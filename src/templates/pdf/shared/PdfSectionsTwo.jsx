@@ -35,19 +35,36 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
   const textAlign  = centered ? 'center' : 'left';
   const dateColor  = getDateColor(settings);
   const shade      = shadesOf(settings);
+  const font       = settings?._pdfFontFamily;
+  // The title keeps the first certification, unbreakable: its name line (name, issuer, ID and link)
+  // wrapped at the entry's width (a Grids cell's), measured in the name's bolder face, so it errs on
+  // more lines — the date at its last line's end, or centred, on a line of its own under it. With only
+  // its own three lines, a name line that wrapped onto four left the title alone at the foot of a page
+  // while the certification moved on (R5-HUNT3-CERTIFICATIONS-TITLE-NO-PRESENCE).
+  const first      = visibleItems[0];
+  const headBox    = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' };
+  const dateBox    = { fontFamily: font, fontSize: baseSize };
+  const headLines  = (item) => {
+    const width = entryTextWidth(settings, cols);
+    const date = showDates ? dateRange(item.date, item.expiry, settings) : '';
+    const text = [[item.name || item.title, item.issuer].filter(Boolean).join(' — '),
+      item.credentialId && `ID: ${item.credentialId}`, item.url && (item.urlLabel || item.url)].filter(Boolean).join(' · ');
+    return centered ? Math.max(1, wrappedLines(text, headBox, width)) + (date ? 1 : 0)
+      : Math.max(1, endRowLines({ text, box: headBox, end: date, endBox: dateBox, gap: 8, width }));
+  };
+  const presence   = first ? headPresence({ lines: headLines(first), styles: [headBox, dateBox], extra: centered ? 1 : 0 }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
           const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
-          const font = settings?._pdfFontFamily;
           const onName = onBaselineOf([{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: entrySize }], { fontFamily: font, fontSize: baseSize });
           // Each separator only between two fields that print: a certification with no name starts at its
           // issuer, or its ID, never at a dangling ' — ' or ' · ' (R4-DOUT-17).
