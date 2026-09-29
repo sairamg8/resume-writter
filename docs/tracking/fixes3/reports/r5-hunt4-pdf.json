@@ -1,0 +1,80 @@
+{
+  "cluster": "r5-hunt4-pdf",
+  "branch": "claude/wf-r5-hunt4-pdf",
+  "base": "b93a09a9c8c5553266111c967fc31cfddd2d8c39",
+  "rows": [
+    {
+      "id": "R5-HUNT4-PDF-EMPTY-SKILL-GROUP-LONE-BULLET",
+      "title": "PDF: a skill group with no category and no skills prints a lone bullet (Bullet) or an empty row and extra gap (other styles)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "0fa7693ceac9553175eaea03e8e6ca5bd10a49a9"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt4-empty-skill-group.test.mjs"
+      ],
+      "summary": "Now: a skill group that prints nothing takes no row, bullet or gap in the PDF. This covers a group added and left blank, the blank first group of a new Skills section, and a group with both eyes off, in every style (Inline, Bullet, Stacked, Tags, Bars) and every template. The main column's SkillsSection and the Sidebar column's SideSkills both filter with the new skillGroupPrints() in src/utils/skills.js, which reads the group through skillGroup(), so a hidden field, a list of skills from imported data or a stored number count the same way in every export. Word already dropped these groups (entries() drops empty cells), and so do Markdown and the ATS text, so the PDF now matches them. A Grids layout closes up the same way Word's grid does. Old stored data: a legacy group that holds only 'name' is still healed by withSkillNames() in normalizeResume(); unhealed, it printed a lone bullet before and now prints nothing, so no content is lost.",
+      "failfirst_run": "36552138187 (green: 40 tests fail with the fix reversed, all pass with it)"
+    },
+    {
+      "id": "R5-HUNT4-PDF-SKILLS-TITLE-ORPHAN-LONG-INLINE-GROUP",
+      "title": "PDF: the Skills title is left alone at the foot of a page when the first Inline or Bullet group wraps onto four lines or more",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "d6413437148ad0c573f15e4e2c1ada5a55a3d0b8"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt4-skills-title-keep.test.mjs"
+      ],
+      "summary": "Now: in Inline and Bullet styles, and in an unknown style (which prints as Inline), the Skills title keeps its first group with it. Each of those groups is one unbreakable row. Its height is the line 'category + separator + skills' wrapped at the entry width (entryTextWidth, less the Bullet marker and its 4 pt gap), measured in bold at the row's own line height (entrySize x Line Height), plus the spare line headPresence adds. A first group that wraps onto 4 or more lines now moves to the next page together with the title. For a short group the old three-line minimum still applies (SectionTitleOf takes the larger value), so nothing changes for résumés that were fine before. Stacked, Tags and Bars rows can split, so they keep the old minimum. In Grids 2/3 the presence follows the first cell. If a later cell in the first row is taller, react-pdf moves only that cell and the title stays with the first one, so the title is never left alone.",
+      "failfirst_run": "36552138187 (green: 3 sweep tests fail with the fix reversed, all pass with it)"
+    },
+    {
+      "id": "R5-HUNT4-PDF-REFERENCES-TITLE-PRESENCE-UNMEASURED",
+      "title": "PDF: the References title is left alone at the foot of a page when a first-row card's job title, company or relationship wraps",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "5dd9bebf47b4458d3714f5c22ee3d764a34588c2"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt4-references-title-keep.test.mjs"
+      ],
+      "summary": "Now: the References title keeps the tallest card of the first row with it. Each field is wrapped at the card's text width: the Grids cell (entryTextWidth) less 5 pt padding and 0.5 pt border on each side. The name is measured in bold and the other fields in regular, through headPresence(lines, extra 12), which adds a spare line. A card whose job title, company or relationship wraps now moves to the next page together with the title. When no field wraps, the height is the same as the old formula, (fields + 1) x line + 12. The fixer's note about the Sidebar page's inherited line height does not apply: in the two-column Sidebar, References always print in the side column (SideReferences, SIDEBAR_COLUMN_TYPES), and the single-column Sidebar prints through Classic, which has no page-level line height.",
+      "failfirst_run": "36552138187 (green: 3 sweep tests fail with the fix reversed, all pass with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "Skills presence measures only the first group, not the tallest in the first Grids row (the References fix measures the whole row).",
+            "resolution": "No change needed. react-pdf's splitNodes moves a breaking child together with every sibling after it. So if the first cell is the tall one, presence covers it. If a later cell is taller, only that cell moves and the title stays with the first cell, so the title is never left alone."
+          },
+          {
+            "issue": "The References height ignores the line height the two-column Sidebar page passes down (the fixer's note).",
+            "resolution": "No change needed. ReferencesSection never renders on that page: References print in the side column (SideReferences), and the single-column Sidebar prints through ClassicTemplatePDF, whose page sets no line height."
+          },
+          {
+            "issue": "Filtering empty groups could shift Grids cells or change a Word/PDF parity or saved-data test.",
+            "resolution": "Word's entries() already drops empty cells before it builds its grid, so the two exports agree. Named-tests run 36555886998 on 5dd9beb re-ran the saved-data (16-*), skills (25, 35, 87, 94, skill-names), sidebar-column (33, 84), Compact (76-*), Word reference (98, 102, 104), ATS-text/Markdown parity (65, 70), JSON Resume reprint and the tests/pdf/parity suites: 3801 tests, 3800 pass. The one 'failure' is tests/pdf/parity/walk-cli.mjs. It is not a test: it is the walker's child-process script, which the reviewer's parity/*.mjs glob picked up by mistake, and it exits without its argv[2] output path. Lint passed."
+          },
+          {
+            "issue": "Fail-first proof.",
+            "resolution": "Read the CI logs of run 36552138187. 0fa7693 reversed: '# fail 40'. d641343 reversed: '# fail 3'. 5dd9beb reversed: '# fail 3'. Each file passes with its fix restored. Each commit's diff was reversed on its own, on top of the branch head."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Three PDF hunt findings, each fixed in its own commit with a fail-first test (run 36552138187: 426 tests, 425 pass, 1 todo, lint green, all 3 fail-first jobs green). The adversarial review found no confirmed defect, so the reviewer made no code changes. The fixer ran node locally once, to import src/constants/templates.js; no test ran locally. Not yet run: the full gate (13 machines) on this head. It belongs to the batch gate on claude/r4-green."
+}

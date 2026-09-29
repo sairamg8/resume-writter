@@ -1,0 +1,52 @@
+{
+  "cluster": "r5-hunt4-dash",
+  "branch": "claude/wf-r5-hunt4-dash",
+  "base": "0a0148f150f67eab7994cff4601626fe7542181d",
+  "rows": [
+    {
+      "id": "R5-HUNT4-SHARE-MODAL-PUBLISH-LANDS-ON-OTHER-RESUME",
+      "title": "A Publish or Unpublish still running when another résumé opens shows its result in that résumé's Share panel, whose Update or Unpublish then acts on the first résumé's link",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "c22821a5b7c6cd8a778238348898906fe500df43"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt4-share-result-other-resume.test.mjs"
+      ],
+      "summary": "Now: a Publish or Unpublish result, and any error from it, is shown only in the Share panel of the résumé it was run for. The Editor route (/resume/:id) is not keyed, so the Editor and its ShareLinkModal stay mounted when another résumé opens, for example with browser Back while a call is in flight. ShareLinkModal now keeps a ref to the résumé it currently shows. run() hands each call a still() check and drops the call's result and its error when another résumé has opened by the time the call returns. Before the fix, résumé B's panel could show A's link. Its 'Update the public copy' then called publish(uid, B, { shareId: A's }): the transaction found no record for B, fell back to the shown shareId, and overwrote A's public copy with B's content. Its Unpublish could take A's link down. The report's Import repro cannot happen, because the Share dialog and Import block each other. The Back-button race is reachable, and it is what the test covers (2 cases: Publish, Unpublish). Fail-first run 36552063298 was read from the CI log: 'fail without the fix (its diff reversed): # fail 2', then 'pass with it'. The named node tests for the share panel, dialogs, contact fields, design resets and knowledge docs passed in the same run, and lint passed. Build, the full suite, Playwright and Cypress did not run.",
+      "failfirst_run": "36552063298 (green: fails without the fix with '# fail 2', passes with it; lint and 11 named node test files green in the same run)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "While A's call is in flight, B's panel keeps busy=true, so its buttons stay disabled until A's call returns (busy is not reset when the résumé changes).",
+            "resolution": "No change. This is conservative and clears as soon as A's call settles. It also stops a second call from starting while the first is unresolved. The behaviour was the same before the fix."
+          },
+          {
+            "issue": "A failure of A's Publish or Unpublish that returns after B opened is logged to the console only, not shown anywhere.",
+            "resolution": "Intended. Showing it under B would describe the wrong résumé. Reopening A's panel calls readShare from the server and shows A's true state."
+          },
+          {
+            "issue": "A→B→A with a Publish in flight: A's readShare, rerun on return, can resolve after the publish result and show A as 'not published' although it is.",
+            "resolution": "Not a defect worth a fix. The window is one server round trip, and the display fixes itself on the next open. A second Publish from that panel is harmless: the publish transaction reads the account's record first and reuses A's existing shareId (publicLink.js publish), so it makes no second link. Unpublish is not offered from a 'not published' panel."
+          },
+          {
+            "issue": "The Copy button's copyText promise can set 'Copied' after a résumé switch.",
+            "resolution": "Not reachable in practice: the clipboard write settles in milliseconds, well inside any navigation. Not worth a guard."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug, fixed in c22821a (src/components/ShareLinkModal.jsx). The diff was reviewed adversarially. The only caller is Editor.jsx, which is not keyed per id; publicLink.js publish/unpublish were checked for how a stale shareId behaved (it overwrote the other résumé's copy); the Dashboard's unpublish-on-delete is untouched, and no stored data is affected. Review found no confirmed problem, so the reviewer made no fix. The fail-first log shows real failures without the fix. Build, the full suite, Playwright and Cypress still need the batch gate."
+}

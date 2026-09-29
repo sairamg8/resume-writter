@@ -1,0 +1,134 @@
+{
+  "cluster": "r5-hunt4-import",
+  "branch": "claude/wf-r5-hunt4-import",
+  "base": "0a0148f150f67eab7994cff4601626fe7542181d",
+  "rows": [
+    {
+      "id": "R5-HUNT4-TEXT-IMPORT-SCHOOL-OVER-DEGREE-DATE-CONSECUTIVE",
+      "title": "Text/PDF/Word import: consecutive 'School' over 'Degree ⇥ dates' entries give each entry the next entry's school, and its own school lands in the description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "69ff746b03fc004eda4bd31c15f55375e9bf6018",
+        "ddd50097f1beaf313f0bc53fbb1e05cb16c528fb"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-text-import-school-over-degree-date.unit.mjs"
+      ],
+      "summary": "Now: when each school sits over its 'Degree ⇥ dates' line with no blank line between entries, each entry keeps its own school. Stanford/MBA and UT Austin/B.S. EE come out right with empty descriptions, also when bullets sit between the entries. In importText.js, titleOver and titleOfNext accept a school over a degree's dated line, the mirror of the degree-over-school rule, and the next entry's title must be laid out the same way. Review fix ddd5009: that school rule applies right after the entry above only when that entry's own school was over its date too (its header ends at its dated line). Without it, in the opposite layout ('MBA ⇥ dates' over 'Stanford University'), a line such as 'Exchange semester at University of Tokyo' became the next degree's school and that degree's real school went into its description. Degree-over-school files and a single entry read as before.",
+      "failfirst_run": "36554156443 (green: with the fix's src undone, the new tests fail at their assertions, and they pass with it) ('# fail 2'); review fix: 36556653160 (green: ddd5009 reversed, # fail 1; passes with it; named-tests and lint green)"
+    },
+    {
+      "id": "R5-HUNT4-JSONRESUME-ROUNDTRIP-AS-ENTERED-DATES-ISO",
+      "title": "JSON Resume export and import: a résumé on Date format 'As entered' comes back printing ISO dates ('2020-01 – 2023-03') instead of 'Jan 2020 – Mar 2023'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "dd331c12832c2869b502041f38b3e4cc2b484519",
+        "450f6c5",
+        "4999b4c67c65e7f45c10b3be87f81ef03f80f903"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-jsonresume-as-entered-dates.unit.mjs",
+        "tests/unit/json-resume-present.unit.mjs",
+        "tests/pdf/102-r4-dux-26-current-keeps-end-date.test.mjs"
+      ],
+      "summary": "Now: a résumé on Date format 'As entered' comes back from its JSON Resume export printing 'Jan 2020 – Mar 2023', not '2020-01 – 2023-03'. The schema fields still hold ISO dates. When the format is As entered, the export also writes meta.enteredDates, which maps each ISO date to the stored text where the two differ. It covers only visible sections and shown entries, and only startDate, endDate, date and expiry. The import puts those stored forms back only when the file says As entered, so a stored ISO date like '2021-03' still round-trips as ISO. 4999b4c keeps a current entry's kept End Date out of the map, because R4-DUX-26 says the file must not hold it. json-resume-present was stale: it expected '2022-06' back where the résumé stored 'Jun 2022' on As entered; it now expects the stored 'Jun 2022'. Limits: a file exported before this fix has no map and still imports as ISO. The map is keyed by ISO date, so if two entries store the same month in different forms (say 'Mar 2021' and '2021-03'), both come back in the first entry's form.",
+      "failfirst_run": "36554156443 (green: dd331c1 with its parent's files, '# fail 2' — the As entered round trip and json-resume-present; 4999b4c reversed, '# fail 1' in 102-r4-dux-26; both pass with the fix)"
+    },
+    {
+      "id": "R5-HUNT4-TEXT-IMPORT-ROLE-COMPANY-PLACE-LINE",
+      "title": "Text/PDF import: 'Role, Company — City, ST' and 'Role | Company | City, ST | Dates' make the city the company (or a description paragraph), and the role keeps the company",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "49b8779363ec2c426bdfbd1ad4e9cb105226443a"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-text-import-role-company-place-line.unit.mjs"
+      ],
+      "summary": "Now: 'Product Manager, Google — Mountain View, CA', 'Product Manager | Google | Mountain View, CA | June 2018 - Present' and 'Role — Company — City, ST' import as role Product Manager, company Google, location Mountain View, CA. 'Software Engineer — Google — Remote' also gets the location Remote; before, 'Remote' went into the description. The new rule in entryOf applies to a job whose line has a role first, then a company, then a trailing place-like field: the place becomes the location. 'Senior Engineer — Acme, Inc.' and 'Company — Place' over the role line read as before.",
+      "failfirst_run": "36554156443 (green: with the fix's src undone, the new tests fail at their assertions, and they pass with it) ('# fail 2')"
+    },
+    {
+      "id": "R5-HUNT4-TEXT-IMPORT-CONTACT-LINE-DASH-COMMA-SLASH",
+      "title": "Text/PDF/Markdown import: a header contact line split by ' — ', ' - ', ' / ' or ', ' gives no email, phone or location and prints as 'Additional Information' (or as the job title)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "316b812fc61269464d00e9ecb8ba2323bf6b5c51"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-text-import-contact-line-separators.unit.mjs"
+      ],
+      "summary": "Now: a header contact line split by ' — ', ' – ', ' - ', ' / ' or ', ' fills email, phone and location, and no 'Additional Information' section appears. The new contactRun in importText.js splits a piece only when it holds at least two contacts, one of them not a place, and every other piece is short with no end punctuation. It keeps 'City, ST' (up to three comma cells) together. So a summary sentence or a job title with a dash ('Senior Engineer — Payments') stays whole, and a contact line is never taken for the job title. A Markdown line 'Backend Engineer — email — [GitHub](url) — City, ST' gives the title, email, GitHub and location.",
+      "failfirst_run": "36554156443 (green: with the fix's src undone, the new tests fail at their assertions, and they pass with it) ('# fail 3')"
+    },
+    {
+      "id": "R5-HUNT4-TEXT-IMPORT-SKILLS-BULLET-PIPE-SEPARATORS",
+      "title": "Text/PDF/Word import: skills split by ' | ', ' • ' or ' · ' are stored as one skill per line, so Tags, Bars and Stacked print one chip holding the whole line",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "b181e87ade4e86bd6c2d3c8ad1da378f8f9ca545"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-text-import-skills-separators.unit.mjs"
+      ],
+      "summary": "Now: skills split by ' | ', ' • ' or ' · ' are stored comma-separated, so Tags, Bars and Stacked print one chip per skill. 'Languages: Python | Java | Go' becomes Languages → 'Python, Java, Go', and 'Python • SQL • Spark' becomes 'Python, SQL, Spark'. A cell with two categories ('Languages: Go | Tools: Git') gives two groups, and a category line over a bulleted list still becomes that list's category. Comma lists and tab cells read as before. Only the Skills section changes; Languages already split at these marks.",
+      "failfirst_run": "36554156443 (green: with the fix's src undone, the new tests fail at their assertions, and they pass with it) ('# fail 2')"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "School-over-degree fix (69ff746) regressed the opposite layout: with each 'Degree ⇥ dates' line over its school, a non-bullet line under a school that names another school (e.g. 'Exchange semester at University of Tokyo'), followed by two more entries, became the next degree's school, and that degree's real school went into its description. Before the fix this read correctly. Confirmed against r4-green; fixed by the reviewer in ddd5009, with a fail-first test.",
+          "Read the logs of all six fail-first jobs of run 36554156443: each fails at assertions without its fix (# fail 2/2/3/2/2/1) and passes with it. The new tests import only functions that already exist before the fixes, so no failure comes from a missing export at import time.",
+          "Other changes checked against r4-green with edge inputs; no regressions found (see issues)."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Text import, degree-over-school layout: a description line naming a school was taken for the next degree's school (regression from 69ff746).",
+        "resolution": "Fixed by the reviewer (ddd5009). titleOver accepts a school over a degree's dated line right after the entry above only when that entry's header ends at its dated line (named fields aside), meaning its school was over its date too, or when there is no entry above. The school-over-degree cases (with and without bullets, 2 and 3 entries) still read correctly. The new test case fails without ddd5009 and passes with it (run 36556653160)."
+      },
+      {
+        "issue": "Does each fail-first run really fail without the fix?",
+        "resolution": "Yes. In run 36554156443, 69ff746 → '# fail 2', 49b8779 → '# fail 2', 316b812 → '# fail 3', b181e87 → '# fail 2', dd331c1 → '# fail 2' (checked out from its parent's files, because 4999b4c touches the same lines; this also undoes 4999b4c) and 4999b4c → '# fail 1' in 102-r4-dux-26. Each passes with the fix. The failure counts match the test cases that exercise the bug, and the guard cases pass either way."
+      },
+      {
+        "issue": "JSON Resume: meta.enteredDates is keyed by ISO date, so two entries storing the same month in different forms ('Mar 2021' typed with the picker, '2021-03' from an earlier JSON Resume import) both come back in the first form.",
+        "resolution": "Accepted, no change. This needs mixed forms of the same month. The print stays correct (same month), only its form changes for one entry. A per-entry map would change the file shape the fix introduced. Recorded in the row summary as a limit."
+      },
+      {
+        "issue": "JSON Resume: could the map put text into empty or unparseable dates?",
+        "resolution": "No. isoDate returns the stored text itself when it cannot parse it, so such dates are never mapped. Empty stored dates are skipped, and a current entry's End Date is left out (4999b4c). The import only maps string values found in the map, and only when meta.dateFormat is As entered."
+      },
+      {
+        "issue": "Role, company, place rule: 'Senior Engineer, Payments — Stripe, San Francisco' reads as role Senior Engineer, company Payments, location 'Stripe, San Francisco'.",
+        "resolution": "Accepted, no change. The line is ambiguous without a gazetteer (the loose ONE_PLACE test takes any 'Word, Word' as a place). It was wrong before too: role 'Senior Engineer, Payments', company 'Stripe, San Francisco'. The common forms 'Role, Company — City, ST' and 'Role — Company — Remote' are now right."
+      },
+      {
+        "issue": "Contact line: 'Software Engineer, Backend — alex@kim.dev' as the line under the name gives the email but puts 'Software Engineer, Backend' in Location and no title.",
+        "resolution": "Accepted, no change. This comes from the existing loose place test in contactOf; the same piece set apart with ' | ' did this before the fix. Before, the whole line (email included) became the job title and no email was read, so the fix is a net improvement."
+      },
+      {
+        "issue": "Skills: could splitting at | • · break other sections or exports?",
+        "resolution": "No. The split applies only in skillsOf (the Skills section). Languages already split at these marks, and skillGroup and every exporter read the comma list. A line whose words are all short with ' · ' separators ('Tools · Git · Docker') becomes three skills, not a category; this is covered by the test and is the documented choice."
+      }
+    ],
+    "fixedByReviewer": [
+      {
+        "commit": "ddd50097f1beaf313f0bc53fbb1e05cb16c528fb",
+        "what": "src/utils/importText.js: titleOver's school-over-degree rule requires the entry above to have its school over its dated line too (schoolFirstAbove). Test case added to tests/unit/r5-hunt4-text-import-school-over-degree-date.unit.mjs."
+      }
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Five hunt-4 import findings, all fixed. The fixer's runs: 36553184281 (tests job had 2 stale failures, fixed in 4999b4c and 450f6c5) and 36554156443 (all green). Review round 1 found one regression in the school-over-degree fix, fixed in ddd5009; run 36556653160 covers the fail-first check, every import/JSON Resume test, the contact-field, design-reset and knowledge-docs guards, and lint. Tracker rows are not marked ✅ here: master moves only after the full gate on the merged commit."
+}

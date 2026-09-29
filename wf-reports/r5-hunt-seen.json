@@ -11,6 +11,10 @@
   "3": {
    "confirmed": 15,
    "head": "6770951"
+  },
+  "4": {
+   "confirmed": 17,
+   "head": "3e9f28d"
   }
  },
  "seen": [
@@ -60,6 +64,24 @@
   "On a project page, the 'c' key and the top bar's Create put the new issue in the first project in the list, not the project you are viewing",
   "List view and Backlog: an issue created while filters are set can vanish with no word (R4-DUX-08 was fixed on the Board only)",
   "Undo on 'Checklist item deleted' writes back a stale checklist once the checklist has remounted, losing items added or ticked since",
-  "Undo on an ATS Check fix (Standardize Headings, Put Job Title First, Grids 1) changes a different résumé opened in the meantime"
+  "Undo on an ATS Check fix (Standardize Headings, Put Job Title First, Grids 1) changes a different résumé opened in the meantime",
+  "Undo on 'Template: …' or 'Spacing: …' deletes contact icons uploaded (and the page size set) while the notice was up",
+  "PDF prints a bare '•' (or an empty row) for a skill group with no category and no skills; Word, Markdown and ATS text leave it out",
+  "References title is left alone at the foot of a page when the first reference card's fields wrap",
+  "Skills title (Inline/Bullet, one column) is orphaned when the first group wraps to 4+ lines",
+  "Text/PDF/Word import: when each job prints 'Company' over 'Role ⇥ Date' with no blank line between jobs, every later job gets the first job's company",
+  "Text/PDF/Word import: consecutive 'School' over 'Degree ⇥ Dates' entries with no blank line give the first entry the next school and leave the second with no institution",
+  "JSON Resume export then import of a résumé on Date format 'As entered' (the default) prints every date as '2020-01' instead of 'Jan 2020'",
+  "Text/PDF/Word import: 'Role, Company — City, ST' (or 'Role, Company ⇥ City, ST ⇥ Dates') makes the city the company and leaves the company inside the job title",
+  "Text/PDF/Word/Markdown import: a contact line separated by ' — ', ' / ' or ', ' yields no email, phone or location; it is printed as an 'Additional Information' section instead",
+  "Text/PDF/Word import: skills separated by ' • ', ' · ' or ' | ' are stored as one skill, so Tags, Bars and the Sidebar's Stacked style show one long chip",
+  "Share panel shows a Publish result for the résumé it started on after another résumé opens, so Update or Unpublish then overwrites or deletes the first résumé's public link",
+  "After sign-out, the recovery notice and its raw backups stay in the browser, so the next person can download the previous account's whole résumé or job list",
+  "Signing in on a new browser adds the demo 'Google' job to the account, and every device gets it back, even after the user deleted it",
+  "Quick search: typing an exact issue key like 'LIFE-1' and pressing Enter opens LIFE-10 (or another LIFE-1x), and the exact issue can drop out of the list",
+  "Changing an epic's Issue type to Task/Story/Bug silently and permanently unlinks all its child issues, with no warning or Undo",
+  "Quick search can't find an issue by its exact key when 8 or more longer keys start with it (LIFE-1 hidden by LIFE-10…LIFE-17)",
+  "ATS plain text (Export → ATS text, ATS tab Copy/Download) prints a website/LinkedIn/GitHub's typed value instead of its Link URL, so the profile address is lost",
+  "ATS Check calls a phone field with more than 15 digits 'Short phone number format' and asks for an area/country code"
  ]
 }

@@ -1,0 +1,52 @@
+{
+  "cluster": "r5-hunt4-jobs",
+  "branch": "claude/wf-r5-hunt4-jobs",
+  "base": "1b074c5026ab5b67e3a8e25b5ade1757786ec2d6",
+  "rows": [
+    {
+      "id": "R5-HUNT4-FRESH-BROWSER-UPLOADS-DEMO-JOB-TO-ACCOUNT",
+      "title": "A fresh browser's untouched demo job is sent to the account at its first sign-in, so a demo the user deleted before first signing in comes back on every device",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "c4646f77b3d2b17b9db9a9052c34990da65c65e4",
+        "e6c7484c00ef409eddc36461144e3424de7b3d99"
+      ],
+      "tests": [
+        "tests/unit/job-sync.unit.mjs"
+      ],
+      "summary": "Now: when a fresh browser (another device, or site data cleared) signs in for the first time, its untouched demo job (demo_1) or demo project (demo_board_life) is only sent to an account that has no items and no deletions of its own. For any other account, the demo is dropped from this browser, and the account's list is shown. This is planFirstSync in collectionSyncPlan.js (c4646f7). Also, if the user deleted the demo on a browser before that browser ever synced, and the account does not have the demo either, that browser's first sync lists the demo's fixed id as deleted in the account. The ids come from store.seedIds: DEMO_JOB_ID and DEMO_BOARD_ID in useCollectionSync.js. So the demo stays deleted even in an account with nothing else in it (e6c7484, review). A demo that was filled in on another browser before its first sign-in is typed work: it is still sent, and it comes off the deletion list. A brand-new account on a fresh browser still takes the untouched demo, as before. Jobs and project boards share the plan, so both behave this way. Before: the demo was kept and sent whenever the cloud lacked it, and every signed-in device got it back.",
+      "product_call": "A browser whose demo is untouched and has never synced loses that demo when it signs in to an account that already has a list: nothing typed is lost. A browser whose list lacks the demo at its first sync, for example after a sign-out emptied it, lists the demo as deleted in an account that does not have it. That account's later fresh browsers then do not show the demo either, which matches what the first browser shows.",
+      "remaining": "Race: if a fresh browser sends the untouched demo to an empty account before the browser where the user deleted it makes its first sync, the demo still comes back. The deleting browser keeps no record of the deletion, so nothing tells it apart from a new item in the cloud. No board-level test drives the same path; boards use the same planFirstSync and the same seedIds wiring. The seedIds wiring in useCollectionSync.js is not unit-tested, because it imports Firebase. The tests pass seedIds through the device harness instead.",
+      "failfirst_run": "36554624658 (green: c4646f7's test fails with its diff reversed ('# fail 1') and passes with it); 36557384840 (green: e6c7484's test fails with its diff reversed ('# fail 1') and passes with it; c4646f7 fail-first again green on the new head; 11 named sync/job/board test files 113/113 pass; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "c4646f7 drops a fresh browser's untouched demo only when the account has items or deletions (docs.length || gone.size). An account the user left empty (demo deleted before the first sign-in, no job of their own, the common case for someone who does not use the tracker) still took the next fresh browser's demo, which came back on every device. The knowledge doc's 'deleted before the first sign-in, it stays deleted' was not true there.",
+          "Once the demo's id is on the account's deletion list, a demo filled in on a fresh browser before its first sign-in was dropped by the gone path (changedSince needs a known version), so typed work was lost."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "The untouched demo still comes back to an account with no items and no deletions of its own, after the user deleted it before the first sign-in",
+        "resolution": "Fixed in e6c7484. planFirstSync takes seedIds (store.seedIds: [DEMO_JOB_ID] for jobs, [DEMO_BOARD_ID] for boards). A seed id is added to deletes when it is absent from this browser, from the account and from its deletion list, and this browser has neither a version for it nor a local deletion of it. The engine commits it, and the account's meta lists it as deleted. The new test in job-sync.unit.mjs checks five things: deleted on the first device → listed; a fresh browser's untouched demo is not sent; the first device stays empty; a filled-in demo is still sent; a new account still adopts the demo. Fail-first run 36557384840."
+      },
+      {
+        "issue": "A demo filled in before the first sign-in would be dropped once the demo's id is on the deletion list",
+        "resolution": "Fixed in e6c7484. The gone path keeps and sends a seed-id item that this browser never synced and that is not untouched (filledDemo); the commit's arrayRemove takes it off the deletion list. This is covered by the same test."
+      }
+    ],
+    "fixedByReviewer": [
+      "e6c7484c00ef409eddc36461144e3424de7b3d99"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One hunt finding: the demo job reappears on every device after being deleted before the first sign-in. c4646f7 fixes it for accounts that already have a list. Review found that an empty account was still affected, and e6c7484 closes that gap by recording the pre-sign-in deletion. It also keeps a demo filled in before sign-in. Both fail-first checks were verified in the CI logs ('# fail 1' without the fix, pass with it). Only named node tests and lint have run on CI; the full gate (suite shards, build, Playwright, Cypress) has not."
+}
