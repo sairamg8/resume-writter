@@ -167,16 +167,31 @@ function issuesPutBack(board, before, after) {
  * just before and just after updateColumn. The category goes back, and each issue the change
  * reopened or resolved, untouched since, as it was: its resolvedAt (the day it was really done, which
  * a reopen wipes), its history; a next occurrence the change made goes again (issuesPutBack).
+ * An issue in the column that is not put back (edited since, or moved or created there since) is
+ * resolved or reopened as any category change does it (recategorized); one done before the change
+ * gets back the day it was really done. Left as it was, it sat open in a done column with no
+ * resolved date (a repeat never made again), or showed "Resolved" and counted as completed while
+ * open in an open one.
  * Refused (the board as it is) when the column is gone or its category changed again since.
  */
-export function restoreCategory(board, changed) {
+export function restoreCategory(board, changed, ctx = {}) {
   const { columnId, before, after } = changed ?? {};
   const was = before && columnById(before, columnId);
   const made = after && columnById(after, columnId);
   const column = columnById(board, columnId);
   if (!was || !made || !column || column.category !== made.category || was.category === made.category) return board;
   const columns = mapById(board.columns, columnId, (c) => ({ ...c, category: was.category }));
-  return { ...board, columns, issues: issuesPutBack(board, before, after) };
+  const restored = { ...board, columns, issues: issuesPutBack(board, before, after) };
+  const done = isDoneColumn(was);
+  if (done === isDoneColumn(made)) return restored;
+  // Each issue of the column as it was before the change: one resolved (or not) as it was then is
+  // left alone, as the change never touched it.
+  const old = new Map(before.issues.filter((i) => i.columnId === columnId).map((i) => [i.id, i]));
+  const asBefore = (i) => old.has(i.id) && (old.get(i.id).resolvedAt ?? null) === (i.resolvedAt ?? null);
+  const off = restored.issues.filter((i) => i.columnId === columnId && Boolean(i.resolvedAt) !== done && !asBefore(i)).map((i) => i.id);
+  if (!off.length) return restored;
+  const dated = done ? { ...restored, issues: restored.issues.map((i) => (off.includes(i.id) && old.get(i.id)?.resolvedAt ? { ...i, resolvedAt: old.get(i.id).resolvedAt } : i)) } : restored;
+  return recategorized(dated, columnId, done, { from: categoryName(made.category), to: categoryName(was.category) }, ctx, off);
 }
 
 /** Move a column to `toIndex` (clamped). */

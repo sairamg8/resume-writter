@@ -117,7 +117,7 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
     return { boardId, columnId, before, after: findBoard(boardId) };
   }
   /** Undo a category change (boardOps.restoreCategory), edits made since kept; true when it went back. */
-  const restoreCategory = (changed) => Boolean(changed?.boardId) && change(changed.boardId, (b) => ops.restoreCategory(b, changed));
+  const restoreCategory = (changed) => Boolean(changed?.boardId) && change(changed.boardId, (b, ctx) => ops.restoreCategory(b, changed, ctx));
   const moveColumn = (boardId, columnId, toIndex) => change(boardId, (b) => ops.moveColumn(b, columnId, toIndex));
 
   /** Add a label (`{ name, color }`); returns it — or the label that already has that name — or null. */
