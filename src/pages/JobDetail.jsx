@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlignLeft, ExternalLink, Info, LayoutList, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useJobStore } from '@/hooks/useJobStore';
+import { jobsNow, useJobStore } from '@/hooks/useJobStore';
 import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { Avatar, Button, DatePill, EmptyState, IconButton, Menu, ProgressBar, TabCount, buttonClass, useConfirmOptional, useToast } from '@/components/ui';
 import { tabClass } from '@/components/ui/Tabs.jsx';
@@ -57,6 +57,13 @@ export function JobDetail({ store }) {
   }
 
   function set(key, val) { updateJob(job.id, { [key]: val }); }
+  // The tasks as stored now: an Undo on a deleted task can be clicked after the Tasks tab that did
+  // the delete has gone (another tab opened, then Tasks again), and must not write back the list
+  // it last saw over the tasks added or ticked since (useRemoveWithUndo).
+  const todosNow = () => {
+    const stored = jobsNow().find((j) => j.id === job.id);
+    return stored ? stored.todos || [] : undefined;
+  };
 
   async function remove() {
     const name = job.company || 'this job';
@@ -134,6 +141,7 @@ export function JobDetail({ store }) {
             <TasksTab
               todos={todos}
               onChange={todos => set('todos', todos)}
+              readNow={todosNow}
             />
           )}
           {activeTab === 'notes' && (
