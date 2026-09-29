@@ -488,6 +488,8 @@ const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.
 
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
 const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern|analyst|designer|consultant|specialist|scientist|officer|assistant|associate|coordinator|architect|administrator|admin|president|vp|founder|co-founder|owner|teacher|professor|lecturer|researcher|nurse|technician|accountant|writer|editor|producer|representative|supervisor|executive|advisor|adviser|strategist|principal|chief|cto|ceo|cfo|coo|partner|fellow|trainee|apprentice|volunteer|tutor|mentor|chair|secretary|treasurer|clerk|agent|operator|instructor|coach|counselor|therapist|physician|attorney|paralegal|sales|marketer|recruiter|contractor|freelancer|freelance)s?\b/i;
+/** Every role word in a text, for whether each is plural (sectionLeads). */
+const ROLE_ALL = new RegExp(ROLE.source, 'gi');
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
@@ -696,14 +698,17 @@ function roleFirst(a, b, roleLeads) {
  * The jobs whose words tell which field is the role say it for those where nothing does ("Sous Chef —
  * Chez Panisse" under "Kitchen Manager — Nopa"). Before, those always read company first, so a
  * role-first résumé's own export came back with the two swapped. None telling: the type's default.
+ * A field whose role words are all plural ("Summit Partners", "Gensler Architects") names a firm, not
+ * a job, so it tells nothing: it made "Summit Partners — Receptionist" swap "Starbucks — Barista" too.
  */
 function sectionLeads(type, entries) {
+  const firm = (t) => { const ms = [...t.matchAll(ROLE_ALL)]; return ms.length > 0 && ms.every((m) => m[0].length > m[1].length); };
   let score = 0;
   for (const e of entries) {
     if (e.header[0]?.group) continue;
     const [a = '', b = ''] = inlinePair(headerOf(type, e.header).parts);
     const lead = b ? roleLeadsOf(a, b) : null;
-    if (lead !== null) score += lead ? 1 : -1;
+    if (lead !== null && !firm(lead ? a : b)) score += lead ? 1 : -1;
   }
   return score ? score > 0 : type === 'volunteering';
 }
