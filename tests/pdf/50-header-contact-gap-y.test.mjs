@@ -92,8 +92,9 @@ describe('Between contact rows in the résumé PDF', () => {
   }
 
   it('sidebar: each contact sits the gap under the one before (its own 6 pt); the Contact block keeps its 6 pt under the last', async () => {
-    // The side column's next section follows the last contact by the block's own spacing.
-    const r = (s) => ({ ...cv('sidebar', s, TWO), sections: [section('skills', [{}])] });
+    // The side column's next section follows the last contact by the block's own spacing. Its group
+    // holds a skill: a section of blank groups prints no heading at all (R5-HUNT6-BLANK-SECTION-HEADING).
+    const r = (s) => ({ ...cv('sidebar', s, TWO), sections: [section('skills', [{ skills: 'Knots' }])] });
     const [unset, set] = [await ys(await render(r({})), ['EMAIL', 'PHONE', 'SKILLS']), await ys(await render(r({ contactGapY: 20 })), ['EMAIL', 'PHONE', 'SKILLS'])];
     near(set.EMAIL, unset.EMAIL, 'first contact');
     near(set.PHONE - unset.PHONE, 15 - 6, 'second contact');

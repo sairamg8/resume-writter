@@ -1,5 +1,5 @@
 import { withPrintablePhotos } from '@/utils/printableImage';
-import { faceFetched, setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
+import { faceFetched, noteBuild, setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
 import { downloadBlob } from '@/utils/download';
 
 /**
@@ -67,7 +67,8 @@ function onReply({ data }, w) {
     setFontFallback(data.fallback);
     setFacesBorrowed(data.borrowed);
   }
-  entry.resolve(new Blob([data.bytes], { type: 'application/pdf' }));
+  // What the build could not print as asked goes with its PDF: a page picture reads it (buildNote).
+  entry.resolve(noteBuild(new Blob([data.bytes], { type: 'application/pdf' }), data));
 }
 
 function worker() {

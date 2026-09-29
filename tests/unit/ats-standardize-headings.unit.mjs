@@ -17,16 +17,17 @@ import {
 
 /**
  * Visible headings the report flags, visible ones it passes, a hidden one and a custom one — each
- * with an entry, as a section with none prints no heading at all (R4-CL-11).
+ * with an entry that prints something, as a section with none, or whose entries are all blank, prints
+ * no heading at all (R4-CL-11, R5-HUNT6-BLANK-SECTION-HEADING).
  */
 const mixedSections = () => [
-  { id: 'exp', type: 'experience', title: 'Work Experience', visible: true, settings: { titleOrder: 'company' }, items: [{ id: 'i' }] },
-  { id: 'edu', type: 'education', title: 'My College', visible: true, settings: {}, items: [{ id: 'i' }] },
-  { id: 'skl', type: 'skills', title: 'Technical Skills', visible: true, settings: {}, items: [{ id: 'i' }] },
-  { id: 'prj', type: 'projects', title: 'Side Quests', visible: false, settings: {}, items: [{ id: 'i' }] },
-  { id: 'awd', type: 'awards', title: 'Awards', visible: true, settings: {}, items: [{ id: 'i' }] },
-  { id: 'hob', type: 'custom', title: 'Hobbies', visible: true, settings: {}, items: [{ id: 'i' }] },
-  { id: 'vol', type: 'volunteering', title: 'Giving Back', settings: {}, items: [{ id: 'i' }] }, // no `visible`: shown
+  { id: 'exp', type: 'experience', title: 'Work Experience', visible: true, settings: { titleOrder: 'company' }, items: [{ id: 'i', role: 'Engineer' }] },
+  { id: 'edu', type: 'education', title: 'My College', visible: true, settings: {}, items: [{ id: 'i', institution: 'State University' }] },
+  { id: 'skl', type: 'skills', title: 'Technical Skills', visible: true, settings: {}, items: [{ id: 'i', skills: 'Figma' }] },
+  { id: 'prj', type: 'projects', title: 'Side Quests', visible: false, settings: {}, items: [{ id: 'i', name: 'Planner' }] },
+  { id: 'awd', type: 'awards', title: 'Awards', visible: true, settings: {}, items: [{ id: 'i', title: 'Harbor Medal' }] },
+  { id: 'hob', type: 'custom', title: 'Hobbies', visible: true, settings: {}, items: [{ id: 'i', title: 'Chess' }] },
+  { id: 'vol', type: 'volunteering', title: 'Giving Back', settings: {}, items: [{ id: 'i', org: 'Food Bank' }] }, // no `visible`: shown
 ];
 
 const stdHeadings = (sections) => analyzeAtsScore({ template: 'classic', settings: {}, personal: {}, sections })
@@ -64,7 +65,7 @@ test('standardizeSectionsForAts: writes no title order — that is the separate 
   assert.equal(exp.settings.titleOrder, 'company');
   // Nor on an experience section it does rename.
   const [renamed] = standardizeSectionsForAts([
-    { id: 'e', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' }, items: [{ id: 'i' }] },
+    { id: 'e', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' }, items: [{ id: 'i', role: 'Engineer' }] },
   ]);
   assert.equal(renamed.title, ATS_STANDARD_SECTIONS.experience.canonical);
   assert.equal(renamed.titleOrder, undefined);

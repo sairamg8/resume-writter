@@ -31,6 +31,23 @@ export function subscribeFontFallback(fn) {
 let borrowing = false;
 
 /**
+ * What one PDF build could not print as asked, by its Blob: the font it printed in Noto Sans in place of
+ * (`fallback`), and whether a face borrowed another's data (`borrowed`). A page picture (pageImage.js)
+ * leaves the editor's notice alone (reportFont: false), so it reads its own build's here, and a picture
+ * painted that way is not kept for the next visit (R5-HUNT6-CARD-PICTURE-KEPT-DEGRADED).
+ */
+const notes = new WeakMap();
+
+/** Record `note` ({ fallback, borrowed }) for the PDF `blob`; returns `blob`. */
+export function noteBuild(blob, note) {
+  if (blob && typeof blob === 'object') notes.set(blob, { fallback: note?.fallback || null, borrowed: Boolean(note?.borrowed) });
+  return blob;
+}
+
+/** What noteBuild recorded for `blob`, or null. */
+export const buildNote = (blob) => (blob && typeof blob === 'object' ? notes.get(blob) ?? null : null);
+
+/**
  * Whether a face of a loaded font failed and prints with another face's data for now (a bold that
  * failed prints as the regular; pdfFontLoader.js prepareFonts fetches it again): the preview builds
  * again when the browser is back online (R4-LO-17). Nothing is shown for it.

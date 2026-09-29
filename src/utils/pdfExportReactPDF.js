@@ -7,6 +7,7 @@ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { withPrintablePhotos } from '@/utils/printableImage';
+import { facesBorrowed, noteBuild } from '@/utils/fontFallback';
 import { templateId } from '@/constants/templates';
 import { BULLET_STYLES, DEFAULT_BULLET_STYLE, bulletStyleOf } from '@/utils/richText';
 
@@ -111,12 +112,13 @@ export async function renderResumePdf(resume, { reportFont = true } = {}) {
     loadTemplate(key),
     withPrintablePhotos(resume),
   ]);
+  const borrowed = facesBorrowed(); // this build's fonts, read before another build prepares its own
   const data = prepareResumeData(printable, fonts, key);
   const instance = pdf(withListsAndLinks(React.createElement(TemplatePDF, { data }), data.settings));
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
   try { instance.reset?.(); } catch { /* no-op */ }
-  return blob;
+  return noteBuild(blob, { fallback: fonts.fallback, borrowed });
 }
 
 /**
@@ -137,11 +139,12 @@ export async function renderCoverLetterPdf(resume, { preview = false, reportFont
     _template: templateKey,
   }, templateKey);
 
+  const borrowed = facesBorrowed();
   const data = { ...printable, settings: resolvedSettings, _preview: preview };
   const instance = pdf(withListsAndLinks(React.createElement(mod.CoverLetterTemplatePDF, { data }), resolvedSettings));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }
-  return blob;
+  return noteBuild(blob, { fallback: fonts.fallback, borrowed });
 }
 
 export async function exportToPDFReact(resume, filename = 'resume.pdf') {
