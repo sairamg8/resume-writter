@@ -41,7 +41,7 @@ Maps user-facing features → primary code locations.
 | Template picker | Design panel + `setTemplate`; the list is `constants/templateTable.js` |
 | Accent / text / sidebar colors | `DesignPanelColors.jsx` |
 | Fonts + Google fonts | `utils/fonts.js` |
-| Spacing / margins | Design panel keys → `settings` |
+| Spacing / margins | Design panel keys → `settings`; their rows are `NumberRow` (`DesignPanelShared.jsx`): − / + land on the next step below / above, so from a preset's 1.65 Line Height they give 1.6 / 1.7, and a typed Line Height keeps two decimals (1.35 stays 1.35) (R5-HUNT9) |
 | Per-section overrides | `updateSectionSettings`, Section customizer |
 
 ## Cover letter
