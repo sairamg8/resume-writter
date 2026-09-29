@@ -18,8 +18,11 @@ import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { cloudCanName, itemPath } from './collectionSyncIo.js';
 
-/** A first sync that waits: the last account's list could not be set aside — tried again later. */
-const noRoom = () => Object.assign(new Error('Storage is full: the last account\'s list could not be set aside.'), { code: 'resource-exhausted' });
+/**
+ * A first sync that waits: storage would not take a sync record — the last account's list set
+ * aside, or this account's record naming it the list's owner — tried again later.
+ */
+const noRoom = (what = 'the last account\'s list could not be set aside') => Object.assign(new Error(`Storage is full: ${what}.`), { code: 'resource-exhausted' });
 
 /**
  * createCollectionSync({ name, io, store, meta, report, ... }):
@@ -309,7 +312,14 @@ export function createCollectionSync({
         ...versionsOf(sets),
       };
       const { [uid]: _gone, ...stashed } = record.stashed;
-      meta.write({ uid, versions: cloudVersions, order: plan.order, stashed });
+      // The record names the account the list now belongs to: refused (storage full), every later
+      // guard took the list for no account's — changes were never sent though the icon said
+      // "synced", and at sign-out the account's list stayed for the next account to take in. Not
+      // done then: the list is left as it was, and the first sync is tried again
+      // (R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED).
+      if (!meta.write({ uid, versions: cloudVersions, order: plan.order, stashed }) && meta.read().uid !== uid) {
+        throw noRoom('this account\'s list could not be recorded');
+      }
       s.prev = plan.merged;
       s.ready = true;
       s.readAt = now();
