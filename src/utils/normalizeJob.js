@@ -7,12 +7,33 @@ import { newId } from './ids.js';
 import { plainTextToHtml } from './richText.js';
 import { readOptionalFields, sourceId, workModeId } from './jobFields.js';
 import { JOB_STATUSES } from '../constants/jobs.js';
+import { parseDayDate } from './dates.js';
 
 /** The fields the job pages print or search as text. */
 const TEXT_FIELDS = [
   'company', 'role', 'location', 'salary', 'contact', 'notes', 'url',
   'appliedDate', 'deadline', 'resumeId', 'stage', 'followUpDate',
 ];
+
+/** The job's days: every job page reads them as 'YYYY-MM-DD' (uiFormat.parseISODay, jobQuery). */
+const DAY_FIELDS = ['appliedDate', 'deadline', 'followUpDate'];
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/**
+ * A job's day as the pages read it, 'YYYY-MM-DD', from how another tool may write it: a timestamp
+ * ('2026-10-15T00:00:00.000Z' → its day as written, '2026-10-15', not shifted by the time zone)
+ * or "15 Jan 2026" (dates.parseDayDate). A day already so, blank, or unreadable ('next week',
+ * '10/15/2026' — either order) comes back as it is (R5-HUNT5-JOB-IMPORT-NON-ISO-DATES-INVISIBLE).
+ */
+export function jobDay(v) {
+  if (typeof v !== 'string') return v;
+  const t = v.trim();
+  if (!t || /^\d{4}-\d{2}-\d{2}$/.test(t)) return v;
+  const stamp = /^(\d{4}-\d{2}-\d{2})[T ]\d{2}:\d{2}/.exec(t);
+  const day = parseDayDate(stamp ? stamp[1] : t);
+  return day ? `${day.y}-${pad2(day.m)}-${pad2(day.d)}` : v;
+}
 
 /** True when `j` can be a job at all: an object that is not an array. */
 export function isJobEntry(j) {
@@ -206,6 +227,9 @@ export function readJob(job) {
  *   notes in plain text (the form's    → the same text as editor HTML, once (notesToHtml, J-03)
  *   old textarea)
  *   source / workMode in other words   → the choice's id ('LinkedIn' → 'linkedin')
+ *   a day (appliedDate, deadline,      → 'YYYY-MM-DD' (jobDay); one it cannot read stays
+ *   followUpDate) written another way:   as written
+ *   a timestamp, "15 Jan 2026"
  *   an interview with no id            → a new one (withOwnIds)
  * One job does not see the others: an id an earlier job has is replaced over the list (addressableJobs).
  */
@@ -237,6 +261,11 @@ export function completeJob(job) {
   // A choice named in other words ('LinkedIn', 'On-site') → its id; an interview → an id of its own.
   const source = sourceId(job.source);
   if (source !== null && source !== job.source) set('source', source);
+  // A day written another way ('2026-10-15T00:00:00.000Z') → 'YYYY-MM-DD', or no page shows it.
+  for (const key of DAY_FIELDS) {
+    const day = jobDay(job[key]);
+    if (day !== job[key]) set(key, day);
+  }
   const workMode = workModeId(job.workMode);
   if (workMode !== null && workMode !== job.workMode) set('workMode', workMode);
   if (Array.isArray(job.interviews)) {

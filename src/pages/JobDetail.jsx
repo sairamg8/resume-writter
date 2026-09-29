@@ -14,7 +14,7 @@ import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { jobTone } from '@/components/job/jobTone';
 import { isOpen, linkedResume } from '@/utils/jobQuery';
 import { safeHref } from '@/utils/richText';
-import { formatDateTime, relativeTime } from '@/utils/uiFormat';
+import { formatDateTime, parseISODay, relativeTime } from '@/utils/uiFormat';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Info },
@@ -23,6 +23,9 @@ const TABS = [
 ];
 
 const nameIn = (list, id) => list.find((x) => x.id === id)?.label ?? '';
+
+/** A day's pill; a day no pill can read (an imported 'next week') as it is written, not a blank row. */
+const dayOf = (value, pill) => value && (parseISODay(value) ? pill : value);
 
 /** One row of the Details box: its name, and the value (or "None"). */
 function Row({ label, children }) {
@@ -154,9 +157,9 @@ export function JobDetail({ store }) {
           <section className="rounded-md border border-line">
             <h2 className="border-b border-line px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>
             <div className="flex flex-col px-2 py-1.5">
-              <Row label="Applied">{job.appliedDate && <DatePill value={job.appliedDate} kind="plain" size="sm" />}</Row>
-              <Row label="Deadline">{job.deadline && <DatePill value={job.deadline} done={closed} size="sm" />}</Row>
-              <Row label="Follow up">{job.followUpDate && <DatePill value={job.followUpDate} done={closed} size="sm" />}</Row>
+              <Row label="Applied">{dayOf(job.appliedDate, <DatePill value={job.appliedDate} kind="plain" size="sm" />)}</Row>
+              <Row label="Deadline">{dayOf(job.deadline, <DatePill value={job.deadline} done={closed} size="sm" />)}</Row>
+              <Row label="Follow up">{dayOf(job.followUpDate, <DatePill value={job.followUpDate} done={closed} size="sm" />)}</Row>
               <Row label="Location">{job.location}</Row>
               <Row label="Work mode">{nameIn(WORK_MODES, job.workMode)}</Row>
               <Row label="Salary">{job.salary}</Row>
