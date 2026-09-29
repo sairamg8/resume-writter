@@ -33,3 +33,17 @@ test('a degree over its school, and a school under its degree\'s dated line, rea
     ['Stanford University', 'MBA', '2013', '2015', ''],
   ]);
 });
+
+// Review of R5-HUNT4-TEXT-IMPORT-SCHOOL-OVER-DEGREE-DATE-CONSECUTIVE: with each degree's dated line
+// over its school, a line under a school that names another school ("Exchange semester at University
+// of Tokyo") was taken for the next degree's school, whose own went into its description.
+test('a line naming a school under a degree-over-school entry stays that entry\'s description', () => {
+  const want = [
+    ['Stanford University', 'MBA', '2013', '2015', '<p>Exchange semester at University of Tokyo</p>'],
+    ['University of Texas at Austin', 'B.S. Electrical Engineering', '2007', '2011', ''],
+    ['MIT', 'M.S. Physics', '2003', '2007', ''],
+  ];
+  assert.deepEqual(schools('Jane Doe\njane@x.com\n\nEDUCATION\nMBA\t2013 - 2015\nStanford University\nExchange semester at University of Tokyo\nB.S. Electrical Engineering\t2007 - 2011\nUniversity of Texas at Austin\nM.S. Physics\t2003 - 2007\nMIT'), want);
+  want[0][4] = '<ul><li>Dean list</li></ul><p>Exchange semester at University of Tokyo</p>';
+  assert.deepEqual(schools('Jane Doe\njane@x.com\n\nEDUCATION\nMBA\t2013 - 2015\nStanford University\n• Dean list\nExchange semester at University of Tokyo\nB.S. Electrical Engineering\t2007 - 2011\nUniversity of Texas at Austin\nM.S. Physics\t2003 - 2007\nMIT'), want);
+});

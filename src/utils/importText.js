@@ -902,13 +902,22 @@ function entriesOf(type, lines, aside) {
     return null;
   };
   const names = (b, L) => Boolean(way(b, L));
+  // A school right after the entry above is this entry's only where that entry's school is over its
+  // dated line too: its header ends at its date (and named fields). Under "MBA ⇥ 2013 – 2015" over
+  // "Stanford University", a line such as "Exchange semester at University of Tokyo" is that entry's
+  // description, not the next degree's school (which is under the next degree's dated line).
+  const schoolFirstAbove = () => {
+    const last = cur?.header.filter((h) => !isMetaLine(h.text)).at(-1);
+    return !cur || Boolean(last?.date);
+  };
   /** That line over `L`, or null. */
   const titleOver = (L) => {
     const body = pool();
     const b = body[body.length - 1];
     const before = b && info[b.index - 1];
     return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
-      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L))) ? b : null;
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L)
+        && (way(b, L) !== 'school' || schoolFirstAbove()))) ? b : null;
   };
   // The line under a dated line that is the next entry's title over its own dated line (the next degree
   // over the next school), where this entry's is over it too and names its degree (or role) the same
