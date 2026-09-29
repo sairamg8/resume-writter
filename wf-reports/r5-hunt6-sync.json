@@ -1,0 +1,68 @@
+{
+  "cluster": "r5-hunt6-sync",
+  "branch": "claude/wf-r5-hunt6-sync",
+  "base": "a79efd8b",
+  "rows": [
+    {
+      "id": "R5-HUNT6-TWO-TABS-DOUBLE-CONFLICT-COPY",
+      "title": "With two tabs open, one conflict between devices produced two identical '(conflict copy)' résumés",
+      "outcome": "fixed",
+      "commits": [
+        "ea8402169494fe62e5978f69556f4e5bd51b6242"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-two-tabs-one-conflict-copy.test.mjs"
+      ],
+      "summary": "Now: a conflict copy's id is <docId>-conflict-<otherUpdatedAt> (conflictId in src/utils/cloudSyncLineage.js), so two tabs or two devices that find the same fork write the same copy. If the version is not a number, the id stays random. initialSync (src/utils/cloudSyncEngine.js) takes its lineage base from the store as it was before the cloud read. Review: the merge (mergeResumeLists, by id with the newer version winning) and the flush put-back (restoreResumes, which replaces by id) both dedupe the shared id without losing a later edit of the copy. When a first sync has no base from before its read (both tabs signing in for the first time), no fork is detected and the newer copy wins, which is the documented behaviour.",
+      "failfirst_run": "36604599233 (green: # fail 3 without, pass with; log read by reviewer)"
+    },
+    {
+      "id": "R5-HUNT6-UNDO-AFTER-SIGN-OUT-UPLOADS-TO-NEXT-ACCOUNT",
+      "title": "Undo on a deleted job, a cleared job list or a deleted project after sign-out put the last account's data back, and the next account uploaded it",
+      "outcome": "fixed",
+      "commits": [
+        "c95acbae617c64655ace5410a50dea5eea7d73aa",
+        "dbdfc786ba7118b3598c703d737300f13da26c12"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-undo-after-sign-out.unit.mjs",
+        "tests/unit/r5-hunt6-undo-demo-project-next-account.unit.mjs"
+      ],
+      "summary": "Now: job, job-list and project Undo put things back only into the list they came from, meaning the same sync-record uid (useJobStore takenFrom, boardActions owner). The same account signed in again still gets its Undo, and a browser that never signed in works as before. Reviewer addition (dbdfc78): issue, column and sprint Undo (boardActions deleteIssue/deleteColumn/deleteSprint and their restores) now carry the same owner check. The demo project has the same id (demo_board_life) in every account, so these Undos used to put account A's issue, column or sprint into account B's demo project, which then uploaded them.",
+      "failfirst_run": "36604599233 (c95acba green: # fail 3 without, pass with); 36606748377 (dbdfc78: green: # fail 1 without, pass with; log read)"
+    },
+    {
+      "id": "R5-HUNT6-SIGN-IN-ERROR-STALE",
+      "title": "An old sign-in error bubble came back after sign-out, although a later sign-in worked",
+      "outcome": "fixed",
+      "commits": [
+        "03b5b4d770650d280d81bc751982d532f9a72e16"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-sign-in-error-clears-on-sign-in.test.mjs"
+      ],
+      "summary": "Now: AuthBar clears signInError during render (a guarded setState) whenever a user is signed in. The error is shown only while signed out, and AuthBar is the only sign-in entry point, so no other path has this defect.",
+      "failfirst_run": "36604599233 (green; log read by reviewer)"
+    }
+  ],
+  "review": {
+    "issuesFound": [
+      "R5-HUNT6-UNDO-AFTER-SIGN-OUT-UPLOADS-TO-NEXT-ACCOUNT: the fix covered project, job and job-list Undo but not issue, column or sprint Undo. Those restore into any project with the same id, and the demo project (demo_board_life) has one id in every account. So A's issue, column or sprint deleted in the demo project, then sign-out and B's sign-in, then Undo put it into B's demo project and uploaded it to B's cloud."
+    ],
+    "issuesFixed": [
+      "dbdfc786ba7118b3598c703d737300f13da26c12: deleteIssue, deleteColumn and deleteSprint record the owner; restoreIssue, restoreColumn and restoreSprint refuse once the list belongs to another account or to none. The same account signed in again still restores. Test: tests/unit/r5-hunt6-undo-demo-project-next-account.unit.mjs, fail-first 36606748377 (green: # fail 1 without, pass with; log read)."
+    ],
+    "open": [
+      "Low, not blocking: the job-task and issue-checklist Undo (useRemoveWithUndo) write through updateJob and updateIssue by id. If the next account signs in while that toast is still up and holds the demo job or demo issue with the same id, A's task text could land in B's copy. This needs a sign-out and a sign-in to another account within the toast's 5 s. Noted, not fixed.",
+      "Low, not blocking: using the lineage base from before the read can, in a narrow race (another tab syncs X and a phone edits X again, all during this tab's cloud read), make an extra conflict copy where one tab would have pulled the phone's copy. No data is lost; the copy is conservative."
+    ],
+    "ciRuns": [
+      "36604599233 fail-first ea84021/c95acba/03b5b4d (green, logs read)",
+      "36604610083 tests at ea84021 (green)",
+      "36606748377 fail-first dbdfc78 (green: # fail 1 without, pass with; log read)",
+      "36606778881 tests at dbdfc78 (green: 528/528 pass): the 3+1 new tests plus 88 existing tests over cloud sync 18-*, the job store and sync, the board store, sync and pages, and AuthBar/sign-in"
+    ],
+    "commitRules": "All 4 commits are authored and committed by sairamgudiputi <sairamgudiputi8@gmail.com>, with no trailers and no mention of AI."
+  },
+  "notes": "No existing test was weakened; the branch only adds test files. Out of scope and untouched: accessibility, docs/tracking and private/."
+}
