@@ -1,0 +1,78 @@
+{
+  "cluster": "r5-hunt1-jobs",
+  "branch": "claude/wf-r5-hunt1-jobs",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-JOBFORM-DRAFT-REVERTS-NEWER-FIELDS",
+      "title": "A restored job-form draft saves back an old status, history entry and location changed elsewhere since",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "480dc4bde6025b50fcd8a0ea29dd6f393db3ef1e"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt1-job-form-draft-typed-fields.test.mjs"
+      ],
+      "summary": "Now: the job form's sessionStorage draft (jobform:<id> / jobform:new) holds only the fields the user changed (formPatch(start, form)), not the whole form. On return those fields are laid over the job as it is now (jobFormValues of the current job), so a field the user never touched shows and saves the job's current value. Before, the draft held every field as it was when written: restored over a job moved on the board or edited in another tab, the old status and location differed from the job, Save counted them as edits and moved the job back to its old status with a false history entry (J-02's overwrite through the draft). A draft whose changes all equal the job as it is now is not restored. Change in src/pages/JobForm.jsx (draft effect). The existing R4-DUX-06 draft tests (102-r4-dux-06-*) still pass: they only check that a draft exists or is cleared.",
+      "product_call": "A field the user did change still wins over a change made elsewhere to that same field: it is what they typed and the Restored line offers Discard.",
+      "remaining": "A draft written by the previous build (the whole form) and still in an open tab's sessionStorage across the deploy is restored whole, as before; it goes away at the first Save, Discard or tab close.",
+      "failfirst_run": "36525125786 (failfirst job 109266399316: '# fail 2' with the diff reversed, passes with it); named tests and lint green in the same run"
+    },
+    {
+      "id": "R5-HUNT1-SUMMARY-FOLLOWUPS-UNSORTED-TRUNCATED",
+      "title": "Summary's Follow-ups due lists the first six in board order and hides the rest without a word",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "fd4ba49eea25d9598e9457dc6b948297c7c9c1c1"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt1-summary-follow-ups-sorted.test.mjs"
+      ],
+      "summary": "Now: the Job Summary's 'Follow-ups due' card sorts the due jobs by followUpDate, most overdue first, as Upcoming deadlines sorts by date, and still shows six. When more are due, a '+N more follow-up(s) due' line under the list counts the hidden ones. Before, the six shown were whichever came first in board order, so the most overdue could be the ones hidden, with nothing saying more were due. followUpDate is always a 'YYYY-MM-DD' string here (isFollowUpDue tests it against ISO_DAY; readJob keeps it text), so the localeCompare sort cannot throw. Change in src/components/job/JobSummary.jsx.",
+      "product_call": "The count line is plain text; the Job Tracker's follow-up-due filter lists them all.",
+      "remaining": "None.",
+      "failfirst_run": "36525125786 (failfirst job 109266399436: '# fail 1' with the diff reversed, the sort-and-count test; the 'six or fewer add no line' test is a guard and passes either way); passes with the fix"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "id": "rev-1",
+            "row": "R5-HUNT1-JOBFORM-DRAFT-REVERTS-NEWER-FIELDS",
+            "issue": "Is the stored patch readable by the restore? formPatch writes only FORM_FIELDS keys with the form's own values, and the restore reads only FORM_FIELDS keys whose type matches the current start, so the patch round-trips (numbers for excitement, strings elsewhere).",
+            "resolution": "No change needed: checked in src/utils/jobEdits.js (FORM_FIELDS, formPatch, jobFormValues)."
+          },
+          {
+            "id": "rev-2",
+            "row": "R5-HUNT1-JOBFORM-DRAFT-REVERTS-NEWER-FIELDS",
+            "issue": "Old whole-form drafts left in sessionStorage by the previous build restore every field, stale ones included.",
+            "resolution": "Accepted: no worse than before, limited to a tab open across the deploy, and cleared by the first Save, Discard or tab close. A patch cannot be told apart from a whole form reliably. Recorded under remaining."
+          },
+          {
+            "id": "rev-3",
+            "row": "R5-HUNT1-JOBFORM-DRAFT-REVERTS-NEWER-FIELDS",
+            "issue": "New-job drafts: only typed fields are kept, so an untouched applied-date prefill is today's on return instead of the day the draft was written; a status picked on the form keeps its withFormStatus applied date because both change together and both go into the patch.",
+            "resolution": "No change needed: the untouched prefill following today is the intended J-10 behaviour."
+          },
+          {
+            "id": "rev-4",
+            "row": "both",
+            "issue": "Do the fail-first runs really fail without the fixes?",
+            "resolution": "Confirmed from the CI logs of run 36525125786: job 109266399316 prints 'fail without the fix (its diff reversed): # fail 2' then 'pass with it'; job 109266399436 prints '# fail 1' then 'pass with it'."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Two hunt findings in the job tracker, both fixed by the fixer (480dc4b, fd4ba49) and confirmed by the reviewer: both cure the root cause, touch no exporter, template or stored job data (only the per-tab sessionStorage draft format changes), and no other code reads jobform:* keys. Run 36525125786 is green (lint, 23 named test files, both failfirst jobs). Review found no confirmed defect, so the reviewer changed no code. Seen but not in scope here: the Summary's Upcoming deadlines card also shows six with no count of the rest (it hides the farthest ones, so it is less harmful); not reported as a row."
+}

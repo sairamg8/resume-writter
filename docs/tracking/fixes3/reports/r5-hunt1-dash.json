@@ -1,0 +1,51 @@
+{
+  "cluster": "r5-hunt1-dash",
+  "branch": "claude/wf-r5-hunt1-dash",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-DASHBOARD-DOUBLE-CLICK-DUPLICATE-RECORDS",
+      "title": "A double-click on a card's Copy, on New Cover or on the dashed New Cover Letter card makes two records",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "4f2d8588cf327e9183dda08081c701fbc24d9e7e",
+        "465faa5ee4fa6b93bfe77b37b782f1ed1a28e1b9"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt1-dash-double-click.test.mjs"
+      ],
+      "summary": "Now: a double-click on a card's Copy, on New Cover (with no résumé or one), or on the dashed New Cover Letter card makes one copy or letter and opens it. Before, the editor is a lazy route and React Router opens it as a transition, so the Dashboard stayed on screen and clickable while the editor's code loaded, and the second click made a second record that was saved and synced. src/pages/Dashboard.jsx now has a once-per-visit `made` ref, the same guard NewResume uses. Copy and every letter made through newLetter (including a pick in the picker) go through it, and a failed duplicate (a null id) does not use up the guard. Review follow-up 465faa5: Back to the dashboard before the editor's code arrives left the Dashboard mounted with its guard used, so Copy and New Cover did nothing until the page mounted again. The guard now resets when the Dashboard shows a new address at /. While the editor is loading, the Dashboard never commits another address, so a double-click still makes one record.",
+      "failfirst_run": "36524559500 (green: 4f2d858, 4 of 4 tests fail without the fix, pass with it); 36526699812 (green: 465faa5, the 2 Back tests fail without the follow-up, pass with it; named tests 95/95 pass; lint passes)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Back before the editor opens leaves Copy and New Cover dead on a still-mounted Dashboard"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Regression from 4f2d858, which the fixer listed as a known limit: with the editor chunk still loading, pressing Back returns to / while the Dashboard is still mounted with made.current true. Copy, New Cover and a picker pick then did nothing until the Dashboard mounted again. Before the fix they worked.",
+        "severity": "low",
+        "resolution": "fixed in 465faa5: useEffect on useLocation() resets the guard when the committed address is /. In the real app the Dashboard never commits the pending /resume/:id address, because its route is the one suspended, so a double-click is still guarded. Two new tests cover it: Copy after Back, and New Cover after Back. Fail-first run 36526699812: 2 tests fail without the change and pass with it."
+      }
+    ],
+    "fixedByReviewer": [
+      "465faa5ee4fa6b93bfe77b37b782f1ed1a28e1b9"
+    ]
+  },
+  "rejected": [
+    {
+      "claim": "NewResume (/new) has the same Back-while-loading limit",
+      "reason": "It is older than this diff and outside it; noted only. /new replaces itself in history (navigate with replace), so Back from the pending editor leaves /new rather than coming back to it, which makes the case rarer there."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Fail-first logs were read. 36524559500 reports '# fail 4' without 4f2d858 and a pass with it. 36526699812 reports '# fail 2' without 465faa5 and a pass with it. Named tests 95/95 pass on 465faa5: the new test, 96-dashboard, 99-cover-letters, 104-r5-dlg-new-letter-dialog, 99-public-link, 99-import-ui, imp-import-busy, 102-r4-dux-11-import-error-stays, 80-dashboard-import-read-error, 91-starter-modal, 104-r5-r2148-public-copy-follows-deletion and knowledge-docs. Store callers are unchanged: duplicateResume and createLetter are called only from the Dashboard. Import has its own guard (importBusy). The full gate has not run on this head."
+}
