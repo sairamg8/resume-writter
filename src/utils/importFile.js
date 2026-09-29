@@ -100,7 +100,7 @@ export function docxXmlLines(xml, links = {}) {
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
   // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
   // `para`'s text from `at` as a link to `to` (linkText), kept in its links for the rich text (R4-LO-05).
   const link = (para, at, to) => {
@@ -161,7 +161,10 @@ export function docxXmlLines(xml, links = {}) {
     else if (!para) continue;
     else if (m[1] !== undefined) para.props = m[1];
     else if (m[2] !== undefined) para.text += xmlText(m[2]);
-    else para.text += m[3] === 'tab' ? '\t' : '\n';
+    // A non-breaking hyphen (Ctrl+Shift+-, "2019‑2021" kept on one line) is a hyphen; a soft one
+    // (an optional break) is nothing. Before, both were dropped, and "2019‑2021" read "20192021".
+    else if (m[3] === 'noBreakHyphen') para.text += '-';
+    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
 }

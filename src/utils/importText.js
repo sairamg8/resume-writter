@@ -286,15 +286,22 @@ export function markdownLines(md) {
 const MONTH = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?';
 const SEASON = '(?:spring|summer|fall|autumn|winter)';
 /** One date as the app's Date formats print it, or as people type it: "Mar 2021", "03/2021", "2021-03", "2021". */
-const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*\\d{1,2}(?!\\d)|(?:19|20)\\d{2})`;
+const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*(?:0?[1-9]|1[0-2])(?!\\d)|(?:19|20)\\d{2})`;
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
-const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
+// A hyphen typed as Unicode's own, the non-breaking one ("2019‑2021" in a PDF of a Word file, text
+// pasted from one) or the minus sign, is a dash too.
+const DASHES = '\\u2010\\u2011\\u2012\\u2212';
+const SEP = `\\s*(?:[-${DASHES}–—~]|to|until|through)\\s*`;
 // "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
 // come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
 const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
 const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
-const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}))?(${AHEAD_AFTER})?$`, 'i');
-const END_ONLY = new RegExp(`^(?:(?:[-–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
+// "(4 years 9 months)", "· 3 yrs 2 mos": how long it lasted, after the range as LinkedIn's PDF prints it.
+const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?|months?|mos?)\\.?(?:,?\\s*(?:and\\s+)?\\d+\\s*(?:months?|mos?)\\.?)?)';
+const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
+const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}|\\d{2}(?!\\d)))?(${AHEAD_AFTER})?(?:${LENGTH_AFTER})?$`, 'i');
+const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
+const END_ONLY = new RegExp(`^(?:(?:[-${DASHES}–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
@@ -305,6 +312,13 @@ export function readDateRange(text) {
   let m = RANGE.exec(t);
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
   if (/\([^)]*$/.test(t)) t = `${t})`;
+  // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
+  // "2011-12" is read as December 2011 above (the app's YYYY-MM Date format), so only a hyphen with
+  // two digits over 12, or another dash, gets here.
+  if (m && /^\d{2}$/.test(m[3] || '')) {
+    if (!/^\d{4}$/.test(m[2]) || Number(m[3]) <= Number(m[2].slice(2))) m = null;
+    else m[3] = m[2].slice(0, 2) + m[3];
+  }
   if (m) {
     // "May 2025 (Expected)": one date still to come is the end, not the start.
     if (m[4] && !m[3] && !m[1]) return { start: '', end: tidy(m[2]), current: false, text: t };
@@ -337,7 +351,7 @@ function trailingDate(text) {
 
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
-const PHONE = /^(?:tel:)?\+?[\d\s().\-/]{7,}$/;
+const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
 /** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
 const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
 /** A part of a place with a "|" typed in it: "London" in "London | Remote". */
@@ -355,6 +369,15 @@ const PLACE = {
     const parts = s.split(TYPED_PIPE).map((p) => p.trim());
     return parts.length > 1 && parts.every((p) => PLACE_PART.test(p)) && parts.some((p) => ONE_PLACE.test(p));
   },
+};
+/**
+ * A place's last part, a state, province or country: "…, SC", "…, Ohio", "…, United Kingdom". A job title
+ * with a comma ("Product Manager, Payments", "Engineer, QA") ends in none (the header's title test).
+ */
+const REGION_END = {
+  CODE: /,\s*(?:A[BKLRZ]|C[AOT]|D\.?C\.?|DE|FL|GA|HI|I[ADLN]|KS|KY|LA|M[ABDEINOST]|N[BCDEHJLMSTUVY]|O[HKNR]|P[AE]|QC|RI|S[CDK]|T[NX]|UT|V[AT]|W[AIVY]|YT|NSW|VIC|QLD|TAS|ACT|UK|USA?|UAE)\.?$/,
+  NAME: /,\s*(?:alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|ontario|quebec|british columbia|alberta|united states(?: of america)?|united kingdom|england|scotland|wales|ireland|canada|australia|new zealand|india|germany|france|spain|italy|netherlands|portugal|poland|sweden|switzerland|singapore|japan|china|brazil|mexico|south africa|nigeria|kenya|pakistan|philippines|united arab emirates)$/i,
+  test(text) { return this.CODE.test(text) || this.NAME.test(text); },
 };
 /** A contact's name before it: "Email: …", "LinkedIn - …". */
 const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address|based in)\s*[:\-–]\s*/i;
@@ -423,7 +446,13 @@ function contactRun(piece) {
 // ── Entries ──────────────────────────────────────────────────────────────────
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
-const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean);
+const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean)
+  // A range's length set apart at "·" ("Jan 2020 – Present · 3 yrs 2 mos") is part of its date.
+  .reduce((out, p) => {
+    if (out.length && LENGTH_ONLY.test(p) && readDateRange(out[out.length - 1])) out[out.length - 1] += ` · ${p}`;
+    else out.push(p);
+    return out;
+  }, []);
 /** Whether a line holds a date: an entry heading with one under it is no grouped employer (loneFields, roleEntries). */
 const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate(p));
 /** A header piece's fields: "Company — Role", "Company - Role". */
@@ -1245,7 +1274,15 @@ export function resumeFromText(input) {
     // A contact line set apart at dashes or commas is none either; one led by a field that is no
     // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
     const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
-    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
+    // A job title with a comma in it ("Product Manager, Payments") reads as a place: a role word says
+    // it is the title, as the entries' rules check. Before, it became the location, and the real one
+    // on the contact line went to "Additional Information".
+    // Not a town with a role word in its name ("Hilton Head, SC", "Mentor, Ohio", "Lead, SD") alone under
+    // the name: one that ends in a state or country is the title only when the header has its place elsewhere.
+    const contact = t && contactOf(t.text);
+    const placeElsewhere = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => contactRun(p) || [p]).some((p) => contactOf(p)?.key === 'location'));
+    const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text) && (!REGION_END.test(t.text) || placeElsewhere());
+    if (t && headerPieces(t.text).length === 1 && (!contact || role) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
     } else if (run && !isContact(run[0])) {
