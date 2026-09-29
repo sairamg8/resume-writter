@@ -1,0 +1,89 @@
+{
+  "cluster": "r5-hunt1-tools",
+  "branch": "claude/wf-r5-hunt1-tools",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-ATS-JD-PHRASE-SUBSTRING-MATCH",
+      "title": "Job scanner finds its fixed tech phrases inside other words ('storefront endpoints' reads as 'front end', 'ecosystem design' as 'system design')",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "02c34920b0bf262ad28c774aca039c7a8be9abea"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt1-ats-jd-phrases.unit.mjs"
+      ],
+      "summary": "Now: the job scanner matches its fixed tech phrases as whole words, in both the posting and the résumé. It uses a new shared wholeWord() regex with Unicode-letter boundaries. So 'storefront endpoints', 'ecosystem design', 'fallback endpoint' and 'interest API' no longer produce 'front end', 'system design', 'back end' or 'rest api'. The same regex replaces the plain includes() check for keywords that contain '/', '.' or a space, such as CI/CD, Node.js and 'machine learning'. The chip's casing now comes from the text where the phrase was found, so an 'İ' earlier in the posting no longer shifts it: the chip reads 'Machine Learning', not 'achine Learning'.",
+      "failfirst_run": "36525677916 (green: the test fails 3 without the fix, checked with its parent's files, and passes with it; reviewer read the log)"
+    },
+    {
+      "id": "R5-HUNT1-ATS-JD-DOTNET-STRIPPED",
+      "title": "'.NET' in a job posting becomes the keyword 'NET', which 'net revenue' matches and '+' writes into Skills",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "099fc1e44ad57136a82693cb83190fd9b0753ad0",
+        "c2c810704e8a3d5b7b965c4e25a9a85ba610bbf3"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt1-ats-jd-dotnet.unit.mjs",
+        "tests/unit/r5-hunt1-ats-jd-dotnet-address.unit.mjs"
+      ],
+      "summary": "Now: a single leading dot before a letter is kept, so '.NET' stays the keyword '.NET' and '+' writes '.NET' into Skills. An ellipsis or a lone dot is still stripped. A keyword that starts with a dot needs no boundary before it, so it matches '.NET' and 'ASP.NET' but not 'net revenue'. Reviewer fix (c2c8107): that same rule also matched the end of every .net address on the résumé. A keyword that starts with a dot is now searched in the corpus with the e-mail and web addresses left out: header e-mail, website, LinkedIn and GitHub without a display label, a reference's e-mail and a project's link. So 'anna@weber.net' or 'annaweber.net' no longer marks '.NET' as matched. Every other keyword still reads the full corpus.",
+      "failfirst_run": "36525677916 (099fc1e: fails 3 without, passes with); 36527588549 (c2c8107: fails 2 without, passes with, 'its diff reversed'; named tests 118/118 pass)"
+    },
+    {
+      "id": "R5-HUNT1-ATS-CORPUS-EMPTY-SECTION-TITLE",
+      "title": "Job match counts the title of a section that prints nothing (all entries hidden, or none)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "5a3d826d3ca8c14c4d788577957c1c8c7741a548"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt1-ats-corpus-empty-section.unit.mjs"
+      ],
+      "summary": "Now: extractResumeCorpus adds a section's title only when the section prints, meaning it is visible and shownItems(...).length > 0. This is the same rule as the score's visibleSections and the PDF's sectionPrints; Word, Markdown and ATS text also leave such a section out (R2-057). A section whose entries are all hidden, or that has none, no longer adds its heading's words to Matched Keywords.",
+      "failfirst_run": "36525677916 (green: the test fails 2 without the fix, checked with its diff reversed, and passes with it; reviewer read the log)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT1-ATS-JD-DOTNET-STRIPPED: the '.NET' keyword (no boundary before its dot, so that ASP.NET matches) also matched a .net e-mail or web address on the résumé"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "id": "R5-HUNT1-ATS-JD-DOTNET-STRIPPED (review 1)",
+        "issue": "wholeWord('.net') has no lead boundary, so it matched 'anna@weber.net', a bare website 'annaweber.net', a project link 'shop.net' or a reference's e-mail. A résumé that never names .NET showed it as matched, and '+' never offered it. This was also true before the fix (the old 'NET' keyword matched after a dot), so it is not a regression, but the fix's claim that .NET matches only .NET and ASP.NET did not hold.",
+        "resolution": "Fixed in c2c8107 by the reviewer: extractResumeCorpus(resume, { addresses: false }) leaves out e-mail and web addresses, and matchResumeWithJob uses that corpus only for keywords that start with a dot. The default corpus is unchanged for all other callers and keywords. Test tests/unit/r5-hunt1-ats-jd-dotnet-address.unit.mjs; run 36527588549 shows fail-first fails 2 without the fix and passes with it, and the named ATS, guard and knowledge-docs tests pass 118/118."
+      },
+      {
+        "id": "fail-first logs",
+        "issue": "The fixer had not read the logs of two of its fail-first jobs.",
+        "resolution": "Read by the reviewer. Phrases: '# fail 3' without the fix (checked with its parent's files, because the later dotnet commit changed nearby lines), then pass. Empty section: '# fail 2' without the fix (its diff reversed), then pass. Both are valid."
+      }
+    ],
+    "fixedByReviewer": [
+      "c2c810704e8a3d5b7b965c4e25a9a85ba610bbf3"
+    ]
+  },
+  "rejected": [
+    {
+      "id": "phrase split across a line break or double space",
+      "reason": "A posting's 'Machine\\nLearning' or 'machine  learning' is not found as the phrase. The old indexOf missed it too, so this is not a regression of this cluster. It was not fixed; noted only."
+    },
+    {
+      "id": "exporters / stored data",
+      "reason": "Checked: only src/utils/atsChecker.js changed, and only AtsCheckerPanel consumes the job match. No PDF, Word or Markdown exporter and no stored-data shape is touched. A keyword chip added with '+' ('.NET') matches again once it is in Skills."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Three fixes in src/utils/atsChecker.js, plus one reviewer follow-up (c2c8107) for .net addresses matching '.NET'. The fixer's CI run 36525677916 and the reviewer's run 36527588549 are both green: tests and lint passed, and every fail-first job fails without its fix and passes with it (all logs read). The full gate (suite, Playwright, Cypress, build) has not run on this head; it is left for the batch gate. docs/tracking/ was not edited."
+}
