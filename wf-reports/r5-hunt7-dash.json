@@ -8,14 +8,33 @@
       "title": "The own-details role starter on /new drops the user's US Letter paper size and uploaded contact icons, so the new résumé prints on A4 with stock icons",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["a16314bf387bd70aedfee8f0b85551fdca30ebac"],
-      "tests": ["tests/unit/r5hunt7-starter-keeps-paper-icons.unit.mjs", "tests/pdf/r5hunt7-starter-look-keeps-paper-icons.test.mjs"],
+      "commits": [
+        "a16314bf387bd70aedfee8f0b85551fdca30ebac"
+      ],
+      "tests": [
+        "tests/unit/r5hunt7-starter-keeps-paper-icons.unit.mjs",
+        "tests/pdf/r5hunt7-starter-look-keeps-paper-icons.test.mjs"
+      ],
       "summary": "Now: a role starter on /new takes the user's paper size and uploaded contact icons along with their name, contacts and photo, so a US Letter user's new résumé stays on US Letter (612 x 792 pt) and shows their own LinkedIn image. This holds on the starter's own look and on every look card, because withLook keeps both settings. The fix is in starterFrom (src/utils/newResume.js). It merges source.settings.customContactIcons (a deep copy, and only when it is a map) and pageSize (through pageSizeOf, with A4 stored as none, as resetDesignSettings does) onto the starter's settings. The rest of the starter's design is unchanged. This matches the look-card path (resumeFrom, then withLook), which already kept both. In templatePresets NOT_A_LOOK and templateSwitch KEPT_ON_UNDO, both keys belong to the user, not to a look.",
       "product_call": "myDesigns (the designs the user saved) is also in NOT_A_LOOK. The row did not name it, so starterFrom does not carry it across. The look-card path copies it with the whole résumé.",
       "remaining": null
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [
+      "No defect found. starterFrom (src/utils/newResume.js) now carries the source's customContactIcons (deep copy, map only) and pageSize (normalised through pageSizeOf, A4 stored as none) onto the starter's settings, the same rule resetDesignSettings uses; its only caller is useResumeStore.createResume, and withLook keeps both keys (KEPT_ON_UNDO / NOT_A_LOOK), which the pdf test pins across every picker card. Older data (icons as an array, no settings, lowercase 'letter') is handled. The PDF, Word, Markdown and ATS exporters read pageSizeOf / customContactIcons from settings unchanged; sync and undo are untouched (a new record).",
+      "Tests pin the intended behaviour: failfirst run 36613589011 on a16314bf shows '# fail 3' with the src diff reversed (unit tests 1-2 and the pdf test; unit test 3 guards that the rest of the starter's design and A4-as-none are unchanged) and pass with it. Named-tests run 36614497922 on 5307022d: 61/61 across 12 files, build, lint and playwright 3/3 green. Base run 36614140565 on r4-green 41b2a7a3 green. The merge 5307022d brings only r4-green's stale-test updates; the branch diff against r4-green is the fix, its 2 tests and the report.",
+      "Not fixed, noted: myDesigns (the user's saved designs) is also NOT_A_LOOK but starterFrom does not carry it, while the look-card path (resumeFrom) copies it with the whole resume. It is stored per resume and a blank resume has none either, so it is left as the product call the report already records."
+    ],
+    "commits": [],
+    "ci": [
+      36613589011,
+      36614497922,
+      36614140565
+    ]
+  },
   "baselineFailures": [
     "tests/pdf/91-starter-modal.test.mjs 'each starter's card creates a résumé from that starter…' and tests/pdf/93-picker-new-resume.test.mjs 'a look picked, then a starter…' failed in run 36613594237 on a16314bf. They expected createResume(name, starterId[, look]) without the fromId argument that the own-details starter added on the base. These tests were stale on the base (a5b1814a) and were updated on claude/r4-green in edf0c8f ('master gate red only on 4 stale starter tests'). After origin/claude/r4-green was merged in (5307022d), they pass in run 36614497922."
   ],
