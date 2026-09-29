@@ -28,3 +28,20 @@ test('a degree and its field, and a grade after the comma, read as before', () =
   assert.deepEqual(one('BSc Computer Science, First Class Honours\t2013 - 2017\nStanford University'), ['BSc Computer Science', 'First Class Honours', 'Stanford University']);
   assert.deepEqual(one('University of California, Berkeley\t2013 - 2017\nBSc Computer Science'), ['BSc Computer Science', '', 'University of California, Berkeley']);
 });
+
+// Review: a degree's own name ("Bachelor of Science") names no subject, so the field after its comma
+// stays the field of study; a grade or a place after the comma is no school; and a school's place
+// ("Harvard University, Cambridge, MA": "MA", "MD" are state codes) is not read as its degree.
+test('"Bachelor of Science, Biochemistry", a grade or a place after the comma: no school', () => {
+  assert.deepEqual(one('Bachelor of Science, Biochemistry, 2015 - 2019'), ['Bachelor of Science', 'Biochemistry', '']);
+  assert.deepEqual(one('Bachelor of Arts, French\t2015 - 2019'), ['Bachelor of Arts', 'French', '']);
+  assert.deepEqual(one('Master of Science, Neuroscience\t2015 - 2019'), ['Master of Science', 'Neuroscience', '']);
+  assert.deepEqual(one('BSc Computer Science, 2:1\t2015 - 2019'), ['BSc Computer Science', '2:1', '']);
+  assert.deepEqual(one('BSc Computer Science, 3.8/4.0\t2015 - 2019'), ['BSc Computer Science', '3.8/4.0', '']);
+  assert.deepEqual(one('Bachelor of Science in Nursing, Seneca\t2015 - 2019'), ['Bachelor of Science in Nursing', '', 'Seneca']);
+});
+
+test('"School, City, ST" over its degree keeps the degree', () => {
+  assert.deepEqual(one('Harvard University, Cambridge, MA\t2015 - 2019\nBA Economics'), ['BA Economics', '', 'Harvard University, Cambridge, MA']);
+  assert.deepEqual(one('Johns Hopkins University, Baltimore, MD\t2015 - 2019\nBS Biology'), ['BS Biology', '', 'Johns Hopkins University, Baltimore, MD']);
+});

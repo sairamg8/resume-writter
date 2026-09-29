@@ -407,6 +407,8 @@ const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
 /** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
 const HONOURS = /\b(honou?rs|distinction|merit|cum laude|summa|magna|first|second|third|class|minor|major|concentration|speciali[sz]ation|track|option|gpa|grade)\b/i;
+/** A degree's own name, which is no subject it is in: the "of Science" of "Bachelor of Science". */
+const DEGREE_NAME = /\b(?:bachelor|master|doctor|associate)'?s?\s+of\s+(?:fine\s+|applied\s+|liberal\s+)?(?:science|arts?|engineering|business\s+administration|laws?|philosophy|education|technology|commerce|music|nursing|medicine|social\s+work|public\s+(?:health|policy|administration)|architecture|design|computer\s+applications)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
@@ -628,7 +630,8 @@ function entryOf(type, header, body, aside = () => {}) {
         else if (!fields.institution && SCHOOL.test(part) && !DEGREE.test(part.split(',')[0])) {
           // "Massachusetts Institute of Technology, BSc Computer Science": the school, then its degree.
           const pair = /^([^,]+),\s*(.+)$/.exec(part);
-          if (pair && !fields.degree && SCHOOL.test(pair[1]) && DEGREE.test(pair[2]) && !SCHOOL.test(pair[2])) [fields.institution, fields.degree] = [pair[1].trim(), pair[2].trim()];
+          // Not "Harvard University, Cambridge, MA": a place after the school, its state no degree ("MA", "MD").
+          if (pair && !fields.degree && SCHOOL.test(pair[1]) && DEGREE.test(pair[2]) && !SCHOOL.test(pair[2]) && !PLACE.test(pair[2])) [fields.institution, fields.degree] = [pair[1].trim(), pair[2].trim()];
           else fields.institution = part;
         }
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
@@ -657,9 +660,12 @@ function entryOf(type, header, body, aside = () => {}) {
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
       // "BSc Computer Science, Stanford University", "B.S. Computer Science, Georgia Tech": with no
       // school found, what follows a degree that names its subject is the school — a school's name,
-      // or one that is no subject nor a grade ("Master of Science, Computer Science" is a field).
+      // or one that is no subject nor a grade ("Master of Science, Computer Science" is a field). A
+      // degree's own name names no subject ("Bachelor of Science, Biochemistry" is a field), and a
+      // grade ("2:1", "3.8/4.0") or a place ("Boston, MA") after the comma is no school.
       const school = comma && !fields.institution && DEGREE.test(comma[1]) && !DEGREE.test(comma[2])
-        && (SCHOOL.test(comma[2]) || (SUBJECT.test(comma[1].replace(DEGREE, '')) && !SUBJECT.test(comma[2]) && !HONOURS.test(comma[2])));
+        && (SCHOOL.test(comma[2]) || (SUBJECT.test(comma[1].replace(DEGREE_NAME, '').replace(DEGREE, '')) && !SUBJECT.test(comma[2])
+          && !HONOURS.test(comma[2]) && /^\p{L}\D*$/u.test(comma[2]) && !PLACE.test(comma[2])));
       if (school) { fields.degree = comma[1].trim(); fields.institution = comma[2].trim(); }
       else if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
