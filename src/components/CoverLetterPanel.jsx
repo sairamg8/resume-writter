@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette, Sparkles } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
@@ -18,7 +18,13 @@ const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, lin
 
 export default function CoverLetterPanel({ resume, coverLetter, personal, settings, template, updateCoverLetter, updateSetting, clearSettings }) {
   const [generatorOpen, setGeneratorOpen] = useState(false);
-  const { toast } = useToast(); // the Editor's notices; outside a ToastProvider, none
+  const { toast, dismiss } = useToast(); // the Editor's notices; outside a ToastProvider, none
+  // The résumé open now, for an Apply's Undo clicked later: updateCoverLetter writes to whichever
+  // résumé is active, so Undo writes only while it is still the one Apply wrote to.
+  const openId = useRef(resume?.id);
+  openId.current = resume?.id;
+  // Another résumé opened (or imported), or the panel left, takes Apply's Undo away with it.
+  useEffect(() => () => dismiss('letter-generated'), [resume?.id, dismiss]);
   const cl = coverLetter || {};
   const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
   const photoInputRef = useRef(null);
@@ -85,6 +91,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
       if (cl.signatureDesignation === 'Professional') next.signatureDesignation = '';
     }
     const before = Object.fromEntries(Object.keys(next).map(key => [key, cl[key]]));
+    const appliedTo = resume?.id;
     for (const [key, value] of Object.entries(next)) updateCoverLetter(key, value);
     // Apply writes over what the user wrote (the body above all), so its notice has an Undo that
     // puts back every field Apply touched, as it was (R4-DUX-04).
@@ -93,7 +100,13 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
       title: 'Generated letter applied',
       description: 'Its body, subject and recipient replaced the letter\'s.',
       duration: 10000,
-      action: { label: 'Undo', onClick: () => { for (const [key, value] of Object.entries(before)) updateCoverLetter(key, value); } },
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (openId.current !== appliedTo) return;
+          for (const [key, value] of Object.entries(before)) updateCoverLetter(key, value);
+        },
+      },
     });
   }
 

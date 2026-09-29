@@ -1,0 +1,64 @@
+{
+  "cluster": "r5-hunt2-dash",
+  "branch": "claude/wf-r5-hunt2-dash",
+  "base": "54b9ec28f19e9684778b75d74230b204737ff3b2",
+  "rows": [
+    {
+      "id": "R5-HUNT2-LETTER-APPLY-UNDO-WRITES-OTHER-RESUME",
+      "title": "The Undo on 'Generated letter applied' writes the first résumé's old letter into another résumé opened within 10 s",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "f24ac36a6af65a5fd64cffcadd1fbdb49e14ff2b"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt2-letter-undo-other-resume.test.mjs"
+      ],
+      "summary": "Now: opening or importing another résumé dismisses the 'Generated letter applied' notice. The Editor and its ToastProvider stay mounted from /resume/A to /resume/B, so the notice used to stay on screen. The panel now uses a useEffect cleanup keyed on resume.id, the same cleanup DesignPanel and PersonalInfoEditorPhoto use. The Undo also compares the open résumé's id with the id captured at Apply, and does nothing if they differ. So an Undo clicked on a notice that is still leaving never writes A's old recipient, company, subject, body or closing into B's letter (updateCoverLetter patches whichever résumé is active). dismiss is a stable useCallback, so the cleanup does not run on every render. Outside a ToastProvider it is the NOOP. The mobile Edit/Preview switch only hides the panel, so the Undo stays there.",
+      "remaining": "Leaving the Cover Letter tab also removes the Undo, as the Design panel's does. This is needed: the unmounted panel's id ref would go stale, and the Editor could then open another résumé while the notice was still up.",
+      "failfirst_run": "36532316252 (job 109288553162: fails without the fix with '# fail 1', passes with it; read from the CI log)"
+    },
+    {
+      "id": "R5-HUNT2-GENERATOR-CITES-HIDDEN-FIELDS",
+      "title": "Cover Letter generator names a company, job title or skills that the user hid with the field's eye",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "65185301c747804bb3e8106273ed6a447fce39bc"
+      ],
+      "tests": [
+        "tests/unit/r5hunt2-generator-hidden-fields.unit.mjs"
+      ],
+      "summary": "Now: extractResumeHighlights treats a field hidden with its eye (item.hiddenFields) as empty, which matches the PDF, Word and Markdown exporters. This covers an Experience entry's role, company and description, a skill group's skills (with no fallback to the old 'name' label, as skillGroup prints nothing) and the personal summary. The letter says 'as <Role>' without a confidential employer and cites no hidden skills. An entry whose role and company are both hidden is skipped for the next one. The Generator modal's 'nothing to draw on' check reads the same highlights, so it stays consistent. The personal title is left as it was: it has no eye and every export prints it. Old data with no hiddenFields, or a non-array value, reads as before.",
+      "remaining": "None.",
+      "failfirst_run": "36532316252 (job 109288553103: fails without the fix with '# fail 3', passes with it; read from the CI log)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "The Undo notice is dismissed when the Cover Letter panel unmounts (a switch to the Résumé, Design or ATS tab), not only when another résumé opens.",
+            "resolution": "Accepted as intended. EditorTabContent unmounts the panel on a tab switch, and after that the panel's open-id ref can no longer see a later switch to another résumé. Keeping the Undo would bring the cross-résumé write back. DesignPanel and PersonalInfoEditorPhoto behave the same way. The mobile Preview toggle only hides the panel (class 'hidden'), so the Undo survives it."
+          },
+          {
+            "issue": "The Undo test passes on the id guard alone. It does not assert that the notice is dismissed after the switch.",
+            "resolution": "Accepted. The guard is what stops the data from being written into the wrong résumé, and the test clicks every Undo still on the page after the switch, including one that is leaving. The dismissal only improves the UX."
+          },
+          {
+            "issue": "Checked for gaps: the generator's other callers, grouped roles, per-template hidden dates or locations, and old stored data.",
+            "resolution": "No problem. CoverLetterGeneratorModal is the only caller and it reads both functions. atsChecker's shownItems only drops dates and location, which the generator never cites. hiddenFields is read defensively with Array.isArray."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Two hunt-2 bugs were fixed on claude/wf-r5-hunt2-dash. The reviewer read both fail-first CI logs in run 36532316252: 'fail without the fix (its diff reversed)' is followed by 'pass with it' for each commit. Named tests and lint are green in the same run, and build, suite, playwright and cypress were skipped by the inputs. Review round 1 found no defects that needed a code change."
+}
