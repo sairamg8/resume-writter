@@ -676,23 +676,40 @@ function placeAfterComma(text) {
   return m && PLACE.test(m[2]) && REGION_END.test(m[2]) && !ROLE.test(m[1]) && !ROLE.test(m[2]) ? [m[1].trim(), m[2].trim()] : null;
 }
 
-/** Two fields in the order the file printed them, `lead` the one that names the role when either does. */
+/** Whether of two fields the first is the role: true, false, or null when neither's words say. */
+function roleLeadsOf(a, b) {
+  if (ROLE.test(a) !== ROLE.test(b)) return ROLE.test(a);
+  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
+  if (CORPORATE.test(a) !== CORPORATE.test(b)) return CORPORATE.test(b);
+  return null;
+}
+
+/** Two fields in the order the file printed them, `roleLeads` whether the role comes first when neither's words say. */
 function roleFirst(a, b, roleLeads) {
   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
-  if (ROLE.test(a) && !ROLE.test(b)) return [a, b];
-  if (ROLE.test(b) && !ROLE.test(a)) return [b, a];
-  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
-  if (CORPORATE.test(b) && !CORPORATE.test(a)) return [a, b];
-  if (CORPORATE.test(a) && !CORPORATE.test(b)) return [b, a];
-  return roleLeads ? [a, b] : [b, a];
+  return (roleLeadsOf(a, b) ?? roleLeads) ? [a, b] : [b, a];
 }
 
 /**
- * One entry of `type` from its header and body lines. `aside(title, texts)`: text the entry has no
- * field for and no description to hold it — a certificate's — kept in "Additional Information" under
- * its name (R4-IMP-01); a description the app never shows would hide it.
+ * Whether a section's jobs lead with the role. A résumé prints every job in a section in one order:
+ * the role first on Sidebar, Executive and Timeline, or where Design's Order says so, else the company.
+ * The jobs whose words tell which field is the role say it for those where nothing does ("Sous Chef —
+ * Chez Panisse" under "Kitchen Manager — Nopa"). Before, those always read company first, so a
+ * role-first résumé's own export came back with the two swapped. None telling: the type's default.
  */
-function entryOf(type, header, body, aside = () => {}) {
+function sectionLeads(type, entries) {
+  let score = 0;
+  for (const e of entries) {
+    if (e.header[0]?.group) continue;
+    const [a = '', b = ''] = inlinePair(headerOf(type, e.header).parts);
+    const lead = b ? roleLeadsOf(a, b) : null;
+    if (lead !== null) score += lead ? 1 : -1;
+  }
+  return score ? score > 0 : type === 'volunteering';
+}
+
+/** An entry's header lines read as entryOf reads them: readHeader's, with a job's place taken out of its title fields. */
+function headerOf(type, header) {
   const h = readHeader(type, header);
   // "Google — Mountain View, CA" over "Software Engineer": a place after the company on its line is
   // the job's location, not its role; the title under it is. Only when neither names a role and a
@@ -723,6 +740,17 @@ function entryOf(type, header, body, aside = () => {}) {
       h.parts = pair.map((p, k) => (k === at ? placed[0] : p));
     }
   }
+  return h;
+}
+
+/**
+ * One entry of `type` from its header and body lines. `aside(title, texts)`: text the entry has no
+ * field for and no description to hold it — a certificate's — kept in "Additional Information" under
+ * its name (R4-IMP-01); a description the app never shows would hide it. `roleLeads`: whether a job
+ * whose words do not tell leads with its role (sectionLeads).
+ */
+function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'volunteering') {
+  const h = headerOf(type, header);
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
@@ -738,7 +766,7 @@ function entryOf(type, header, body, aside = () => {}) {
     case 'volunteering': {
       // A role under its employer (roleEntries): the employer and its place are the group's.
       const group = header[0]?.group;
-      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, type === 'volunteering');
+      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, roleLeads);
       const more = group ? group.lead.map((l) => l.text) : [];
       const location = h.location || take('location') || (group ? group.place : '');
       return itemOf(type, { [type === 'experience' ? 'company' : 'org']: org, role, location, ...dates, description: description([...more, ...lead]) });
@@ -1081,7 +1109,8 @@ function entriesOf(type, lines, aside) {
   } else if (preamble.length) {
     entries[0].body.unshift(...preamble);
   }
-  return entries.map((e) => entryOf(type, e.header, e.body, aside));
+  const leads = JOB.has(type) ? sectionLeads(type, entries) : undefined;
+  return entries.map((e) => entryOf(type, e.header, e.body, aside, leads));
 }
 
 /**
