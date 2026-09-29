@@ -134,7 +134,9 @@ export function createCloudSync({
   /**
    * The public copies of these résumés, deleted in `user`'s account, are taken down (R2-148): a
    * résumé deleted anywhere takes its copy with it. Not waited for; one that fails is tried again at
-   * the next first sync, as the id stays on the account's deletion list.
+   * the next first sync, as the id stays on the account's deletion list. A demo account's original,
+   * flagged rather than removed, loses its copy too: restoring the originals brings the résumé back
+   * but not its link, which its owner publishes again — as after the Dashboard's Delete.
    */
   function unpublishGone(user, ids) {
     if (!publicLinks || !ids.length) return;

@@ -145,6 +145,21 @@ export const TOO_LARGE_CODE = 'too-large';
 export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
+  // The sync's own documents (cloudSyncIo.js): the résumé, and the account's deletion list.
+  const resumeDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'resumes', resumeId);
+  const deletionsDoc = (uid) => fs.doc(db, 'users', uid, 'meta', 'deletions');
+
+  /**
+   * Whether the account holds the résumé again: its document is there, not flagged deleted, and its
+   * id is off the deletion list — another device's edit the deletion never saw wrote it back
+   * (R2-029). One written back by a stale device while it stays listed is still deleted for good
+   * (V2OWNER-DATA-0).
+   */
+  async function stillHeld(tx, uid, resumeId) {
+    const [doc, list] = [await tx.get(resumeDoc(uid, resumeId)), await tx.get(deletionsDoc(uid))];
+    if (!doc.exists() || doc.data().deleted) return false;
+    return !(list.exists() && (list.data().ids || []).includes(resumeId));
+  }
 
   /**
    * Deletes résumé `resumeId`'s copies at `shareIds` and at the link the account records for it, those
@@ -152,11 +167,13 @@ export function publicIo(fs, db) {
    * (R4-LO-22): read first and written after as a batch, a Publish on another device between the two
    * put a new copy and record up, and the batch deleted the record and left that copy public with
    * nothing naming it. Now the record read is checked at the commit, and a changed one runs it again.
+   * `onlyIfGone`: only while the account no longer holds the résumé — see unpublishDeleted.
    */
-  async function takeDown(uid, resumeId, shareIds) {
+  async function takeDown(uid, resumeId, shareIds, { onlyIfGone = false } = {}) {
     // Every link an attempt found recorded stays on the list when the transaction runs again.
     const ids = new Set(shareIds.filter(Boolean));
     return fs.runTransaction(db, async (tx) => {
+      if (onlyIfGone && await stillHeld(tx, uid, resumeId)) return false;
       const share = await tx.get(shareDoc(uid, resumeId));
       if (share.exists() && share.data().shareId) ids.add(share.data().shareId);
       // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
@@ -234,15 +251,19 @@ export function publicIo(fs, db) {
      * another device, or offline, or on a build that did not unpublish, kept its copy public with
      * no panel left anywhere to take it down: the cloud sync calls this once it knows the list
      * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one
-     * transaction for each copy to take down.
+     * transaction for each copy to take down. Each checks, in the transaction, that the résumé is
+     * still gone: between the deletion reaching the cloud and this call, another device's edit the
+     * deletion never saw could write it back (R2-029) and publish it again — and the copy of a
+     * résumé the account holds is not taken down. Resolves to the ids whose copy went.
      */
     async unpublishDeleted(uid, ids) {
       const gone = new Set(ids);
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
       const stale = shares.docs.filter((d) => gone.has(d.id));
-      for (const d of stale) await takeDown(uid, d.id, [d.data().shareId]);
-      return stale.map((d) => d.id);
+      const down = [];
+      for (const d of stale) if (await takeDown(uid, d.id, [d.data().shareId], { onlyIfGone: true })) down.push(d.id);
+      return down;
     },
 
     /** A published copy by its id, for anyone: the résumé to print, or null when there is none. */

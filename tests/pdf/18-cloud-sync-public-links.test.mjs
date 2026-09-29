@@ -106,6 +106,10 @@ describe('a résumé deleted anywhere takes its public copy with it (R2-148)', (
 
   it('publicIo.unpublishDeleted takes down only the listed résumés\' copies, and nothing when none is published', async () => {
     const { cloud, io, x, y } = await published();
+    // As the sync calls it: once the deletion is in the cloud (R2-148 review: a résumé the account
+    // still holds keeps its copy — tests/pdf/104-r5-r2148-public-copy-follows-deletion.test.mjs).
+    cloud.data.delete(resumePath('u', X));
+    cloud.data.set(listPath('u'), { ids: [X] });
     assert.deepEqual(await io.unpublishDeleted('u', []), [], 'no deletion: nothing read');
     assert.deepEqual(await io.unpublishDeleted('u', ['resume_never_published', X]), [X]);
     assert.equal(cloud.doc(`public/${x}`), undefined);
