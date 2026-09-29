@@ -1,0 +1,74 @@
+{
+  "cluster": "r5-hunt3-pdf",
+  "branch": "claude/wf-r5-hunt3-pdf",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-AWARDS-TITLE-KEEP-UNMEASURED",
+      "title": "PDF: the Awards heading is left alone at the foot of a page when the first award's title or issuer wraps",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "471af3d"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt3-awards-title-keep.test.mjs"
+      ],
+      "summary": "Now: the Awards heading keeps the first award's measured header under it. Its title (bold) and issuer are each wrapped at the entry's width (entryTextWidth, so a Grids cell's width in a grid). The date line and the two description lines the header keeps are added on top, as Projects' header does (R4-DOUT-04). Before, the title and issuer counted as one line each. So a title wrapping onto three lines, or a two-line title over a wrapping issuer, made the unbreakable header taller than the heading's keep. The award then moved to the next page and left its heading alone at the page foot. The test sweeps the section across the page foot in Classic Left, Classic Center and Minimal Grids 2.",
+      "failfirst_run": "36542138457 (failfirst job 109319881083: '# fail 2' with 471af3d's diff reversed, passes with it); named-tests job green; reviewer regression run 36545873797 (green: 24 files, 608 tests, 0 failures)"
+    },
+    {
+      "id": "R5-HUNT3-CERTIFICATIONS-TITLE-NO-PRESENCE",
+      "title": "PDF: the Certifications heading is left alone at the foot of a page when the first certification wraps",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "5855f1d"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt3-certifications-title-keep.test.mjs"
+      ],
+      "summary": "Now: the Certifications heading passes a presence to SectionTitleOf. The presence is the first certification's name line (name — issuer · ID · link, the same fields and separators the PDF prints), measured in the bold face at the entry's width. Left-aligned, the date sits at the end of its last line (endRowLines). Centred, the date gets a line of its own. SectionTitleOf's three-line minimum still applies. Before, the heading passed no presence and kept only three lines. A first certification that wrapped onto four lines (or three plus the centred date) moved to the next page as a whole and left the heading behind. The test covers Classic Left, Classic Center and Minimal Grids 2.",
+      "failfirst_run": "36542138457 (failfirst job 109319881090: '# fail 3' with 5855f1d's diff reversed, passes with it); named-tests job green; reviewer regression run 36545873797 (green: 24 files, 608 tests, 0 failures)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "Do the fail-first runs really fail without each fix?",
+            "resolution": "Yes. I read the CI logs of run 36542138457. Job 109319881083 reversed 471af3d's src diff and got '# fail 2' for the awards test; with the diff restored it passed. Job 109319881090 reversed 5855f1d's diff and got '# fail 3' for the certifications test; restored, it passed. Each test also checks that its case really wraps (a three-line award title over a two-line issuer; a certification name line of four or more lines), so neither test passes vacuously."
+          },
+          {
+            "issue": "Is the certification name line measured as it prints? Old data can have no name (item.title fallback), no issuer, only an ID, a urlLabel, or an unsafe link.",
+            "resolution": "No change needed. The measured text uses item.name || item.title, then issuer, 'ID: …' and urlLabel || url, joined only between fields that are present. That is the order and separators the renderer prints (R4-DOUT-17). An unsafe link prints the same value as plain text. With every field empty, the measured text is '' and endRowLines/wrappedLines count one line, which is at least what prints."
+          },
+          {
+            "issue": "The estimate uses the bold face for the whole line, although issuer, ID and link are regular, and it counts the link's widest piece in endRowLines while EndRow's leftMin leaves it out. Could the heading keep too little?",
+            "resolution": "No change needed. Both differences can only over-count lines, which is the safe direction for a keep: at worst the heading moves to the next page a line early, never alone. The link wraps inside itself (breakLinks), and wrappedLines spans a long piece over several lines."
+          },
+          {
+            "issue": "Awards: an award with no title, an issuer that is only whitespace, or an italic issuer (italicSubs) measured in the regular face.",
+            "resolution": "No change needed. A missing title still counts one line (Math.max(1, …)). A whitespace-only issuer prints a blank line that counts 0, and the italic face runs a little wider. Both are small and covered by the spare line headPresence always adds, the same margin Projects' R4-DOUT-04 measure uses."
+          },
+          {
+            "issue": "Do other renderers need the same fix: the Timeline, the Sidebar's dark column, other templates?",
+            "resolution": "No. Awards and Certifications are not on the Timeline's rail (FIELDS has no entry for them), so every template prints them through SectionRouter's AwardsSection/CertificationsSection, which are the renderers changed here. The Sidebar's dark-column SideCertifications already measures its first entry (entryPresence). Grids go through gridRows. The first row's other cell does not need to be measured, because a cell that does not fit splits away on its own and never leaves the heading alone."
+          },
+          {
+            "issue": "Word, Markdown, ATS text, the HTML preview and stored data.",
+            "resolution": "Unaffected. Only the PDF heading's minPresenceAhead changed; nothing that prints changed, and no data shape was touched. Reviewer run 36545873797 ran 24 existing PDF test files that render Awards or Certifications (looks, sidebar, timeline, long URLs, dates, ATS parse, import round-trips, section structure): 608 tests, 0 failures, 0 skipped. Lint passed."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Two PDF page-break keep bugs, fixed in PdfSectionsTwo.jsx. Fail-first run 36542138457 is green: 2 and 3 subtests failed without the fixes and passed with them, and the named tests and lint passed. The review found no defects. Reviewer regression run 36545873797 (24 existing PDF test files that render these sections: 608 tests, 0 failures) is green. The full gate has not been run on this head; the batch gate covers it. Severity 'medium': the heading left alone at a page foot is a visible layout defect in an exported résumé, the same class as R2-047 and R4-DOUT-04."
+}
