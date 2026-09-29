@@ -121,7 +121,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
     return name + wrappedLines([item.technologies, item.url].filter(Boolean).join(' · '), metaBox, width);
   };
   const presence   = first ? headPresence({
-    lines: 1 + (first.technologies || first.url ? 1 : 0),
+    lines: headLines(first),
     styles: [nameBox, metaBox],
     keep: headerKeep(settings),
     extra: 2,
