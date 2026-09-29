@@ -243,11 +243,15 @@ function nextSprintName(board) {
 /**
  * `name`, or — when another sprint on the board has it, case aside — a free one (R5-BRD-02: a sprint
  * made while a deleted one's Undo was on offer can take its default name): a default name becomes the
- * next default name (nextSprintName), any other name gets " (2)", " (3)"…
+ * next default name (nextSprintName), any other name gets " (2)", " (3)"… `had` is each other sprint's
+ * name when the sprint was deleted (id → name): one that had this name already then is no clash, since
+ * sprints may share a name (addSprint and a rename take any), so the sprint comes back as it was.
  */
-function freeSprintName(board, name) {
+function freeSprintName(board, name, had = null) {
   const taken = (n) => board.sprints.some((s) => sameName(String(s.name ?? ''), n));
-  if (!taken(name)) return name;
+  const clash = board.sprints.some((s) => sameName(String(s.name ?? ''), name)
+    && !(had && typeof had[s.id] === 'string' && sameName(had[s.id], name)));
+  if (!clash) return name;
   if (sprintNamePattern(board).test(name)) return nextSprintName(board);
   let n = 2;
   while (taken(`${name} (${n})`)) n += 1;
@@ -319,23 +323,28 @@ export function completeSprint(board, sprintId, { moveOpenTo = null } = {}, ctx 
   return { ...board, issues, sprints: mapById(board.sprints, sprintId, (x) => ({ ...x, state: 'closed', completedAt: now })) };
 }
 
-/** What deleteSprint takes away, for its Undo (restoreSprint): the sprint, its place, its issues' ids. */
+/**
+ * What deleteSprint takes away, for its Undo (restoreSprint): the sprint, its place, its issues' ids,
+ * and the other sprints' names then (id → name), so a name clash that was already there is kept.
+ */
 export function removedSprint(board, sprintId) {
   const index = board.sprints.findIndex((s) => s.id === sprintId);
   if (index === -1) return null;
-  return { sprint: board.sprints[index], index, issueIds: board.issues.filter((i) => i.sprintId === sprintId).map((i) => i.id) };
+  const names = Object.fromEntries(board.sprints.filter((s) => s.id !== sprintId).map((s) => [s.id, String(s.name ?? '')]));
+  return { sprint: board.sprints[index], index, issueIds: board.issues.filter((i) => i.sprintId === sprintId).map((i) => i.id), names };
 }
 
 /**
  * Put back what deleteSprint took (`removed` from removedSprint, R5-BRD-02): the sprint at its old
  * place, as it was — or future, when it was active and another sprint was started since (a project
  * never has two active) — and its issues that are still in the backlog; one moved elsewhere since
- * stays where it is. A name another sprint took meanwhile is made free (freeSprintName).
+ * stays where it is. A name another sprint took meanwhile is made free (freeSprintName); one a sprint
+ * already shared with it when it was deleted is kept.
  */
 export function restoreSprint(board, removed, ctx = {}) {
   if (!removed?.sprint || sprintById(board, removed.sprint.id)) return board;
   const second = removed.sprint.state === 'active' && board.sprints.some((s) => s.state === 'active');
-  const name = freeSprintName(board, removed.sprint.name);
+  const name = freeSprintName(board, removed.sprint.name, removed.names);
   const sprint = second || name !== removed.sprint.name ? { ...removed.sprint, name, ...(second ? { state: 'future' } : {}) } : removed.sprint;
   const sprints = [...board.sprints];
   sprints.splice(Math.max(0, Math.min(removed.index ?? sprints.length, sprints.length)), 0, sprint);

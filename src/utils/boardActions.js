@@ -167,7 +167,7 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   const startSprint = (boardId, sprintId, fields) => change(boardId, (b, ctx) => ops.startSprint(b, sprintId, fields, ctx));
   /** Complete the active sprint: open issues to `{ moveOpenTo }` (a future sprint's id) or the backlog. */
   const completeSprint = (boardId, sprintId, options) => change(boardId, (b, ctx) => ops.completeSprint(b, sprintId, options, ctx));
-  /** Delete a sprint (its issues go to the backlog); returns `{ sprint, index, issueIds }` for restoreSprint (the toast's Undo), or null. */
+  /** Delete a sprint (its issues go to the backlog); returns `{ sprint, index, issueIds, names }` for restoreSprint (the toast's Undo), or null. */
   function deleteSprint(boardId, sprintId) {
     const board = findBoard(boardId);
     const removed = board && ops.removedSprint(board, sprintId);

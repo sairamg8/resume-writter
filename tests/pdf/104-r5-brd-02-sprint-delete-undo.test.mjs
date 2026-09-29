@@ -123,3 +123,34 @@ it('the Backlog page: Delete the last sprint, Create sprint, then Undo: two sect
     assert.match(page.section('s2').textContent, /HOME Sprint 3.*Fix the tap.*Paint the fence.*Oil the gate/);
   } finally { await page.close(); }
 });
+
+// BRD-REV-01 (review of R5-BRD-02): sprints may share a name (addSprint and a rename take any), so a
+// name another sprint already had when the sprint was deleted is no clash: Undo brings it back under
+// its own name. Only a clash made while the Undo was on offer gives it a free one (above).
+describe('BRD-REV-01: a name shared before the delete is kept on Undo', () => {
+  it('two sprints named "Cleanup": delete one, Undo, it is "Cleanup" again', () => {
+    const shared = [sprint('s1', 'Cleanup', 'closed'), sprint('s2', 'Cleanup', 'future', { goal: 'The shed' })];
+    const original = project({ mode: 'scrum', sprints: shared, issues: issues(), nextNumber: 6 });
+    const { a, board } = actionsOver(original);
+    const removed = a.deleteSprint('p1', 's2');
+    assert.equal(a.restoreSprint('p1', removed), true);
+    assert.deepEqual(board().sprints, original.sprints, 'as it was, name and all');
+  });
+
+  it('two sprints named "HOME Sprint 2" (one renamed so): delete one, Undo, it keeps its default-pattern name', () => {
+    const shared = [sprint('s1', 'HOME Sprint 1', 'active'), sprint('s2', 'HOME Sprint 2', 'future'), sprint('s3', 'HOME Sprint 2', 'future')];
+    const { a, board } = actionsOver(project({ mode: 'scrum', sprints: shared, issues: issues(), nextNumber: 6 }));
+    const removed = a.deleteSprint('p1', 's3');
+    a.restoreSprint('p1', removed);
+    assert.deepEqual(board().sprints.map((s) => s.name), ['HOME Sprint 1', 'HOME Sprint 2', 'HOME Sprint 2']);
+  });
+
+  it('a sprint renamed to the deleted one\'s name while Undo was on offer is still a clash', () => {
+    const named = [sprint('s1', 'Cleanup', 'future'), sprint('s2', 'Garden week', 'future')];
+    const { a, board } = actionsOver(project({ mode: 'scrum', sprints: named, issues: issues(), nextNumber: 6 }));
+    const removed = a.deleteSprint('p1', 's2');
+    a.updateSprint('p1', 's1', { name: 'Garden week' });
+    a.restoreSprint('p1', removed);
+    assert.equal(board().sprints.find((s) => s.id === 's2').name, 'Garden week (2)');
+  });
+});
