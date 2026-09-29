@@ -9,7 +9,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, syncPage, syncModules, resumePath, settle } from './fake-firestore.mjs';
+import { fakeFirestore, syncPage, syncModules, resumePath, listPath, settle } from './fake-firestore.mjs';
 import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let mods;
