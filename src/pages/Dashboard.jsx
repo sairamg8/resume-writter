@@ -14,7 +14,7 @@ import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
-import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, isDocumentFile } from '@/utils/importDocument';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -133,13 +133,10 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       // The read takes seconds: an account that signs out meanwhile gets the résumé kept aside for it
       // (importResume's `account`), not the signed-out list, and it is not opened
       // (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
-      const account = store.appState.syncedUid ?? null;
-      const importResume = (resume, options) => {
-        const id = store.importResume(resume, { ...options, account });
-        if (!account || listOwner.current === account) return id;
-        if (mounted.current) setImportError(`You signed out while ${file.name} was being read. It is kept for that account and comes back when it signs in again.`);
-        return null;
-      };
+      const importResume = importingFor(store.importResume, {
+        account: store.appState.syncedUid ?? null, ownerNow: () => listOwner.current, name: file.name,
+        onLeft: (message) => { if (mounted.current) setImportError(message); },
+      });
       importDocument(file, {
         importResume, keep: keeps && importAsOriginal.current,
         navigate: (...args) => { if (mounted.current) navigate(...args); },

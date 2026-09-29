@@ -43,3 +43,19 @@ export async function importDocument(file, { importResume, navigate, onError, ke
     return null;
   }
 }
+
+/**
+ * `importResume` for a document picked while the list was account `account`'s (the store's syncedUid;
+ * null: no account's). The read takes seconds, and an account that signs out meanwhile gets the résumé
+ * kept aside for it (the store's importResume `account`), not the signed-out list; then this answers
+ * null — nothing to open — and `onLeft(message)` says why. `ownerNow()`: the account the list is now.
+ * The Dashboard's Import and the editor's (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
+ */
+export function importingFor(importResume, { account = null, ownerNow, onLeft, name = 'the file' }) {
+  return (resume, options) => {
+    const id = importResume(resume, { ...options, account });
+    if (!account || ownerNow() === account) return id;
+    onLeft(`You signed out while ${name} was being read. It is kept for that account and comes back when it signs in again.`);
+    return null;
+  };
+}

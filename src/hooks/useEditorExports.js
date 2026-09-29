@@ -7,7 +7,7 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
-import { importDocument, IMPORT_NOTICE, NEW_LETTER_NOTICE, NEW_RESUME_NOTICE } from '@/utils/importDocument';
+import { importDocument, importingFor, IMPORT_NOTICE, NEW_LETTER_NOTICE, NEW_RESUME_NOTICE } from '@/utils/importDocument';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { editorPath, isLetter } from '@/utils/letters';
 
@@ -20,8 +20,10 @@ const NETWORK_EXPORTS = new Set(['pdf', 'word']);
  * menu to say so on the letter's tab, where it also offers the letter as plain text (R2-131) — and
  * Import JSON — with the busy state and a visible error message. `keeps`: a
  * demo account, which can import a file as its original (useDemoSeed), as from the dashboard.
+ * `account`: the account the list is now (the store's syncedUid): a document picked now is kept for it
+ * when the read ends after it signed out (importingFor, R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
  */
-export function useEditorExports({ resume, activeTab, authUser, importResume, navigate }) {
+export function useEditorExports({ resume, activeTab, authUser, importResume, navigate, account = null }) {
   const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
   const keeps = isDemoAccount(authUser, DEMO_ACCOUNTS);
@@ -33,6 +35,8 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   const mounted = useRef(true);
   const shownId = useRef(resume?.id);
   shownId.current = resume?.id;
+  const listOwner = useRef(account);
+  listOwner.current = account;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   /**
@@ -144,8 +148,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     setExportError(null);
     const from = resume?.id;
     try {
+      const importFor = importingFor(importResume, {
+        account, ownerNow: () => listOwner.current, name: file?.name || 'the file',
+        onLeft: (message) => { if (mounted.current) setExportError(message); },
+      });
       return await importDocument(file, {
-        importResume, onError: setExportError, keep: keeps && asOriginal, notice: `${NEW_RESUME_NOTICE} ${IMPORT_NOTICE}`,
+        importResume: importFor, onError: setExportError, keep: keeps && asOriginal, notice: `${NEW_RESUME_NOTICE} ${IMPORT_NOTICE}`,
         navigate: (...args) => { if (mounted.current && shownId.current === from) navigate(...args); },
       });
     } finally {
