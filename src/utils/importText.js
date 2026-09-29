@@ -1118,18 +1118,38 @@ function entriesOf(type, lines, aside) {
   // Information" (R5-HUNT8-UNDATED-ENTRY-MERGED). Not in a Markdown file's sections, whose entries are
   // its "###" headings and whose blank lines part an entry's paragraphs; nor in a custom section.
   const datedSection = type !== 'custom' && !info.some((l) => l.hint === 'entry') && info.some((l) => l.date);
+  // No title but a sentence: three words or more in lower case that are no "of", "the"… (bracketed
+  // words aside: "Resume Builder (react, node)").
+  const sentence = (text) => text.replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((w) => /^\p{Ll}/u.test(w) && !SMALL.has(w)).length >= 3;
   const undatedEntry = (L) => {
     if (!datedSection || L.bullet || L.date || L.hint || (!L.gap && L.index > 0)) return false;
-    if (L.text.length > 100 || /[.!?:;,]$/.test(L.text) || isMetaLine(L.text)) return false;
-    for (let k = L.index + 1; k < info.length && !info[k].gap; k += 1) if (info[k].date || info[k].hint === 'entry') return false;
+    if (L.text.length > 100 || /[.!?:;,]$/.test(L.text) || isMetaLine(L.text) || sentence(L.text)) return false;
+    const block = [];
+    for (let k = L.index + 1; k < info.length && !info[k].gap; k += 1) {
+      if (info[k].date || info[k].hint === 'entry') return false;
+      block.push(info[k]);
+    }
+    // A sentence run on to the next line ("…, cutting deploy" over "time by 80%"): a paragraph.
+    if (block[0] && !block[0].bullet && /^\p{Ll}/u.test(block[0].text)) return false;
+    // Right after a dated entry with nothing under it yet — its title, a blank line, then this — the
+    // block is that entry's text ("Relevant Coursework" over its list, a paragraph), as it was before:
+    // unless it is a line alone (with its named fields: the ATS text's next entry, after one with no
+    // description), or it names a role (a degree, a school) as the section's entries do, or the entry
+    // above has no text to hold (a certificate).
+    if (cur && !cur.body.length && type !== 'certifications' && !block.every((b) => isMetaLine(b.text))
+      && !(KIND && KIND.test(L.text)) && !(type === 'education' && SCHOOL.test(L.text))) return false;
     return true;
   };
 
   for (let i = 0; i < info.length;) {
     const L = info[i];
     if (undatedEntry(L)) {
-      start([L]);
+      // Its named fields under it ("Link: …", "Expires: … | ID: …") its own, as a dated entry's are:
+      // they went into its description, which a certificate never shows.
+      const header = [L];
       i += 1;
+      while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
+      start(header);
       continue;
     }
     if (L.hint === 'entry') {
