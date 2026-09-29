@@ -28,6 +28,10 @@
    "confirmed": 21,
    "head": "7bf94d30",
    "note": "all 9 areas; 21 fixes"
+  },
+  "8": {
+   "confirmed": 5,
+   "note": "dash and jobs dry; pdf 1, boards 2, sync 1, editor 1 (+review fixes); import/export/tools running; Website-freeze lead: no cause found"
   }
  },
  "seen": [
@@ -165,6 +169,11 @@
   "Markdown export splits a 'Group roles by company' group at a blank or all-eyes-off entry",
   "If the description changes in another tab or device while the STAR Optimizer is open, Apply puts the rewrite as loose text at the top of the description and leaves the original bullet in place",
   "Job scanner reads figures with a unit other than K/M/B ('3x', '10x', '200ms', '#1', '1st') as missing keywords, and '+' writes them into Skills",
-  "Public résumé page keeps showing, and downloading, the previous résumé after the tab moves to another share link"
+  "Public résumé page keeps showing, and downloading, the previous résumé after the tab moves to another share link",
+  "PDF: with the Skills style set to Stacked or Tags, a skill group's category heading (and Stacked's thin rule under it) can be left alone at the bottom of a page while that group's skills move to the next page",
+  "Story points: typing an unreadable number such as '2,5' (a decimal comma) erases the issue's points instead of keeping them",
+  "Project settings: a fractional WIP limit ('2.5') silently removes the column's limit, while the board's own limit dialog saves it as 2",
+  "Deleting a job the cloud refused (an imported id with '/'), or clearing all jobs while one is in the list, stops the job sync",
+  "A website, LinkedIn or GitHub typed as just 'https://', 'http://' or 'www.' prints as a blank contact in the PDF, Word, Markdown and the cover letter"
  ]
 }
