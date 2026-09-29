@@ -42,6 +42,15 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
 export function TypographySection({ settings, template, resumeId, updateSetting, onReset }) {
   const [customFontInput, setCustomFontInput] = useState('');
   const [savedCustomFonts, setSavedCustomFonts] = useState(() => loadCustomFonts());
+  // The custom font as the PDF reads it (pdfFontLoader.js): a padded name prints trimmed, a blank one
+  // prints Font Family's picker font, and a stored non-string (a hand-edited backup) is only a name.
+  const ownFont = String(settings.customFont || '').trim();
+  // The chips are this browser's list plus the font this résumé prints in, when the list lacks it
+  // (removed here while another résumé still uses it, or a résumé synced or restored from elsewhere),
+  // so Font Family always marks the font the PDF prints in — as OwnFontRow does for its value.
+  const customFonts = ownFont && !savedCustomFonts.includes(ownFont)
+    ? [...savedCustomFonts, ownFont]
+    : savedCustomFonts;
   const [checking, setChecking] = useState(false);
   const [fontError, setFontError] = useState(null);
   // The résumé and font as of this render, read after a font check's wait.
@@ -54,8 +63,9 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
   // Show every choice in its own face — from the same files the PDF embeds.
   useEffect(() => {
     FONTS.forEach((font) => loadPreviewFont(font.name, font.pkg));
-    savedCustomFonts.forEach((name) => loadPreviewFont(name));
-  }, [savedCustomFonts]);
+    customFonts.forEach((name) => loadPreviewFont(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedCustomFonts, ownFont]);
 
   function chooseCustomFont(name) {
     updateSetting('customFont', name);
@@ -106,7 +116,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
 
   const base = settings.fontSizeBase ?? 11;
   // No font set (older or imported résumés) prints in Noto Sans, so that is what is selected.
-  const activeFont = settings.customFont ? null : (FONTS.some((f) => f.id === settings.font) ? settings.font : 'notosans');
+  const activeFont = ownFont ? null : (FONTS.some((f) => f.id === settings.font) ? settings.font : 'notosans');
   const sizePreset = Object.keys(SIZE_PRESETS).find((k) => SIZE_PRESETS[k] === base) || '';
 
   // A new base keeps each stored size delta printing within its row's range (TYPE_SIZE_PT): Section
@@ -141,12 +151,12 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             </button>
           ))}
         </div>
-        {savedCustomFonts.length > 0 && (
+        {customFonts.length > 0 && (
           <div className="mb-2">
             <p className="text-[11px] text-gray-400 mb-1">Your custom fonts</p>
             <div className="flex flex-wrap gap-1">
-              {savedCustomFonts.map(name => {
-                const active = settings.customFont === name;
+              {customFonts.map(name => {
+                const active = ownFont === name;
                 return (
                   <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                     <button style={{ fontFamily: `'${name}', sans-serif` }} onClick={() => chooseCustomFont(name)} className="leading-none">{name}</button>
@@ -155,7 +165,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
                         removeCustomFont(name);
                         setSavedCustomFonts(loadCustomFonts());
                         // A removed font leaves every place it was chosen: Font Family, Name Font, Heading Font.
-                        for (const key of ['customFont', 'nameFont', 'headingFont']) if (settings[key] === name) updateSetting(key, '');
+                        for (const key of ['customFont', 'nameFont', 'headingFont']) if ((key === 'customFont' ? ownFont : settings[key]) === name) updateSetting(key, '');
                       }}
                       className="text-gray-300 hover:text-red-400 leading-none ml-0.5"
                       title="Remove font"
@@ -199,8 +209,8 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
       </div>
 
       <div className="space-y-2">
-        <OwnFontRow label="Name Font" value={settings.nameFont} customFonts={savedCustomFonts} onChange={v => updateSetting('nameFont', v)} />
-        <OwnFontRow label="Heading Font" value={settings.headingFont} customFonts={savedCustomFonts} onChange={v => updateSetting('headingFont', v)} />
+        <OwnFontRow label="Name Font" value={settings.nameFont} customFonts={customFonts} onChange={v => updateSetting('nameFont', v)} />
+        <OwnFontRow label="Heading Font" value={settings.headingFont} customFonts={customFonts} onChange={v => updateSetting('headingFont', v)} />
       </div>
 
       <div>

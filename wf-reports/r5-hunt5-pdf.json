@@ -1,0 +1,67 @@
+{
+  "cluster": "r5-hunt5-pdf",
+  "branch": "claude/wf-r5-hunt5-pdf",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-TYPOGRAPHY-CUSTOM-FONT-NOT-SHOWN-WHEN-NOT-IN-LOCAL-LIST",
+      "title": "Design > Typography > Font Family marks no font when the résumé's custom font is missing from this browser's saved list",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "45b63d00b71eff4b135f88e9442a5d2eac91a537",
+        "5c08ec75b90089cd3b55d1a53094dae7e1599309"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt5-typography-own-custom-font.test.mjs"
+      ],
+      "summary": "Now: Design > Typography > Font Family always marks the font the résumé prints in. The saved custom fonts are kept per browser (localStorage), so a résumé whose settings.customFont is missing from that list showed nothing selected: no picker font and no chip. This happens when the font was removed here while another résumé still uses it, or when the résumé came in by sync or a JSON restore. The panel now adds that font to the chips, selected, and loads it for preview. It can be picked again or removed like any other chip. A font already in the list is not shown twice. Name Font and Heading Font offer the same list. The panel reads customFont the way the PDF does (pdfFontLoader.js: String(customFont || '').trim()). A blank stored value shows no chip and marks the picker font the PDF prints in. A padded name (' Nunito ') is the saved 'Nunito' chip, selected, and removing it clears the résumé's font. A non-string value from a hand-edited backup shows as the name the PDF tries and no longer crashes the panel. Only the panel's display changed (src/components/DesignPanelTypography.jsx). Nothing that prints changed, so the PDF, Word, Markdown and ATS exporters are not affected.",
+      "failfirst_run": "36562381181 (45b63d0: 3 of 4 tests fail without the fix, all pass with it; the 4th test, no custom font, passes either way by design); 36564772525 (5c08ec7, the review fix: the 3 review tests fail without it, all 7 tests pass with it); named tests and lint in 36564772525: green, 30/30 (105, 93-name-heading-font, 93-word-font-fallback, 91-design-resets, knowledge-docs); oxlint passed"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT5-REV-1: the fix took settings.customFont raw, but the PDF reads String(customFont || '').trim(). A whitespace-only value showed a blank selected chip (and 'Your custom fonts') while the PDF prints Font Family's picker font, which was left unmarked.",
+          "R5-HUNT5-REV-2: a padded stored name (' Nunito ') showed a second chip beside the saved 'Nunito'. The saved chip was not selected, and removing it did not clear the résumé's font.",
+          "R5-HUNT5-REV-3 (regression from 45b63d0): a non-string customFont (an object from a hand-edited JSON backup, which normalizeResume passes through) was rendered as a React child, so opening Typography crashed the panel. Before 45b63d0 it was never rendered."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "id": "R5-HUNT5-REV-1",
+        "issue": "A whitespace-only customFont showed a blank selected chip and left the picker font the PDF prints unmarked.",
+        "resolution": "fixed in 5c08ec7: ownFont = String(settings.customFont || '').trim() drives the chip list, activeFont, the selected chip and the remove handler. Test: 'a blank stored value shows no chip and marks the picker font the PDF prints in'."
+      },
+      {
+        "id": "R5-HUNT5-REV-2",
+        "issue": "A padded customFont showed a duplicate chip; the saved one was not selected and removing it did not clear the résumé's font.",
+        "resolution": "fixed in 5c08ec7 (same trimmed ownFont). Test: 'a padded stored name is the saved chip, selected, not a second one'."
+      },
+      {
+        "id": "R5-HUNT5-REV-3",
+        "issue": "A non-string customFont crashed the Typography panel (object as a React child), a regression from 45b63d0.",
+        "resolution": "fixed in 5c08ec7: String() coerces it, matching the PDF, which tries that name and falls back to Noto Sans. Test: 'a non-string stored value (a hand-edited backup) does not break the panel'."
+      }
+    ],
+    "fixedByReviewer": [
+      "5c08ec75b90089cd3b55d1a53094dae7e1599309"
+    ]
+  },
+  "rejected": [
+    {
+      "candidate": "The chip list could go stale when another tab adds or removes a custom font (savedCustomFonts is read once on mount).",
+      "reason": "Not caused by this diff, and there is no storage listener anywhere for this list. The résumé's own font is still shown, because it comes from settings rather than the list."
+    },
+    {
+      "candidate": "Case-only duplicates ('nunito' saved, 'Nunito' stored) show two chips.",
+      "reason": "Both saveCustomFont and chooseCustomFont store the family as Google spells it (checkFont), so the app never writes such a pair. The PDF also treats the two spellings as different names."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Seen outside this diff, pre-existing, not fixed here: wordFonts.js resolveWordFont and categoryOf call settings.customFont?.trim(), which throws for a non-string customFont (optional chaining does not guard a non-string). The panel's stand-in note swallows that rejection, but the Word export would fail on such a hand-edited backup. normalizeResume does not coerce customFont to a string. This is a candidate for the next hunt."
+}
