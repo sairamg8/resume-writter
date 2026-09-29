@@ -116,6 +116,15 @@ function buildTree(html) {
       continue;
     }
     if (!rawTag) {
+      // Word's list marker ('·' in Symbol, '1.', then &nbsp; padding) sits between <![if !supportLists]>
+      // and <![endif]> (or the <!--[if …]--> comment form): keep it apart so the list can drop it.
+      if (/^<!(--)?\[if !supportLists\]/i.test(token)) {
+        const node = { tag: '#mso-marker', attrs: {}, children: [] };
+        top().children.push(node);
+        stack.push(node);
+        continue;
+      }
+      if (/^<!(--)?\[endif\]/i.test(token)) { closeTo('#mso-marker'); continue; }
       if (token.startsWith('<!') || token.startsWith('<?')) continue; // comments, doctype, CDATA
       top().children.push(decodeEntities(token));
       continue;
@@ -247,6 +256,53 @@ function numberMarker(n, type) {
   return `${n}.`;
 }
 
+const textOf = (node) => (typeof node === 'string' ? node : node.children.map(textOf).join(''));
+
+/**
+ * Word for desktop copies a list as paragraphs styled "mso-list:l0 level2 lfo1", not as <ul>/<ol>.
+ * Runs of them become real lists, nested by level; a numbered marker ("1.", "a)") makes an <ol>.
+ * The marker text itself is dropped by the walk (#mso-marker, mso-list:Ignore).
+ */
+function wordLists(node) {
+  if (typeof node === 'string') return;
+  node.children.forEach(wordLists);
+  const out = [];
+  let open = []; // [{ level, id, ordered, list }]
+  for (const child of node.children) {
+    const msoList = typeof child === 'string' || !BLOCK_TAGS.has(child.tag) ? null : styleOf(child.attrs)['mso-list'];
+    const m = msoList && /^(l\d+)\s+level(\d+)/.exec(msoList);
+    if (!m) {
+      if (open.length && typeof child === 'string' && !child.trim()) continue; // the newline between items
+      open = [];
+      out.push(child);
+      continue;
+    }
+    const level = Number(m[2]);
+    const markerNode = child.children.find((c) => typeof c !== 'string' && c.tag === '#mso-marker');
+    const marker = markerNode ? textOf(markerNode).replace(/[\s\u00a0]+/g, '') : '';
+    const num = /^\(?([0-9]+|[a-z]+|[A-Z]+)[.)]$/.exec(marker);
+    const ordered = !!num;
+    while (open.length && open[open.length - 1].level > level) open.pop();
+    let top = open[open.length - 1];
+    if (top && top.level === level && (top.ordered !== ordered || (level === 1 && top.id !== m[1]))) {
+      open.pop();
+      top = open[open.length - 1];
+    }
+    if (!top || top.level < level) {
+      const attrs = {};
+      if (num && /^\d+$/.test(num[1])) attrs.start = num[1];
+      else if (num) attrs.type = /^[ivxlcdm]+$/i.test(num[1]) ? (num[1] === num[1].toLowerCase() ? 'i' : 'I') : (num[1] === num[1].toLowerCase() ? 'a' : 'A');
+      const list = { tag: ordered ? 'ol' : 'ul', attrs, children: [] };
+      const parentItem = top && top.list.children[top.list.children.length - 1];
+      (parentItem ? parentItem.children : out).push(list);
+      top = { level, id: m[1], ordered, list };
+      open.push(top);
+    }
+    top.list.children.push({ tag: 'li', attrs: child.attrs, children: child.children });
+  }
+  node.children = out;
+}
+
 const sameFormat = (a, b) => a.bold === b.bold && a.italic === b.italic
   && a.underline === b.underline && a.strike === b.strike && a.href === b.href;
 
@@ -255,6 +311,7 @@ export function parseRichText(html) {
   const src = String(html);
   if (!src.trim()) return [];
   const tree = buildTree(src);
+  wordLists(tree);
   const blocks = [];
   let cur = null; // { parts: [{ text, fmt } | { br: true }], align, indent, marker }
 
@@ -290,6 +347,7 @@ export function parseRichText(html) {
       const { tag, attrs } = child;
       if (tag === 'br') { addBreak(ctx); continue; }
       if (tag === 'img' || tag === 'input' || tag === 'wbr') continue;
+      if (tag === '#mso-marker' || styleOf(attrs)['mso-list'] === 'ignore') continue; // Word's typed list marker
       if (tag === 'hr') { flush(); continue; }
       if (!BLOCK_TAGS.has(tag)) {
         walk(child, { ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) });
