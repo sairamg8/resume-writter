@@ -13,11 +13,13 @@ const empty = () => ({ uid: null, versions: {}, order: null, stashed: {} });
 const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
 /**
- * The record under `key` as { read() → { uid, versions, order, stashed }, write(meta) }: what
- * cannot be read is an empty record (the list then joins the next account's, and nothing is lost);
- * a write storage refuses is dropped — the next sync finds more to send, never less. A record
- * saved before the order was kept has none (`order` null): its first sync lets the cloud's order
- * lead, as it always did.
+ * The record under `key` as { read() → { uid, versions, order, stashed }, write(meta) → whether
+ * storage took it }: what cannot be read is an empty record (the list then joins the next
+ * account's, and nothing is lost); a write storage refuses is dropped — the next sync finds more
+ * to send, never less — and says so: a list leaving this browser does not go unless its record,
+ * holding what was kept aside, was written (collectionSyncEngine's leave). A record saved before
+ * the order was kept has none (`order` null): its first sync lets the cloud's order lead, as it
+ * always did.
  */
 export function localMeta(key, storage = () => globalThis.localStorage) {
   return {
@@ -38,8 +40,10 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
     write(meta) {
       try {
         storage()?.setItem(key, JSON.stringify(meta));
+        return true;
       } catch {
         // Full or blocked: see above.
+        return false;
       }
     },
   };
@@ -61,7 +65,7 @@ export function forgetSynced(key, storage) {
 /** A record in memory, for a test or a page with no storage. */
 export function memoryMeta(start = empty()) {
   let meta = start;
-  return { read: () => meta, write: (next) => { meta = next; } };
+  return { read: () => meta, write: (next) => { meta = next; return true; } };
 }
 
 /**

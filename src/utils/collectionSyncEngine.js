@@ -18,6 +18,9 @@ import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { itemPath } from './collectionSyncIo.js';
 
+/** A first sync that waits: the last account's list could not be set aside — tried again later. */
+const noRoom = () => Object.assign(new Error('Storage is full: the last account\'s list could not be set aside.'), { code: 'resource-exhausted' });
+
 /**
  * createCollectionSync({ name, io, store, meta, report, ... }):
  *   name      the list's collection: 'jobs' or 'boards'
@@ -104,17 +107,31 @@ export function createCollectionSync({
     s.queue = null;
   }
 
-  /** Account `uid`'s list leaves this browser (collectionSyncPlan.leaveList); nothing when it is not that account's. */
+  /**
+   * Account `uid`'s list leaves this browser (collectionSyncPlan.leaveList); nothing when it is not
+   * that account's. False when storage would not take the record holding what was kept aside: the
+   * list then stays, still that account's — its next sign-in sends it, and another account's first
+   * sync waits until it can be set aside (R5-HUNT7-SYNC-LEAVE-META-WRITE-DROPPED).
+   */
   function leave(uid) {
     // The list first: loading it may find it damaged and make the record forget what the cloud
     // holds (forgetSynced), which must come before the record is read.
     const list = store.items();
     const left = leaveList(meta.read(), list, uid);
-    if (!left) return;
-    meta.write(left.meta);
+    if (!left) return true;
+    // The record before the list goes: gone with nothing kept aside, what was not sent was lost,
+    // and the record left behind still listed the account's items — the next first sync took them
+    // for deleted here and deleted them from the account. Storage full: the list goes first, to
+    // make room; still refused, it comes back.
+    const written = meta.write(left.meta);
     store.replace(left.list);
+    if (!written && !meta.write(left.meta)) {
+      store.replace(list);
+      return false;
+    }
     // Its recovery notice and backups copy it: they leave with it (storageBackup.forgetRecovery).
     store.leaveRecovery?.();
+    return true;
   }
 
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
@@ -206,7 +223,8 @@ export function createCollectionSync({
       if (gen !== s.gen) return;
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
       const m = meta.read();
-      if (m.uid && m.uid !== uid) leave(m.uid);
+      // The last account's list could not be set aside (storage full): not merged into this one's.
+      if (m.uid && m.uid !== uid && !leave(m.uid)) throw noRoom();
       const record = meta.read();
       const own = store.items();
       const mine = record.uid === uid;
