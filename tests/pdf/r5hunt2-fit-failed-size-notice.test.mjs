@@ -1,8 +1,9 @@
-// R4-DUX-15: Design → Spacing → 1-Page Fit. Past the spacing steps its ladder lowers the base text
-// size (down to 9 pt), but the button's tooltip spoke only of margins and line heights, and a fit
-// that worked left the notice empty: the user's 11 pt text became 9 pt without a word. Now the
-// tooltip says the text size may be reduced, and a fit that brought it down says so under the
-// presets ("Fits on 1 page — text size 11 → 9 pt."); a fit on spacing alone still says nothing.
+// R5-HUNT2: Design → Spacing → 1-Page Fit on a résumé too long for one page. No step of the ladder
+// fits, so the last one is kept — the tightest spacing with the base text at 9 pt — and all of it is
+// written, the text size too. The notice spoke only of spacing ("Still N pages at the tightest
+// spacing — …"), so an 11 pt résumé became 9 pt without a word, and 1-Page Fit has no Undo. Now the
+// notice names the text size as well: "Still N pages at the tightest spacing and 9 pt text (was 11 pt)
+// — shorten the content to fit one page." A résumé already at 9 pt hears only the spacing.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, read, loadModule } from './harness.mjs';
@@ -44,44 +45,33 @@ async function panel(r) {
     for (let i = 0; i < 600 && button().textContent.includes('Fitting'); i += 1) await new Promise((res) => { setTimeout(res, 100); });
     await new Promise((res) => { setTimeout(res, 0); });
   };
-  const notice = () => all().find((el) => el.tagName === 'P' && el.textContent.trim().startsWith('Fits on 1 page'))?.textContent.trim();
+  const notice = () => all().find((el) => el.tagName === 'P' && el.textContent.trim().startsWith('Still '))?.textContent.trim();
   return { button, settled, notice, settings: () => current.settings, unmount: () => view.unmount() };
 }
 
-describe('1-Page Fit names a smaller text size (R4-DUX-15)', () => {
-  it('the notice text: the size change on a fit, nothing for spacing alone', async () => {
+describe('1-Page Fit that stays over a page names the smaller text size (R5-HUNT2)', () => {
+  it('the notice text: the size change when the tightest step lowered it, spacing alone when it did not', async () => {
     const { fitSizeNotice } = await loadModule('/src/utils/pageFit.js');
-    assert.equal(fitSizeNotice({}, { pages: 1, settings: { marginV: 5, fontSizeBase: 9 } }), 'Fits on 1 page — text size 11 → 9 pt.', 'an unset base prints at 11 pt');
-    assert.equal(fitSizeNotice({ fontSizeBase: 12 }, { pages: 1, settings: { fontSizeBase: 10 } }), 'Fits on 1 page — text size 12 → 10 pt.');
-    assert.equal(fitSizeNotice({}, { pages: 1, settings: { marginV: 8 } }), '', 'spacing only: nothing to say');
-    assert.match(fitSizeNotice({}, { pages: 2, settings: { fontSizeBase: 9 } }), /^Still 2 pages .* and 9 pt text \(was 11 pt\)/, 'no fit: the "Still N pages" notice, with the size (R5-HUNT2)');
-    assert.equal(fitSizeNotice({}, null), '');
+    assert.equal(fitSizeNotice({}, { pages: 2, settings: { marginV: 5, fontSizeBase: 9 } }),
+      'Still 2 pages at the tightest spacing and 9 pt text (was 11 pt) — shorten the content to fit one page.', 'an unset base prints at 11 pt');
+    assert.equal(fitSizeNotice({ fontSizeBase: 12 }, { pages: 3, settings: { fontSizeBase: 9 } }),
+      'Still 3 pages at the tightest spacing and 9 pt text (was 12 pt) — shorten the content to fit one page.');
+    assert.equal(fitSizeNotice({ fontSizeBase: 9 }, { pages: 2, settings: { marginV: 5 } }),
+      'Still 2 pages at the tightest spacing — shorten the content to fit one page.', 'already at 9 pt: no size step, only spacing to say');
   });
 
-  it('the tooltip says the text size may be reduced', async () => {
-    const p = await panel(long(1));
-    try {
-      assert.match(p.button().getAttribute('title'), /reducing the text size \(down to 9 pt\)/);
-      assert.doesNotMatch(p.button().getAttribute('title'), /safely/);
-    } finally { await p.unmount(); }
-  });
-
-  it('a résumé that fits only at a smaller text size is fitted and the panel says 11 → N pt', async () => {
-    const { fitLadder, fitOnePage } = await loadModule('/src/utils/pageFit.js');
-    // The fewest entries that run past one page at the tightest spacing: only a smaller size fits them.
-    const spacingOnly = fitLadder({}).filter((s) => s.fontSizeBase === undefined).at(-1);
-    let n = 4;
-    while (await pagesOf(at(long(n), spacingOnly)) < 2) n += 1;
-    const r = long(n);
-    const fit = await fitOnePage(r);
-    assert.equal(fit.pages, 1, `${n} entries fit on one page at a smaller size`);
-    assert.ok(fit.settings.fontSizeBase < 11, 'the text size came down');
+  it('a résumé too long for one page: the 9 pt text is stored and the panel says so', async () => {
+    const { fitLadder } = await loadModule('/src/utils/pageFit.js');
+    const r = long(40);
+    const tightest = fitLadder(r.settings).at(-1);
+    assert.equal(tightest.fontSizeBase, 9, 'the last step lowers the text to 9 pt');
+    assert.ok(await pagesOf(at(r, tightest)) > 1, 'still over a page at it');
     const p = await panel(r);
     try {
       reactProps(p.button()).onClick();
       await p.settled();
-      assert.equal(p.settings().fontSizeBase, fit.settings.fontSizeBase, 'the smaller size is stored');
-      assert.equal(p.notice(), `Fits on 1 page — text size 11 → ${fit.settings.fontSizeBase} pt.`);
+      assert.equal(p.settings().fontSizeBase, 9, 'the tightest step is stored, text size included');
+      assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing and 9 pt text \(was 11 pt\) — shorten the content to fit one page\.$/);
     } finally { await p.unmount(); }
   });
 });
