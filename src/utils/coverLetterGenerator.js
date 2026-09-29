@@ -98,10 +98,19 @@ export function extractResumeHighlights(resume) {
 function article(next) {
   if (/^U[A-Z]/.test(next) || /^(uni|use|usu|uti|eu|one\b|once)/i.test(next)) return 'a';
   // An initialism spelled out letter by letter from F, H, L, M, N, R, S or X starts with a vowel
-  // sound ("an HR Manager", "an SRE"); one read as a word ("a NASA Engineer", "a NATO …") does not.
-  const initialism = /^[A-Z][A-Z&]*[A-Z](?![A-Za-z])/.exec(next)?.[0];
-  if (initialism && /^[FHLMNRSX]/.test(initialism) && !/^[^AEIOU][AEIOU][^AEIOU][AEIOU]/.test(initialism)) return 'an';
+  // sound ("an HR Manager", "an SRE", "an R&D Engineer", "an L2 Support Engineer"). A capitalised
+  // word does not: a longer one with a vowel ("a NASA Engineer", "a SWAT Officer", a title typed in
+  // capitals: "a SOFTWARE ENGINEER", "a MARKETING MANAGER") or a three-letter one read as a
+  // syllable ("a LAN Administrator", "a LAW CLERK").
+  const caps = /^[A-Z](?:[A-Z&]*[A-Z])?(?![A-Za-z])/.exec(next)?.[0].replace(/&/g, '');
+  if (caps && /^[FHLMNRSX]/.test(caps) && spelledOut(caps)) return 'an';
   return /^[aeiou]/i.test(next) ? 'an' : 'a';
+}
+
+/** A run of capitals read letter by letter: no vowel ("HR", "NLP", "HTML"), or at most three letters and no syllable ("SRE", "MBA", not "LAN"). */
+function spelledOut(caps) {
+  if (!/[AEIOUY]/.test(caps)) return true;
+  return caps.length <= 3 && !/^[^AEIOUY][AEIOUY][^AEIOUY]$/.test(caps);
 }
 
 function roleClause({ role, company }) {
