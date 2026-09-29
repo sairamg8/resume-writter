@@ -59,7 +59,8 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
     // focused box, not its long digits; a template's 1.35 still shows 1.35 (R5-HUNT6-LINE-HEIGHT-FLOAT).
     editText: String(Number(current.toPrecision(15))),
     commit: (str) => {
-      const n = parseFloat(str);
+      // A decimal comma reads as a point: '1,6' is 1.6, not 1 (R5-HUNT7-LINE-HEIGHT-COMMA).
+      const n = parseFloat(str.replace(',', '.'));
       if (!isNaN(n)) onChange(Math.min(max, Math.max(min, snap(n))));
     },
   });

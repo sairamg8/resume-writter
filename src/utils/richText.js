@@ -12,7 +12,7 @@
  * so a pasted colour is an accident — and "background-color: transparent" used to become
  * invisible text in the PDF.
  *
- * Block: { runs, align, indent, marker, inList }
+ * Block: { runs, align, indent, marker, inList, list }
  *   runs   [{ text, bold, italic, underline, strike, href }] — "\n" inside a run is a <br>
  *   align  'left' | 'center' | 'right' | 'justify' | null (null: the caller's alignment)
  *   indent list depth: 0 for body text; list items at depth n and their continuation
@@ -22,6 +22,9 @@
  *   inList true for a block inside a list (an item, or its continuation); false for body text. A
  *          quote or <dd> outside any list shares a top-level item's indent, and only this tells it
  *          from that item's continuation (the ATS bullets, R4-SW-WT-01)
+ *   list   on a list item only: { id, type, number } — which list it is in (one id per <ul>/<ol>), that
+ *          list's number type ('1' | 'a' | 'A' | 'i' | 'I') and the item's number (null in a <ul>);
+ *          sanitizeRichText writes the list back from these (R5-HUNT7-LIST-TYPE)
  */
 
 const BLOCK_TAGS = new Set([
@@ -243,6 +246,24 @@ function toAlpha(n) {
   return out;
 }
 
+const ROMAN = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+const fromRoman = (s) => [...s].reduce((sum, c, i) => sum + (ROMAN[c] < (ROMAN[s[i + 1]] || 0) ? -ROMAN[c] : ROMAN[c]), 0);
+const fromAlpha = (s) => [...s].reduce((n, c) => n * 26 + c.charCodeAt(0) - 96, 0);
+
+/**
+ * A typed list marker's letters ('c', 'IV') as { type, start }: Roman when longer than one letter
+ * and all Roman digits (ii, iv, xii), or i, v or x alone; any other letter counts in the alphabet, so
+ * a Word list copied from its third item, 'c)', starts at c., not at i. (R5-HUNT7-LIST-TYPE).
+ */
+function letteredStart(s) {
+  const lower = s.toLowerCase();
+  const roman = /^[ivxlcdm]+$/.test(lower) && (lower.length > 1 || 'ivx'.includes(lower));
+  const upper = s !== lower;
+  return roman
+    ? { type: upper ? 'I' : 'i', start: fromRoman(lower) }
+    : { type: upper ? 'A' : 'a', start: fromAlpha(lower) };
+}
+
 function listType(attrs) {
   const css = styleOf(attrs)['list-style-type'];
   const t = attrs.type || '';
@@ -310,7 +331,12 @@ function wordLists(node) {
     if (!top || top.level < level) {
       const attrs = {};
       if (num && /^\d+$/.test(num[1])) attrs.start = num[1];
-      else if (num) attrs.type = /^[ivxlcdm]+$/i.test(num[1]) ? (num[1] === num[1].toLowerCase() ? 'i' : 'I') : (num[1] === num[1].toLowerCase() ? 'a' : 'A');
+      else if (num) {
+        // Its letters give the list's type and where it starts: 'c)' is c., 'iv.' is iv.
+        const { type, start } = letteredStart(num[1]);
+        attrs.type = type;
+        if (start !== 1) attrs.start = String(start);
+      }
       const list = { tag: ordered ? 'ol' : 'ul', attrs, children: [] };
       const parentItem = top && top.list.children[top.list.children.length - 1];
       (parentItem ? parentItem.children : out).push(list);
@@ -332,12 +358,14 @@ export function parseRichText(html) {
   const tree = buildTree(src);
   wordLists(tree);
   const blocks = [];
-  let cur = null; // { parts: [{ text, fmt } | { br: true }], align, indent, marker }
+  let cur = null; // { parts: [{ text, fmt } | { br: true }], align, indent, marker, list }
+  let listCount = 0;
 
   const start = (ctx) => {
     cur = { parts: [], align: ctx.align || null, indent: ctx.indent, marker: null, inList: ctx.depth > 0 };
     if (ctx.li && !ctx.li.used) {
       cur.marker = ctx.li.marker;
+      cur.list = ctx.li.list;
       ctx.li.used = true;
     }
   };
@@ -377,7 +405,8 @@ export function parseRichText(html) {
       if (tag === 'ul' || tag === 'ol') {
         flush();
         const depth = ctx.depth + 1;
-        const list = { ordered: tag === 'ol', type: listType(attrs), next: Number.parseInt(attrs.start, 10) };
+        listCount += 1;
+        const list = { id: listCount, ordered: tag === 'ol', type: listType(attrs), next: Number.parseInt(attrs.start, 10) };
         if (!Number.isFinite(list.next)) list.next = 1;
         walk(child, { ...ctx, align, depth, list, li: null, indent: depth });
         flush();
@@ -388,15 +417,18 @@ export function parseRichText(html) {
         const depth = Math.max(ctx.depth, 1);
         const list = ctx.list || { ordered: false, type: '1', next: 1 };
         let marker;
+        let number = null;
         if (list.ordered) {
           const value = Number.parseInt(attrs.value, 10);
           if (Number.isFinite(value)) list.next = value;
+          number = list.next;
           marker = numberMarker(list.next, list.type);
           list.next += 1;
         } else {
           marker = BULLETS[(depth - 1) % BULLETS.length];
         }
-        const li = { marker, used: false };
+        // Which list the item is in, its type and its number: sanitizeRichText writes them back.
+        const li = { marker, used: false, list: { id: list.id, type: list.type, number } };
         walk(child, { ...ctx, align, depth, indent: depth, li, fmt: formatOf(tag, attrs, ctx.fmt) });
         flush();
         continue;
@@ -458,7 +490,9 @@ function finish(block) {
     if (!parts.length) push('\u00a0', {}); // an empty line keeps its height
     for (const { text, fmt } of parts) push(text, fmt);
   });
-  return { runs, align: block.align, indent: block.indent, marker: block.marker, inList: block.inList };
+  const out = { runs, align: block.align, indent: block.indent, marker: block.marker, inList: block.inList };
+  if (block.list) out.list = block.list;
+  return out;
 }
 
 /** True when the HTML prints anything (a lone <br> or &nbsp; line counts as nothing). */
@@ -521,13 +555,17 @@ export function sanitizeRichText(html) {
       const tag = /^[•–·]$/.test(b.marker) ? 'ul' : 'ol';
       closeLists(depth);
       const top = open[open.length - 1];
-      if (top && top.depth === depth && top.tag !== tag) {
+      const listId = b.list ? b.list.id : null;
+      // A second numbered list next to the first stays its own list, so it keeps its own numbering.
+      if (top && top.depth === depth && (top.tag !== tag || (tag === 'ol' && top.id !== listId))) {
         out += `</li></${open.pop().tag}>`;
       }
       if (!open.length || open[open.length - 1].depth < depth) {
-        const start = tag === 'ol' ? Number.parseInt(b.marker, 10) : NaN;
-        out += `<${tag}${Number.isFinite(start) && start !== 1 ? ` start="${start}"` : ''}>`;
-        open.push({ tag, depth });
+        // The list keeps its number type (a., A., i., I.) and where it starts (R5-HUNT7-LIST-TYPE).
+        const type = tag === 'ol' && b.list && b.list.type !== '1' ? b.list.type : null;
+        const start = tag === 'ol' ? (b.list && b.list.number != null ? b.list.number : Number.parseInt(b.marker, 10)) : NaN;
+        out += `<${tag}${type ? ` type="${type}"` : ''}${Number.isFinite(start) && start !== 1 ? ` start="${start}"` : ''}>`;
+        open.push({ tag, depth, id: listId });
       } else {
         out += '</li>';
       }
