@@ -11,9 +11,9 @@ import * as ops from './boardOps.js';
 /**
  * The actions, given the store's `boardsNow()` (the list now, loaded first) and
  * `setBoards(change)` (the list becomes change(list); the same list back saves nothing).
- * `now()` is the time in ms.
+ * `now()` is the time in ms; `owner()` the account the list belongs to (its sync record), or null.
  */
-export function createBoardActions({ boardsNow, setBoards, now = () => Date.now() }) {
+export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(), owner = () => null }) {
   const findBoard = (id) => boardsNow().find((b) => b.id === id) ?? null;
   const findIn = (boardId, part, id) => findBoard(boardId)?.[part].find((x) => x.id === id) ?? null;
 
@@ -65,18 +65,25 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
 
   const toggleStar = (id) => change(id, (b) => ops.updateBoardFields(b, { starred: !b.starred }));
 
-  /** Delete a project; returns `{ board, index }` for restoreBoard (the toast's Undo), or null. */
+  /** Delete a project; returns `{ board, index, owner }` for restoreBoard (the toast's Undo), or null. */
   function deleteBoard(id) {
     const boards = boardsNow();
     const index = boards.findIndex((b) => b.id === id);
     if (index === -1) return null;
+    const from = owner();
     setBoards((list) => list.filter((b) => b.id !== id));
-    return { board: boards[index], index };
+    return { board: boards[index], index, owner: from };
   }
 
-  /** Put a deleted project back where it was (a key another project took meanwhile is re-derived); true when it came back. */
+  /**
+   * Put a deleted project back where it was (a key another project took meanwhile is re-derived);
+   * true when it came back. Not once its account's list has left this browser (a sign-out, here or
+   * in another tab, while the toast was up): put into the list with no owner, the next account to
+   * sign in took it for its own and uploaded it.
+   */
   function restoreBoard(removed) {
     if (!removed?.board || findBoard(removed.board.id)) return false;
+    if (removed.owner && removed.owner !== owner()) return false;
     setBoards((boards) => {
       const taken = boards.map((b) => b.key);
       const board = taken.includes(removed.board.key) ? { ...removed.board, key: deriveKey(removed.board.title, taken) } : removed.board;

@@ -5,7 +5,7 @@ import { addressableJobs, completeJob, readJob, statusId } from '../utils/normal
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobMerge.js';
-import { forgetSynced, JOBS_SYNC_KEY } from '../utils/collectionSyncMeta.js';
+import { forgetSynced, JOBS_SYNC_KEY, localMeta } from '../utils/collectionSyncMeta.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -249,6 +249,21 @@ function updateJob(id, updates) {
   return true;
 }
 
+/** The account the list belongs to (its sync record's uid): null signed out, or never synced. */
+const listOwner = () => localMeta(JOBS_SYNC_KEY).read().uid;
+
+/**
+ * Whose list each job (deleteJob, moveJob) or whole list (clearDemoData) an Undo can put back was
+ * taken from. An Undo toast outlives a sign-out, here or in another tab: its restore wrote the
+ * last account's jobs into the list the sign-out had emptied, with no owner, and the next account
+ * to sign in took them for its own and uploaded them. Put back only into the list they left.
+ */
+const takenFrom = new WeakMap();
+const stillOwner = (taken) => {
+  const owner = takenFrom.get(taken);
+  return !owner || owner === listOwner();
+};
+
 /** Job `id` as it is and where, `{ job, index }` — what Undo needs — or null when there is none. */
 function placeOf(id) {
   if (!initialized) init();
@@ -266,13 +281,17 @@ function moveJob(id, { status, beforeId = null } = {}) {
   if (!was) return null;
   const jobs = moveInList(snapshot().jobs, id, { status, beforeId }, Date.now());
   if (jobs !== snapshot().jobs) setJobs(() => jobs);
+  takenFrom.set(was.job, listOwner());
   return was;
 }
 
 /** Delete job `id`; returns it and its place, `{ job, index }`, for restoreJob (Undo) — null when there was none. */
 function deleteJob(id) {
   const was = placeOf(id);
-  if (was) setJobs(jobs => jobs.filter(j => j.id !== id));
+  if (was) {
+    takenFrom.set(was.job, listOwner());
+    setJobs(jobs => jobs.filter(j => j.id !== id));
+  }
   return was;
 }
 
@@ -282,7 +301,7 @@ function deleteJob(id) {
  * comes back exactly as it was.
  */
 function restoreJob(job, index) {
-  if (!job?.id) return;
+  if (!job?.id || !stillOwner(job)) return;
   setJobs(jobs => {
     const rest = jobs.filter(j => j.id !== job.id);
     const at = Number.isInteger(index) ? Math.max(0, Math.min(index, rest.length)) : rest.length;
@@ -318,7 +337,10 @@ function replaceJobs(jobs) {
 function clearDemoData() {
   if (!initialized) init();
   const was = snapshot().jobs;
-  if (was.length) setJobs(() => []);
+  if (was.length) {
+    takenFrom.set(was, listOwner());
+    setJobs(() => []);
+  }
   return was;
 }
 
@@ -328,7 +350,7 @@ function clearDemoData() {
  * sends them again, which also takes them off the account's deleted list (collectionSyncIo.commit).
  */
 function restoreJobs(list) {
-  if (!Array.isArray(list) || !list.length) return;
+  if (!Array.isArray(list) || !list.length || !stillOwner(list)) return;
   const back = new Set(list.map(j => j.id));
   setJobs(jobs => [...list, ...jobs.filter(j => !back.has(j.id))]);
 }
