@@ -1,112 +1,223 @@
 {
- "cluster": "r5-opt",
- "branch": "claude/wf-r5-opt",
- "base": "b8d7667",
- "rows": [
-  {
-   "id": "R6a-review",
-   "outcome": "already-fixed",
-   "commits": [
-    "8e97533",
-    "e3b2030",
-    "d529431",
-    "e4cc82f",
-    "5f52d43",
-    "56e42bf"
-   ],
-   "tests": [
-    "tests/pdf/103-r4-dph-30-optimizer.test.mjs",
-    "tests/pdf/103-r4-dph-37-optimizer.test.mjs",
-    "tests/pdf/103-r4-dph-38-optimizer.test.mjs",
-    "tests/pdf/103-r4-dvis-07-optimizer.test.mjs",
-    "tests/pdf/103-r4-dph-41-quality-tiles.test.mjs",
-    "tests/pdf/103-r4-dph-42-verb-categories.test.mjs",
-    "tests/pdf/103-r4-dvis-23-optimizer-not-faded.test.mjs"
-   ],
-   "summary": "Review of the R6a (Bullet Optimizer) rows, all verdicts HOLD, no code change. Fail-first run 36518113356 (green): 8e97533 (DPH-30), e3b2030 (DVIS-07, DPH-37, DPH-38, and DVIS-23's test), d529431 (DPH-41), e4cc82f (DPH-42) each fail without their src change and pass with it; full gate 36463569183 on 9d40631 green. Code read at HEAD: textarea pointer-coarse:text-base (DPH-30/36); kit Dialog size lg, max-sm:h-dvh, overlay max-sm:p-0, body min-h-0 flex-1 overflow-y-auto (DPH-37); footer flex-wrap, kit buttons, Copy mr-auto (DPH-38); tiles grid-cols-1 sm:grid-cols-3 (DPH-41/43); verb row and categories flex-wrap, no max-w-[280px]/overflow-x-auto (DPH-42); the Dialog's own portal (DVIS-23, via 56e42bf; 5f52d43's outer Portal is gone, proven against e3b2030 in 36453755199 and again in 36518113356). Two claims were superseded on purpose: DVIS-07's 'Escape closes even after a rewrite' is reversed by R5-OPT-01, and DVIS-23's 'inside the kit Portal' is now the Dialog's portal.",
-   "remaining": "DPH-30/36/37/38 and DVIS-07 stay partial in the tracker only for their non-optimizer dialogs (Cover Letter Generator, Header Icon picker, NewLetter, ShareLink), which are the dlg cluster's scope."
-  },
-  {
-   "id": "R4-DUX-22",
-   "outcome": "fixed",
-   "commits": [
-    "8c430b5"
-   ],
-   "tests": [
-    "tests/pdf/104-r5-opt-dux-22-restore-through-edits.test.mjs",
-    "tests/pdf/102-r4-dux-22-template-undo.test.mjs"
-   ],
-   "summary": "Now: 'Restore my statement' stays after a template through typing, Auto-Fix, chips and more template picks, and brings back the user's own statement; it goes once used or once the text is that statement again. Fail-first run 36456232667."
-  },
-  {
-   "id": "R5-OPT-01",
-   "outcome": "fixed",
-   "commits": [
-    "bea64b2",
-    "0e3e18d"
-   ],
-   "tests": [
-    "tests/pdf/104-r5-opt-01-escape-keeps-edits.test.mjs"
-   ],
-   "summary": "Now: Escape closes the optimizer only while the statement is unchanged; after a rewrite it is ignored, and the ignored Escape stops at the optimizer so an issue dialog around the editor stays open. Fail-first runs 36456232667 (bea64b2), 36457682925 (0e3e18d)."
-  },
-  {
-   "id": "R4-SW-WT-01",
-   "outcome": "fixed",
-   "commits": [
-    "6d9ac2a"
-   ],
-   "tests": [
-    "tests/unit/r4-sw-wt-01-body-after-list.unit.mjs"
-   ],
-   "summary": "Now: body text after a list (a blockquote, a <dd>, a paragraph) ends the open ATS bullet and is not scored as a bullet. Fail-first run 36456232667."
-  },
-  {
-   "id": "R4-SW-WT-02",
-   "outcome": "fixed",
-   "commits": [
-    "39a5788",
-    "058d471",
-    "9d40631",
-    "681fecc",
-    "f9971a8"
-   ],
-   "tests": [
-    "tests/pdf/104-r5-opt-sw-wt-02-item-statement.test.mjs",
-    "tests/pdf/104-r5-opt-sw-wt-02-no-empty-line.test.mjs",
-    "tests/playwright/bullet-optimizer.spec.mjs"
-   ],
-   "summary": "Now: the optimizer opens a list item's whole own statement (text before and after a nested list), as the ATS scores it, and Apply rewrites it keeping the sub-list, leaving no <br> or empty paragraph (checked in Chromium). Fail-first runs 36456882224 (39a5788), 36462478655 (058d471, 9d40631)."
-  },
-  {
-   "id": "R4-SW-WT-03",
-   "outcome": "fixed",
-   "commits": [
-    "bc196c0",
-    "abe8409",
-    "f849efd",
-    "837fc9b",
-    "fe78717"
-   ],
-   "tests": [
-    "tests/unit/r4-sw-wt-03-one-weak-list.unit.mjs",
-    "tests/unit/r4-sw-wt-03-chip-keeps-infinitive.unit.mjs",
-    "tests/pdf/104-r5-opt-sw-wt-04-verb-chip-negative.test.mjs",
-    "tests/unit/r4-sw-wt-04-modal-helpers.unit.mjs"
-   ],
-   "summary": "Now: the ATS score and the optimizer read one weak-phrase list, every phrase with an Auto-Fix; a power-verb chip leaves a statement opening with a helper verb or negation (Did not, Was, Never, Could not, Can't, Won't) unchanged and shows a rewrite tip, and keeps 'efforts to' after 'Led'. The negative-chip part was filed as R4-SW-WT-04 in the commits. Fail-first runs 36456882224 (bc196c0, 837fc9b), 36459969462 (abe8409, fe78717)."
-  }
- ],
- "review": {
-  "issues": [
-   "Reviewer findings on 39a5788 (Chrome placeholders) and on the WT-03 test title were fixed in 058d471, 9d40631, f849efd, f9971a8, 681fecc"
+  "cluster": "r5-opt",
+  "branch": "claude/wf-r5-opt",
+  "base": "b8d7667ae7ace64a83872e84b413bc6a68d71521",
+  "rows": [
+    {
+      "id": "R6a-review (R4-DPH-30/36/37/38/41/42/43, R4-DVIS-07, R4-DVIS-23)",
+      "title": "Review of the formerly unreviewed R6a Bullet Optimizer rows",
+      "severity": "low",
+      "outcome": "already-fixed",
+      "commits": [
+        "8e975334c04c6b8ae22133fd49b4acca99e5c788",
+        "e3b20306e8e0719ee39efa5e9468c8ada6053081",
+        "d5294315df12a837457da58151bd81567ea70d5f",
+        "e4cc82f1ad5b4ecbb8a2fce6e3138710bdffab19",
+        "5f52d435fee388c35b8e9933820cb55c355aeac5",
+        "56e42bf9ed0ad5ec9f7923c6124ac06450a95629"
+      ],
+      "tests": [
+        "tests/pdf/103-r4-dph-30-optimizer.test.mjs",
+        "tests/pdf/103-r4-dph-37-optimizer.test.mjs",
+        "tests/pdf/103-r4-dph-38-optimizer.test.mjs",
+        "tests/pdf/103-r4-dvis-07-optimizer.test.mjs",
+        "tests/pdf/103-r4-dph-41-quality-tiles.test.mjs",
+        "tests/pdf/103-r4-dph-42-verb-categories.test.mjs",
+        "tests/pdf/103-r4-dvis-23-optimizer-not-faded.test.mjs"
+      ],
+      "summary": "Now: every R6a optimizer verdict holds, with no code change. The statement box is 16 px on touch screens (pointer-coarse:text-base, DPH-30/36). The optimizer is the kit Dialog, size lg, full screen below sm (max-sm:h-dvh, overlay max-sm:p-0) with the body as the only scroll region (DPH-37, DVIS-07). The footer wraps, uses kit buttons and keeps Copy at the start (DPH-38). The quality tiles stack below 640 px (grid-cols-1 sm:grid-cols-3, DPH-41/43). The power-verb row and its categories wrap, with no 280 px cap and no sideways scroll (DPH-42). The Dialog's own portal keeps the optimizer out of a faded hidden entry (DVIS-23). Fail-first run 36518113356 is green for 8e97533, e3b2030, d529431 and e4cc82f.",
+      "product_call": "Two earlier claims were overtaken on purpose. DVIS-07's 'Escape closes even after a rewrite' is reversed by R5-OPT-01. DVIS-23's outer Portal (5f52d43) was removed in 56e42bf because the Dialog's own portal does the same job.",
+      "remaining": "DPH-30/36/37/38 and DVIS-07 stay partial in the tracker only for their non-optimizer dialogs (Cover Letter Generator, Header Icon picker, NewLetter, ShareLink), which belong to the dlg cluster. 5f52d43 alone cannot be re-proven, as its code is gone; the DVIS-23 test is proven against e3b2030 (runs 36453755199, 36518113356).",
+      "failfirst_run": "36518113356 (green)"
+    },
+    {
+      "id": "R4-DUX-22",
+      "title": "STAR Optimizer → Use Template replaces the edited statement with no way back",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "8c430b5747bc58deeb7c5bd25a67a4f687bdca3b"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-opt-dux-22-restore-through-edits.test.mjs",
+        "tests/pdf/102-r4-dux-22-template-undo.test.mjs"
+      ],
+      "summary": "Now: after a template replaces the statement, 'Restore my statement' stays through typing, Auto-Fix, the chips and further template picks, and brings back the user's own statement. It goes once used, or once the text is that statement again. 102-r4-dux-22-template-undo's old 'Undo gone after an edit' assertion was reversed to this intended behaviour, and it now asserts more.",
+      "product_call": "The restore link keeps the statement from before the first template of this session, not the last edit.",
+      "remaining": "None.",
+      "failfirst_run": "36456232667 (green)"
+    },
+    {
+      "id": "R5-OPT-01",
+      "title": "Escape in the optimizer throws away a rewritten statement",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "bea64b27c56bd501f22c01a3abde8f4f6e7c72b1",
+        "0e3e18de9eb0e18579614c71b2ee1aac1b24998c"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-opt-01-escape-keeps-edits.test.mjs"
+      ],
+      "summary": "Now: Escape closes the optimizer only while the statement is unchanged. After a rewrite it is ignored, and that ignored Escape stops at the optimizer, so an issue dialog around the editor stays open too. This is unchanged by claude/r4-green's inert closing Dialog panel, as the optimizer is unmounted on close and close() does nothing once open is false (clean merge, git merge-tree).",
+      "product_call": "A rewritten statement is closed only with Cancel or Apply, never by a stray Escape.",
+      "remaining": "No feedback is given when Escape is ignored (noted as a11y, deferred).",
+      "failfirst_run": "36456232667 (bea64b2), 36457682925 (0e3e18d), both green"
+    },
+    {
+      "id": "R4-SW-WT-01",
+      "title": "Body text after a list (a blockquote) joins the last ATS bullet",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "6d9ac2ac47b821a0aabf04a6ddcd9bacfb0bdd87",
+        "af15d53e9b2735ce8e99e4ddbd3817a8f9455790",
+        "89119f0d8aa256b87b4def989e2d42dd29197ea3"
+      ],
+      "tests": [
+        "tests/unit/r4-sw-wt-01-body-after-list.unit.mjs",
+        "tests/unit/r5-opt-sw-wt-01-quote-after-list-saved.unit.mjs"
+      ],
+      "summary": "Now: a quote or <dd> after a list stays apart from the last bullet everywhere, including after the description is edited. The ATS ends the open bullet at a block outside every list (6d9ac2a). The editor's sanitizer, which the next edit saves, now closes the list before such a block instead of putting it into the last <li> as a <p>. Before, one typed character glued the quote back onto the bullet. The Markdown export prints it as a paragraph of its own, not as the item's continuation (af15d53). A quote or paragraph inside an item still stays in it.",
+      "product_call": "An ATS bullet is a list item plus what is inside that item. Body text outside the list is never part of a bullet. In the PDF and Word a quote prints as an indented paragraph of its own (paragraph gap, no marker), the same column a paragraph inside a level-1 item has; that look is left as it is.",
+      "remaining": "The sanitizer still stores a top-level <blockquote> as a plain <p> (its indent is lost on save). This is older behaviour for every quote, not only after a list, and is left as it is.",
+      "failfirst_run": "36456232667 (6d9ac2a); 36519427309 (af15d53, green: fail without, pass with); named tests 36519429796 (green)"
+    },
+    {
+      "id": "R4-SW-WT-02",
+      "title": "Text after a nested list opens as its own line in the optimizer but joins the outer item in the ATS",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "39a5788f0af7e7d106f8cb9ed187c60b1f1bb99e",
+        "058d471cda6b333f7d7017087e8be5bf1110ad8b",
+        "9d4063149d3fde8097a5dbe2731c28be29da24da",
+        "681feccd1c637e8c16c34131ef321703bdf2cb4a",
+        "f9971a8ee7a4d930cce74002aab607f66b328deb"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-opt-sw-wt-02-item-statement.test.mjs",
+        "tests/pdf/104-r5-opt-sw-wt-02-no-empty-line.test.mjs",
+        "tests/playwright/bullet-optimizer.spec.mjs"
+      ],
+      "summary": "Now: the optimizer opens a list item's whole statement across a nested list, as the ATS scores it. Apply rewrites that statement, keeps the sub-list and leaves no <br> or empty paragraph. The Playwright spec pins the saved HTML in Chromium.",
+      "product_call": "The statement the optimizer edits is the one the ATS scores: an item's own text before and after its nested list.",
+      "remaining": "The Playwright spec cannot be proven fail-first (failfirst runs node only); its real-browser evidence is red run 36460322150 on 058d471, then green on 9d40631 and in full gate 36463569183. The node tests for 058d471 and 9d40631 rely on the test's own imitation of Chrome's delete.",
+      "failfirst_run": "36456882224 (39a5788), 36462478655 (058d471, 9d40631), green"
+    },
+    {
+      "id": "R4-SW-WT-03",
+      "title": "The ATS and optimizer weak-phrase lists differ; a power-verb chip on a negative statement",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "bc196c0fcb0e337e00f715a404d25078ea7839d1",
+        "abe8409e1f9ed1cfaa9fca00baacc160c842f0cc",
+        "f849efdd09f9ea017232aa680e7dac6c35a1fc4e",
+        "837fc9bba4813361c9c017c8afeb10b35ccdbcf5",
+        "fe78717897ed7183ddc543422c3eda93078838cd",
+        "5ceb67c6eaf3c634551dd2dd43bfb3b50c527d35"
+      ],
+      "tests": [
+        "tests/unit/r4-sw-wt-03-one-weak-list.unit.mjs",
+        "tests/unit/r4-sw-wt-03-chip-keeps-infinitive.unit.mjs",
+        "tests/pdf/104-r5-opt-sw-wt-04-verb-chip-negative.test.mjs",
+        "tests/unit/r4-sw-wt-04-modal-helpers.unit.mjs",
+        "tests/unit/r5-opt-sw-wt-03-chip-other-negatives.unit.mjs"
+      ],
+      "summary": "Now: the ATS score and the optimizer read one weak-phrase list (WEAK_PHRASE_REPLACEMENTS), and every phrase has an Auto-Fix. A power-verb chip leaves a statement that opens with a helper verb or a negative unchanged and shows a rewrite tip: Did not, Was, Never, Could not, Can't, Won't, and now also No, Nobody, None, Nothing, Neither, Nor and Zero (5ceb67c). Before, 'No customer data was lost' read 'Spearheaded no customer data was lost'. 'No-code …' and 'Zero-downtime …' still take a verb. The chip keeps 'efforts to' after 'Led'.",
+      "product_call": "A chip never puts a verb in front of a negative statement; the user rewrites it as something they did. A hyphenated noun that starts with No or Zero is not a negative.",
+      "remaining": "The negatives part was committed under the ID R4-SW-WT-04; it is this scope item. f849efd changes a test title only.",
+      "failfirst_run": "36456882224 (bc196c0, 837fc9b), 36459969462 (abe8409, fe78717), 36519147360 (5ceb67c job green)"
+    }
   ],
-  "fixedByReviewer": [
-   "058d471",
-   "9d40631",
-   "f849efd"
-  ]
- },
- "baselineFailures": [],
- "notes": "Full gate on 9d40631: run 36463569183 green (suite 6/6, Playwright 3/3, Cypress 4/4, build, lint). Merges with claude/r4-green cleanly (git merge-tree). r4-green's Dialog makes a closing panel inert and pointer-events-none; the optimizer's Escape handling is in its onClose(reason) and Dialog's keydown on the wrapper, and close() is a no-op once open is false, so it is compatible. 5f52d43 is not re-proven on its own: 56e42bf removed its outer Portal, so the DVIS-23 test is proven against e3b2030 (the Dialog's portal)."
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Reviewer findings on 39a5788 (Chrome placeholders after Apply) and on the WT-03 test title"
+        ]
+      },
+      {
+        "round": 2,
+        "issues": [
+          "R4-SW-WT-01: the sanitizer and the Markdown export still put a quote after a list into the last item",
+          "R4-SW-WT-03: the power-verb chip still fires on No/Nobody/Neither/Zero"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "R4-SW-WT-02: Apply left a <br> or an empty paragraph in Chromium after rewriting across a nested list",
+        "resolution": "fixed in 058d471, 9d40631, 681fecc, f9971a8; Playwright green in full gate 36463569183"
+      },
+      {
+        "issue": "R4-SW-WT-03: a test title named the wrong behaviour",
+        "resolution": "fixed in f849efd (title only)"
+      },
+      {
+        "issue": "R4-SW-WT-01 (medium): sanitizeRichText ignored inList, so the first edit saved a quote after a list inside the last <li> and the ATS glued it to that bullet again; the Markdown export printed it as the item's continuation",
+        "resolution": "confirmed by reading sanitizeRichText and markdownBody; fixed in af15d53 (test corrected in 89119f0); fail-first 36519427309 green, named tests 36519429796 and 36519166141 green apart from the corrected assertion"
+      },
+      {
+        "issue": "R4-SW-WT-03 (low): 'No customer data was lost' took the chip's verb ('Spearheaded no customer data…'); No/Nobody/Neither/Zero were not in AUXILIARY_LEAD",
+        "resolution": "confirmed by reading insertActionVerb (no/nobody/neither/zero match no rule before the verb is prepended); fixed in 5ceb67c; fail-first job in 36519147360 green, named tests 36519166141 green for it"
+      }
+    ],
+    "fixedByReviewer": [
+      "058d471cda6b333f7d7017087e8be5bf1110ad8b",
+      "9d4063149d3fde8097a5dbe2731c28be29da24da",
+      "f849efdd09f9ea017232aa680e7dac6c35a1fc4e",
+      "af15d53e9b2735ce8e99e4ddbd3817a8f9455790",
+      "89119f0d8aa256b87b4def989e2d42dd29197ea3",
+      "5ceb67c6eaf3c634551dd2dd43bfb3b50c527d35"
+    ]
+  },
+  "rejected": [
+    {
+      "id": "R4-SW-WT-01 (PDF part of the finding)",
+      "reason": "The finding says the PDF prints a quote after a list at the item's text column, like an in-item paragraph. True, but it is layout, not a scoring error: the PDF and Word print a quote as its own indented paragraph wherever it is, and Word uses the same column for both too. The data bug (the sanitizer) and the Markdown export are fixed; the PDF look is left as it is and recorded as a product call."
+    }
+  ],
+  "a11yNoted": [
+    "BulletOptimizerModal.jsx: while the statement is rewritten, Escape is ignored with no feedback and no live-region message.",
+    "BulletOptimizerModal.jsx: the 'a verb can't go in front of it' tip appears without aria-live.",
+    "BulletOptimizerModal.jsx: 'Restore my statement' explains itself only in a title attribute, and is a small text-link target (text-[11px]).",
+    "Tip text is text-[11px] amber-800 on amber-50; contrast and size need checking."
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [
+    {
+      "id": "R4-DPH-30",
+      "verdict": "fixed-verified",
+      "evidence": "8e97533: the optimizer's statement textarea has pointer-coarse:text-base (16 px on touch, no iOS zoom). 103-r4-dph-30-optimizer fails without it and passes with it, run 36518113356. Other dialogs' fields are the dlg cluster's."
+    },
+    {
+      "id": "R4-DPH-37",
+      "verdict": "fixed-verified",
+      "evidence": "e3b2030: kit Dialog size lg, max-sm:h-dvh max-sm:max-h-dvh, overlay max-sm:p-0, body min-h-0 flex-1 overflow-y-auto; no max-h-[90vh] left. 103-r4-dph-37-optimizer, run 36518113356."
+    },
+    {
+      "id": "R4-DPH-38",
+      "verdict": "fixed-verified",
+      "evidence": "e3b2030: Copy, Cancel and Apply sit in the Dialog footer, one flex-wrap row of kit buttons, Copy first with mr-auto. 103-r4-dph-38-optimizer, run 36518113356."
+    },
+    {
+      "id": "R4-DPH-41",
+      "verdict": "fixed-verified",
+      "evidence": "d529431: the quality tiles are grid-cols-1 sm:grid-cols-3, so they stack below 640 px (DPH-43 is its duplicate). 103-r4-dph-41-quality-tiles, run 36518113356."
+    },
+    {
+      "id": "R4-DPH-42",
+      "verdict": "fixed-verified",
+      "evidence": "e4cc82f: the power-verb row is flex-wrap and the categories wrap; max-w-[280px], overflow-x-auto and the undefined no-scrollbar are gone. 103-r4-dph-42-verb-categories, run 36518113356."
+    },
+    {
+      "id": "R4-DVIS-07",
+      "verdict": "fixed-verified",
+      "evidence": "e3b2030: BulletOptimizerModal is the kit Dialog in a [data-ui-portal] layer (ring-1, rounded-lg, size lg). 103-r4-dvis-07-optimizer, run 36518113356. Its 'Escape closes after a rewrite' claim is superseded on purpose by R5-OPT-01."
+    }
+  ],
+  "notes": "Two reviewer findings were confirmed and fixed (af15d53 + 89119f0 for SW-WT-01, 5ceb67c for SW-WT-03). Every fix commit has a green fail-first run. Named tests over every file that uses richText, markdownExport, atsChecker or bulletOptimizer ran in 36519166141 (958/961 pass, the one failure the wrong <dt> expectation fixed in 89119f0; lint green) and 36519429796 (green). The last full gate is 36463569183 on 9d40631 (suite 6/6, Playwright 3/3, Cypress 4/4, build, lint); the full gate has not been re-run on this head, so the coordinator's batch gate should cover af15d53 and 5ceb67c. The branch merges cleanly with claude/r4-green; its inert closing Dialog panel does not interact with the optimizer. No accessibility changes were made."
 }
