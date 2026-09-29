@@ -1,0 +1,55 @@
+{
+  "cluster": "r5-hunt6-jobs",
+  "branch": "claude/wf-r5-hunt6-jobs",
+  "base": "a79efd8b",
+  "rows": [
+    {
+      "id": "R5-HUNT6-SIGNOUT-JOB-FORM-SAVE-AS-NEW",
+      "title": "Signing out with a job's Edit form open offered 'Save as a new job', which copied the previous account's job into the signed-out list for the next account to upload; an Add job draft also survived sign-out",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "c26c33548671590fa5829332c6d33e8b8e71ed3d"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-signout-job-form.test.mjs"
+      ],
+      "summary": "Now: when the account's job list leaves the browser (sign-out, or another account signing in), an open job form (Edit or Add) goes back to the tracker without saving anything. It no longer shows the false 'deleted in another tab' notice or its 'Save as a new job' button. Save and Save as a new job also refuse to write once the list has left. Every job form's sessionStorage draft (jobform:*) leaves with the list, so the next account does not see 'Restored your unsaved changes' with the previous account's values. The fix is in src/hooks/useJobStore.js: leaveRecovery(), which the cloud sync's leave() already calls as the list leaves, now drops the jobform:* drafts and bumps a `left` count in the store snapshot. useJobStore exposes that count. In src/pages/JobForm.jsx the form remembers the count it opened with. When it changes, the form is not 'gone' (J-16), its draft is cleared, and it leaves to /jobs. A job deleted in another tab still shows the J-16 notice and Save as a new job, which the test checks.",
+      "product_call": "Anything typed on the open form at sign-out is discarded without a question, because it belongs to the account that left. The form returns to the tracker instead of keeping the values on screen.",
+      "remaining": "No Cypress or Playwright spec signs out with a job form open in a real browser. The test runs the cloud sync's leave step (replaceJobs([]) then leaveRecovery()) on the real JobForm and store in the fake DOM."
+    },
+    {
+      "id": "R5-HUNT6-UNLISTED-STAGE-CLEAR",
+      "title": "A job's interview stage cannot be cleared on the job form when that stage is not in this browser's stage lists (imported, synced from another device, or a custom stage removed since)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "4482e356270b2f4cd2f1618d5a107965351789fb"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-unlisted-stage-clear.test.mjs"
+      ],
+      "summary": "Now: when the job's stage is in neither the predefined nor this browser's custom stages, the selected-stage pill in Interview Stage has a small X button, titled 'Clear stage', that sets the stage to none. A listed stage has no pill X and still clears through its own active button, as before. The fix is in src/components/job/InterviewStageSelector.jsx (the `unlisted` check and the pill's button).",
+      "product_call": "The X shows only for an unlisted stage, to keep the existing way of clearing a listed one. Showing it for every stage would also work, but would add a second control for listed stages.",
+      "remaining": "Custom stages still do not sync between devices. That is a separate feature and out of scope here."
+    },
+    {
+      "id": "R5-HUNT6-SALARY-RANGE-SHARED-THOUSANDS",
+      "title": "List view Salary sort treats a range written with the thousands only on the second number ('$40-50,000', '€40-50.000') as 40, so it sorts below every real salary",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "89121a4a564e4b1c8b5d2554b30685f4bbc95ae2"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-salary-range-thousands.unit.mjs"
+      ],
+      "summary": "Now: salaryValue reads '$90-120,000' as 90,000, '€40-50.000' and '40 – 55 000 €' as 40,000, and '$1-1,500,000' as 1,000,000. The Salary sort puts such a range among the real salaries, so ascending lists '$50,000' before '$90-120,000'. The fix is in src/utils/jobQuery.js. SALARY now captures the range's second number, and a new sharedGrouping() scales a bare, ungrouped first number by the grouped digits of the second (120,000 gives ×1000). It does this only when the result does not pass the second number, so '90000-120,000' stays 90,000. Ranges with a unit ('$120-150k', '10-15 LPA') and plain amounts read as before.",
+      "product_call": null,
+      "remaining": "A range such as '90-120', with no thousands and no unit anywhere, still reads as 90, since nothing in it says the thousands are implied."
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Three bugs were confirmed and fixed, one commit each: 89121a4 (salary), 4482e35 (stage), c26c335 (sign-out). Fail-first run 36602223369 is green, read from its logs. Salary: 'fail without the fix (its diff reversed): # fail 2', then pass with it. Stage: '# fail 1', then pass; the test's second case checks that listed stages keep no pill X. Sign-out: '# fail 2', then pass; the third case checks that J-16's deleted-in-another-tab flow is kept. Lint was green in both runs. Tests run 36602242674 is green. It ran 43 node test files: the 3 new ones plus the existing tests for jobQuery, InterviewStageSelector, JobForm and useJobStore, 206 tests with 206 passing. It also ran Cypress cypress/e2e/06-job-tracker.cy.js, 10 of 10 passing. Nothing prints differently, so the PDF, Word, Markdown and ATS exporters are untouched. The full gate has not run on this branch; it is left for the batch."
+}
