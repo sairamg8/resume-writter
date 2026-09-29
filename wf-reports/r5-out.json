@@ -1,0 +1,127 @@
+{
+  "cluster": "r5-out",
+  "branch": "claude/wf-r5-out",
+  "base": "b8d7667ae7ace64a83872e84b413bc6a68d71521",
+  "rows": [
+    {
+      "id": "R4-DOUT-04",
+      "title": "Sidebar PDF project card prints its technologies and link on two lines (leftover); the Projects title's keep does not measure that line",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["88ec662", "ebdaf27", "5bac05e", "948da1c", "7d31415", "8df9d77"],
+      "tests": [
+        "tests/pdf/104-r5-out-dout-04-sidebar-project-tech-line.test.mjs",
+        "tests/pdf/104-r5-out-dout-04-sidebar-project-keep.test.mjs",
+        "tests/pdf/104-r5-out-dout-04-projects-keep.test.mjs",
+        "tests/pdf/85-grid-card-long-url.test.mjs"
+      ],
+      "summary": "Now: the Sidebar's project card prints its technologies and link on one 'technologies · link' line under its name, as the other templates and Word do (88ec662). A Projects section title keeps its first project's header on every template, with each line measured. Before, it counted the name and the joined line as one line each. The Sidebar card is measured by projectCardLines at the card's width (5bac05e). The shared ProjectsSection is measured by headLines at entryTextWidth, the page's text or a Grids cell (948da1c, 8df9d77). ProjectsSection covers Classic, Minimal, the designed layouts and the Sidebar's Single · ATS-safe page. A long name over long technologies with a link no longer leaves the title alone at the foot of a page.",
+      "product_call": "The count is greedy (wrappedLines), so it errs on more lines. A title may move to the next page with its project when the header would just have fit. That is the same trade-off the Timeline's keep takes.",
+      "remaining": "Awards' and Certifications' title presence still count one line a field (not in this row's scope, not reported as failing). The test-only commit ebdaf27 updated 85-grid-card-long-url to read the ' · ' run the way pdf.js returns it. It still requires the whole URL in one run.",
+      "failfirst_run": "36459155704 (88ec662: fail 2, then passes); 36462651043 (5bac05e: fail 2 of 3, then passes); 36517512736 (8df9d77: fail 3 of 4, then passes). 948da1c's own fail-first in 36516688711 failed for the wrong reason: reversing its whole diff removed helpers 31e6f50 uses. 7d31415 and 8df9d77 re-prove it on the presence line alone."
+    },
+    {
+      "id": "R4-DOUT-07",
+      "title": "A section title can be left alone at a page foot when its first entry's header fields wrap (Timeline leftover: ~0.4 pt margin, 3-line wraps fall short as on other templates)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["45be9cd", "31e6f50"],
+      "tests": [
+        "tests/pdf/104-r5-out-dout-07-timeline-wrap-keep.test.mjs",
+        "tests/pdf/104-r5-out-dout-07-item-head-wrap-keep.test.mjs"
+      ],
+      "summary": "Now: a section title keeps its first entry's header, with each field wrapped at the width it prints in. On the Timeline, timelineHeadPresence measures at the rail's text width (45be9cd). On every other template, itemHeadPresence measures at entryTextWidth: the page's text, the Sidebar's main column or a Grids cell. That covers Experience, Education, Volunteering and Custom. The date and the location are counted on the lines they print on, in Stacked, Inline, Side by side and centred layouts. The Sidebar's main-column Experience card is measured at the card's text width. A company on three lines of the page or four of the Sidebar card, or a role and an organisation that both wrap, no longer leave the title alone at the page foot (31e6f50).",
+      "product_call": "The count errs on more lines, never fewer than the one line a field it counted before. A title may occasionally move to the next page with a header that would just have fit.",
+      "remaining": "None for the row as written. The measuring is approximate (greedy word wrap, not textkit's own breaking), with one spare line kept as the margin.",
+      "failfirst_run": "36459155704 (45be9cd: fail 3 of 4, then passes); 36516688711 (31e6f50: fail 4 of 5, then passes)"
+    },
+    {
+      "id": "R5-OUT-01",
+      "title": "Word export: a reference's e-mail has no gap above it, while the PDF card has 2 pt",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["6854572"],
+      "tests": ["tests/pdf/104-r5-out-01-word-reference-email-gap.test.mjs"],
+      "summary": "Now: in the main column of the Word export, a reference's e-mail has 40 twips (2 pt) of space before it, matching the PDF card's marginTop 2. The Sidebar's side column is unchanged, because its PDF prints the e-mail flush.",
+      "product_call": "",
+      "remaining": "Word still adds 1 pt after every card line. That is an older, separate difference and was left as it is.",
+      "failfirst_run": "36459155704 (fail 1, then passes)"
+    },
+    {
+      "id": "R5-OUT-02",
+      "title": "Export dropdown's Word hint says the designed layouts' section-title rules do not print",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["aba980c"],
+      "tests": ["tests/pdf/83-templates-ui-leftovers.test.mjs"],
+      "summary": "Now: the Export dropdown's Word hint says the designed layouts' section-title rules do print in Word. It says only the header's designed marks and the Timeline's rail and dots are left out. Test 83's stale phrase was updated to the new wording, with evidence from wordExportBuilders headingFrame and wordExportHeader headerEnd.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36459155704 (fail 1, then passes)"
+    },
+    {
+      "id": "R5-OUT-03",
+      "title": "Markdown export: a heading whose title ends in ' #' loses the '#'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["297f27d"],
+      "tests": ["tests/unit/104-r5-out-03-markdown-heading-hash.unit.mjs"],
+      "summary": "Now: a heading title that ends in ' #', or is only '#', is escaped by closeSafe in markdownExport.js. The '#' survives in Markdown renderers and when the file is imported again through importText. 'C#' and body text are unchanged.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36459155704 (fail 2, then passes)"
+    },
+    {
+      "id": "SW-W-01",
+      "title": "Word export: Modern's banner keeps extra shaded space under its last line when Banner top & bottom is below that line's space after",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["5c05640"],
+      "tests": ["tests/pdf/104-r5-out-sw-w-01-word-band-padding.test.mjs"],
+      "summary": "Now: in Word, the space after the last paragraph of Modern's banner is cut to the padding, using descriptionToParagraphs' new lastAfter. The banner ends exactly Banner top & bottom under its last line, down to 0. Before, a setting of 0 still left 4 pt under the contacts. The default of 15 pt is unchanged.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36459155704 (fail 3, then passes)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": ["RV-OUT-1", "RV-OUT-2", "RV-OUT-3"]
+      }
+    ],
+    "issues": [
+      {
+        "id": "RV-OUT-1",
+        "severity": "low",
+        "row": "R4-DOUT-04",
+        "problem": "The shared ProjectsSection title presence (PdfSectionsTwo.jsx) still counted the first project's header as 1 + 1 lines, unmeasured, while the Sidebar card and the Timeline measured it.",
+        "resolution": "Confirmed by reading the code and on CI. Fixed in 948da1c and 8df9d77 (headLines at entryTextWidth). The new tests/pdf/104-r5-out-dout-04-projects-keep.test.mjs covers Classic Left, Classic Center and Minimal Grids 2. It fails 3 of 4 without the fix (run 36517512736) and passes with it."
+      },
+      {
+        "id": "RV-OUT-2",
+        "severity": "low",
+        "row": "R4-DOUT-07",
+        "problem": "itemHeadPresence (every non-Timeline ItemHeader) and SidebarMainExperience's cardLines still counted one line a field, so 3-line wraps fell short on the other templates, as the row's leftover says.",
+        "resolution": "Confirmed and fixed in 31e6f50. itemHeadPresence takes a width (entryTextWidth) and measures each layout (Stacked, Inline, Side by side, centred) with endRowLines and centredLines, and every caller passes its Grids width. The Sidebar card's Stacked header is measured at cardTextWidth. The new tests/pdf/104-r5-out-dout-07-item-head-wrap-keep.test.mjs covers Classic Stacked, Classic Inline, Minimal Volunteering and the Sidebar card. It fails 4 of 5 without the fix (run 36516688711) and passes with it."
+      },
+      {
+        "id": "RV-OUT-3",
+        "severity": "low",
+        "row": null,
+        "problem": "The eight earlier cluster commits (88ec662..5bac05e) carry Claude-Session session_01PeuUcY5NWWpCxy878FtEE1, not the brief's session_013S3xa7VBjcBV3avHWTbYQF.",
+        "resolution": "Confirmed and not fixable without rewriting pushed history, which the rules forbid (no force-push). The commits since then (948da1c, 31e6f50, 7d31415, 8df9d77 and this report) carry the brief's trailer. The code is not affected."
+      }
+    ],
+    "fixedByReviewer": ["948da1c", "31e6f50", "7d31415", "8df9d77"]
+  },
+  "rejected": [],
+  "a11yNoted": [
+    "ExportDropdown.jsx: the Word hint that R5-OUT-02 updates exists only as a title-attribute tooltip. Keyboard, touch and screen-reader users do not reliably get it (deferred, not fixed).",
+    "The TodoItem delete button has no accessible name (out of scope, deferred)."
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [],
+  "notes": "Head before this report: 8df9d77. It has the same tree as 31e6f50, where the full gate passed in run 36516693879 (suite 6/6, Playwright 3/3, Cypress 4/4, build and lint). Named-file runs on 31e6f50 (36516688711) covered the new tests plus 104-r5-out-*, 102-r4-dout-07, 84-keep-together, 96-sidebar-single-column, 41-sidebar-contacts-whole and 85-grid-card-long-url. The named-file run on 8df9d77 (36517512736) covered the projects test and lint. Both are green. The earlier full gate on 5bac05e was run 36462654683 (green). The coordinator should run one gate on the report commit before fast-forwarding master, because the rule is an exact commit. 7d31415 and 8df9d77 are a revert-and-reapply pair of one line, made only so that 948da1c's fail-first could be proved on a head where later commits use its helpers. SIDE_COL now lives in PdfPage.jsx (mainTextWidthPt) and is re-exported from PdfSidebarColumn.jsx. None of the dsg-layout rows listed (DPH-25/26/30/33/34/35/37/38/39/41/42, DVIS-07/24/26/28/29/32/33/34/35) are UI rows this cluster touched, so dsgLayoutVerdicts is empty."
+}
