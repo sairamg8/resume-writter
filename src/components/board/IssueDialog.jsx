@@ -28,6 +28,12 @@ function Description({ value, onSave }) {
   // a cloud pull had saved meanwhile.
   const [opened, setOpened] = useState('');
   const edit = () => { setOpened(value || ''); setDraft(value || ''); };
+  // An editor with nothing typed in it follows a newer description (another tab, a cloud pull, an
+  // undo): kept on the old text, its Save, or the first key typed, wrote that old text back over it.
+  if (draft !== null && draft === opened && (value || '') !== opened) {
+    setOpened(value || '');
+    setDraft(value || '');
+  }
   // The draft and this issue's save, as last rendered, for the unmount below: it runs after the view
   // has moved on, and must save into the issue the draft was typed in.
   const latest = useRef({ draft, opened, onSave });
