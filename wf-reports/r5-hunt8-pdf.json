@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt8-pdf",
+  "branch": "claude/wf-r5-hunt8-pdf",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN",
+      "title": "PDF: with the Skills style set to Stacked or Tags, a skill group's category heading (and Stacked's thin rule under it) can be left alone at the bottom of a page while that group's skills move to the next page",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["c09d9a24bcd90b37a35fc8b2f377667c74fffadc"],
+      "tests": ["tests/pdf/r5hunt8-skills-category-keep.test.mjs"],
+      "summary": "Now: in Skills styles Stacked, Tags and Bars a group's category is an unbreakable block that keeps the first lines of its skills on its page (minPresenceAhead, three entry lines in the main column, 30 pt in the Sidebar's side column, SPACER giving it the previous sibling it needs), so the category moves to the next page with its skills instead of ending a page alone. This holds in the main column (any Grids) and in the Sidebar's dark column. Word's Stacked category paragraph now has keepNext. Bars had the same orphan, so it got the same keep. Fail-first: all 6 subtests fail without the fix and pass with it.",
+      "ci": [36634172799]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "One dispatch (run 36634172799): failfirst passed (fail 6 without the fix, pass with it); the tests job passed on the new test plus 17 existing files for skills, Sidebar, keep-together, pagination, Word stacked skills and the guards (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs); lint passed. The docs/knowledge/06-templates-export.md page-break paragraph now describes the keep. The branch base is origin/claude/r4-green at 420f487, which had moved on from the 9519ef6b named in the task."
+}
