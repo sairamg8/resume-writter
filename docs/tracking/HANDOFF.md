@@ -8,11 +8,11 @@
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
 **Lock:** `claude/coordinator-lock` (LOCK refreshed every 30 min while this run works).
-**Done this run:** brd (72af18e, 8 rows + 2 review fixes in boardOps), job (0ffbe5b, 8 rows fixed, reviewer found nothing; main.jsx is now a data router for the Back guard), dash (2d7d165), panels (182e232) and dlg (04ec3bf; 10 rows fixed, product call: the CL Generator ignores a click
+**Done this run:** out (4c404e4, 6 rows; review widened the keep-with-next measuring to Projects and every item header; Awards/Certifications title keep still counts one line per field — for the hunt), brd (72af18e, 8 rows + 2 review fixes in boardOps), job (0ffbe5b, 8 rows fixed, reviewer found nothing; main.jsx is now a data router for the Back guard), dash (2d7d165), panels (182e232) and dlg (04ec3bf; 10 rows fixed, product call: the CL Generator ignores a click
 beside it once a field is edited, as the optimizer does) merged into `claude/r4-green` (1f99a1a). Gate 36515623771 on 3426a09
 (dash+panels) was dispatched; the batch gate for the merged head is still to run.
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
-`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Running: out, opt. Then imp, then opt + imp. Then the
+`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Running: opt, imp, then opt + imp. Then the
 20-row dsg-layout verdict check, R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
 A cluster is done only when its report is on its branch; merge it then. No full gate yet on the merged head.
 
