@@ -44,10 +44,35 @@ export function filterJobs(jobs, { q = '', statuses = [], followUpDue = false, n
 }
 
 const UNIT = '(k|mn|m|lpa|lakhs?|lacs?|l|crores?|cr)';
+// A number: digits grouped in thousands by a comma, dot, space or apostrophe ('120,000', '€60.000',
+// '120 000 €', "CHF 120'000", the lakh grouping '1,20,000'), maybe with decimals; or digits with one
+// decimal point or comma ('65.5', '2,5 LPA').
+const SEP = "[.,'’ \\u00a0\\u202f]";
+const NUM = `\\d{1,3}(?:${SEP}\\d{2,3})*${SEP}\\d{3}(?!\\d)(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?`;
 // An amount and its unit, then maybe a range's second amount ('-', '–', 'to', a currency sign):
 // '$120-150k' writes the unit once, after the second number (the first read as 120).
-const SALARY = new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*${UNIT}?(?![a-z])(?:\\s*(?:-|–|—|to)\\s*[^\\d\\s]{0,3}\\s*\\d[\\d,]*(?:\\.\\d+)?\\s*${UNIT}?(?![a-z]))?`, 'i');
+const SALARY = new RegExp(`(${NUM})\\s*${UNIT}?(?![a-z])(?:\\s*(?:-|–|—|to)\\s*[^\\d\\s]{0,3}\\s*(?:${NUM})\\s*${UNIT}?(?![a-z]))?`, 'i');
 const SALARY_UNIT = { k: 1e3, m: 1e6, mn: 1e6, lpa: 1e5, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, l: 1e5, cr: 1e7, crore: 1e7, crores: 1e7 };
+
+/**
+ * A number as SALARY matched it. Spaces and apostrophes only group thousands. With both a dot and a
+ * comma, the last one is the decimal point ('1.234,5', '1,234.5'); with one of them, it groups
+ * thousands when it repeats or has three digits after it ('€60.000', '$120,000'), else it is the
+ * decimal point ('65.5k', '2,5 LPA'). Every comma was dropped and every dot kept: '€60.000' read as
+ * 60 and '2,5 LPA' as 25 LPA (R5-HUNT2). With a unit after it (`scaled`), a lone dot stays the
+ * decimal point, as it always was: '$1.125M' is 1,125,000, not a thousand times that (R5-HUNT2 review).
+ */
+function amount(text, scaled) {
+  const digits = text.replace(/['’\s]/g, '');
+  const point = Math.max(digits.lastIndexOf('.'), digits.lastIndexOf(','));
+  if (point < 0) return Number.parseFloat(digits);
+  const mark = digits[point];
+  const both = digits.includes('.') && digits.includes(',');
+  const grouping = !both && (digits.indexOf(mark) !== point
+    || (digits.length - point - 1 === 3 && !(scaled && mark === '.')));
+  const whole = digits.slice(0, grouping ? digits.length : point).replace(/[.,]/g, '');
+  return Number.parseFloat(grouping ? whole : `${whole}.${digits.slice(point + 1)}`);
+}
 
 /**
  * The first amount in a salary as the user wrote it — '$150k – $200k' → 150000, '$120,000' →
@@ -57,8 +82,9 @@ const SALARY_UNIT = { k: 1e3, m: 1e6, mn: 1e6, lpa: 1e5, lakh: 1e5, lakhs: 1e5, 
 export function salaryValue(text) {
   const m = SALARY.exec(String(text ?? ''));
   if (!m) return null;
-  const n = Number.parseFloat(m[1].replace(/,/g, ''));
-  return Number.isFinite(n) ? n * (SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()] || 1) : null;
+  const scale = SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()];
+  const n = amount(m[1], Boolean(scale));
+  return Number.isFinite(n) ? n * (scale || 1) : null;
 }
 
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });

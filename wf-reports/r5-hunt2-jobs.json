@@ -1,0 +1,59 @@
+{
+  "cluster": "r5-hunt2-jobs",
+  "branch": "claude/wf-r5-hunt2-jobs",
+  "base": "54b9ec28f19e9684778b75d74230b204737ff3b2",
+  "rows": [
+    {
+      "id": "R5-HUNT2-IMPORT-BACKUP-SKIPS-EDITED-DEMO-JOB",
+      "title": "Restoring a job backup in a fresh browser keeps the untouched demo job and drops the user's edited copy of it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["554a1591f5f23a1374cc884902184ca0905e03a6"],
+      "tests": ["tests/unit/job-import.unit.mjs (R5-HUNT2: the backup's edited demo job replaces the untouched demo a fresh browser shows)"],
+      "summary": "Now: when the tracker's job with the file's id is the untouched demo (isUntouchedDemoJob: id demo_1, its own four history entries, and times that were never changed), mergeImport in src/utils/jobImport.js replaces it with the file's copy and counts it as updated. This is the same rule the cloud sync's first merge uses. Before, the fresh browser's demo is dated from today, so it looked newer than the demo the user filled in and backed up days ago, and the import skipped the user's job as 'already in the tracker'. An untouched demo in the file still does not replace today's demo, and a demo the user already edited in this browser is still kept or replaced by date, as before. The rule applies whether or not the file's entry has times. useJobStore.importJobs is the only caller.",
+      "failfirst_run": "36533134220 (job 109291124553, green: '# fail 1' with the diff reversed, passes with it)"
+    },
+    {
+      "id": "R5-HUNT2-SALARY-SORT-EUROPEAN-NUMBER-FORMAT",
+      "title": "List view's Salary sort reads '€60.000' as 60, '120 000 €' as 120 and '2,5 LPA' as 25 LPA",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["44af75b37fe570f278ae1042572bc6777db5d31f", "19b48d77a824e8e14fefc37a0a4bc0594f510a67"],
+      "tests": [
+        "tests/unit/job-query.unit.mjs (R5-HUNT2: salaries written with European separators sort by their real amount)",
+        "tests/unit/job-query.unit.mjs (R5-HUNT2 review: a dot before a unit (k, M, Cr, LPA) is still the decimal point)"
+      ],
+      "summary": "Now: salaryValue in src/utils/jobQuery.js, which the List view's Salary sort uses, accepts a dot, space, no-break space or apostrophe as the thousands separator, as well as the lakh grouping. When a number has both a dot and a comma, the last one is the decimal point. A lone comma, or a lone dot with no unit after it, groups thousands when exactly three digits follow; otherwise it is the decimal point. A lone dot before a unit (k, M, Cr, LPA) stays the decimal point, as it was before R5-HUNT2. Results: '€60.000' is 60000, '120 000 €' is 120000, \"CHF 120'000\" is 120000, '2,5 LPA' is 250000, '€1.234,50' is 1234.5, '$1.125M' is 1125000, '$1,500k' is 1500000 and '1.500k' is 1500. All the existing J-18 and range values are unchanged. Salaries are stored as the user typed them, so jobs saved earlier sort correctly without any migration.",
+      "failfirst_run": "36533134220 (job 109291124450, green: '# fail 1' with the diff reversed, passes with it); review fix 19b48d7: run 36535910361 (job 109299816288, green: '# fail 1' with the diff reversed, passes with it; named tests and lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": ["A lone dot before a unit was read as a thousands separator: '$1.125M' sorted as 1,125,000,000"]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Regression from 44af75b, which the fixer had noted as a deliberate choice ('1.500k' reads as 1,500,000). The same rule read '$1.125M' as 1,125,000,000, '₹1.125 Cr' as 11,250,000,000 and '₹12.500 LPA' as 1,250,000,000, when r4-green read them as 1.125 million, 1.125 crore and 12.5 lakh. Each of those jumped to the top of a descending Salary sort. Nobody writes thousands of a unit ('1.500k' meaning 1500k), but a three-digit decimal before M or Cr is common.",
+        "severity": "low",
+        "resolution": "fixed in 19b48d7: amount() gets `scaled`, which is true when a unit follows (the first number's own unit or the range's shared one), and a lone dot before a unit stays the decimal point. A comma before a unit still groups thousands ('$1,500k' is 1,500,000, as on r4-green). No unit: '€60.000' is still 60000. New test 'R5-HUNT2 review: a dot before a unit (k, M, Cr, LPA) is still the decimal point'. Fail-first run 36535910361 is green: the test fails without the change and passes with it."
+      }
+    ],
+    "fixedByReviewer": ["19b48d77a824e8e14fefc37a0a4bc0594f510a67"]
+  },
+  "rejected": [
+    {
+      "claim": "A range that writes its magnitude only on the second number ('40-50.000 €', '$40-50,000') sorts by 40",
+      "reason": "This is older than this diff and has a different root cause: the J-18 range rule shares only a trailing unit (k, LPA), not a thousands group. r4-green reads '$40-50,000' as 40 too. It is noted as a candidate for a later hunt and was not fixed here."
+    },
+    {
+      "claim": "The failfirst checks might pass without the fixes",
+      "reason": "Refuted by the CI logs. Jobs 109291124553 and 109291124450 of run 36533134220 each report '# fail 1' with the commit's diff reversed, then pass with it restored."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Two hunt findings, both fixed and both proved fail-first on CI. The review found one regression in the salary parser ('$1.125M' read as 1.125 billion) and fixed it in 19b48d7, with its own fail-first test. docs/tracking was not edited, and nothing in docs/knowledge describes salary parsing. Playwright and Cypress were not run, because the changes are in two pure utils and their only callers are ListView (sortJobs) and useJobStore.importJobs (mergeImport). The full gate still runs when the batch is merged."
+}
