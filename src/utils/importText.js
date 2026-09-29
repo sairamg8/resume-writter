@@ -672,6 +672,17 @@ function readHeader(type, header) {
 function inlinePair(parts) {
   if (parts.length !== 1) return parts;
   const [text] = parts;
+  // "Software Engineer at Acme Corp", "Data Analyst @ Globex": the role, then its employer. Before, the
+  // whole line was the role and the company empty (R5-HUNT7-ROLE-AT-COMPANY). Only with a job title's
+  // word before it, and none after but a firm's plural ("Engineer at Summit Partners"): a company
+  // "Made at Home" alone stays whole. Before a comma: "Engineer, Payments at Acme" is role, then Acme.
+  const at = /\s+(?:at|@)\s+/i.exec(text);
+  if (at) {
+    const a = text.slice(0, at.index).trim();
+    const b = text.slice(at.index + at[0].length).trim();
+    const firm = [...b.matchAll(ROLE_ALL)].every((m) => m[0].length > m[1].length);
+    if (a && b && ROLE.test(a) && firm) return [a, b];
+  }
   for (const m of text.matchAll(/,\s+/g)) {
     const a = text.slice(0, m.index).trim();
     const b = text.slice(m.index + m[0].length).trim();
