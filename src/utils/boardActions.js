@@ -122,16 +122,16 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   const restoreColumn = (removed) => Boolean(removed?.boardId) && stillOwner(removed) && change(removed.boardId, (b) => ops.restoreColumn(b, removed));
   /**
    * Set a column's category (its issues resolved or reopened when it becomes or stops being done);
-   * returns `{ boardId, columnId, before, after }` (the board either side of it) for
+   * returns `{ boardId, columnId, before, after, owner }` (the board either side of it) for
    * restoreCategory — the toast's Undo — or null when nothing changed.
    */
   function setColumnCategory(boardId, columnId, category) {
     const before = findBoard(boardId);
     if (!change(boardId, (b, ctx) => ops.updateColumn(b, columnId, { category }, ctx))) return null;
-    return { boardId, columnId, before, after: findBoard(boardId) };
+    return taken({ boardId, columnId, before, after: findBoard(boardId) });
   }
   /** Undo a category change (boardOps.restoreCategory), edits made since kept; true when it went back. */
-  const restoreCategory = (changed) => Boolean(changed?.boardId) && change(changed.boardId, (b, ctx) => ops.restoreCategory(b, changed, ctx));
+  const restoreCategory = (changed) => Boolean(changed?.boardId) && stillOwner(changed) && change(changed.boardId, (b, ctx) => ops.restoreCategory(b, changed, ctx));
   const moveColumn = (boardId, columnId, toIndex) => change(boardId, (b) => ops.moveColumn(b, columnId, toIndex));
 
   /** Add a label (`{ name, color }`); returns it — or the label that already has that name — or null. */
