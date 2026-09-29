@@ -13,11 +13,15 @@ export function createSectionActions(patchActive) {
     patchActive(r => ({ ...r, sections }));
   }
 
-  function updateSection(sectionId, updater) {
+  /**
+   * `resumeId`: that résumé's section instead of the open one's — for a write that lands later (a
+   * notice's Undo), by when another résumé with the same section id may be open (R5-HUNT3).
+   */
+  function updateSection(sectionId, updater, resumeId) {
     patchActive(r => ({
       ...r,
       sections: r.sections.map(s => s.id === sectionId ? updater(s) : s),
-    }));
+    }), resumeId);
   }
 
   /**
