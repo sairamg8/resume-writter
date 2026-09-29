@@ -19,7 +19,9 @@ beside it once a field is edited, as the optimizer does) merged into `claude/r4-
 down; the takedown skips a résumé that is back; known limit: an unrecorded stray public/ copy can't be listed). Hunt round 1 DONE and merged (5a471df): 13 bugs confirmed + fixed with fail-first
 and review in 8 areas (reports wf-reports/r5-hunt1-<area>.json; boards: 1 finding refuted). High: a late document import took over the
 open editor (editor); another tab's sign-out could delete every cloud résumé (sync). Full gate 36528111587 on 988681d RED: 2 import tests (96-dashboard 'Import (R2-167)', 99-cover-letters
-'letter's JSON… opens on its letter') — likely the hunt1-editor importResume change; being fixed on claude/r4-green-gatefix1.
+'letter's JSON… opens on its letter') — stale tests after the hunt1-editor importResume change (the test pages lacked the editor's useOpenResume);
+fixed test-only in 0cdc8f3 (CI 36531274182 green, 351/351). Candidate for hunt round 3: the editor's first render after
+/resume/:id may briefly show the previous résumé (useOpenResume runs in useEffect).
 Deploy line stays at a89bdd2. Running: hunt round 2 (same 9 areas; the round-1
 titles are passed as 'seen'). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
