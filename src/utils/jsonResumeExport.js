@@ -2,12 +2,12 @@
 // as the basics, each section's entries under the schema's key for its type (jsonResumeSections.js),
 // and in `meta` what the schema has no place for, which the import reads back.
 import { isText, storedText } from './storedText.js';
-import { entries, flattened } from './jsonResumeText.js';
+import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
-import { dateFormatOf } from './dates.js';
+import { DEFAULT_DATE_FORMAT, dateFormatOf } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -68,8 +68,20 @@ export function cpwtResumeToJsonResume(resume) {
    * not in the file at all, and a round trip retitled, reordered and merged the rest.
    */
   const layout = [];
+  // A résumé As entered prints each date as it is stored — the month picker's "Jan 2020" — and the
+  // file holds it as ISO "2020-01": each stored form that differs goes in `meta.enteredDates`, by its
+  // ISO date, for the import to put back. Before, a round trip printed "2020-01 – 2023-03".
+  const entered = {};
+  const asEntered = dateFormatOf(resume.settings) === DEFAULT_DATE_FORMAT;
   for (const s of entries(resume.sections).filter((section) => section.visible !== false)) {
     const items = shownItems(s.items);
+    for (const item of asEntered ? items : []) {
+      for (const key of ['startDate', 'endDate', 'date', 'expiry']) {
+        const text = storedText(item[key]).trim();
+        const iso = isoDate(item[key]);
+        if (text && iso !== text && !Object.hasOwn(entered, iso)) entered[iso] = text;
+      }
+    }
     // By its own key only: a type named like an Object member ('constructor') is a custom section (R2-109).
     const kind = Object.hasOwn(SECTION_KEYS, s.type) ? SECTION_KEYS[s.type] : undefined;
     const own = { type: kind ? s.type : 'custom', title: storedText(s.title), ...(isRecord(s.settings) ? { settings: s.settings } : {}) };
@@ -117,6 +129,7 @@ export function cpwtResumeToJsonResume(resume) {
     meta: {
       template: templateId(resume.template),
       dateFormat: dateFormatOf(resume.settings),
+      ...(Object.keys(entered).length ? { enteredDates: entered } : {}),
       ...(headerTemplateId(resume.template, resume.settings) !== templateId(resume.template) ? { layout: 'single' } : {}),
       // The design the résumé is on (R2-138): the import brings its look back, as picking it would.
       ...(presetOf(resume.settings, resume.template) ? { design: resume.settings.templatePreset } : {}),
