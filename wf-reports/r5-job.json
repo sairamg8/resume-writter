@@ -1,0 +1,160 @@
+{
+  "cluster": "r5-job",
+  "branch": "claude/wf-r5-job",
+  "base": "b8d7667ae7ace64a83872e84b413bc6a68d71521",
+  "rows": [
+    {
+      "id": "R4-DUX-06",
+      "title": "Job form: browser Back and in-app links discard the typed input with no warning",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "96865eee15413acdd52858e9d2b421492eb0ec0f",
+        "edbe49dc2c03c8cf003eca4faf17958ba4d39834",
+        "be9b7d7df1961131ec0271a97e3f5acd6a1b0fea"
+      ],
+      "tests": [
+        "tests/pdf/102-r4-dux-06-job-form-discard.test.mjs",
+        "tests/pdf/102-r4-dux-06-one-discard-question.test.mjs"
+      ],
+      "summary": "Now: main.jsx mounts a data router (createHashRouter + RouterProvider), so the job form can block navigation. A changed job form asks 'Discard your changes?' (Keep editing / Discard) on browser Back and on every in-app link, as it already did on Cancel and the back arrow. Discard clears the sessionStorage draft and continues; Keep editing stays on the form. Save, Add Job and a confirmed Cancel set a 'leaving' flag before they navigate, so they do not ask again. A second Back pressed while the question is up asks nothing more (be9b7d7), so no question is left over on the next page. The hash history is the same, so location.key is still 'default' where useBackOrHome and useScrollMemory expect it.",
+      "product_call": "Guard every way out of a changed job form inside the app. Typing a new #/ address in the browser bar is not blockable by React Router; the sessionStorage draft still restores what was typed.",
+      "remaining": "Address-bar navigation is not guarded (see product_call); acceptable.",
+      "failfirst_run": "36456659217 at 96865ee failed (the test read main.jsx's comment; fixed by edbe49d); 36457331417 (96865ee: fails 4 without, passes with; green) + 36461317497 (be9b7d7: fails 2 without, passes with; green)"
+    },
+    {
+      "id": "R5-JOB-01",
+      "title": "Overview click-to-edit input is hand-rolled, not the kit box (job/Field.jsx)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "820708056fad33af882c6071919a63f58fde6c6e"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-job-01-overview-field-kit-box.test.mjs"
+      ],
+      "summary": "Now: an opened Overview value in Field.jsx is the kit's input box, placed in its row after the field's icon, instead of a hand-rolled input.",
+      "product_call": "Use the kit box for consistency with the rest of the app.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (fails 1 without, passes with; green)"
+    },
+    {
+      "id": "R5-JOB-02",
+      "title": "JobForm's 'Job not found' is a bare text link, not the EmptyState",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "b2b1fe84a7a625d5e1fff08585dec3df42192e8d"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-job-02-job-form-not-found.test.mjs"
+      ],
+      "summary": "Now: the edit page for a missing job shows the same 'Job not found' state as the job page (JobDetail.jsx), instead of a bare text link.",
+      "product_call": "Match the job page's not-found state.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (green)"
+    },
+    {
+      "id": "R5-JOB-03",
+      "title": "Quick-search results have no max height on short screens",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "282b1182864c938d77a0c24f8f6e3052868f6c1f",
+        "a2f87a00a474b4cd9b4df5876e4076a8c6a98f46"
+      ],
+      "tests": [
+        "tests/unit/r5-job-03-quick-search-fits.unit.mjs"
+      ],
+      "summary": "Now: the TopBar quick-search results have a max height that fits the window (following the Dialog.jsx pattern) and scroll inside; the arrow keys keep the highlighted result in view. Hovering a result highlights it but no longer scrolls the list (a2f87a0); only the arrow keys and typing do.",
+      "product_call": "Scroll inside the list rather than past the screen.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (282b118, green) + 36461317497 (a2f87a0: fails 1 without, passes with; green)"
+    },
+    {
+      "id": "R5-JOB-04",
+      "title": "Projects table's Name cell cannot truncate",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "3f75889a062f9713f813dd9c0c11af9250b1115a"
+      ],
+      "tests": [
+        "tests/pdf/103-r4-dph-08-projects-table-phone.test.mjs"
+      ],
+      "summary": "Now: a long project name in the Boards Projects table ends in an ellipsis at every width, not only on a phone. The Name column is the only one without a fixed width, so it still takes the remaining space. 103-r4-dph-08 was updated to expect truncation at every width (the new intended behaviour); it still checks the rule is not tied to one breakpoint.",
+      "product_call": "Ellipsis at every width.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (green)"
+    },
+    {
+      "id": "R5-JOB-05",
+      "title": "Pipeline 'Close as:' row does not wrap on a narrow phone",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "19c93a287aa6884dda2807acadb75c2cfa07c6ff"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-job-05-close-as-wraps.test.mjs"
+      ],
+      "summary": "Now: an on-hold job's 'Close as:' row in the Pipeline wraps between its pills on a narrow phone instead of running past the edge.",
+      "product_call": "Wrap between pills.",
+      "remaining": "The pills are about 26 px tall (a11y target size, deferred; see a11yNoted).",
+      "failfirst_run": "36457331417 (green)"
+    },
+    {
+      "id": "R5-JOB-06",
+      "title": "A long issue summary in the List (ProjectList.jsx) does not end in an ellipsis on wider screens",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "e80a1a8706a6f5af3256d3ad9b0c60d2248efb05"
+      ],
+      "tests": [
+        "tests/pdf/103-r4-dph-09-project-list-phone.test.mjs"
+      ],
+      "summary": "Now: a long issue summary in the Boards List ends in an ellipsis at every width. Summary is the only column without a fixed width, so it keeps the remaining space. 103-r4-dph-09 was updated to expect truncation at every width (intended behaviour), still checking the rule is not breakpoint-limited.",
+      "product_call": "Ellipsis at every width, same as the Projects Name cell.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (green)"
+    },
+    {
+      "id": "R5-JOB-07",
+      "title": "An open Overview field loses what is being typed when the job changes in another tab",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "811a282ddb9585c2e370a6377ab7ed7269989633",
+        "c299537b64c5dbf3fbf232019d569db63d4f08b4"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-job-07-overview-field-keeps-draft.test.mjs"
+      ],
+      "summary": "Now: Field.jsx's draft follows the job only while the field is closed, so an open Overview field keeps what is being typed when the job is changed in another tab. An untouched open field writes nothing, and a blank company or role that the Overview refuses is reset when the field closes. 811a282's subject says R5-JOB-06, but it is this row; c299537 renamed the test file and comments only.",
+      "product_call": "Keep the user's in-progress input over a remote update.",
+      "remaining": "None.",
+      "failfirst_run": "36457331417 (811a282: fails 1 without, passes with; green; the test was then named 104-r5-job-06-overview-field-keeps-draft)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [
+    "src/components/job/Field.jsx:80 (approx.): the Edit pencil is opacity-0 until hover/focus, and its only label is title='Edit', which does not name the field (pre-existing).",
+    "src/components/job/Pipeline.jsx:96: the 'Close as' pills are about 26 px tall (11 px text, py-1.5), under the 44 px touch-target minimum on phones.",
+    "src/components/job/Field.jsx:52: the opened input's focus ring is now the kit's 1 px focus:ring-1 (was 2 px); check focus visibility and contrast.",
+    "src/components/shell/TopBar.jsx:163: quick-search options change aria-selected on mouse hover without keyboard focus moving, so screen-reader output may not match the pointer highlight."
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [],
+  "notes": "All 8 scope rows fixed: R4-DUX-06 (medium, from r4-dsg-flow) and R5-JOB-01..07 (low; 01-04 are the 'low extras' in r4-dsg-layout.findings.md line 91, 05-07 found while fixing). Every fix commit has a green fail-first run: 36457331417 (96865ee, 8207080, 811a282, b2b1fe8, 282b118, 3f75889, e80a1a8, 19c93a2) and 36461317497 (be9b7d7, a2f87a0, plus the named test files). Full gate on c299537, run 36461320858: green on all 6 node shards, 3 Playwright, 4 Cypress, build and lint. Review round 1 found no issues, so nothing was confirmed or rejected; the reviewer read the fail-first logs and checked no test was weakened (103-r4-dph-08/09 now expect truncation at every width, the intended behaviour). The branch also carries 56e42bf and e939340 from claude/r4-green (the R4-DVIS-23 test fix and the 28 Sep handoff), which are not this cluster's work. dsgLayoutVerdicts is empty: none of the formerly unreviewed dsg-layout rows (DPH-25..42, DVIS-07..35) touch the files this cluster changed (Field.jsx, OverviewTab.jsx, Pipeline.jsx, TopBar.jsx, main.jsx, Boards.jsx, JobForm.jsx, ProjectList.jsx). The id R5-JOB-06 was used twice by the fixers: it stays the List Summary ellipsis (e80a1a8); the Overview draft fix (811a282) is R5-JOB-07."
+}

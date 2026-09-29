@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search, X } from 'lucide-react';
@@ -55,6 +55,7 @@ function QuickSearch({ search }) {
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
   const listId = useId();
   const results = open && search ? search(query) : [];
   // The highlighted row, within the list as it is now: the list can shrink while it is open (an issue
@@ -68,6 +69,17 @@ function QuickSearch({ search }) {
     inputRef.current?.focus();
   };
   useHotkeys({ '/': () => { openAndFocus(); inputRef.current?.select(); } });
+  // The panel scrolls when its rows do not fit (R5-JOB-03): the arrow keys and typing keep the
+  // highlighted row in view, so Enter never opens a result the user cannot see. Only those: a row
+  // highlighted by the pointer is never scrolled, or resting it on a row cut off at the panel's edge
+  // scrolled the list, the browser's mouse move after the scroll highlighted the next row, and the
+  // list crept to its end on its own (R5-JOB-03 review).
+  const keyed = useRef(false);
+  useEffect(() => {
+    if (!keyed.current) return;
+    keyed.current = false;
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  });
 
   const go = (hit) => {
     if (!hit) return;
@@ -79,6 +91,7 @@ function QuickSearch({ search }) {
   };
   const close = () => { setQuery(''); setOpen(false); setPhoneOpen(false); inputRef.current?.blur(); };
   const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') keyed.current = true;
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.max(0, Math.min(at + 1, results.length - 1))); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(at - 1, 0)); }
     if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
@@ -107,7 +120,7 @@ function QuickSearch({ search }) {
           aria-activedescendant={results.length ? `${listId}-${at}` : undefined}
           placeholder="Search"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
+          onChange={(e) => { keyed.current = true; setQuery(e.target.value); setActive(0); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => { setOpen(false); setPhoneOpen(false); }, 120)}
           onKeyDown={onKeyDown}
@@ -132,11 +145,14 @@ function QuickSearch({ search }) {
           </button>
         )}
         {open && query.trim() && (
-          <div className="absolute top-10 right-0 left-0 z-50 overflow-hidden rounded-md border border-line bg-white py-1 shadow-xl">
+          // At most 24rem, or what is left of the window under the box (it starts ~52 px down), and it
+          // scrolls inside: 8 two-line rows ran past a short window's bottom, where the shell clips
+          // them and nothing could reach them (R5-JOB-03).
+          <div className="absolute top-10 right-0 left-0 z-50 max-h-[min(24rem,calc(100dvh-4.5rem))] overflow-y-auto overscroll-contain rounded-md border border-line bg-white py-1 shadow-xl">
             {results.length === 0 ? (
               <p className="px-3 py-3 text-sm text-ink-subtlest">No issues or projects match “{query.trim()}”.</p>
             ) : (
-              <ul id={listId} role="listbox" aria-label="Search results">
+              <ul ref={listRef} id={listId} role="listbox" aria-label="Search results">
                 {results.map((hit, i) => (
                   <li
                     key={`${hit.kind}-${hit.id}`}
@@ -144,7 +160,7 @@ function QuickSearch({ search }) {
                     role="option"
                     aria-selected={i === at}
                     onMouseDown={(e) => { e.preventDefault(); go(hit); }}
-                    onMouseEnter={() => setActive(i)}
+                    onMouseEnter={() => { keyed.current = false; setActive(i); }}
                     className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === at ? 'bg-brand-subtle' : 'hover:bg-hovered')}
                   >
                     {hit.kind === 'issue'

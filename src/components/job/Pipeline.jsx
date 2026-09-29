@@ -80,8 +80,10 @@ export function Pipeline({ status, onChange }) {
             })}
           </div>
         </div>
-        <div className="flex items-center gap-2 pt-1 border-t border-line">
-          <span className="text-[12px] font-semibold leading-5 text-ink-subtle">Close as:</span>
+        {/* As "Mark as:" (R4-DPH-13): on a phone narrower than the row it wraps between its pills,
+            never inside one nor inside "Close as:" (R5-JOB-05). */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line">
+          <span className="text-[12px] font-semibold leading-5 text-ink-subtle whitespace-nowrap">Close as:</span>
           {[
             { id: 'rejected',  icon: XCircle, label: 'Rejected' },
             { id: 'withdrawn', icon: LogOut,  label: 'Withdrawn' },
@@ -91,7 +93,7 @@ export function Pipeline({ status, onChange }) {
               <button
                 key={id}
                 onClick={() => onChange(id)}
-                className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+                className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
                 style={{ color: s.text, backgroundColor: s.bg, borderColor: s.color + '40' }}
               >
                 <Icon size={11} />

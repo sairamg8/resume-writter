@@ -1,6 +1,6 @@
 import { Info, Briefcase, MapPin, DollarSign, Calendar, CalendarClock, User, Link2, FileText, ExternalLink, Building2, Compass } from 'lucide-react';
 import { JOB_SOURCES, WORK_MODES } from '@/constants/jobs';
-import { Field } from '@/components/job/Field';
+import { BOX, Field } from '@/components/job/Field';
 import { Pipeline } from '@/components/job/Pipeline';
 import { StatusHistory } from '@/components/job/StatusHistory';
 import { deadlineState } from '@/utils/dates';
@@ -22,8 +22,8 @@ const LABEL = 'text-[12px] font-semibold leading-5 text-ink-subtle';
 const HEADING = 'text-sm font-semibold text-ink';
 // The kit's box (controlClass) for the controls that are always live — the selects and the deadline —
 // 36 px tall as the kit's Select and TextField draw theirs, 44 on a touch screen; min-w-0 lets it
-// shrink in its row (R4-DPH-14). A click-to-edit value stays a plain row until its pencil opens it.
-const BOX = 'h-9 pointer-coarse:h-11 min-w-0 flex-1 px-3';
+// shrink in its row (R4-DPH-14). A click-to-edit value stays a plain row until its pencil opens it
+// into the same box (BOX, from Field, R5-JOB-01).
 // The deadline's date box without the kit's own ink: its red or amber takes its place, and one text
 // colour per element leaves nothing to the stylesheet's order.
 const DATE_BOX = controlClass().split(' ').filter((c) => c !== 'text-ink').join(' ');

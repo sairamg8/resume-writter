@@ -2,9 +2,11 @@
 // (Summary, Project settings, Delete) is in view without a sideways pan. The table was at least
 // 48rem (768px) wide at every width, with the menu at about x 720-768 of a 343px content box.
 // Below sm it now drops the Key, Type, Lead and Updated columns — in the header and in every
-// row — and its 48rem floor applies from sm up only; the Name button is contained inline there,
-// so a long project name is cut short in its cell rather than widening the table again. From sm
-// up every column is back (sm:table-cell) and the table is as it was.
+// row — and its 48rem floor applies from sm up only; the Name button is contained inline, so a
+// long project name is cut short in its cell rather than widening the table again. From sm up
+// every column is back (sm:table-cell). R5-JOB-04: the Name button was contained on a phone only,
+// so from sm up a long name still widened the table past its container; it is contained at every
+// width now.
 // fake-dom has no layout: the real page is rendered over the real board store through Vite's
 // loader (tests/pdf/harness.mjs) with react-dom/server, and the classes that make the layout are read.
 // Run: node --test tests/pdf/103-r4-dph-08-projects-table-phone.test.mjs
@@ -94,12 +96,12 @@ it('below sm the Projects table drops Key, Type, Lead and Updated in the header 
   });
 });
 
-it('on a phone a long project name is cut short inside its cell, so it cannot widen the table past the menu', () => {
+it('a long project name is cut short inside its cell at every width, so it cannot widen the table past the menu (R5-JOB-04)', () => {
   const html = render();
   const name = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].find(([, , inner]) => text(inner).endsWith(TITLE));
   assert.ok(name, 'the Name button: the project\'s avatar and title');
   const cls = classOf(name[1]);
-  for (const t of ['max-sm:w-full', 'max-sm:contain-inline-size', 'min-w-0']) assert.ok(cls.includes(t), `the Name button has ${t}: ${cls.join(' ')}`);
-  assert.ok(!cls.includes('w-full') && !cls.includes('contain-inline-size'), 'from sm up the Name button is as it was');
+  for (const t of ['w-full', 'contain-inline-size', 'min-w-0']) assert.ok(cls.includes(t), `the Name button has ${t}: ${cls.join(' ')}`);
+  assert.ok(!cls.some((c) => /^[\w-]+:(w-full|contain-inline-size)$/.test(c)), `contained at every width, not behind a breakpoint: ${cls.join(' ')}`);
   assert.match(name[2], /class="truncate"/, 'the name itself ends in an ellipsis');
 });

@@ -80,9 +80,10 @@ export function Boards() {
                           <IconButton icon={Star} size="sm" label={b.starred ? `Unstar ${b.title}` : `Star ${b.title}`} pressed={b.starred} onClick={() => store.toggleStar(b.id)} className={b.starred ? '[&_svg]:fill-amber-400 [&_svg]:text-amber-500' : 'opacity-60 group-hover:opacity-100'} />
                         </td>
                         <td className="border-b border-line-subtle px-2">
-                          {/* On a phone a long name is cut short in the cell (inline-size containment: it
-                              no longer sets the column's width), so it cannot push the menu off screen. */}
-                          <button type="button" onClick={() => open(b)} className="flex min-w-0 items-center gap-2.5 text-left font-medium text-brand hover:underline max-sm:w-full max-sm:contain-inline-size">
+                          {/* A long name is cut short in the cell at every width (inline-size containment: it
+                              no longer sets the column's width), so it cannot push the menu off screen —
+                              from sm up it widened the table past its container too (R5-JOB-04). */}
+                          <button type="button" onClick={() => open(b)} className="flex w-full min-w-0 items-center gap-2.5 text-left font-medium text-brand hover:underline contain-inline-size">
                             <ProjectAvatar board={b} size={24} />
                             <span className="truncate">{b.title || 'Untitled project'}</span>
                           </button>

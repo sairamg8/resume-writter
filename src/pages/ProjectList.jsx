@@ -93,9 +93,10 @@ export function ProjectList() {
                   <td className={cx('border-b border-line-subtle px-3', PHONE_HIDDEN)}><IssueTypeIcon type={issue.type} /></td>
                   <td className={cx('border-b border-line-subtle px-2 text-ink-subtle', done && 'line-through')}>{key}</td>
                   <td className="border-b border-line-subtle px-2">
-                    {/* On a phone a long summary is cut short in the cell (inline-size containment: it
-                        no longer sets the column's width), so it cannot push Status off screen. */}
-                    <button type="button" onClick={() => route.open(key)} className="max-w-full truncate text-left text-ink hover:text-brand hover:underline max-sm:w-full max-sm:contain-inline-size">{issue.title}</button>
+                    {/* A long summary is cut short in the cell at every width (inline-size containment:
+                        it no longer sets the column's width), so it cannot push Status off screen —
+                        from sm up it widened the table past its 64rem floor too (R5-JOB-06). */}
+                    <button type="button" onClick={() => route.open(key)} className="w-full max-w-full truncate text-left text-ink hover:text-brand hover:underline contain-inline-size">{issue.title}</button>
                   </td>
                   <td className="border-b border-line-subtle px-2">
                     <StatusMenu size="sm" value={column?.id} options={statuses} onChange={(columnId) => store.updateIssue(board.id, issue.id, { columnId })} label={`Status of ${key}`} />
