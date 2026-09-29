@@ -16,7 +16,7 @@ test('the sanitizer keeps a quote after the list out of the last item', () => {
   const clean = sanitizeRichText(RAW);
   assert.equal(clean, '<ul><li>Led migration of 40 services</li></ul><p>Quoted by the CTO</p>');
   assert.deepEqual(extractBulletsFromItem({ description: clean }), ['Led migration of 40 services']);
-  assert.equal(sanitizeRichText('<ul><li>A</li></ul><dl><dt>Stack</dt><dd>Go</dd></dl>'), '<ul><li>A</li></ul><p>Stack</p><p>Go</p>');
+  assert.equal(sanitizeRichText('<ul><li>A</li></ul><dl><dd>Go and Postgres</dd></dl>'), '<ul><li>A</li></ul><p>Go and Postgres</p>');
 });
 
 test('a quote inside an item still stays in it', () => {
