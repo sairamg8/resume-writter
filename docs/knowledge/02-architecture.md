@@ -31,8 +31,10 @@
 
 - **A hash router** (`createHashRouter`, a data router, so the job form can hold Back and links with
   `useBlocker`, R4-DUX-06) so static hosting works without rewrite rules (`#/resume/xyz`).
-- Resume editor syncs URL `:id` to `store.activeId`; an id not in the store → navigate home
-  (`useOpenResume`).
+- Resume editor syncs URL `:id` to `store.activeId` — whenever the two differ, not only when the
+  address changes; an id not in the store → navigate home (`useOpenResume`). `importResume` adds a
+  résumé without opening it: the caller's navigation to `/resume/:id` opens it, so an import that
+  finishes after another résumé was opened leaves that one open (R5-HUNT1).
 - The editor's tab is in the address: `#/resume/:id?tab=design|coverletter|ats` (`useEditorTab`); no
   `?tab=` is the Résumé tab.
 
