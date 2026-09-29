@@ -1,0 +1,50 @@
+{
+  "cluster": "r5-hunt7-import",
+  "branch": "claude/wf-r5-hunt7-import",
+  "base": "88819d0da706a6962a145f2f013b5a07f9841590",
+  "rows": [
+    {
+      "id": "R5-HUNT7-DOCX-TABLE-ROW-CELLS",
+      "title": "Word import: an entry header laid out as a table row is split into one line per cell, so fields land in the wrong place",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["7d182ac786de4a7ef170c90398e68ab88f678a7f"],
+      "tests": ["tests/unit/r5-hunt7-docx-table-row-cells.unit.mjs"],
+      "summary": "Now: in a Word table that has a row ending in a date, each row whose cells hold one line each is read as one line, with the cells joined by tabs (joinedRows in src/utils/importFile.js). Each job keeps its own company, role, dates and place, and the school is the institution. Tables with no date (skill or certificate grids, including the Word export's Grids) and rows with multi-line cells, list items, nested tables or text boxes are still read one line per paragraph. The existing guard at tests/unit/import-docx-textbox.unit.mjs:73 is unchanged and still passes.",
+      "ci": [36633363404]
+    },
+    {
+      "id": "R5-HUNT7-BULLETED-HEADER-CONTACTS",
+      "title": "Text/Word/Markdown import: contacts written as a bulleted list are not read (email becomes the job title, the rest goes to Additional Information, a link label starts with a bullet)",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["c2ee481373f4be785cb7a9637eadc742a871d6aa"],
+      "tests": ["tests/unit/r5-hunt7-import-bulleted-header-contacts.unit.mjs"],
+      "summary": "Now: a list mark (• - * etc., not numbering) in front of a header or Contact-section piece is removed before the piece is checked as a contact or a job title (unbulleted in src/utils/importText.js). Bulleted contacts fill email, phone, location and links, and a link's Display label has no bullet. A bulleted header line that is not a contact keeps its mark wherever it goes.",
+      "ci": [36633363404]
+    },
+    {
+      "id": "R5-HUNT7-ROLE-AT-COMPANY",
+      "title": "Import: a job header 'Role at Company' / 'Role @ Company' is not split, so Company is empty",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["7aac16723abc1a76f10eb70744c846f9c017e727"],
+      "tests": ["tests/unit/r5-hunt7-import-role-at-company.unit.mjs"],
+      "summary": "Now: inlinePair splits a single job field at ' at ' or ' @ ' when a job-title word comes before it and no singular one comes after it. This fills the role and the company for text, PDF, Word and Markdown headers, including one with a place after it or a comma in the role. A company such as 'Made at Home Bakery' stays whole.",
+      "ci": [36633363404]
+    },
+    {
+      "id": "R5-HUNT7-DOCX-ALIGNMENT-TAB-DROPPED",
+      "title": "Word import: an alignment tab (<w:ptab/>) between a title and its date is dropped, gluing the text and losing the date",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["131409a176d392d6e9b2e7dd2246dec07a1c54c7"],
+      "tests": ["tests/unit/r5-hunt7-docx-alignment-tab.unit.mjs"],
+      "summary": "Now: <w:ptab/> is read as a tab, so 'Acme Corp' and 'Jan 2020 – Present' import as the company and the dates. There was a second cause: the paragraph-start check (m[0].startsWith('<w:p')) also matched '<w:ptab', which would have opened a new paragraph. It now matches only a real <w:p> start.",
+      "ci": [36633363404]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base moved from 9519ef6b to 88819d0 (docs and merges only). CI run 36633363404 (dispatch on 7aac167) passed: failfirst for all 4 fix commits (each test fails with its fix reverted and passes with it restored), plus the named tests tests/unit/*imp*.unit.mjs, tests/unit/r5-hunt*.unit.mjs, tests/unit/knowledge-docs.unit.mjs, tests/pdf/*imp*.test.mjs (Word/PDF round trips), tests/pdf/87-word-grids and tests/pdf/92-word-header-band, and lint. docs/knowledge/ does not describe the import parsing rules at this level, so it needed no change. No new Design keys, contact fields or start-up chunk changes. The full gate has not run yet."
+}
