@@ -105,7 +105,31 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
   const key = issueKey(board, issue);
   const epic = issue.epicId ? issueById(board, issue.epicId) : null;
   const column = statusColumn(board, issue);
-  const update = (patch) => store.updateIssue(board.id, issue.id, patch);
+  const update = (patch) => {
+    // An epic retyped to a task, story or bug lets its children go (updateIssue), and one click on
+    // the type picker did it with no word; setting Epic again did not bring them back. The toast's
+    // Undo does, as a delete's Undo does: the type back, and each child that joined no other epic
+    // since relinked, read from the store at the click.
+    const childIds = 'type' in patch && issue.type === 'epic' && patch.type !== 'epic' ? childrenOf(board, issue.id).map((c) => c.id) : [];
+    store.updateIssue(board.id, issue.id, patch);
+    if (childIds.length === 0) return;
+    toast({
+      title: `${key} is no longer an epic`,
+      description: `${childIds.length} child issue${childIds.length === 1 ? '' : 's'} left it.`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          store.updateIssue(board.id, issue.id, { type: 'epic' });
+          const b = boardsNow().find((x) => x.id === board.id);
+          if (!b || issueById(b, issue.id)?.type !== 'epic') return;
+          for (const id of childIds) {
+            const child = issueById(b, id);
+            if (child && !child.epicId) store.updateIssue(board.id, id, { epicId: issue.id });
+          }
+        },
+      },
+    });
+  };
   // The checklist as stored now: an Undo on a deleted item can be clicked after this view (or the
   // checklist that did the delete) has gone, and must not write back the list it last saw.
   const checklistNow = () => {
