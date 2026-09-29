@@ -1066,6 +1066,16 @@ export function resumeFromText(input) {
   const ownPart = (text, i) => (['skills', 'projects'].includes(headingType(text)) && entryAfter(i)) || headingType(text) === 'summary'
     || /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   let inEntry = false;
+  // The type of the section a line is in, and whether the line under it holds a date: an employer or a
+  // school typed in capitals over its entry's dated line ("ACME CORP" over "Senior Engineer ⇥ Jan 2020
+  // – Present") is that entry's, not a section of its own. Before, it started a custom section named
+  // after it, and the Experience or Education heading over it, left empty, was dropped.
+  let within = null;
+  const entriesIn = (t) => t && !['custom', 'summary', 'contact', 'skills', 'languages', 'interests'].includes(t);
+  const overDate = (i) => {
+    const n = lines[i + 1];
+    return Boolean(n && !n.gap && !BULLET.test(n.text) && pieces(n.text).some((p) => readDateRange(p) || trailingDate(p)));
+  };
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
     if (l.hint === 'heading') inEntry = false;
@@ -1080,9 +1090,9 @@ export function resumeFromText(input) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
-      else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
+      else if (seen && isCaps(text) && !(entriesIn(within) && !l.gap && overDate(i)) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
     }
-    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; }
+    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; within = type; }
   });
 
   const firstHeading = [...headingAt.keys()][0] ?? lines.length;

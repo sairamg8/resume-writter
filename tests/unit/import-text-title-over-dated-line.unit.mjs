@@ -35,3 +35,18 @@ test('an employer with no role word over its roles is still the group\'s employe
   const [job] = section(r, 'experience').items;
   assert.deepEqual([job.company, job.role], ['Acme Corp', 'Senior Engineer']);
 });
+
+test('an employer or school in capitals over its dated line is the entry\'s, not a section of its own (R5-HUNT2-TEXT-IMPORT-CAPS-EMPLOYER-BECOMES-SECTION)', () => {
+  const r = resumeFromText('JANE DOE\nSoftware Engineer\njane@x.com | 555-123-4567\n\nEXPERIENCE\nACME CORP\nSenior Engineer\tJan 2020 – Present\n• Built things\n\nEDUCATION\nSTANFORD UNIVERSITY\nBSc Computer Science\t2014 – 2018');
+  assert.deepEqual(r.sections.map((s) => s.type), ['experience', 'education']);
+  const [job] = section(r, 'experience').items;
+  assert.deepEqual([job.company, job.role, job.startDate, job.current, job.description], ['ACME CORP', 'Senior Engineer', 'Jan 2020', true, '<ul><li>Built things</li></ul>']);
+  const [school] = section(r, 'education').items;
+  assert.deepEqual([school.institution, school.startDate, school.endDate, school.description], ['STANFORD UNIVERSITY', '2014', '2018', '']);
+  assert.match(school.degree, /^BSc/);
+});
+
+test('a heading in capitals after a gap still starts a section of its own, dated line under it or not', () => {
+  const r = resumeFromText('JANE DOE\n\nEXPERIENCE\nSenior Engineer\tAcme\tJan 2020 – Present\n• x\n\nTEACHING\nLecturer\t2016\n• z');
+  assert.deepEqual(r.sections.map((s) => [s.type, s.title]), [['experience', 'Experience'], ['custom', 'Teaching']]);
+});
