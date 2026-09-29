@@ -1,5 +1,12 @@
 # Session Handoff — Resume Here
 
+**STOPPED by the owner 2026-09-29 13:01 UTC. Next: DoD — résumé parsing on real career portals with the owner's own résumé; bugs resume after.**
+Latest green: `910237e` on `claude/r4-green` — full gate run 36567126236 GREEN (owner deploy: `git push origin 910237e:refs/heads/master`).
+Stopped: hunt round 6 (had just started its finders; nothing pushed), the coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL
+(disabled), the lock refresher. Hunt state to resume from: rounds 1–5 merged (78 fixes; seen-list wf-reports/r5-hunt-seen.json;
+round script = finder → skeptic → fixer with fail-first → reviewer per area); not yet dry. Not yet done: STATUS.md/tracker row
+updates for Round 5 and ROUND 5 COMPLETE.
+
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
 > `git push origin 910237e:refs/heads/master` — full gate run 36567126236 on that exact commit is GREEN. A fast-forward
 > from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters, R2-148's public-link takedown, hunt rounds 1–5
