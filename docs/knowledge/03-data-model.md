@@ -45,6 +45,9 @@ type Resume = {
 
 A new résumé starts from `BLANK_PERSONAL` in `defaultDataContent.js` (empty fields).  
 Includes name, title, contact fields, optional photo, `hiddenFields[]`.  
+Every template and export prints the contacts `contactItems` (`src/utils/contacts.js`) returns: a
+website, LinkedIn or GitHub prints its Display label, else its address as a bare domain, and one whose
+printed value is empty (typed as just `https://` or `www.`) is no contact at all.  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
 `updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).
