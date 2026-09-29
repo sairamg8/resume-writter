@@ -34,6 +34,8 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
  * on the next edit (R4-LO-18).
  */
 export const imageRetryPending = () => retry.size > 0;
+/** Whether the saved image `src` printed as none just now only for a passing reason (see `retry`). */
+export const imageRetryPendingFor = (src, { kind = 'photo' } = {}) => retry.has(`${kind}:${src}`);
 /** Copies kept: the résumé's photo and the letter's, and custom contact icons (and the store's, smallerPhotos.js). */
 const KEEP = 64;
 const listeners = new Set();

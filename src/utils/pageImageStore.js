@@ -35,6 +35,23 @@ const memory = new Map(); // key → data URL, oldest first
 /** The picture painted for `key` this session, or null. */
 export const pictureFor = (key) => memory.get(key) ?? null;
 
+// Pictures painted without what the résumé asks for — its font (Noto Sans in its place) or a photo
+// that could not be fetched just now (pageImage.js). Shown, but kept neither for the session nor
+// across visits: the next visit paints again, in the font and with the photo once they load. Kept,
+// such a picture stayed until the résumé was edited (R5-HUNT6-CARD-PICTURE-KEPT-DEGRADED).
+const incomplete = new Set();
+
+/**
+ * Mark `url` as painted without the résumé's font or photo (`yes`), so it is not kept (remember,
+ * savePicture); `yes` false: painted whole, as a later paint of the same picture may be.
+ */
+export function markIncomplete(url, yes = true) {
+  incomplete.delete(url);
+  if (!yes) return;
+  incomplete.add(url);
+  while (incomplete.size > MEMORY_KEPT) incomplete.delete(incomplete.values().next().value);
+}
+
 function remember(key, url) {
   memory.delete(key);
   memory.set(key, url);
@@ -57,7 +74,7 @@ async function drain() {
       let url = null;
       try { url = await job.make(); } catch { url = null; }
       inFlight.delete(job.key);
-      if (url) remember(job.key, url);
+      if (url && !incomplete.has(url)) remember(job.key, url);
       for (const done of job.waiting) done(url);
       if (queue.length) await new Promise((r) => { setTimeout(r, GAP_MS); });
     }
@@ -114,8 +131,12 @@ export function savedPicture(id, hash) {
   return e && e.h === hash && typeof e.url === 'string' ? e.url : null;
 }
 
-/** Keep `url` as résumé `id`'s picture at `hash`; the least recently painted go past SAVED_KEPT. */
+/**
+ * Keep `url` as résumé `id`'s picture at `hash`; the least recently painted go past SAVED_KEPT. One
+ * painted without the résumé's font or photo (markIncomplete) is not kept.
+ */
 export function savePicture(id, hash, url) {
+  if (incomplete.has(url)) return;
   saved = null;
   const next = { ...readSaved(), [id]: { h: hash, url, t: Date.now() } };
   // The one just painted first: several painted in one millisecond tie on `t`.

@@ -1,5 +1,5 @@
 import { renderCoverLetterPdf, renderResumePdf, warmPdfExport } from '@/utils/pdfExportReactPDF';
-import { facesBorrowed, fontFallback } from '@/utils/fontFallback';
+import { buildNote, facesBorrowed, fontFallback } from '@/utils/fontFallback';
 
 /**
  * What the PDF worker (pdfWorker.js) does with one message from pdfBuild.js: build the résumé's or
@@ -17,7 +17,10 @@ export async function runJob({ id, kind, resume, options }) {
       return { id };
     }
     const blob = kind === 'letter' ? await renderCoverLetterPdf(resume, options) : await renderResumePdf(resume, options);
-    return { id, bytes: new Uint8Array(await blob.arrayBuffer()), fallback: fontFallback(), borrowed: facesBorrowed() };
+    // This build's own (buildNote): a page picture's (reportFont: false) never set fontFallback(), and
+    // its card must know it printed in Noto Sans (R5-HUNT6).
+    const note = buildNote(blob);
+    return { id, bytes: new Uint8Array(await blob.arrayBuffer()), fallback: note ? note.fallback : fontFallback(), borrowed: note ? note.borrowed : facesBorrowed() };
   } catch (e) {
     return { id, error: e?.message || String(e) };
   }
