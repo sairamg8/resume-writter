@@ -1,0 +1,108 @@
+{
+  "cluster": "r5-hunt5-import",
+  "branch": "claude/wf-r5-hunt5-import",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-IMPORT-HEADER-TITLE-WITH-COMMA-READ-AS-LOCATION",
+      "title": "Text/PDF/Word/Markdown import: a job title with a comma under the name ('Product Manager, Payments') becomes the location, and the real location goes to 'Additional Information'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "bcf79d1a379d82432b230700d091dd51ed613667",
+        "cd4a216556707468638504eb1aff49919bd67780"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-import-header-title-with-comma.unit.mjs",
+        "tests/unit/r5-hunt5-import-header-town-with-role-word.unit.mjs"
+      ],
+      "summary": "Now: the line under the name can pass the place test, as 'Product Manager, Payments' does. It is read as the job title when it has no 'Location:' label, contains a ROLE word, and either names no state or country after its comma or the rest of the header already has a location. 'Product Manager, Payments', 'Software Engineer, QA' and 'Director, Product Marketing' become the title, and 'Seattle, WA' on the contact line becomes the location. No 'Additional Information' section is created, and the Markdown round trip gives the same result. A town whose name contains a role word and which ends in a state or country ('Hilton Head, SC', 'Mentor, Ohio', 'Lead, SD', 'Chief Lake, Ontario') stays the location when it is alone under the name. That also covers the app's own Markdown export of a résumé with a location and no title. The change is in src/utils/importText.js: the header title check, and REGION_END (US/Canadian/Australian state and province codes, US state names and common countries).",
+      "failfirst_run": "36563266975 (bcf79d1, green: fails without the fix with 2 failures and passes with it); 36565467206 (cd4a216, the review fix, green: fails without it with 2 failures and passes with it; named tests green)"
+    },
+    {
+      "id": "R5-HUNT5-IMPORT-DATE-WITH-DURATION-SUFFIX-NOT-A-DATE",
+      "title": "Text/PDF import: a date range followed by its length ('January 2020 - Present (4 years 9 months)', '· 3 yrs 2 mos') is not read as a date, so the job loses its role and dates",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "7138cb49fe96a0c79f134950ed4633ee58a47e2b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-import-date-with-duration.unit.mjs"
+      ],
+      "summary": "Now: a range followed by its length reads as the range. The length can be in brackets ('(4 years 9 months)', '(2 months)', '(less than a year)') or after ' · ' ('· 3 yrs 2 mos'). The entry-line splitter joins a piece that is only a length back onto the date before it. 'Infosys / Senior Data Analyst / January 2020 - Present (4 years 9 months)' gives role 'Senior Data Analyst', start 'January 2020' and current, and only the bullet goes into the description. A custom section's free-text date keeps the text as written. The change is in src/utils/importText.js (LENGTH, LENGTH_AFTER, LENGTH_ONLY, pieces).",
+      "failfirst_run": "36563266975 (green: fails without the fix, with the parent's importText.js, with 2 failures, and passes with it)"
+    },
+    {
+      "id": "R5-HUNT5-IMPORT-SHORT-END-YEAR-RANGE-MISREAD",
+      "title": "Text/PDF import: an academic-year range with a two-digit end year ('2019–21', '2019-21') is misread, so the school loses its dates and the next school merges into it",
+      "severity": "medium",
+      "outcome": "fixed (partly not a bug)",
+      "commits": [
+        "01641aea2f8045c56f825f053f0b4564aebeda1f"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-import-short-end-year-range.unit.mjs"
+      ],
+      "summary": "Now: '2019–21', '2019-21' and '2015 – 19' read as 2019 to 2021 (or 2015 to 2019), and each school becomes its own education entry. DAY's year-month form only accepts months 1 to 12. RANGE accepts a two-digit end year after a four-digit start year when the two digits are larger than the start year's last two. '2011-12' with a plain hyphen still reads as December 2011, because that is the app's own YYYY-MM Date format; that part of the report is not a bug, and a test pins it. '2011–12' with an en dash reads as 2011 to 2012. '2019–05' is not a date. The change is in src/utils/importText.js (DAY, RANGE, readDateRange).",
+      "failfirst_run": "36563266975 (green: fails without the fix with 2 failures and passes with it)"
+    },
+    {
+      "id": "R5-HUNT5-DOCX-IMPORT-DROPS-NONBREAKING-HYPHEN",
+      "title": "Word import drops a non-breaking hyphen: '2019‑2021' reads '20192021' (no dates) and '555‑0100' reads '5550100'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "f10331d8ba0b030705238371c47030f418e05364",
+        "fb7e24f14c18c27615d972da632b43b042fd8b97"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-docx-import-nonbreaking-hyphen.unit.mjs",
+        "tests/unit/r5-hunt5-import-unicode-hyphen-dates.unit.mjs"
+      ],
+      "summary": "Now: docxXmlLines reads <w:noBreakHyphen/> as '-' and <w:softHyphen/> as nothing, so 'Call 555‑0100' stays 'Call 555-0100', and 'Acme Corp⇥2019‑2021 / Engineer' gives role 'Engineer', start 2019 and end 2021. The same hyphen typed as a character also works in dates and phone numbers. That covers U+2011 (non-breaking, which is what a PDF of that Word file or text pasted from it contains), U+2010, the figure dash U+2012 and the minus sign U+2212. '2019‑2021' gives the entry its dates, '‑ Jun 2021' reads as an end date, and '555‑0100' is the phone number. The changes are in src/utils/importFile.js (the TOKEN regex and the text append) and src/utils/importText.js (DASHES in SEP and END_ONLY, and PHONE).",
+      "failfirst_run": "36563266975 (f10331d, green: fails without the fix with 2 failures and passes with it); 36565467206 (fb7e24f, the review fix, green: fails without it with 2 failures and passes with it; named tests green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "header-title: a town whose name has a role word in it becomes the job title",
+          "nonbreaking-hyphen: the U+2011 character in text/PDF/pasted input is still no dash"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "row": "R5-HUNT5-IMPORT-HEADER-TITLE-WITH-COMMA-READ-AS-LOCATION",
+        "issue": "The ROLE test includes head, lead, mentor, chief and similar words, and real towns contain them. Alone under the name, 'Hilton Head, SC', 'Mentor, Ohio' or 'Lead, SD' became the job title and the résumé lost its location. That also broke the round trip of the app's own Markdown export for a résumé with a location, no title and no other contacts, because the location line is printed alone.",
+        "resolution": "Fixed in cd4a216. A line that ends in a state or country code or name (REGION_END) is taken as the title only when the header has a location elsewhere. A title with a comma ('Director, Product Marketing', 'Software Engineer, QA', 'Account Manager, PR') is still the title. PR was left out of the code list on purpose. Fail-first test: tests/unit/r5-hunt5-import-header-town-with-role-word.unit.mjs."
+      },
+      {
+        "row": "R5-HUNT5-DOCX-IMPORT-DROPS-NONBREAKING-HYPHEN",
+        "issue": "The fix covers only Word's <w:noBreakHyphen/> element. The same hyphen stored as the U+2011 character, whether in a Word run's text, a PDF of that Word file or pasted text, was still not accepted by the date separator or the phone test. '2019‑2021' still gave no dates, and '555‑0100' went to 'Additional Information'.",
+        "resolution": "Fixed in fb7e24f. U+2010, U+2011, U+2012 and U+2212 are now dashes in SEP and END_ONLY and are accepted in PHONE. Fail-first test: tests/unit/r5-hunt5-import-unicode-hyphen-dates.unit.mjs."
+      },
+      {
+        "row": "R5-HUNT5-IMPORT-DATE-WITH-DURATION-SUFFIX-NOT-A-DATE",
+        "issue": "Fail-first for 7138cb4 reverted to the parent's files, not the diff. That also takes out the later short-end-year change in the same file.",
+        "resolution": "No change needed. The duration test does not depend on 01641ae, so the failure without the fix is caused by 7138cb4 itself (2 failures)."
+      },
+      {
+        "row": "R5-HUNT5-IMPORT-SHORT-END-YEAR-RANGE-MISREAD",
+        "issue": "'2011 - 12' with spaces around a plain hyphen still reads as December 2011, like '2011-12'. That behaviour already existed before this branch, because DAY allows spaces in YYYY-MM. It is ambiguous and not the app's own format.",
+        "resolution": "Left as is and noted. It is not a regression, and a hyphenated YYYY-MM stays a month by design. A century wrap ('1999–00') is also still not read as a range, as before."
+      }
+    ],
+    "fixedByReviewer": [
+      "cd4a216556707468638504eb1aff49919bd67780",
+      "fb7e24f14c18c27615d972da632b43b042fd8b97"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "All fixes are on the import side (importText.js, importFile.js). No exporter, template or stored-data shape changed. The fixer's run 36563266975 is green (tests, lint and 4 fail-first jobs), and each fail-first log shows '# fail 2' without the fix and a pass with it. The review fixes were checked in run 36565467206, which is green (tests, lint, and both fail-first jobs show '# fail 2' without the fix) (named tests: the 66 import tests plus job-import, 31-contact-fields, 91-design-resets and knowledge-docs, with 2 fail-first pairs; playwright none, cypress none). docs/tracking/ was not edited."
+}
