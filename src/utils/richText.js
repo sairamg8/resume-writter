@@ -124,7 +124,12 @@ function buildTree(html) {
         stack.push(node);
         continue;
       }
-      if (/^<!(--)?\[endif\]/i.test(token)) { closeTo('#mso-marker'); continue; }
+      if (/^<!(--)?\[endif\]/i.test(token)) {
+        for (let i = stack.length - 1; i > 0; i -= 1) {
+          if (stack[i].tag === '#mso-marker') { stack[i].closed = true; stack.length = i; break; }
+        }
+        continue;
+      }
       if (token.startsWith('<!') || token.startsWith('<?')) continue; // comments, doctype, CDATA
       top().children.push(decodeEntities(token));
       continue;
@@ -258,6 +263,21 @@ function numberMarker(n, type) {
 
 const textOf = (node) => (typeof node === 'string' ? node : node.children.map(textOf).join(''));
 
+// The blocks Word writes a list item as. An <li> already sits in a real list (Outlook, Word's
+// HTML export: <ol><li style="mso-list:l0 level1 lfo1">), so it is left as it is.
+const WORD_ITEM_TAGS = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+
+/** A Word list paragraph's [list id, level]: from its mso-list style, or — when a list style ("List
+ * Bullet 2") keeps mso-list in the skipped <style> sheet — from its typed marker and class. */
+function wordListItem(child) {
+  if (typeof child === 'string' || !WORD_ITEM_TAGS.has(child.tag)) return null;
+  const m = /^(l\d+)\s+level(\d+)/.exec(styleOf(child.attrs)['mso-list'] || '');
+  if (m) return [m[1], Number(m[2])];
+  if (!child.children.some((c) => typeof c !== 'string' && c.tag === '#mso-marker' && c.closed)) return null;
+  const n = /MsoList(?:Bullet|Number)(\d)/i.exec(child.attrs.class || '');
+  return ['#style', n ? Number(n[1]) : 1];
+}
+
 /**
  * Word for desktop copies a list as paragraphs styled "mso-list:l0 level2 lfo1", not as <ul>/<ol>.
  * Runs of them become real lists, nested by level; a numbered marker ("1.", "a)") makes an <ol>.
@@ -269,22 +289,21 @@ function wordLists(node) {
   const out = [];
   let open = []; // [{ level, id, ordered, list }]
   for (const child of node.children) {
-    const msoList = typeof child === 'string' || !BLOCK_TAGS.has(child.tag) ? null : styleOf(child.attrs)['mso-list'];
-    const m = msoList && /^(l\d+)\s+level(\d+)/.exec(msoList);
+    const m = wordListItem(child);
     if (!m) {
       if (open.length && typeof child === 'string' && !child.trim()) continue; // the newline between items
       open = [];
       out.push(child);
       continue;
     }
-    const level = Number(m[2]);
-    const markerNode = child.children.find((c) => typeof c !== 'string' && c.tag === '#mso-marker');
+    const [id, level] = m;
+    const markerNode = child.children.find((c) => typeof c !== 'string' && c.tag === '#mso-marker' && c.closed);
     const marker = markerNode ? textOf(markerNode).replace(/[\s\u00a0]+/g, '') : '';
     const num = /^\(?([0-9]+|[a-z]+|[A-Z]+)[.)]$/.exec(marker);
     const ordered = !!num;
     while (open.length && open[open.length - 1].level > level) open.pop();
     let top = open[open.length - 1];
-    if (top && top.level === level && (top.ordered !== ordered || (level === 1 && top.id !== m[1]))) {
+    if (top && top.level === level && (top.ordered !== ordered || (level === 1 && top.id !== id))) {
       open.pop();
       top = open[open.length - 1];
     }
@@ -295,7 +314,7 @@ function wordLists(node) {
       const list = { tag: ordered ? 'ol' : 'ul', attrs, children: [] };
       const parentItem = top && top.list.children[top.list.children.length - 1];
       (parentItem ? parentItem.children : out).push(list);
-      top = { level, id: m[1], ordered, list };
+      top = { level, id, ordered, list };
       open.push(top);
     }
     top.list.children.push({ tag: 'li', attrs: child.attrs, children: child.children });
@@ -347,7 +366,8 @@ export function parseRichText(html) {
       const { tag, attrs } = child;
       if (tag === 'br') { addBreak(ctx); continue; }
       if (tag === 'img' || tag === 'input' || tag === 'wbr') continue;
-      if (tag === '#mso-marker' || styleOf(attrs)['mso-list'] === 'ignore') continue; // Word's typed list marker
+      // Word's typed list marker. One Word never closed (a cut-off paste) may hold the item's text: kept.
+      if ((tag === '#mso-marker' && child.closed) || styleOf(attrs)['mso-list'] === 'ignore') continue;
       if (tag === 'hr') { flush(); continue; }
       if (!BLOCK_TAGS.has(tag)) {
         walk(child, { ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) });
