@@ -9,12 +9,16 @@
 // as useAppStore makes it. Fictional data only.
 import { before, after, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
 import { setup, teardown, loadModule } from './harness.mjs';
+import { mount } from './fake-dom.mjs';
 import { fakeFirestore, syncPage, syncModules, resumePath, settle } from './fake-firestore.mjs';
 import { DATA_VERSION } from '../../src/utils/dataVersion.js';
-import {
-  backupRaw, forgetRecovery, pendingRecovery, rememberRecovery, _resetUnpersistedNotices,
-} from '../../src/utils/storageBackup.js';
+// A namespace import: without the fix forgetRecovery is not there, and the tests below fail at
+// their assertions (fail-first), not at loading the file.
+import * as storageBackup from '../../src/utils/storageBackup.js';
+
+const { backupRaw, pendingRecovery, rememberRecovery, _resetUnpersistedNotices } = storageBackup;
 
 let mods;
 before(async () => {
@@ -46,7 +50,7 @@ function damagedPage(cloud, state) {
   rememberRecovery(KEY, { backupKey: backupRaw(KEY, raw) });
   const p = syncPage(mods, cloud, state);
   p.left = 0;
-  p.store.leaveRecovery = () => { p.left += 1; forgetRecovery(KEY); };
+  p.store.leaveRecovery = () => { p.left += 1; storageBackup.forgetRecovery?.(KEY); };
   return p;
 }
 const signInAs = async (p, cloud, user) => { cloud.auth = user?.uid ?? null; p.sync.start(user); await settle(); };
@@ -79,5 +83,43 @@ describe('the résumés\' recovery notice and backups leave with the account (R5
     assert.equal(p.left, 0);
     assert.ok(pendingRecovery(KEY));
     assert.equal(backups().length, 1);
+  });
+
+  // The real store, as App.jsx hands it to useCloudSync (liveStore over { appState, store }).
+  const ticks = async (n = 5) => { for (let i = 0; i < n; i += 1) await new Promise((r) => { setImmediate(r); }); };
+  async function realStore(saved) {
+    localStorage.setItem(KEY, JSON.stringify(saved));
+    const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
+    let store = null;
+    function Page() { store = useAppStore(); return null; }
+    const view = mount(Page, {});
+    await ticks(); // useAppStore's effect backs up what it could not read and keeps the notice
+    return { view, store: () => store, live: mods.actions.liveStore(() => ({ appState: store.appState, store })) };
+  }
+
+  it('useAppStore: A\'s list leaving takes the notice off the Dashboard, and its backup out of storage', async () => {
+    const page = await realStore({ resumes: [ALICE, { name: 'no id' }], activeId: ALICE.id, syncedUid: 'A', cloudVersions: { [ALICE.id]: 5 } });
+    try {
+      assert.ok(page.store().recovery?.backupKey, 'the store was not read in full: the Dashboard offers the copy');
+      assert.equal(backups().length, 1);
+      page.view.act(() => page.live.leaveAccount('A'));
+      await ticks();
+      assert.deepEqual(page.store().appState.resumes, [], 'A\'s résumés leave (R2-005)');
+      assert.equal(page.store().recovery, null, 'before: the Dashboard still showed "Download the copy"');
+      assert.equal(pendingRecovery(KEY), null);
+      assert.deepEqual(backups(), [], 'before: A\'s raw store stayed in cpwtcv_v1_backup_*');
+    } finally { await page.view.unmount(); }
+  });
+
+  it('useAppStore: another account\'s leave (the list is not its) keeps the notice and backup', async () => {
+    const page = await realStore({ resumes: [ALICE, { name: 'no id' }], activeId: ALICE.id, syncedUid: 'A', cloudVersions: { [ALICE.id]: 5 } });
+    try {
+      page.view.act(() => page.live.leaveAccount('B'));
+      await ticks();
+      assert.equal(page.store().appState.resumes.length, 1, 'the list is A\'s, not B\'s: it stays');
+      assert.ok(page.store().recovery?.backupKey);
+      assert.ok(pendingRecovery(KEY));
+      assert.equal(backups().length, 1);
+    } finally { await page.view.unmount(); }
   });
 });

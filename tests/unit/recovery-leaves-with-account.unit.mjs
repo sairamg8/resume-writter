@@ -13,13 +13,14 @@ import { collectionIo } from '../../src/utils/collectionSyncIo.js';
 import { localMeta } from '../../src/utils/collectionSyncMeta.js';
 import { completeJob, readJob } from '../../src/utils/normalizeJob.js';
 import { completeBoard, readBoard } from '../../src/utils/normalizeBoard.js';
-import {
-  backupRaw, forgetRecovery, pendingRecovery, rememberRecovery, _resetUnpersistedNotices,
-} from '../../src/utils/storageBackup.js';
+// A namespace import: without the fix forgetRecovery is not there, and the tests below fail at
+// their assertions (fail-first), not at loading the file.
+import * as storageBackup from '../../src/utils/storageBackup.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 import * as jobStore from '../../src/hooks/useJobStore.js';
 import * as boardStore from '../../src/hooks/boardStoreState.js';
 
+const { backupRaw, pendingRecovery, rememberRecovery, _resetUnpersistedNotices } = storageBackup;
 const A = { uid: 'A', email: 'a@example.com' };
 const B = { uid: 'B', email: 'b@example.com' };
 const JOBS = 'cpwtcv_jobs_v1';
@@ -60,7 +61,8 @@ test('forgetRecovery: the notice and every backup of that key go; another list\'
   const resumes = backupRaw('cpwtcv_v1', 'résumés');
   rememberRecovery('cpwtcv_v1', { backupKey: resumes });
 
-  forgetRecovery(JOBS);
+  assert.equal(typeof storageBackup.forgetRecovery, 'function', 'storageBackup.forgetRecovery(key)');
+  storageBackup.forgetRecovery(JOBS);
   assert.equal(pendingRecovery(JOBS), null);
   assert.deepEqual(backupsOf(JOBS), []);
   assert.deepEqual(pendingRecovery('cpwtcv_v1'), { backupKey: resumes, earlier: [] }, 'the résumés\' notice is theirs');
