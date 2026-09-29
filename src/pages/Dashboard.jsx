@@ -64,6 +64,18 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   const letterSourceList = letterSources(store.appState.resumes);
   const openLetter = id => navigate(`/resume/${id}?tab=coverletter`);
 
+  // One new letter or copy per visit, as on /new (NewResume.jsx): the editor opens as a transition, so
+  // the dashboard stays clickable while its code loads — the second click of a double-click on New
+  // Cover or a card's Copy made a second one.
+  const made = useRef(false);
+  function once(make, open) {
+    if (made.current) return;
+    const id = make();
+    if (!id) return;
+    made.current = true;
+    open(id);
+  }
+
   // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
   // is, or the one picked when there are several; with none, a blank letter.
   function startLetter() {
@@ -73,7 +85,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
 
   function newLetter(fromId) {
     setLetterModalOpen(false);
-    openLetter(store.createLetter(fromId));
+    once(() => store.createLetter(fromId), openLetter);
   }
 
   /** A résumé's or a letter's card; `open` is where Edit and a new copy go. */
@@ -82,7 +94,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       key={r.id}
       resume={r}
       onOpen={open}
-      onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) open(newId); }}
+      onDuplicate={id => once(() => store.duplicateResume(id), open)}
       onDelete={id => {
         if (!confirm(deletePrompt(r, keeps))) return;
         store.deleteResume(id, auth.user?.uid);
