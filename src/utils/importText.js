@@ -293,9 +293,11 @@ const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const DASHES = '\\u2010\\u2011\\u2012\\u2212';
 const SEP = `\\s*(?:[-${DASHES}–—~]|to|until|through)\\s*`;
 // "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
-// come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
-const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
-const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
+// come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025"). So is one
+// past: "Graduated May 2021", "Graduation: 2020", "Class of 2020", "May 2020 (Graduated)". Before,
+// those were no date, and the education took them as its degree.
+const AHEAD = '(?:(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?|graduated|graduation(?:\\s+date)?|class\\s+of)\\s*:?\\s*';
+const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated|graduated)\\s*\\)?';
 // "(4 years 9 months)", "· 3 yrs 2 mos": how long it lasted, after the range as LinkedIn's PDF prints it.
 const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?|months?|mos?)\\.?(?:,?\\s*(?:and\\s+)?\\d+\\s*(?:months?|mos?)\\.?)?)';
 const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
@@ -303,13 +305,19 @@ const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${N
 const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
 const END_ONLY = new RegExp(`^(?:(?:[-${DASHES}–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
+// "Jun – Aug 2021", "May to August 2020": a range inside one year prints the year once, at its end.
+// The first month takes the end's year (the year before when it comes later in the year: "Dec – Feb
+// 2021"). Before, "Jun" was no date: it became the job's role and "Aug 2021" its start.
+const SAME_YEAR = new RegExp(`^(${MONTH})(?=${SEP}(${MONTH}),?\\s+(\\d{4})(?!\\d))`, 'i');
+const MONTH_AT = (m) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m.slice(0, 3).toLowerCase());
+const withYear = (t) => t.replace(SAME_YEAR, (first, _, end, year) => `${first} ${MONTH_AT(first) > MONTH_AT(end) ? Number(year) - 1 : year}`);
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
 export function readDateRange(text) {
   let t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
   if (!t) return null;
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
-  let m = RANGE.exec(t);
+  let m = RANGE.exec(withYear(t));
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
   if (/\([^)]*$/.test(t)) t = `${t})`;
   // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
@@ -320,7 +328,7 @@ export function readDateRange(text) {
     else m[3] = m[2].slice(0, 2) + m[3];
   }
   if (m) {
-    // "May 2025 (Expected)": one date still to come is the end, not the start.
+    // "May 2025 (Expected)", "May 2020 (Graduated)": one date so marked is the end, not the start.
     if (m[4] && !m[3] && !m[1]) return { start: '', end: tidy(m[2]), current: false, text: t };
     // "Since 2019" is a range still running, as "2019 – Present" is.
     const now = m[3] ? IS_NOW.test(m[3]) : Boolean(m[1]);
@@ -352,8 +360,15 @@ function trailingDate(text) {
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
-/** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
-const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+/**
+ * "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. With its postcode
+ * too ("Chicago, IL 60601", "Toronto, ON M5V 2T6"), and then its street before it ("123 Main St,
+ * Chicago, IL 60601"): before, the digits failed the test, and the place printed as "Additional Information".
+ */
+const TOWN = "[\\p{L}][\\p{L}.'’\\- ]{0,40},\\s*[\\p{L}][\\p{L}.'’\\- ]{0,40}(?:,\\s*[\\p{L}][\\p{L}.'’\\- ]{0,30})?";
+const POSTCODE = `,?\\s+(?:\\d{5}(?:-\\d{4})?|[a-z]\\d[a-z] ?\\d[a-z]\\d|[a-z]{1,2}\\d[a-z\\d]? ?\\d[a-z]{2})(?:,\\s*[\\p{L}][\\p{L}.'’\\- ]{0,30})?`;
+const STREET = "\\d{1,6}[a-z]?\\s+[\\p{L}\\d.'’#\\- ]{1,40},\\s*";
+const ONE_PLACE = new RegExp(`^(?:${TOWN}|(?:${STREET})?${TOWN}${POSTCODE}|remote|hybrid)$`, 'iu');
 /** A part of a place with a "|" typed in it: "London" in "London | Remote". */
 const PLACE_PART = /^[\p{L}][\p{L}.,'’\- ]{0,60}$/u;
 /**
@@ -473,6 +488,8 @@ const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.
 
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
 const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern|analyst|designer|consultant|specialist|scientist|officer|assistant|associate|coordinator|architect|administrator|admin|president|vp|founder|co-founder|owner|teacher|professor|lecturer|researcher|nurse|technician|accountant|writer|editor|producer|representative|supervisor|executive|advisor|adviser|strategist|principal|chief|cto|ceo|cfo|coo|partner|fellow|trainee|apprentice|volunteer|tutor|mentor|chair|secretary|treasurer|clerk|agent|operator|instructor|coach|counselor|therapist|physician|attorney|paralegal|sales|marketer|recruiter|contractor|freelancer|freelance)s?\b/i;
+/** Every role word in a text, for whether each is plural (sectionLeads). */
+const ROLE_ALL = new RegExp(ROLE.source, 'gi');
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
@@ -655,23 +672,52 @@ function inlinePair(parts) {
   return parts;
 }
 
-/** Two fields in the order the file printed them, `lead` the one that names the role when either does. */
+/** "Google, Mountain View, CA" → ["Google", "Mountain View, CA"]: a name, then its city and state or country after a comma; else null. */
+function placeAfterComma(text) {
+  const m = /^(.+?),\s*([^,]+),(\s*[^,]+)$/.exec(text);
+  // "Google, Inc., CA": a legal ending is the company's, no city ("Inc., CA" was the job's location).
+  if (!m || CORPORATE.test(`, ${m[2].trim()}`)) return null;
+  const place = `${m[2]},${m[3]}`;
+  return PLACE.test(place) && REGION_END.test(place) && !ROLE.test(m[1]) && !ROLE.test(place) ? [m[1].trim(), place.trim()] : null;
+}
+
+/** Whether of two fields the first is the role: true, false, or null when neither's words say. */
+function roleLeadsOf(a, b) {
+  if (ROLE.test(a) !== ROLE.test(b)) return ROLE.test(a);
+  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
+  if (CORPORATE.test(a) !== CORPORATE.test(b)) return CORPORATE.test(b);
+  return null;
+}
+
+/** Two fields in the order the file printed them, `roleLeads` whether the role comes first when neither's words say. */
 function roleFirst(a, b, roleLeads) {
   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
-  if (ROLE.test(a) && !ROLE.test(b)) return [a, b];
-  if (ROLE.test(b) && !ROLE.test(a)) return [b, a];
-  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
-  if (CORPORATE.test(b) && !CORPORATE.test(a)) return [a, b];
-  if (CORPORATE.test(a) && !CORPORATE.test(b)) return [b, a];
-  return roleLeads ? [a, b] : [b, a];
+  return (roleLeadsOf(a, b) ?? roleLeads) ? [a, b] : [b, a];
 }
 
 /**
- * One entry of `type` from its header and body lines. `aside(title, texts)`: text the entry has no
- * field for and no description to hold it — a certificate's — kept in "Additional Information" under
- * its name (R4-IMP-01); a description the app never shows would hide it.
+ * Whether a section's jobs lead with the role. A résumé prints every job in a section in one order:
+ * the role first on Sidebar, Executive and Timeline, or where Design's Order says so, else the company.
+ * The jobs whose words tell which field is the role say it for those where nothing does ("Sous Chef —
+ * Chez Panisse" under "Kitchen Manager — Nopa"). Before, those always read company first, so a
+ * role-first résumé's own export came back with the two swapped. None telling: the type's default.
+ * A field whose role words are all plural ("Summit Partners", "Gensler Architects") names a firm, not
+ * a job, so it tells nothing: it made "Summit Partners — Receptionist" swap "Starbucks — Barista" too.
  */
-function entryOf(type, header, body, aside = () => {}) {
+function sectionLeads(type, entries) {
+  const firm = (t) => { const ms = [...t.matchAll(ROLE_ALL)]; return ms.length > 0 && ms.every((m) => m[0].length > m[1].length); };
+  let score = 0;
+  for (const e of entries) {
+    if (e.header[0]?.group) continue;
+    const [a = '', b = ''] = inlinePair(headerOf(type, e.header).parts);
+    const lead = b ? roleLeadsOf(a, b) : null;
+    if (lead !== null && !firm(lead ? a : b)) score += lead ? 1 : -1;
+  }
+  return score ? score > 0 : type === 'volunteering';
+}
+
+/** An entry's header lines read as entryOf reads them: readHeader's, with a job's place taken out of its title fields. */
+function headerOf(type, header) {
   const h = readHeader(type, header);
   // "Google — Mountain View, CA" over "Software Engineer": a place after the company on its line is
   // the job's location, not its role; the title under it is. Only when neither names a role and a
@@ -690,6 +736,29 @@ function entryOf(type, header, body, aside = () => {}) {
       h.parts = pair;
     }
   }
+  // "Google, Mountain View, CA" beside "Software Engineer": a company with its place after a comma,
+  // the city and a state or country, gives the job its location. Only beside a field that names the
+  // role, so a place alone ("Portland, Oregon, USA") is not cut. Before, the company kept the place.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location) {
+    const pair = inlinePair(h.parts);
+    const at = pair.length >= 2 ? [0, 1].find((k) => ROLE.test(pair[1 - k]) && !ROLE.test(pair[k])) : undefined;
+    const placed = at === undefined ? null : placeAfterComma(pair[at]);
+    if (placed) {
+      h.location = placed[1];
+      h.parts = pair.map((p, k) => (k === at ? placed[0] : p));
+    }
+  }
+  return h;
+}
+
+/**
+ * One entry of `type` from its header and body lines. `aside(title, texts)`: text the entry has no
+ * field for and no description to hold it — a certificate's — kept in "Additional Information" under
+ * its name (R4-IMP-01); a description the app never shows would hide it. `roleLeads`: whether a job
+ * whose words do not tell leads with its role (sectionLeads).
+ */
+function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'volunteering') {
+  const h = headerOf(type, header);
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
@@ -705,7 +774,7 @@ function entryOf(type, header, body, aside = () => {}) {
     case 'volunteering': {
       // A role under its employer (roleEntries): the employer and its place are the group's.
       const group = header[0]?.group;
-      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, type === 'volunteering');
+      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, roleLeads);
       const more = group ? group.lead.map((l) => l.text) : [];
       const location = h.location || take('location') || (group ? group.place : '');
       return itemOf(type, { [type === 'experience' ? 'company' : 'org']: org, role, location, ...dates, description: description([...more, ...lead]) });
@@ -894,6 +963,9 @@ function entriesOf(type, lines, aside) {
     // place on one line, split at its dash — neither names a role, and the second is a place.
     const [co, at, ...more] = found ? fieldsOf(found.company) : [];
     if (found && !found.place && at && !more.length && !ROLE.test(co) && !ROLE.test(at) && PLACE.test(at) && !CORPORATE.test(at)) found = { ...found, company: co, place: at };
+    // "Acme Corp, Austin, TX": the place after a comma, as a city and its state or country.
+    const placed = found && !found.place && placeAfterComma(found.company);
+    if (placed) found = { ...found, company: placed[0], place: placed[1] };
     // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
     if (!found || fieldsOf(found.company).length !== 1) return null;
     body.splice(body.length - found.n);
@@ -1045,7 +1117,8 @@ function entriesOf(type, lines, aside) {
   } else if (preamble.length) {
     entries[0].body.unshift(...preamble);
   }
-  return entries.map((e) => entryOf(type, e.header, e.body, aside));
+  const leads = JOB.has(type) ? sectionLeads(type, entries) : undefined;
+  return entries.map((e) => entryOf(type, e.header, e.body, aside, leads));
 }
 
 /**
