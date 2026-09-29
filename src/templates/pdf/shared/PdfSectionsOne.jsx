@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
@@ -132,7 +132,8 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
   const accent    = settings?.accentColor || '#2563eb';
   const entrySize = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH     = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  // A group that prints nothing takes no row (a lone Bullet marker) and no gap, as in Word (skillGroupPrints).
+  const visibleItems = (section.items || []).filter(i => i.visible !== false && skillGroupPrints(i));
   const cols       = s.columns || 1;
   const isModern   = settings?._template === 'modern';
   const isMinimal  = settings?._template === 'minimal';

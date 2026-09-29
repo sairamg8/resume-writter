@@ -4,7 +4,7 @@ import { hexAlpha } from './PdfSections';
 import { SideSectionTitle, sideBreaks } from './PdfSidebarColumn';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
-import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
 
 /** A group as printed (skillGroup), its category in the column's capitals (skillCategory). */
 function shownGroup(item) {
@@ -16,7 +16,8 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   const s     = section.settings || {};
   const style = s.skillsStyle || 'inline';
   const sep   = skillSeparator(s); // as in the main column and Word
-  const groups = (section.items || []).filter(i => i.visible !== false).map(shownGroup);
+  // A group that prints nothing takes no row, marker or gap, as in Word (skillGroupPrints).
+  const groups = (section.items || []).filter(i => i.visible !== false && skillGroupPrints(i)).map(shownGroup);
   const catBreaks = sideBreaks(settings, { fontSize: 8.5, fontWeight: 'bold' });
   // Bars' and Tags' categories are letter-spaced: measured so, a word that fits unspaced still breaks.
   const trackedCat = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 0.5) };
