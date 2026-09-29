@@ -113,9 +113,13 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   // Extract profiles
   let linkedin = '';
   let github = '';
+  // A profile may give only its username (the schema asks for neither): the address is built from it.
+  const PROFILE_URL = { linkedin: 'linkedin.com/in/', github: 'github.com/' };
   for (const p of entries(b.profiles)) {
     const net = storedText(p.network).toLowerCase();
-    const url = storedText(p.url);
+    const user = storedText(p.username).trim().replace(/^@/, '');
+    const site = Object.keys(PROFILE_URL).find((k) => net.includes(k));
+    const url = storedText(p.url) || (site && user ? PROFILE_URL[site] + user : '');
     if (!linkedin && (net.includes('linkedin') || url.includes('linkedin.com'))) linkedin = url;
     if (!github && (net.includes('github') || url.includes('github.com'))) github = url;
   }
@@ -126,12 +130,12 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     email: storedText(b.email),
     phone: storedText(b.phone),
     location: locStr,
-    website: storedText(b.url),
+    website: storedText(b.url) || storedText(b.website), // `website`, `picture`: the pre-1.0 schema's names
     linkedin,
     github,
     ...linkFields(b),
     summary: richFrom(b.summary, b.summaryHtml),
-    photo: typeof b.image === 'string' && b.image ? b.image : null,
+    photo: [b.image, b.picture].find((v) => typeof v === 'string' && v) || null,
     hiddenFields: [],
   };
 
