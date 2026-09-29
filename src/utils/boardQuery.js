@@ -189,6 +189,12 @@ export function columnCounts(board, issues = board.issues) {
   return out;
 }
 
+/**
+ * A sum of story points as it is shown: an estimate is any number ≥ 0, so 0.1 + 0.2 added as
+ * floats is 0.30000000000000004 — rounded to 2 decimals it reads 0.3 (R5-HUNT9-POINT-SUMS-FLOAT-NOISE).
+ */
+export const roundPoints = (n) => Math.round(n * 100) / 100;
+
 /** `{ issues, open, done, points, donePoints }` over `issues` (story points from estimates). */
 export function issueStats(board, issues) {
   const stats = { issues: issues.length, open: 0, done: 0, points: 0, donePoints: 0 };
@@ -198,7 +204,17 @@ export function issueStats(board, issues) {
     stats.points += i.estimate ?? 0;
     if (done) stats.donePoints += i.estimate ?? 0;
   }
+  stats.points = roundPoints(stats.points);
+  stats.donePoints = roundPoints(stats.donePoints);
   return stats;
+}
+
+/** A backlog section's points by status category, the tracker's three bubbles: `{ todo, inprogress, done }`. */
+export function pointsByCategory(board, issues) {
+  const sum = { todo: 0, inprogress: 0, done: 0 };
+  for (const i of issues) sum[statusColumn(board, i)?.category ?? 'todo'] += i.estimate ?? 0;
+  for (const k of Object.keys(sum)) sum[k] = roundPoints(sum[k]);
+  return sum;
 }
 
 /**

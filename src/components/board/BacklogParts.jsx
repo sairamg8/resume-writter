@@ -7,7 +7,7 @@ import { IssueTypeIcon, Points, PriorityIcon } from '@/components/tracker/Tracke
 import { StatusMenu } from '@/components/tracker/Lozenge';
 import { DEFAULT_SPRINT_DAYS } from '@/constants/boards';
 import { addDays, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
-import { epicProgress, epicsOf } from '@/utils/boardQuery';
+import { epicProgress, epicsOf, pointsByCategory } from '@/utils/boardQuery';
 import { formatShortDay } from '@/utils/uiFormat';
 import { openOnKey } from '@/utils/cardKeys';
 import { EpicLozenge } from './IssueFields';
@@ -18,8 +18,7 @@ export const sprintDates = (s) => (s?.startDate && s?.endDate ? `${formatShortDa
 
 /** A section's points by status, as the tracker's three bubbles: to do, in progress, done. */
 export function PointBubbles({ board, issues }) {
-  const sum = { todo: 0, inprogress: 0, done: 0 };
-  for (const i of issues) sum[statusColumn(board, i)?.category ?? 'todo'] += i.estimate ?? 0;
+  const sum = pointsByCategory(board, issues);
   const tones = { todo: 'bg-loz-todo text-loz-todo-ink', inprogress: 'bg-loz-progress text-loz-progress-ink', done: 'bg-loz-done text-loz-done-ink' };
   const names = { todo: 'to do', inprogress: 'in progress', done: 'done' };
   return (
