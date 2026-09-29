@@ -4,6 +4,7 @@
 // none: the private-data scan forbids it). With no résumé yet there is nothing of the user's to start
 // from, and the look's card makes a blank one, as New Resume always did. Relative imports only, so Node's
 // test runner loads this file as it is.
+import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { withKeep } from './demoSeed.js';
 import { LETTER_CONTENT, letterSources } from './letters.js';
@@ -40,6 +41,10 @@ const STARTER_EXAMPLE = ['title', 'summary'];
  * own name, contacts, links, photo and what they hide, not the starter's sample person (the owner's idea,
  * 2026-09-29), with the role's job title and summary (STARTER_EXAMPLE) kept as its example and shown. With
  * no résumé yet there is nothing of the user's to start from, and the starter is as it was.
+ * The contact icons uploaded under Personal Info → Fields and the paper (Design → Spacing → Page size)
+ * come too: they are the user's, not a look of the starter's (templatePresets NOT_A_LOOK), as a look
+ * picked on /new keeps them (resumeFrom). A US Letter résumé's starter printed on A4 with stock icons
+ * (R5-HUNT7-DASH-STARTER-DROPS-PAPER-AND-ICONS). A4 is stored as none.
  */
 export function starterFrom(built, source) {
   if (!source?.personal || typeof source.personal !== 'object') return built;
@@ -47,5 +52,8 @@ export function starterFrom(built, source) {
   const hidden = Array.isArray(mine.hiddenFields) ? mine.hiddenFields.filter((key) => !STARTER_EXAMPLE.includes(key)) : [];
   const personal = { ...mine, hiddenFields: hidden };
   for (const key of STARTER_EXAMPLE) personal[key] = built.personal?.[key] ?? '';
-  return { ...built, personal };
+  const icons = source.settings?.customContactIcons;
+  const uploads = icons && typeof icons === 'object' && !Array.isArray(icons) ? { customContactIcons: JSON.parse(JSON.stringify(icons)) } : {};
+  const paper = pageSizeOf(source.settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(source.settings) } : {};
+  return { ...built, personal, settings: { ...built.settings, ...uploads, ...paper } };
 }
