@@ -42,6 +42,12 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
 export function TypographySection({ settings, template, resumeId, updateSetting, onReset }) {
   const [customFontInput, setCustomFontInput] = useState('');
   const [savedCustomFonts, setSavedCustomFonts] = useState(() => loadCustomFonts());
+  // The chips are this browser's list plus the font this résumé prints in, when the list lacks it
+  // (removed here while another résumé still uses it, or a résumé synced or restored from elsewhere),
+  // so Font Family always marks the font the PDF prints in — as OwnFontRow does for its value.
+  const customFonts = settings.customFont && !savedCustomFonts.includes(settings.customFont)
+    ? [...savedCustomFonts, settings.customFont]
+    : savedCustomFonts;
   const [checking, setChecking] = useState(false);
   const [fontError, setFontError] = useState(null);
   // The résumé and font as of this render, read after a font check's wait.
@@ -54,8 +60,9 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
   // Show every choice in its own face — from the same files the PDF embeds.
   useEffect(() => {
     FONTS.forEach((font) => loadPreviewFont(font.name, font.pkg));
-    savedCustomFonts.forEach((name) => loadPreviewFont(name));
-  }, [savedCustomFonts]);
+    customFonts.forEach((name) => loadPreviewFont(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedCustomFonts, settings.customFont]);
 
   function chooseCustomFont(name) {
     updateSetting('customFont', name);
@@ -141,11 +148,11 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             </button>
           ))}
         </div>
-        {savedCustomFonts.length > 0 && (
+        {customFonts.length > 0 && (
           <div className="mb-2">
             <p className="text-[11px] text-gray-400 mb-1">Your custom fonts</p>
             <div className="flex flex-wrap gap-1">
-              {savedCustomFonts.map(name => {
+              {customFonts.map(name => {
                 const active = settings.customFont === name;
                 return (
                   <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
@@ -199,8 +206,8 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
       </div>
 
       <div className="space-y-2">
-        <OwnFontRow label="Name Font" value={settings.nameFont} customFonts={savedCustomFonts} onChange={v => updateSetting('nameFont', v)} />
-        <OwnFontRow label="Heading Font" value={settings.headingFont} customFonts={savedCustomFonts} onChange={v => updateSetting('headingFont', v)} />
+        <OwnFontRow label="Name Font" value={settings.nameFont} customFonts={customFonts} onChange={v => updateSetting('nameFont', v)} />
+        <OwnFontRow label="Heading Font" value={settings.headingFont} customFonts={customFonts} onChange={v => updateSetting('headingFont', v)} />
       </div>
 
       <div>
