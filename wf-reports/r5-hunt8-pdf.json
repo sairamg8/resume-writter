@@ -1,0 +1,43 @@
+{
+  "cluster": "r5-hunt8-pdf",
+  "branch": "claude/wf-r5-hunt8-pdf",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN",
+      "title": "PDF: with the Skills style set to Stacked or Tags, a skill group's category heading (and Stacked's thin rule under it) can be left alone at the bottom of a page while that group's skills move to the next page",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "c09d9a24bcd90b37a35fc8b2f377667c74fffadc"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-skills-category-keep.test.mjs"
+      ],
+      "summary": "Now: in Skills styles Stacked, Tags and Bars a group's category is an unbreakable block that keeps the first lines of its skills on its page (minPresenceAhead, three entry lines in the main column, 30 pt in the Sidebar's side column, SPACER giving it the previous sibling it needs), so the category moves to the next page with its skills instead of ending a page alone. This holds in the main column (any Grids) and in the Sidebar's dark column. Word's Stacked category paragraph now has keepNext. Bars had the same orphan, so it got the same keep. Fail-first: all 6 subtests fail without the fix and pass with it.",
+      "ci": [
+        36634172799
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [
+      "No defect in c09d9a24. It fixes the root cause: the Bars/Stacked/Tags category is now an unbreakable View with minPresenceAhead, led by SPACER (entry() in the main column, an explicit SPACER in the Sidebar's groups). react-pdf clamps the presence to the group's own later siblings, so a category with no skills never forces a break and the keep never reaches past its group. The wrappers add no height (SPACER is 0 pt; the Text's marginBottom moves inside its wrapper), and Tags' alignSelf stretch keeps a centred category centred. SkillsSection and SideSkills are the only Skills renderers, so no other template path is affected. Word: keepNext on the Stacked category only; Tags and Bars in Word are one inline paragraph and cannot orphan.",
+      "Coverage gap (fixed in the test only): the fix changed the Sidebar's Bars and the main column in Grids, but the test swept neither. Added 'Sidebar's side column, Bars' (fails without the fix, passes with it) and 'Classic, Stacked in two Grids' (a regression guard: passes both ways, since the grid row keep already holds a Grids row's categories). The sweep's line matcher now reads a Grids row's categories printed side by side on one line."
+    ],
+    "commits": [
+      "1b96dbe166226fbdc644bba76e6f42f372cd4d18",
+      "d088c9e55c2252e13221cf91e285fb5db8d9ea91"
+    ],
+    "ci": [
+      36634172799,
+      36635856377,
+      36637125643
+    ],
+    "notes": "Run 36634172799 (the fixer's): failfirst green, fail 6 without the fix and pass with it; area tests and lint green. Run 36635856377 on 1b96dbe1: the first version of the added Grids subtest failed its own guard (its matcher missed the row's shared category line; it found no orphan). Every other test passed, 129 of 130: the new file's other 7 subtests, including the Sidebar Bars one, plus 25-skills, 102-r4-dout-16-sidebar-bars-gaps, 84-keep-together, 84-sidebar-column-breaks, 06-pagination and 35-word-skill-category-case. Run 36637125643 on d088c9e5: failfirst for c09d9a24 green (fail 7 of 8 without the fix, all 8 pass with it; the Grids guard is the one that passes both ways), tests and lint green."
+  },
+  "baselineFailures": [],
+  "notes": "One dispatch (run 36634172799): failfirst passed (fail 6 without the fix, pass with it); the tests job passed on the new test plus 17 existing files for skills, Sidebar, keep-together, pagination, Word stacked skills and the guards (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs); lint passed. The docs/knowledge/06-templates-export.md page-break paragraph now describes the keep. The branch base is origin/claude/r4-green at 420f487, which had moved on from the 9519ef6b named in the task."
+}

@@ -1,10 +1,19 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { hexAlpha } from './PdfSections';
+import { SPACER, hexAlpha } from './PdfSections';
 import { SideSectionTitle, sideBreaks } from './PdfSidebarColumn';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
+
+/**
+ * Bars, Tags and Stacked print a group's category over its skills, and a group may split between them:
+ * the category, unbreakable, keeps about two of the column's skill lines (a bar, a row of chips, a
+ * "• " line: 13-15 pt each) on its page, so it moves to the next page with them instead of ending a
+ * page alone; the keep ends with the group. SPACER, first in the group, gives it the previous sibling
+ * minPresenceAhead needs (R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN).
+ */
+const categoryKeep = { wrap: false, minPresenceAhead: 30 };
 
 /** A group as printed (skillGroup), its category in the column's capitals (skillCategory). */
 function shownGroup(item) {
@@ -39,10 +48,13 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
+              {SPACER}
               {category ? (
-                <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
-                  {category}
-                </Text>
+                <View {...categoryKeep}>
+                  <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
+                    {category}
+                  </Text>
+                </View>
               ) : null}
               {/* 4 pt between a group's bars, none after the last: groups are apart by the item gap
                   alone and the section ends at its last bar, as the column's other sections do (R4-DOUT-16). */}
@@ -68,10 +80,13 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
+              {SPACER}
               {category ? (
-                <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
-                  {category}
-                </Text>
+                <View {...categoryKeep}>
+                  <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
+                    {category}
+                  </Text>
+                </View>
               ) : null}
               {list.length > 0 && (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 }}>
@@ -96,8 +111,11 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
+              {SPACER}
               {category ? (
-                <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={catBreaks}>{category}</Text>
+                <View {...categoryKeep}>
+                  <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={catBreaks}>{category}</Text>
+                </View>
               ) : null}
               {list.map((sk, index) => (
                 <Text key={index} style={{ fontSize: 8.5, color: shades.value, lineHeight: 1.4, marginBottom: 1 }} hyphenationCallback={valBreaks}>{'• '}{sk}</Text>

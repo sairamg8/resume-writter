@@ -253,6 +253,8 @@ function stackedSkills(category, skills, list, categoryInk, centered, look) {
     paras.push(new Paragraph({
       children: [bold(category, { size: look.entry, color: categoryInk })],
       spacing: { after: 40 },
+      // On the page of its skills, never alone at a page foot (R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN).
+      keepNext: true,
       ...(look.side ? {} : { border: { bottom: { style: BorderStyle.SINGLE, size: eighths(0.5), color: 'e5e7eb', space: 1 } } }),
       ...centredIf(centered),
     }));
