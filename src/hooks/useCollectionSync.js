@@ -12,7 +12,7 @@ import { completeBoard, readBoard } from '@/utils/normalizeBoard';
 import { isUntouchedDemoJob } from '@/utils/jobEdits';
 import { isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
-import { boardsNow, replaceBoards, subscribe as subscribeBoards } from '@/hooks/useBoardStore';
+import { boardsNow, replaceBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
 
 const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove };
 
