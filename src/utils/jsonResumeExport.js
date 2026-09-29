@@ -76,7 +76,8 @@ export function cpwtResumeToJsonResume(resume) {
   for (const s of entries(resume.sections).filter((section) => section.visible !== false)) {
     const items = shownItems(s.items);
     for (const item of asEntered ? items : []) {
-      for (const key of ['startDate', 'endDate', 'date', 'expiry']) {
+      // Not a current entry's kept End Date: the file writes none (R4-DUX-26).
+      for (const key of ['startDate', ...(item.current ? [] : ['endDate']), 'date', 'expiry']) {
         const text = storedText(item[key]).trim();
         const iso = isoDate(item[key]);
         if (text && iso !== text && !Object.hasOwn(entered, iso)) entered[iso] = text;
