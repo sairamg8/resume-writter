@@ -15,7 +15,7 @@
 // happens — the list is this browser's, as before.
 import { backoff, failureReport } from './cloudSyncRetry.js';
 import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
-import { diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
+import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { itemPath } from './collectionSyncIo.js';
 
 /**
@@ -81,12 +81,19 @@ export function createCollectionSync({
     if (changed) heldChanged();
   }
 
-  /** What a flush got into account `uid`'s cloud: the versions of `sets`, `deletes` gone, and the `order` it sent (null: none). */
+  /**
+   * What a flush got into account `uid`'s cloud: the versions of `sets`, `deletes` gone, and the
+   * `order` it sent (null: none). A deletion is kept as version `DELETED` until the next first
+   * sync: an item put back here after it (Undo) is then one changed since this browser saw it, and
+   * a first sync keeps it and takes it off the account's deleted list, even when its own write
+   * never got there (a reload or a failure within the pause). Its version simply dropped, the
+   * first sync took it for a stale copy of a deleted item, and deleted it here too.
+   */
   const noteVersions = (uid, sets, deletes, order) => {
     const m = meta.read();
     if (m.uid !== uid) return;
     const versions = { ...m.versions, ...versionsOf(sets) };
-    deletes.forEach((id) => { delete versions[id]; });
+    deletes.forEach((id) => { versions[id] = DELETED; });
     meta.write({ ...m, versions, ...(order ? { order } : {}) });
   };
 
@@ -229,7 +236,11 @@ export function createCollectionSync({
       const added = [...edited.values()].filter((x) => !result.some((r) => r.id === x.id));
       const next = [...result, ...added];
 
-      const cloudVersions = { ...versionsOf(docs.filter((d) => !plan.deletes.includes(d.id))), ...versionsOf(sets) };
+      const cloudVersions = {
+        ...versionsOf(docs.filter((d) => !plan.deletes.includes(d.id))),
+        ...Object.fromEntries(plan.deletes.map((id) => [id, DELETED])),
+        ...versionsOf(sets),
+      };
       const { [uid]: _gone, ...stashed } = record.stashed;
       meta.write({ uid, versions: cloudVersions, order: plan.order, stashed });
       s.prev = plan.merged;
@@ -340,8 +351,11 @@ export function createCollectionSync({
       }
       if (newer.length) {
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
-        const list = store.items().map((x) => newer.find((n) => n.id === x.id) || x);
-        s.prev = (s.prev || []).map((x) => newer.find((n) => n.id === x.id) || x);
+        // An item edited here while the batch read the cloud is newer still: that edit stays, and its
+        // own write is queued (taken over, it vanished here while the queue still sent it).
+        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && !(x.updatedAt > n.updatedAt) ? n : x; };
+        const list = store.items().map(take);
+        s.prev = (s.prev || []).map(take);
         store.replace(list);
       }
       await sending;

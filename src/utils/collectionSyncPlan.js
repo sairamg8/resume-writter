@@ -14,6 +14,14 @@
 // orders with. An order carries no `updatedAt`, so without it a move made before the first sync
 // (offline, signed out, a failed sync) always lost to the cloud's order (R2-140).
 
+/**
+ * The version this browser records for an item whose deletion it sent to the cloud
+ * (collectionSyncEngine's noteVersions), kept until the next first sync: older than any copy, so
+ * one put back here since (Undo) counts as changed here. The deletion itself is in the cloud
+ * already: a list leaving this browser (leaveList) keeps no such id aside to delete again.
+ */
+export const DELETED = 0;
+
 /** `{ id: updatedAt }` of `list`. */
 export const versionsOf = (list) => Object.fromEntries(list.filter((x) => Number.isFinite(x.updatedAt)).map((x) => [x.id, x.updatedAt]));
 
@@ -145,7 +153,9 @@ export function leaveList(meta, list, uid) {
   const versions = isMap(meta.versions) ? meta.versions : {};
   const unsent = list.filter((x) => versions[x.id] !== x.updatedAt);
   const ids = new Set(list.map((x) => x.id));
-  const deletes = Object.keys(versions).filter((id) => !ids.has(id));
+  // A deletion already sent (DELETED) is not kept aside: sent again at the next sign-in, it
+  // deleted the copy another device had edited and written back since (R5-HUNT2 review).
+  const deletes = Object.keys(versions).filter((id) => !ids.has(id) && versions[id] !== DELETED);
   const base = idsOf(meta.order);
   const moved = base && !sameOrder(list.map((x) => x.id), base);
   const stashed = { ...(isMap(meta.stashed) ? meta.stashed : {}) };
