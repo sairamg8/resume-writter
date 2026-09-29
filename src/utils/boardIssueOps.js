@@ -310,7 +310,11 @@ export function duplicateIssue(board, issueId, ctx = {}, { id } = {}) {
   const original = issueById(board, issueId);
   if (!original) return board;
   const fields = { ...original, title: `${original.title} (copy)`, checklist: original.checklist.map(({ text, done }) => ({ text, done })) };
-  const copy = makeIssue(board, fields, { id, now: nowOf(ctx), createdFrom: issueKey(board, original) });
+  const made = makeIssue(board, fields, { id, now: nowOf(ctx), createdFrom: issueKey(board, original) });
+  // A copy of a monthly occurrence keeps the day it repeats on: its due, clamped in a short month
+  // (28 Feb of a 31st), is not that day.
+  const day = original.recurrence === 'monthly' ? recurrenceDay(original.due, original.recurrenceDay) : null;
+  const copy = day ? { ...made, recurrenceDay: day } : made;
   const at = board.issues.indexOf(original) + 1;
   return { ...board, nextNumber: board.nextNumber + 1, issues: [...board.issues.slice(0, at), copy, ...board.issues.slice(at)] };
 }

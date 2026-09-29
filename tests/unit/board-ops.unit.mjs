@@ -134,6 +134,16 @@ test('recurrence: a monthly issue keeps the day it started on after a short mont
   assert.equal(get(b, get(b, id).recurrenceNextId).due, '2026-06-15');
 });
 
+test('recurrence: a copy of a monthly occurrence clamped to a short month keeps its day (R5-HUNT2-MONTHLY-RECURRENCE-ANCHOR-DRIFT)', () => {
+  let b = ops.addIssue(boardWith([]), { id: 'M', title: 'Pay rent', due: '2026-01-31', recurrence: 'monthly' }, ctx);
+  b = ops.moveIssue(b, 'M', { columnId: 'done' }, { now: new Date(2026, 0, 31, 10, 0).getTime() });
+  const feb = get(b, 'M').recurrenceNextId;
+  assert.equal(get(b, feb).due, '2026-02-28');
+  b = ops.duplicateIssue(b, feb, ctx, { id: 'COPY' });
+  b = ops.moveIssue(b, 'COPY', { columnId: 'done' }, { now: new Date(2026, 1, 28, 10, 0).getTime() });
+  assert.equal(get(b, get(b, 'COPY').recurrenceNextId).due, '2026-03-31', 'the copy repeats on the 31st, not the 28th');
+});
+
 test('updateIssue: a status change through columnId spawns too; a plain issue done spawns nothing', () => {
   let b = ops.addIssue(boardWith(['P']), { id: 'D', title: 'Daily', recurrence: 'daily' }, ctx);
   b = ops.updateIssue(b, 'D', { columnId: 'done' }, ctx);
