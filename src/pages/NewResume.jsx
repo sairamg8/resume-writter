@@ -125,7 +125,7 @@ export function NewResume({ store }) {
             inline
             isOpen
             onClose={goBack}
-            onSelectStarter={(starterId, look) => once(() => (look ? store.createResume(NEW_RESUME_NAME, starterId, look) : store.createResume(NEW_RESUME_NAME, starterId)))}
+            onSelectStarter={(starterId, look) => once(() => store.createResume(NEW_RESUME_NAME, starterId, look, source?.id ?? null))}
             onSelectBlank={(look) => once(() => (look ? store.createResume(NEW_RESUME_NAME, null, look) : store.createResume()))}
           />
         </div>

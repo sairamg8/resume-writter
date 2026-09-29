@@ -31,3 +31,21 @@ export function resumeFrom(source, { id, now, name = NEW_RESUME_NAME }) {
   for (const key of LETTER_CONTENT) coverLetter[key] = BASE_COVER_LETTER[key];
   return withKeep({ ...copy, id, name, coverLetter }, false, now);
 }
+
+/** What a role starter keeps of its own Personal Info: the role's job title and summary, as examples. */
+const STARTER_EXAMPLE = ['title', 'summary'];
+
+/**
+ * The role starter `built` (buildResumeFromStarter) for the account whose résumé `source` is: the user's
+ * own name, contacts, links, photo and what they hide, not the starter's sample person (the owner's idea,
+ * 2026-09-29), with the role's job title and summary (STARTER_EXAMPLE) kept as its example and shown. With
+ * no résumé yet there is nothing of the user's to start from, and the starter is as it was.
+ */
+export function starterFrom(built, source) {
+  if (!source?.personal || typeof source.personal !== 'object') return built;
+  const mine = JSON.parse(JSON.stringify(source.personal));
+  const hidden = Array.isArray(mine.hiddenFields) ? mine.hiddenFields.filter((key) => !STARTER_EXAMPLE.includes(key)) : [];
+  const personal = { ...mine, hiddenFields: hidden };
+  for (const key of STARTER_EXAMPLE) personal[key] = built.personal?.[key] ?? '';
+  return { ...built, personal };
+}
