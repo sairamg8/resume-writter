@@ -246,6 +246,24 @@ function toAlpha(n) {
   return out;
 }
 
+const ROMAN = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+const fromRoman = (s) => [...s].reduce((sum, c, i) => sum + (ROMAN[c] < (ROMAN[s[i + 1]] || 0) ? -ROMAN[c] : ROMAN[c]), 0);
+const fromAlpha = (s) => [...s].reduce((n, c) => n * 26 + c.charCodeAt(0) - 96, 0);
+
+/**
+ * A typed list marker's letters ('c', 'IV') as { type, start }: Roman when longer than one letter
+ * and all Roman digits (ii, iv, xii), or i, v or x alone; any other letter counts in the alphabet, so
+ * a Word list copied from its third item, 'c)', starts at c., not at i. (R5-HUNT7-LIST-TYPE).
+ */
+function letteredStart(s) {
+  const lower = s.toLowerCase();
+  const roman = /^[ivxlcdm]+$/.test(lower) && (lower.length > 1 || 'ivx'.includes(lower));
+  const upper = s !== lower;
+  return roman
+    ? { type: upper ? 'I' : 'i', start: fromRoman(lower) }
+    : { type: upper ? 'A' : 'a', start: fromAlpha(lower) };
+}
+
 function listType(attrs) {
   const css = styleOf(attrs)['list-style-type'];
   const t = attrs.type || '';
@@ -313,7 +331,12 @@ function wordLists(node) {
     if (!top || top.level < level) {
       const attrs = {};
       if (num && /^\d+$/.test(num[1])) attrs.start = num[1];
-      else if (num) attrs.type = /^[ivxlcdm]+$/i.test(num[1]) ? (num[1] === num[1].toLowerCase() ? 'i' : 'I') : (num[1] === num[1].toLowerCase() ? 'a' : 'A');
+      else if (num) {
+        // Its letters give the list's type and where it starts: 'c)' is c., 'iv.' is iv.
+        const { type, start } = letteredStart(num[1]);
+        attrs.type = type;
+        if (start !== 1) attrs.start = String(start);
+      }
       const list = { tag: ordered ? 'ol' : 'ul', attrs, children: [] };
       const parentItem = top && top.list.children[top.list.children.length - 1];
       (parentItem ? parentItem.children : out).push(list);
