@@ -25,7 +25,8 @@ const TYPED_BULLET = /^[•\-*–—◦▪▸‣⁃]\s+/;
 /**
  * Rich text (a description, the summary) as the lines the PDF prints, in its order, through the
  * parse the PDF and Word use: a paragraph as typed (one line per line break), a list item as
- * "* …" — nested ones indented, a numbered one with its number ("3. …") — and every entity decoded.
+ * "* …" — nested ones indented, a numbered one with its number ("3. …"), a paragraph inside one
+ * under its text — and every entity decoded.
  */
 function richTextLines(html) {
   const out = [];
@@ -36,6 +37,10 @@ function richTextLines(html) {
       if (block.marker) {
         const pad = '  '.repeat(Math.max(0, block.indent - 1));
         out.push(i ? `${pad}  ${line}` : `${pad}${block.marker.length === 1 ? '*' : block.marker} ${line}`);
+      } else if (block.inList && block.indent > 0) {
+        // A paragraph inside a list item (an <li> holding two <p>) starts at that item's text, as in the
+        // PDF and the Markdown, so it reads as part of the bullet, not a line of its own (R5-HUNT2).
+        out.push(`${'  '.repeat(block.indent - 1)}  ${line}`);
       } else if (TYPED_BULLET.test(line)) {
         out.push(`* ${line.replace(TYPED_BULLET, '')}`);
       } else {
