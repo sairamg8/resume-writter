@@ -428,6 +428,14 @@ function contactOf(segment) {
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
 const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
 
+/**
+ * A header piece without a list mark before it: contacts set as a bulleted list ("• jane@x.com", the
+ * Markdown's "- Email: …", a Word list) are read as contacts. Before, the mark stayed on the piece, so
+ * none was: the email became the job title, the rest went to "Additional Information", and a link's
+ * Display label began "• " (R5-HUNT7-BULLETED-HEADER-CONTACTS). Numbering ("1.") is no such mark here.
+ */
+const unbulleted = (piece) => piece.replace(/^[•◦▪▫▸►‣⁃●○■□✓✔➢➤*+\-–—]\s+/, '');
+
 /** Whether a header piece is a contact: one alone, or a link as linkText writes it, "GitHub (https://…)". */
 const isContact = (piece) => Boolean(contactOf(piece) || (LINKED.exec(piece) && contactOf(LINKED.exec(piece)[2])));
 
@@ -664,6 +672,20 @@ function readHeader(type, header) {
 function inlinePair(parts) {
   if (parts.length !== 1) return parts;
   const [text] = parts;
+  // "Software Engineer at Acme Corp", "Data Analyst @ Globex": the role, then its employer. Before, the
+  // whole line was the role and the company empty (R5-HUNT7-ROLE-AT-COMPANY). Only with a job title's
+  // word before it, and none after but a firm's plural ("Engineer at Summit Partners"): a company
+  // "Made at Home" alone stays whole. Before a comma: "Engineer, Payments at Acme" is role, then Acme.
+  const at = /\s+(?:at|@)\s+/i.exec(text);
+  if (at) {
+    const a = text.slice(0, at.index).trim();
+    const b = text.slice(at.index + at[0].length).trim();
+    const firm = [...b.matchAll(ROLE_ALL)].every((m) => m[0].length > m[1].length);
+    // Its order is the line's own: the role is what comes before "at". Marked (roleLeads) so entryOf
+    // keeps it; a firm's plural role word ("Gensler Architects") left the words telling nothing, and a
+    // company-first section swapped them: the role "Gensler Architects", the company "Senior Engineer".
+    if (a && b && ROLE.test(a) && firm) return Object.assign([a, b], { roleLeads: true });
+  }
   for (const m of text.matchAll(/,\s+/g)) {
     const a = text.slice(0, m.index).trim();
     const b = text.slice(m.index + m[0].length).trim();
@@ -672,13 +694,16 @@ function inlinePair(parts) {
   return parts;
 }
 
-/** "Google, Mountain View, CA" → ["Google", "Mountain View, CA"]: a name, then its city and state or country after a comma; else null. */
-function placeAfterComma(text) {
+/**
+ * "Google, Mountain View, CA" → ["Google", "Mountain View, CA"]: a name, then its city and state or country after a comma; else null.
+ * `company`: the text is known to be a company ("Role at Company"), so a firm's role word ("Gensler Architects") does not stop it.
+ */
+function placeAfterComma(text, company = false) {
   const m = /^(.+?),\s*([^,]+),(\s*[^,]+)$/.exec(text);
   // "Google, Inc., CA": a legal ending is the company's, no city ("Inc., CA" was the job's location).
   if (!m || CORPORATE.test(`, ${m[2].trim()}`)) return null;
   const place = `${m[2]},${m[3]}`;
-  return PLACE.test(place) && REGION_END.test(place) && !ROLE.test(m[1]) && !ROLE.test(place) ? [m[1].trim(), place.trim()] : null;
+  return PLACE.test(place) && REGION_END.test(place) && (company || !ROLE.test(m[1])) && !ROLE.test(place) ? [m[1].trim(), place.trim()] : null;
 }
 
 /** Whether of two fields the first is the role: true, false, or null when neither's words say. */
@@ -731,7 +756,9 @@ function headerOf(type, header) {
   if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 2) {
     const place = h.parts[h.parts.length - 1];
     const pair = h.parts.length === 2 ? inlinePair(h.parts.slice(0, 1)) : h.parts.slice(0, -1);
-    if (pair.length === 2 && ROLE.test(pair[0]) && !ROLE.test(pair[1]) && PLACE.test(place) && !ROLE.test(place) && !CORPORATE.test(place)) {
+    // A "Role at Company" pair (inlinePair's roleLeads) is one whatever the company's words: "Senior
+    // Engineer at Gensler Architects | Chicago, IL" gave the company "Chicago, IL" before.
+    if (pair.length === 2 && (pair.roleLeads || (ROLE.test(pair[0]) && !ROLE.test(pair[1]))) && PLACE.test(place) && !ROLE.test(place) && !CORPORATE.test(place)) {
       h.location = place;
       h.parts = pair;
     }
@@ -741,11 +768,11 @@ function headerOf(type, header) {
   // role, so a place alone ("Portland, Oregon, USA") is not cut. Before, the company kept the place.
   if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location) {
     const pair = inlinePair(h.parts);
-    const at = pair.length >= 2 ? [0, 1].find((k) => ROLE.test(pair[1 - k]) && !ROLE.test(pair[k])) : undefined;
-    const placed = at === undefined ? null : placeAfterComma(pair[at]);
+    const at = pair.roleLeads ? 1 : pair.length >= 2 ? [0, 1].find((k) => ROLE.test(pair[1 - k]) && !ROLE.test(pair[k])) : undefined;
+    const placed = at === undefined ? null : placeAfterComma(pair[at], pair.roleLeads);
     if (placed) {
       h.location = placed[1];
-      h.parts = pair.map((p, k) => (k === at ? placed[0] : p));
+      h.parts = Object.assign(pair.map((p, k) => (k === at ? placed[0] : p)), { roleLeads: pair.roleLeads });
     }
   }
   return h;
@@ -759,7 +786,8 @@ function headerOf(type, header) {
  */
 function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'volunteering') {
   const h = headerOf(type, header);
-  const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
+  const ordered = JOB.has(type) ? inlinePair(h.parts) : h.parts;
+  const [p0 = '', p1 = '', ...rest] = ordered;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
   // A field named on its line ("Technologies: …", "Link: …") that this type has a place for, taken;
@@ -774,7 +802,7 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
     case 'volunteering': {
       // A role under its employer (roleEntries): the employer and its place are the group's.
       const group = header[0]?.group;
-      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, roleLeads);
+      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : ordered.roleLeads ? [p0, p1] : roleFirst(p0, p1, roleLeads);
       const more = group ? group.lead.map((l) => l.text) : [];
       const location = h.location || take('location') || (group ? group.place : '');
       return itemOf(type, { [type === 'experience' ? 'company' : 'org']: org, role, location, ...dates, description: description([...more, ...lead]) });
@@ -1314,21 +1342,22 @@ export function resumeFromText(input) {
   const takeContacts = (ls, { spill }) => {
     for (const l of ls) {
       const leftover = [];
-      for (const piece of headerPieces(l.text).flatMap((p) => contactRun(p) || [p])) {
+      for (const listed of headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p])) {
+        const piece = unbulleted(listed);
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
         // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
         // it was shown as its Display label (R4-IMP-02).
         const linked = LINKED.exec(piece);
         const lc = linked && contactOf(linked[2]);
         if (lc && lc.key !== 'location') {
-          if (personal[lc.key]) { leftover.push(piece); continue; }
+          if (personal[lc.key]) { leftover.push(listed); continue; }
           personal[lc.key] = lc.value;
           if (LABELLED_KEYS.has(lc.key) && linked[1]) personal[`${lc.key}Label`] = linked[1];
           continue;
         }
         const c = contactOf(piece);
         if (c && !personal[c.key]) personal[c.key] = c.value;
-        else leftover.push(piece); // not a contact, or a second one of a kind
+        else leftover.push(listed); // not a contact, or a second one of a kind
       }
       if (leftover.length) spill(leftover.join(' | '), l.links);
     }
@@ -1343,7 +1372,8 @@ export function resumeFromText(input) {
     const rest = [...head.slice(0, nameAt), ...(more.length ? [{ text: more.join('\t') }] : []), ...head.slice(nameAt + 1)];
     // The job title is the next line, or the one field set beside the name on its line (Compact's
     // Inline layout, "Name ⇥ Job Title"); a name line with more fields than that is a contact line.
-    const t = rest[0] && more.length <= 1 ? rest[0] : null;
+    // Without a list mark before it: a bulleted contact list's first line is no job title.
+    const t = rest[0] && more.length <= 1 ? { ...rest[0], text: unbulleted(rest[0].text) } : null;
     // A contact line set apart at dashes or commas is none either; one led by a field that is no
     // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
     const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;

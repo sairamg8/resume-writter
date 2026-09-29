@@ -1,7 +1,7 @@
 // Import from a PDF, a Word file (.docx), Markdown or plain text (R2-148): the file's text as lines,
 // read by importText.js into a new résumé. JSON stays with the importers it always had (the
 // Dashboard's and the editor's); importDocument.js loads this on demand, and pdf.js only for a PDF.
-import { linkText, markdownLines, resumeFromText } from './importText.js';
+import { linkText, markdownLines, readDateRange, resumeFromText } from './importText.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 const SCANNED = 'That PDF looks like a scanned image: its pages have no text layer to read. Export the résumé again as a text PDF from the program it was written in, save it as a Word file, or run the scan through OCR (text recognition) first, and import that.';
@@ -82,6 +82,47 @@ function withoutFallbacks(xml) {
 }
 
 /**
+ * `xml` with an entry header set in a borderless table ("Acme Corp" | "Jan 2020 – Present", "Software
+ * Engineer" | "Austin, TX", as many Word templates set one) read as the lines a tab or a PDF's baseline
+ * gives: each row whose cells hold one line apiece as one paragraph, its cells joined by tabs. Read a
+ * line a cell, the city went into the description, the next job took this one's company and a school
+ * came in as the degree (R5-HUNT7-DOCX-TABLE-ROW-CELLS). Only a table with such a row ending in a date
+ * is read so: a grid of skills or certificates a cell each ("Go" | "Rust", the Word export's Grids)
+ * stays a line a cell. A row with a cell of several lines (a layout table's columns), a list item, a
+ * nested table or a text box is left as it was too. The joined line takes its first cell's paragraph
+ * properties (a heading stays one).
+ */
+function joinedRows(xml) {
+  const PARA = /<w:p(?=[\s>/])[^>]*?(?:\/>|>([\s\S]*?)<\/w:p>)/g;
+  const textOf = (p) => [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((t) => xmlText(t[1])).join('').trim();
+  const LISTED = /<w:numPr>|<w:pStyle w:val="List\s?(?:Bullet|Number)/i;
+  const ROW = /<w:tr(?=[\s>])[^>]*>([\s\S]*?)<\/w:tr>/g;
+  /** A row's one-line cells' paragraphs, or null for a row read a line a paragraph. */
+  const oneLineCells = (inner) => {
+    const cells = [...inner.matchAll(/<w:tc(?=[\s>])[^>]*>([\s\S]*?)<\/w:tc>/g)]
+      .map((c) => [...c[1].matchAll(PARA)].filter((p) => textOf(p[0])));
+    const paras = cells.flat();
+    return paras.length < 2 || cells.some((c) => c.length > 1) || paras.some((p) => LISTED.test(p[0])) ? null : paras;
+  };
+  // The innermost tables: a nested one's rows are read, its outer table's left as it was.
+  return xml.replace(/<w:tbl(?=[\s>])[^>]*>(?:(?!<w:tbl[\s>])[\s\S])*?<\/w:tbl>/g, (tbl) => {
+    if (/<w:txbxContent\b/.test(tbl)) return tbl;
+    const dated = [...tbl.matchAll(ROW)].some((r) => {
+      const paras = oneLineCells(r[1]);
+      return paras && readDateRange(textOf(paras[paras.length - 1][0]));
+    });
+    if (!dated) return tbl;
+    return tbl.replace(ROW, (row, inner) => {
+      const paras = oneLineCells(inner);
+      if (!paras) return row;
+      const props = /^<w:pPr>[\s\S]*?<\/w:pPr>/.exec(paras[0][1].trim())?.[0] ?? '';
+      const runs = paras.map((p) => p[1].replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, ''));
+      return `<w:p>${props}${runs.join('<w:r><w:tab/></w:r>')}</w:p>`;
+    });
+  });
+}
+
+/**
  * word/document.xml as lines: a paragraph a line (its breaks as more lines, its tabs as tabs), a
  * list paragraph behind a "• ", an empty one as a blank line. A Heading style marks a heading, the
  * Title style the name — the app's Word export writes its section titles as Heading 1.
@@ -96,11 +137,11 @@ function withoutFallbacks(xml) {
  * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
 export function docxXmlLines(xml, links = {}) {
-  const body = withoutFallbacks(String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml));
+  const body = joinedRows(withoutFallbacks(String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml)));
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|ptab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
   // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
   // `para`'s text from `at` as a link to `to` (linkText), kept in its links for the rich text (R4-LO-05).
   const link = (para, at, to) => {
@@ -155,7 +196,7 @@ export function docxXmlLines(xml, links = {}) {
       const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
       const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
       lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
-    } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
+    } else if (/^<w:p[\s>]/.test(m[0])) { // a paragraph's start (not <w:pPr>, not <w:ptab/>)
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }
     else if (!para) continue;
@@ -164,7 +205,9 @@ export function docxXmlLines(xml, links = {}) {
     // A non-breaking hyphen (Ctrl+Shift+-, "2019‑2021" kept on one line) is a hyphen; a soft one
     // (an optional break) is nothing. Before, both were dropped, and "2019‑2021" read "20192021".
     else if (m[3] === 'noBreakHyphen') para.text += '-';
-    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' ? '\t' : '\n';
+    // An alignment tab (<w:ptab/>, Insert Alignment Tab: a date pushed to the right margin) is a tab too;
+    // skipped before, "Acme Corp" and its date ran together and no date was read (R5-HUNT7-DOCX-ALIGNMENT-TAB-DROPPED).
+    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' || m[3] === 'ptab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
 }
