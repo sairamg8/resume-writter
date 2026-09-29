@@ -18,6 +18,14 @@ export const asStored = (x) => JSON.parse(JSON.stringify(x));
 /** The path segments of item `id` of list `name` in account `uid`: what the size guard counts. */
 export const itemPath = (name, uid, id) => ['users', uid, name, id];
 
+/**
+ * Whether Firestore can name a document `id`: not empty, no "/" (a path, not an id), not "." or
+ * "..", not "__…__". One it cannot was never in the cloud (an imported job's "linkedin/3912345",
+ * held: R5-HUNT7), so its deletion is nothing to send (R5-HUNT8).
+ */
+export const cloudCanName = (id) => typeof id === 'string' && id !== '' && !id.includes('/')
+  && id !== '.' && id !== '..' && !/^__.*__$/.test(id);
+
 export function collectionIo(fs, db, name) {
   const itemsCol = (uid) => fs.collection(db, 'users', uid, name);
   const itemDoc = (uid, id) => fs.doc(db, ...itemPath(name, uid, id));

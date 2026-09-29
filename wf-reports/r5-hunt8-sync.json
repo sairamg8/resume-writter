@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt8-sync",
+  "branch": "claude/wf-r5-hunt8-sync",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS",
+      "title": "Deleting a job the cloud refused (an imported id with '/'), or clearing all jobs while one is in the list, stops the job sync",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "6135579a29cb66b6ae838f80f4807e5e561caf72"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-sync-delete-refused-id.unit.mjs"
+      ],
+      "summary": "Now: a flush drops the deletion of any id Firestore cannot name (collectionSyncIo.cloudCanName: empty, containing '/', '.', '..' or '__…__'), since such an item was never in the cloud. Deleting the held 'linkedin/3912345' job ends 'synced' and the next change goes out as usual. 'Clear all jobs' with that job in the list sends every other deletion to the account. The list's order is still sent, so the stale id leaves the cloud's order too.",
+      "ci": [
+        36634023674
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "6135579a fixes the root cause of the reported stop: the flush now skips the read and deletion of an id Firestore cannot name. It still sends the order when the only change is that deletion (q.deletes.size), so the stale id leaves the cloud's order. Its failfirst run 36634023674 is green: the test failed without the src change and passed with it. The same run's tests job passed. The report is right that a version check would drop a real deletion from an in-flight flush.",
+      "Defect in its premise ('an id the cloud cannot name was never in the cloud'): an id with two '/' ('greenhouse/acme/12345', which normalizeJob keeps as imported) makes a path with an even number of segments. The SDK and firestore.rules accept that path, so the job was written as a document nested under users/{uid}/jobs. No read of the list returns it, yet it was reported 'synced'. No other device got it. This browser's next first sync counted it as known and gone from the cloud and dropped it (planFirstSync 'removed by hand'): the job was lost. Under 6135579a its deletion was also skipped, so it stayed in the cloud. Fixed in b07e49af: sendable() now holds an item whose id !cloudCanName before it is sent, as it does for one too large. firstSync ignores a version an older build recorded for such an id, so the job stays and is held rather than dropped. With both changes the flush's rule holds: such an id is never written. Test: tests/unit/r5-hunt8-sync-nested-id-held.unit.mjs."
+    ],
+    "commits": [
+      "b07e49afc2a08f2349272500996fd248ffc7a117"
+    ],
+    "ci": [
+      36635219649
+    ],
+    "notes": "Run 36635219649 (head b07e49af) is green. Fail-first for b07e49af: 2 failed without the fix (its diff reversed) and passed with it. The tests job ran 279/279 green: every tests/unit/*sync*, recovery-leaves-with-account, firestore-rules, knowledge-docs, every tests/pdf/*sync*, clear-all-undo, 71-startup-chunks and 97-store-sign-out-write. Lint is green. The full gate was not run on this branch. Checked and found fine: noteVersions never records the skipped id. leaveList and stash deletes come only from recorded versions, so an unnameable id never becomes a first-sync deletion. The boards list shares the engine and gets the same fix. The r5-hunt7 tests hold 'linkedin/3912345' the same way, now without the failed round trip first. Left as it is: a nested document an older build already wrote stays in the account (no list read finds it); a deletion of it recorded here before this change is still sent by the next first sync. Not checked in this review: whether the résumé sync (cloudSyncEngine) can meet imported ids with '/'. No accessibility issues noted."
+  },
+  "baselineFailures": [],
+  "notes": "One dispatch (run 36634023674): failfirst passed, meaning the new test fails with the src change reverted and passes with it restored. The same run's tests job passed: every tests/unit/*sync*.unit.mjs, recovery-leaves-with-account, firestore-rules, knowledge-docs, and the pdf sync/sign-out/clear-all-undo/71-startup-chunks tests. Base is origin/claude/r4-green at 420f4875 (the task named 9519ef6b; r4-green had moved on). docs/knowledge/05-state-auth-sync.md is updated. The fix filters by id validity rather than by 'no version in the sync record': a job written by an in-flight flush has no version until that flush's noteVersions runs, so a version check could drop a real deletion."
+}
