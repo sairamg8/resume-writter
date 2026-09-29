@@ -287,7 +287,8 @@ export function deleteIssue(board, issueId) {
 
 /**
  * Put back what deleteIssue took (`removed` from removedIssue): at its old place, its children
- * relinked where nothing else claimed them; a column, sprint or label gone since is let go.
+ * relinked where nothing else claimed them; a column, sprint, label or epic gone since (or no
+ * longer an epic) is let go, or the issue pointed at an epic nothing shows or lets it leave (R5-HUNT5).
  */
 export function restoreIssue(board, removed) {
   if (!removed?.issue || issueById(board, removed.issue.id)) return board;
@@ -297,6 +298,7 @@ export function restoreIssue(board, removed) {
     columnId: columnById(board, i.columnId) ? i.columnId : defaultColumnId(board),
     sprintId: sprintById(board, i.sprintId) ? i.sprintId : null,
     labelIds: i.labelIds.filter((l) => board.labels.some((x) => x.id === l)),
+    epicId: epicIdFor(board, i.type, i.epicId, i.id),
   };
   const children = new Set(removed.childIds || []);
   const issues = board.issues.map((x) => (children.has(x.id) && !x.epicId ? { ...x, epicId: i.id } : x));
