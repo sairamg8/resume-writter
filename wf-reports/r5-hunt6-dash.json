@@ -1,0 +1,54 @@
+{
+  "cluster": "r5-hunt6-dash",
+  "branch": "claude/wf-r5-hunt6-dash",
+  "base": "a79efd8b",
+  "rows": [
+    {
+      "id": "R5-HUNT6-DASH-DELETE-DROPS-SAVED-DESIGNS",
+      "title": "Deleting a résumé from the Dashboard silently removes every saved design that only that résumé held",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["e5709c365a8527cd9bef8856c8632c82c9256184"],
+      "tests": ["tests/pdf/104-r5-hunt6-dash-delete-keeps-designs.test.mjs"],
+      "summary": "Now: deleting a résumé keeps every saved design that only it held. The designs move to the most recently edited résumé that is left, or to a letter when no résumé is left. That record goes a version on, so the cloud sync carries the design to other devices. The design stays under Design → Template → Your designs and on /new. A design another record still holds, or one deleted (R3-008 tombstone), is left as it is. The fix is in the store's deleteResume (src/hooks/useResumeSyncActions.js), using a new designsOnlyIn helper in src/constants/templatePresets.js.",
+      "product_call": "The designs go to the most recently edited résumé that is left, and the delete prompt is unchanged. The other option, an account-level list of saved designs, would be a data-model change.",
+      "remaining": "When the last record is deleted, nothing is left to hold its designs, so they still go. A deletion that arrives from another device through the sync does not go through deleteResume, so it does not move the designs."
+    },
+    {
+      "id": "R5-HUNT6-DASH-BACK-LOSES-SCROLL",
+      "title": "Browser Back from the editor (or from Job Tracker/Projects) returns to the Dashboard at the top, not where the user had scrolled",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["517e299867d8a1f03efe5af2e9cdbe54c0c3d74a", "d23d3f17c806720b6761ad2fc516bdcd69ed3c57"],
+      "tests": ["tests/pdf/104-r5-hunt6-dash-back-keeps-scroll.test.mjs", "tests/pdf/89-app-routes.test.mjs"],
+      "summary": "Now: Back or Forward to a page returns the window to where that visit was scrolled. RouteFrame in src/AppRoutes.jsx records each history entry's window offset (by key and path, as useScrollMemory does for the workspace <main>) from the window's scroll events, so it is the offset before the editor's fixed layout clamped it. On a POP to an entry it left scrolled, RouteFrame calls window.scrollTo with that offset. A new visit (PUSH) still opens at the top, and a change of the search alone still does not move the scroll. The follow-up commit d23d3f1 keeps R2-073's contract for everything else: an entry left at its top, or never recorded, is still left to the browser. This stops a stale 0 filed under HashRouter's shared 'default' key from resetting a Back (tests/pdf/89-app-routes 'Back and Forward leave the scroll to the browser' failed without it).",
+      "product_call": null,
+      "remaining": "HashRouter gives the key 'default' to the first entry and to every address typed into the bar. So a typed address to a path the first entry showed can get that entry's non-zero offset back (useScrollMemory has the same limit). The commit message of d23d3f1 overstates this: it says a reused key brings back no old offset, but only a zero offset is left to the browser. No Playwright spec covers real browser Back. The fix is checked in node over the fake DOM."
+    },
+    {
+      "id": "R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT",
+      "title": "A PDF/Word import started on the Dashboard that finishes after the user signs out adds that person's résumé to the signed-out browser's list",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["58c64c8eb3404c833388dccf11e301104726ac92"],
+      "tests": ["tests/pdf/104-r5-hunt6-dash-import-after-sign-out.test.mjs"],
+      "summary": "Now: the Dashboard's document import records the account the list belonged to (syncedUid) when the file was picked. If the list has left that account by the time the read ends (signed out, or another account signed in), store.importResume({ account }) does not add the résumé to the list. It keeps it in stashed[uid], the way leaveAccount keeps unsent work, and that account's next sign-in sends it (src/hooks/useResumeStore.js). The Dashboard (src/pages/Dashboard.jsx) opens nothing and says the file was kept for that account, and importDocument (src/utils/importDocument.js) skips navigate when importResume answers null. An import with no sign-out is unchanged. A list that was never synced (signed out from the start) still takes the import.",
+      "product_call": "The notice says 'You signed out while … was being read', including in the rarer case where another account signed in during the read.",
+      "remaining": "The editor's Import (useEditorExports) does not pass `account`. It navigates within the editor, and the editor leaves the page on sign-out, but the store call would still append after a sign-out that happens in another route."
+    },
+    {
+      "id": "R5-HUNT6-DASH-CAREER-AFTER-LETTER",
+      "title": "After a cover letter is opened, the Dashboard's Career History switches to the oldest résumé instead of the one the user was working on",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["1fc98fd1a3b7998eea21fab1817c63205bb8cebf"],
+      "tests": ["tests/pdf/104-r5-hunt6-dash-career-after-letter.test.mjs"],
+      "summary": "Now: when the open record is not among the résumés the panel gets (a letter is open), CareerHistoryPanel (src/components/CareerHistoryPanel.jsx) shows the résumé edited last (letterSources order), not resumes[0], the oldest. When the open record is a résumé, that résumé is still the one shown. The Dashboard and the Job Tracker both use the panel.",
+      "product_call": "The fallback is the résumé edited most recently, not the last one opened. The store does not record which résumé was opened last, and a letter does not record its source.",
+      "remaining": "A résumé that was only viewed, not edited, before a letter was opened is not remembered. If another résumé was edited more recently, that one shows."
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI runs: failfirst 36603951856 (delete-designs, import-after-sign-out and career-after-letter: each fails without its fix and passes with it; back-keeps-scroll failed without its fix, but its second test then failed with the fix too, because offsets leaked between tests through MemoryRouter's 'default' key). Tests 36603969699 (278/280: the same test, and 89-app-routes 'Back and Forward leave the scroll to the browser', failed). Both were fixed in d23d3f1 (a zero offset stays the browser's) and in the test (a unique first-entry key per test, the scrollTo stub set before the routes mount). Re-run, all green at d23d3f1: failfirst 36605065594 (517e299 and d23d3f1 each fail without their change and pass with it; d23d3f1 with 89-app-routes too), tests 36605084261 (every named test and lint pass). The other three rows are green in failfirst 36603951856. Not run: the full gate, Playwright and Cypress (no browser spec covers these paths)."
+}
