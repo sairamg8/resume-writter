@@ -29,7 +29,7 @@ Under `src/components/job/`:
 |-----------|------|
 | `OverviewTab` | Core fields, edited in place: company and role (not both blank), deadline, follow-up date, work mode, source, résumé |
 | `NotesTab` | Freeform notes |
-| `TasksTab` / `TodoItem` | Checklist todos |
+| `TasksTab` / `TodoItem` | Checklist todos; double-click renames a task, and a box left untouched writes nothing, so another tab's newer rename stays (R5-HUNT9) |
 | `Pipeline` | Visual pipeline |
 | `StatusBadge` / `StatusHistory` | Status UI + audit trail |
 | `InterviewStageSelector` | Stage controls |
