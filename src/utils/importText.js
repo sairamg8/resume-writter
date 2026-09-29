@@ -286,7 +286,7 @@ export function markdownLines(md) {
 const MONTH = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?';
 const SEASON = '(?:spring|summer|fall|autumn|winter)';
 /** One date as the app's Date formats print it, or as people type it: "Mar 2021", "03/2021", "2021-03", "2021". */
-const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*\\d{1,2}(?!\\d)|(?:19|20)\\d{2})`;
+const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*(?:0?[1-9]|1[0-2])(?!\\d)|(?:19|20)\\d{2})`;
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
 // "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
@@ -296,7 +296,7 @@ const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
 // "(4 years 9 months)", "· 3 yrs 2 mos": how long it lasted, after the range as LinkedIn's PDF prints it.
 const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?|months?|mos?)\\.?(?:,?\\s*(?:and\\s+)?\\d+\\s*(?:months?|mos?)\\.?)?)';
 const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
-const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}))?(${AHEAD_AFTER})?(?:${LENGTH_AFTER})?$`, 'i');
+const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}|\\d{2}(?!\\d)))?(${AHEAD_AFTER})?(?:${LENGTH_AFTER})?$`, 'i');
 const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
 const END_ONLY = new RegExp(`^(?:(?:[-–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
@@ -309,6 +309,13 @@ export function readDateRange(text) {
   let m = RANGE.exec(t);
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
   if (/\([^)]*$/.test(t)) t = `${t})`;
+  // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
+  // "2011-12" is read as December 2011 above (the app's YYYY-MM Date format), so only a hyphen with
+  // two digits over 12, or another dash, gets here.
+  if (m && /^\d{2}$/.test(m[3] || '')) {
+    if (!/^\d{4}$/.test(m[2]) || Number(m[3]) <= Number(m[2].slice(2))) m = null;
+    else m[3] = m[2].slice(0, 2) + m[3];
+  }
   if (m) {
     // "May 2025 (Expected)": one date still to come is the end, not the start.
     if (m[4] && !m[3] && !m[1]) return { start: '', end: tidy(m[2]), current: false, text: t };
