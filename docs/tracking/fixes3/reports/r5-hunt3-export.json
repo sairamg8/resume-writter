@@ -1,0 +1,42 @@
+{
+  "cluster": "r5-hunt3-export",
+  "branch": "claude/wf-r5-hunt3-export",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-COVER-LETTER-TEXT-LIST-ITEM-SECOND-PARAGRAPH-DETACHED",
+      "title": "Cover Letter Text (.txt) prints a list item's second paragraph flush left between blank lines, splitting the list",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "a8ea179b4b5e67520b772c419fed5d3231dbfd75"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt3-letter-text-list-item-paragraph.test.mjs"
+      ],
+      "summary": "Now: in Export > Cover Letter Text (.txt), a paragraph inside a list item goes on the next line, indented to the item's text, with no blank line, so the list stays whole ('- Led the migration\n  Cut costs by 30%.\n- Built the API'). This covers an <li> holding two <p> (a Google Docs or Word paste) and a quote inside an item. A nested item's paragraph is indented to that item's text. A paragraph after the list still starts flush left after one blank line. The .txt now matches the PDF, Word, Markdown and ATS text (R5-HUNT2). Before, bodyLines() treated the block (marker null, inList true, indent >= 1) as a body paragraph: it closed the list with a blank line, printed the text flush left, and restarted the list after it. Fix: bodyLines() in src/utils/coverLetterText.js has a branch for block.inList && block.indent > 0, the same check atsPlainText.js richTextLines uses. Stored data is not changed. The only caller is useEditorExports (Cover Letter Text).",
+      "product_call": "The continuation is indented two spaces per list depth, like the item's text, and has no blank line before it, as in the ATS text.",
+      "remaining": "Same as the ATS text row R5-HUNT2: malformed stored HTML with a <p> directly inside a <ul> before any <li> prints indented with no bullet above it. The sanitizer does not produce this HTML. Also see rejected: an item whose first paragraph is only a <br> loses its bullet (this was already true before the fix and is shared with the ATS text).",
+      "failfirst_run": "36543095477 (green: the failfirst job reversed a8ea179's diff and the test failed with '# fail 2', then passed with the fix restored; the named-tests job passed the new test plus 99-cover-letters, 98-exp-letter-text-contacts, 78-letter-export-menu, 31-contact-fields, 91-design-resets and knowledge-docs.unit)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [
+    {
+      "candidate": "An <li> whose first block is an empty paragraph holding only a <br> (<li><p><br></p><p>X</p></li>) loses its bullet in the letter .txt: X prints as an indented continuation with no '-' above it.",
+      "reason": "This was already true before the fix: X printed flush left, also without a bullet. The ATS text (atsPlainText.js) does the same. The parse gives the marker to the NBSP-only block, and bodyLines drops that block because it is blank. The editor stores an empty item as <p></p>, which never takes the marker, so only unusual pasted HTML hits this. All the text is kept. It is not a regression and not part of this bug."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "I reviewed git diff origin/claude/r4-green...origin/claude/wf-r5-hunt3-export: one commit, a8ea179 (src/utils/coverLetterText.js, plus the new test). I checked the branch against parseRichText's block fields (richText.js start/finish): a continuation paragraph, a quote inside an item, a nested item's paragraph, a quote or <dd> outside a list (inList false, so it stays a body paragraph), and a paragraph after the list. It matches atsPlainText.js richTextLines. I read CI run 36543095477: the failfirst job for a8ea179 shows the test fails without the fix (2 failures) and passes with it, and the tests job is green. The branch merges cleanly into the current claude/r4-green (c16dc7e, which only changed HANDOFF.md since the base). Review found no issues, so the reviewer made no commits apart from this report. Tests run only on CI."
+}

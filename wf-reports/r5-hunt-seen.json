@@ -7,6 +7,10 @@
   "2": {
    "confirmed": 19,
    "head": "8e2ab9e"
+  },
+  "3": {
+   "confirmed": 15,
+   "head": "6770951"
   }
  },
  "seen": [
@@ -42,6 +46,20 @@
   "Deleting or retyping the epic the view is filtered by leaves a filter that hides every issue and cannot be unticked",
   "On a Kanban board, a card's 'Move to' can put it in the middle of the column when the project has used sprints",
   "Job scanner lists a tech phrase and each of its words as separate keywords, e.g. 'CI/CD', 'CI' and 'CD'",
-  "Salary figures like '$150K–$180K' become missing keywords, and '+' writes '150K' into Skills"
+  "Salary figures like '$150K–$180K' become missing keywords, and '+' writes '150K' into Skills",
+  "A summary, description or cover-letter body changed from outside while its box has the caret keeps showing the old text, and the next keystroke writes the old text back",
+  "Awards section title is left alone at the foot of a page when the first award's title or issuer wraps",
+  "Certifications section title passes no presence, so a wrapping first certificate leaves the heading orphaned",
+  "Cover Letter Text export prints a list item's second paragraph as a separate paragraph, cut off from its bullet and splitting the list",
+  "Text/PDF/Word import: an 'Expected May 2025' graduation date is not read as a date, and it ends up as the Degree",
+  "Text/PDF/Word import: 'Since 2019' loses its 'ongoing' meaning, so the job prints as a single year",
+  "JSON Resume import silently drops every profile that is not LinkedIn or GitHub (X/Twitter, GitLab, Stack Overflow, portfolio…)",
+  "Cover letter generator writes 'as a HR Manager' / 'as a SRE': acronym titles starting with a consonant letter get 'a' although they are read with a vowel sound",
+  "Signing out in one tab leaves a second tab's unsaved résumés in the browser with no owner, and the next account to sign in uploads them to its own cloud",
+  "Undo from a job toast, or a job form reopened after leaving the job pages, writes this tab's old job list over another tab's newer one",
+  "On a project page, the 'c' key and the top bar's Create put the new issue in the first project in the list, not the project you are viewing",
+  "List view and Backlog: an issue created while filters are set can vanish with no word (R4-DUX-08 was fixed on the Board only)",
+  "Undo on 'Checklist item deleted' writes back a stale checklist once the checklist has remounted, losing items added or ticked since",
+  "Undo on an ATS Check fix (Standardize Headings, Put Job Title First, Grids 1) changes a different résumé opened in the meantime"
  ]
 }

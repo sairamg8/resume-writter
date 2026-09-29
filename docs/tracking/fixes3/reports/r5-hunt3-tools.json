@@ -1,0 +1,65 @@
+{
+  "cluster": "r5-hunt3-tools",
+  "branch": "claude/wf-r5-hunt3-tools",
+  "base": "c16dc7e49bbee19240c9300c7c17167774a2e42b",
+  "rows": [
+    {
+      "id": "R5-HUNT3-ATS-FIX-UNDO-WRITES-OTHER-RESUME",
+      "title": "Undo on an ATS Check section fix (Standardize Headings, Put Job Title First, Grids 1) writes into a different résumé opened meanwhile",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "de0124e136fb7e4f0ab6f9ce362b36543714a506",
+        "7ac53a2e8473e8f47a9fe51b6e7b22d17522a0ac"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt3-ats-fix-undo-other-resume.test.mjs"
+      ],
+      "summary": "Now: the Undo on an ATS Check section fix writes only into the résumé the fix changed. Before, it called store.updateSection(id, …), which patches whichever résumé is open when Undo is clicked. Section ids repeat across résumés ('experience' in every blank one), and the Editor with its notices stays mounted from /resume/A to /resume/B, so an Undo within the notice's 8 s wrote A's old heading, title order or Grids into B. updateSection now takes an optional resumeId, passed to patchActive's existing id argument, and the Undo passes the id captured when the fix ran. Each restore writes only while the section still holds the value the fix wrote (title, settings.titleOrder or settings.columns), so a heading retyped while the notice is up is kept. The ATS panel also closes its three fix notices when another résumé opens while the ATS tab is showing. If the ATS tab was left first, the notice stays, and its Undo still restores only the original résumé. Other updateSection callers pass two arguments and behave as before.",
+      "failfirst_run": "36547162683 (de0124e: '# fail 3' with its diff reversed, pass with it restored; log read); callers run 36548169529"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "row": "R5-HUNT3-ATS-FIX-UNDO-WRITES-OTHER-RESUME",
+            "issue": "The fixer's CI run did not cover the other updateSection callers (Reset style Undo, section spacing, import section shapes, visibility exports, object member editor, the ATS checker unit).",
+            "resolution": "covered: named-tests run 36548169529 on 7ac53a2 ran them with the fix and the new test, green: 159 tests pass, 0 fail, lint green. No code change was needed: every other caller passes two arguments, so resumeId is undefined and patchActive falls back to the open résumé as before; nothing wraps or re-spreads updateSection."
+          },
+          {
+            "row": "R5-HUNT3-ATS-FIX-UNDO-WRITES-OTHER-RESUME",
+            "issue": "The notices close on a résumé switch only while the ATS tab is mounted. After a fix on A, a trip to the Résumé tab and then opening B, the 'Renamed 1 section heading' notice is still up on B.",
+            "resolution": "accepted, not changed: its Undo writes only into A (the résumé the fix named) and only while A's section still holds the fixed value, so no data goes into B. The leftover notice is at most confusing for its remaining seconds, and closing it would need Editor-level notice handling beyond this bug."
+          },
+          {
+            "row": "R5-HUNT3-ATS-FIX-UNDO-WRITES-OTHER-RESUME",
+            "issue": "An Undo clicked on a notice still fading out (150 ms) after a switch restores the original résumé instead of doing nothing.",
+            "resolution": "accepted: it writes only into the résumé the fix changed, which is what Undo means; no write reaches the open résumé."
+          }
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Other updateSection callers were not in the fixer's CI run",
+        "resolution": "covered by named-tests run 36548169529 (green: 159 tests pass, 0 fail, lint green); no change needed"
+      },
+      {
+        "issue": "Fix notice outlives a résumé switch made after leaving the ATS tab",
+        "resolution": "accepted: its Undo targets only the original résumé, so nothing is written into the open one"
+      },
+      {
+        "issue": "Undo from a fading notice restores the original résumé",
+        "resolution": "accepted: harmless, writes only into the résumé the fix changed"
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "The fix changes src/components/AtsCheckerPanel.jsx and src/hooks/useResumeSectionActions.js. The only new write path is patchActive(updater, id), which R5-HUNT2 already uses for uploads. It does nothing when that résumé is gone, so a deleted résumé cannot be written by a late Undo. The Reset style Undo in SectionEditor (R4-DUX-16) was checked for the same bug: it already guards on the reference identity of the settings it wrote, so it cannot write into another résumé. The restore guards compare the exact value the fix wrote, so two fixes on one section (title order and Grids) undo independently. Nothing is stored in a new shape, so old data, templates and exporters are unaffected. I read the fail-first log of run 36547162683: '# fail 3' with de0124e's diff reversed, then pass with it restored, at head 7ac53a2. Playwright, Cypress, build and the full suite were not run, so the batch gate still has to run them. No tests were run locally."
+}

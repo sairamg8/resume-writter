@@ -1,0 +1,66 @@
+{
+  "cluster": "r5-hunt3-boards",
+  "branch": "claude/wf-r5-hunt3-boards",
+  "base": "c16dc7e49bbee19240c9300c7c17167774a2e42b",
+  "rows": [
+    {
+      "id": "R5-HUNT3-create-shortcut-opens-first-project",
+      "title": "Top bar Create and the c key on a project page open the create dialog in the first project, not the one being viewed",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["f797d95"],
+      "tests": ["tests/pdf/105-r5-hunt3-create-in-viewed-project.test.mjs"],
+      "summary": "Now: on any /boards/:id page (Board, Backlog, List, Calendar, Timeline, Summary, Settings), the top bar's Create button and the c key open the create-issue dialog in that project. WorkspaceLayout reads the project id from the route with matchPath('/boards/:id/*'). A project picked in the dialog still wins. Off a project page (/work, /boards, /jobs) no project is passed, so the dialog opens in the first project as before. A /boards/:id link to a deleted project also falls back to the first project, because the dialog only uses a boardId it can find.",
+      "failfirst_run": "36545083734 (green: fails without the fix with 3 failures, passes with it)"
+    },
+    {
+      "id": "R5-HUNT3-list-backlog-create-hidden-by-filters-silent",
+      "title": "List and Backlog composers add an issue the filters hide without a word, so the create looks like it failed",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["9597035"],
+      "tests": ["tests/pdf/105-r5-hunt3-list-backlog-hidden-create.test.mjs"],
+      "summary": "Now: when the current filters hide an issue made from the List view's foot composer or from a Backlog section's composer, a toast says '<KEY> created — hidden by your filters' and offers Open, the same as the Board's column composer (R4-DUX-08). The check runs the new issue through filterIssues with the page's own filters. An issue the filters match shows no toast. The Backlog's Epics panel is unchanged: it is not filtered.",
+      "failfirst_run": "36545083734 (green: fails without the fix with 2 failures, passes with it)"
+    },
+    {
+      "id": "R5-HUNT3-checklist-undo-overwrites-after-remount",
+      "title": "Undo on a deleted checklist item (or job task) writes back a stale list over items added after the list remounted",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["6b6b591", "c033b64"],
+      "tests": ["tests/pdf/105-r5-hunt3-checklist-undo-after-remount.test.mjs", "tests/pdf/105-r5-hunt3-job-task-undo-after-tab-switch.test.mjs"],
+      "summary": "Now: Undo on 'Checklist item deleted' puts the item back into the issue's checklist as the board store holds it when Undo is clicked. Items added or ticked after the checklist remounted (its last item deleted, or the issue view closed and reopened) are kept. useRemoveWithUndo takes an optional readNow(), and IssueDialog passes one that reads boardsNow(). The review found the same root cause on the job page: its Tasks tab unmounts when Overview or Notes is opened, so Undo on 'Task deleted' after leaving the tab and coming back lost the tasks added since. JobDetail now passes a readNow that reads jobsNow() to TasksTab (c033b64). Without readNow the hook behaves as before.",
+      "failfirst_run": "36545083734 (6b6b591, green: fails without the fix with 1 failure, passes with it); 36548319121 (c033b64, green: fails without the fix with 1 failure, passes with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT3-checklist-undo-overwrites-after-remount: the fix covered only the issue checklist. The job page's Tasks tab uses the same useRemoveWithUndo and unmounts when Overview or Notes is opened. So after deleting a task, leaving the tab and coming back, adding a task and then clicking Undo, the new task was lost (the fixer's report said 'The job Tasks tab is unchanged')."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Job Tasks tab: Undo on 'Task deleted' clicked after switching to Overview/Notes and back wrote the unmounted tab's stale task list over tasks added since.",
+        "resolution": "fixed in c033b64: JobDetail passes readNow (the job's todos from jobsNow()) to TasksTab, which forwards it to useRemoveWithUndo. Fail-first test tests/pdf/105-r5-hunt3-job-task-undo-after-tab-switch.test.mjs, run 36548319121 (green)."
+      }
+    ],
+    "fixedByReviewer": ["c033b64"],
+    "checked": [
+      "Fail-first logs of run 36545083734 read: f797d95 fails 3 without the fix, 9597035 fails 2, 6b6b591 fails 1, and each passes with its fix ('its diff reversed').",
+      "IssueView is keyed by issue.id, so readNow and the writer always name the same issue; readNow gives undefined for a deleted issue, and Undo then falls back to the rendered list, as before.",
+      "InlineCreate in the Backlog passes allowEpic={false}, so an epic, which the Backlog sections leave out, cannot be made from a section composer.",
+      "matchPath('/boards/:id/*') also matches the bare /boards/:id (the Board). It does not match /boards or /work."
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [
+    "Job Tasks tab: a task row's tick button and delete (X) button have no accessible name (TodoItem.jsx). Deferred per the owner's order."
+  ],
+  "baselineFailures": [],
+  "notes": "Three hunt bugs were fixed by the fixer: f797d95, 9597035 and 6b6b591. The review found one gap, the same stale-list Undo on the job Tasks tab, and fixed it in c033b64 with a fail-first test. Named-tests and fail-first run 36548319121 on c033b64: green, 56 of 56 named tests pass, lint passes. Nothing under docs/tracking/ was edited. Severities are the reviewer's estimate."
+}
