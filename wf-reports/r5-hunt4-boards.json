@@ -1,0 +1,72 @@
+{
+  "cluster": "r5-hunt4-boards",
+  "branch": "claude/wf-r5-hunt4-boards",
+  "base": "1b074c5026ab5b67e3a8e25b5ade1757786ec2d6",
+  "rows": [
+    {
+      "id": "R5-HUNT4-QUICK-SEARCH-EXACT-KEY-LOSES-TO-PREFIX",
+      "title": "Quick search: an issue key typed in full ('LIFE-1') is listed after its prefix siblings or not at all, so Enter opens another issue",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "51af36e89aa15a8b8ba3779825d32024d08a8cf5",
+        "2e98cb33067e3452238e5a64663965f91c0a37c6"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-quick-search-exact-key.unit.mjs"
+      ],
+      "summary": "Now: in the top bar's quick search (src/utils/workspaceSearch.js), the issue whose key equals the query ('LIFE-1', 'life 1', 'life_1') is listed first, ahead of projects and of prefix matches, whether it is open or done. Enter opens the first row, so it now opens that issue. The limit of 8 can no longer drop it. Before, all issues whose key started with the query were ranked alike with open before done, so a done LIFE-1 came after LIFE-10…LIFE-19, and with eight or more open siblings it was cut from the list. Prefix matches, title matches and open-before-done ordering are unchanged. The only caller is WorkspaceRoute; the list is flat with no section headings, so putting an issue ahead of projects changes nothing else. The reviewer updated two comments to match (the TopBar QuickSearch docstring said 'projects, then issues', and the workspaceSearch header named tests/unit/workspace-search.unit.mjs, which does not exist).",
+      "remaining": "None.",
+      "failfirst_run": "36554774633 (job 109361232272: fails without the fix with '# fail 2', passes with it); reviewer named-tests run 36558405143 (green)"
+    },
+    {
+      "id": "R5-HUNT4-EPIC-RETYPE-UNLINKS-CHILDREN-NO-UNDO",
+      "title": "Changing an epic's type to Task, Story or Bug unlinks all its children with no warning and no Undo",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "2e440e2e094727f4cae8ddf4438293c292f81d8c"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt4-epic-retype-undo.test.mjs"
+      ],
+      "summary": "Now: when an epic with children is changed to Task, Story or Bug in the issue view's Details (src/components/board/IssueDialog.jsx, IssueView update), a toast says '<KEY> is no longer an epic' and 'N child issue(s) left it.', with Undo. Undo sets the type back to Epic and relinks each child that still exists and has joined no other epic since. It reads the store at the moment of the click (boardsNow), so a later edit is not overwritten, and it does nothing if the issue was deleted meanwhile. Before, one click on the type picker unlinked every child with no message, and choosing Epic again did not bring them back. The unlinking itself in boardIssueOps.updateIssue is intended and was left unchanged. IssueDetails' TypePicker is the only place an existing issue's type can change (CreateIssueDialog and InlineCreate only set the type of a new issue), so every path is covered. Other type changes show no toast.",
+      "remaining": "Each relinked child gets an 'epic: none → X' history entry, while the unlink wrote none. Undo also relinks a child the user explicitly unlinked in the meantime, because 'no epic' cannot be told apart from 'unlinked by the retype'. Both are minor.",
+      "failfirst_run": "36554774633 (job 109361232192: fails without the fix with '# fail 1' (the Undo case; the no-toast guard case passes either way), passes with it); reviewer named-tests run 36558405143 (green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "workspaceSearch.js header named tests/unit/workspace-search.unit.mjs, which does not exist",
+          "TopBar QuickSearch docstring said results are 'projects, then issues', which is stale now that an exact-key issue comes first"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "workspaceSearch.js header comment pointed to a test file that does not exist",
+        "resolution": "fixed: it now names tests/unit/tracker-views.unit.mjs and tests/unit/r5-hunt4-quick-search-exact-key.unit.mjs (comment only, commit 2e98cb3)"
+      },
+      {
+        "issue": "TopBar QuickSearch docstring described the old result order",
+        "resolution": "fixed: it now says an issue whose key is typed in full comes first, then projects, then issues (comment only, commit 2e98cb3)"
+      }
+    ],
+    "fixedByReviewer": [
+      "2e98cb33067e3452238e5a64663965f91c0a37c6"
+    ],
+    "checked": [
+      "Both fail-first jobs were read in the CI logs: 109361232272 '# fail 2' and 109361232192 '# fail 1' without the fix, and both pass with it.",
+      "The store's change() is synchronous, so the Undo's boardsNow() read sees the type restored before it relinks.",
+      "Undo after the epic was deleted: updateIssue is a no-op and the type check returns early. A child that became an epic has its epicId cleared by updateIssue (line 263). A child that was deleted is skipped.",
+      "searchWorkspace has one caller (WorkspaceRoute), and QuickSearch renders a flat list, so an issue ahead of projects affects only the order."
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Two hunt-4 board bugs fixed. Fixer CI run 36554774633 is green: lint, the named tests and both fail-first jobs. The reviewer changed only comments (commit 2e98cb3) and re-ran the affected tests and lint in run 36558405143 (green). Nothing under docs/tracking/ was edited."
+}
