@@ -74,6 +74,14 @@ export function Backlog() {
   // backlog is one section, whose board ignores sprints: a sprint picked there changed nothing
   // the user could see, and 'Backlog' was ticked for a row still in one (R4-SW-B-03).
   const targets = scrum ? [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' }) : [];
+  // A new issue the filters don't match never shows up: say it was made, and offer to open it, as
+  // the Board does (R4-DUX-08), or "+ Create issue" looks like it failed (R5-HUNT3).
+  const create = (sprintId) => ({ title, type }) => {
+    const made = store.addIssue(board.id, { title, type, sprintId });
+    if (!made || filterIssues(board, filters, { issues: [made] }).length > 0) return;
+    const key = issueKey(board, made);
+    toast({ tone: 'success', title: `${key} created — hidden by your filters`, action: { label: 'Open', onClick: () => route.open(key) } });
+  };
   const toggleFold = (sid) => setFolded((f) => { const n = new Set(f); if (n.has(sid)) n.delete(sid); else n.add(sid); return n; });
 
   function onDragEnd({ active: a, over }) {
@@ -225,7 +233,7 @@ export function Backlog() {
                           </SortableContext>
                         )}
                       </div>
-                      <InlineCreate variant="row" onCreate={({ title, type }) => store.addIssue(board.id, { title, type, sprintId })} />
+                      <InlineCreate variant="row" onCreate={create(sprintId)} />
                     </div>
                   )}
                 </DroppableSection>

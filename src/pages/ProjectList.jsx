@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, DatePill, EmptyState, cx } from '@/components/ui';
+import { Button, DatePill, EmptyState, cx, useToast } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
@@ -62,12 +62,21 @@ export function ProjectList() {
   const route = useIssueRoute(store.boards, board);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState({ by: 'rank', dir: 'asc' });
+  const { toast } = useToast();
   if (!board) {
     return <EmptyState className="m-auto" title="This project doesn’t exist" description="It may have been deleted, or the link is wrong." action={<Button variant="primary" to="/boards">View all projects</Button>} />;
   }
   const statuses = board.columns.map((c) => ({ id: c.id, name: c.title || 'Untitled', category: c.category }));
   const rows = sortIssues(board, filterIssues(board, filters), sort.by, sort.dir);
   const onSort = (by) => setSort((s) => (s.by === by ? (s.dir === 'asc' ? { by, dir: 'desc' } : { by: 'rank', dir: 'asc' }) : { by, dir: 'asc' }));
+  // A new issue the filters don't match never shows up: say it was made, and offer to open it, as
+  // the Board does (R4-DUX-08), or "+ Create issue" looks like it failed (R5-HUNT3).
+  const create = ({ title, type }) => {
+    const made = store.addIssue(board.id, { title, type });
+    if (!made || filterIssues(board, filters, { issues: [made] }).length > 0) return;
+    const key = issueKey(board, made);
+    toast({ tone: 'success', title: `${key} created — hidden by your filters`, action: { label: 'Open', onClick: () => route.open(key) } });
+  };
   const epicOf = (i) => (i.epicId ? board.issues.find((e) => e.id === i.epicId) : null);
 
   return (
@@ -118,7 +127,7 @@ export function ProjectList() {
         </table>
         {rows.length === 0 && <p className="py-10 text-center text-sm text-ink-subtlest">{board.issues.length ? 'No issues match these filters.' : 'No issues yet. Create the first one below.'}</p>}
         <div className="mt-1 max-w-xl">
-          <InlineCreate variant="row" onCreate={({ title, type }) => store.addIssue(board.id, { title, type })} />
+          <InlineCreate variant="row" onCreate={create} />
         </div>
       </div>
       <IssueHost route={route} />
