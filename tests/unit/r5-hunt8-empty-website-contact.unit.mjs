@@ -2,11 +2,11 @@
 // or "www." passed contactItems' filter (its raw text is not empty) but printed as '' once
 // displayUrl took the scheme and "www." off — a bare icon, or an empty slot between separators, in
 // the PDF, Word, Markdown and the cover letter. A contact whose printed value is empty is left out.
+// The letter's plain text loads through the harness: tests/pdf/r5hunt8-empty-website-contact.test.mjs.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contactItems } from '../../src/utils/contacts.js';
 import { generateMarkdownResume } from '../../src/utils/markdownExport.js';
-import { generateCoverLetterPlainText } from '../../src/utils/coverLetterText.js';
 
 const personal = {
   name: 'Jane Doe', email: 'jane@x.com', phone: '555-0100',
@@ -31,10 +31,4 @@ test('Markdown prints no empty slot between separators', () => {
   assert.ok(line, md);
   assert.equal(line.split('•').length, 2, line);
   assert.match(line, /555-0100/);
-});
-
-test('the cover letter prints no empty slot between separators', () => {
-  const text = generateCoverLetterPlainText({ personal, settings: {}, coverLetter: {} });
-  assert.match(text, /jane@x\.com \| 555-0100/);
-  assert.doesNotMatch(text, /\|\s*(\||$)/m);
 });
