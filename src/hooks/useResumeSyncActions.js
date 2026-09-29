@@ -7,7 +7,8 @@ import { normalizeResume } from '@/utils/normalizeResume';
 import { withDeletion, withoutDeletions } from '@/utils/localDeletions';
 import { afterSync } from '@/utils/cloudSyncPlan';
 import { leaveAccount as leaving } from '@/utils/cloudSyncLeave';
-import { buryDeletedDesigns } from '@/constants/templatePresets';
+import { buryDeletedDesigns, designsOnlyIn, withOwnDesign } from '@/constants/templatePresets';
+import { letterSources } from '@/utils/letters';
 
 /**
  * The store with a saved design deleted on any résumé deleted on all (R3-008): a copy that came in from a
@@ -57,13 +58,22 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
 
   /**
    * Remove a résumé; the id and the version deleted are kept for the cloud sync (localDeletions),
-   * as a deletion of account `uid` — the one signed in, if any.
+   * as a deletion of account `uid` — the one signed in, if any. A design the user saved that only it
+   * held goes on to the most recently edited résumé left (a letter when none is), which goes a version
+   * on so the sync carries it: the designs live on the résumés, and deleting the one a design was saved
+   * on took it out of every picker, with nothing said (R5-HUNT6-DASH).
    */
   function deleteResume(id, uid = null) {
     setAppState(prev => {
       const gone = prev.resumes.find(r => r.id === id);
       if (!gone) return prev;
-      const remaining = prev.resumes.filter(r => r.id !== id);
+      let remaining = prev.resumes.filter(r => r.id !== id);
+      const orphans = Object.entries(designsOnlyIn(gone, remaining));
+      const heir = orphans.length ? (letterSources(remaining)[0] ?? remaining[0]) : null;
+      if (heir) {
+        const settings = orphans.reduce((s, [designId, design]) => withOwnDesign(s, designId, design), heir.settings);
+        remaining = remaining.map(r => (r === heir ? { ...r, settings, updatedAt: now() } : r));
+      }
       const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
       return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, now(), uid) };
     });

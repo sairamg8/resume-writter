@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { dateRange, presentLabel } from '@/utils/dates';
 import { careerItems, careerMonths, companiesLabel, companyCount, entryLabel, entrySpan, totalLabel } from '@/utils/careerHistory';
+import { letterSources } from '@/utils/letters';
 
 const AVATAR_COLORS = [
   { bg: '#eef2ff', text: '#4338ca' },
@@ -31,7 +32,9 @@ const LOOKS = {
 export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = true, variant = 'dashboard' }) {
   const look = LOOKS[variant] ?? LOOKS.dashboard;
   const navigate = useNavigate();
-  const active = resumes?.find(r => r.id === activeId) || resumes?.[0];
+  // The open résumé; with a letter open (not among `resumes` on the Dashboard), the résumé edited last,
+  // not the oldest in the list (R5-HUNT6-DASH-CAREER-AFTER-LETTER).
+  const active = resumes?.find(r => r.id === activeId) || letterSources(resumes)[0] || resumes?.[0];
   // What the résumé prints: every visible experience section's visible entries (AUD-29).
   const items = careerItems(active);
   const personal = active?.personal || {};
