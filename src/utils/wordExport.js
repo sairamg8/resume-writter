@@ -13,6 +13,7 @@ import { entryInk } from '@/utils/wordExportLook';
 import { resolveWordFont, wordFontTable } from '@/utils/wordFonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
+import { getDocumentProps } from '@/templates/pdf/shared/PdfPage';
 
 export { resolveWordFont };
 
@@ -58,14 +59,33 @@ function runningHeader(name, color, margin) {
 }
 
 /**
+ * The .docx's File → Info properties, as the PDF's document properties (getDocumentProps): Title
+ * "<Name> Resume" (the letter's "<Name> Cover Letter"), Author and Last Modified By the name, Subject
+ * and Keywords. Without them docx wrote Author and Last Modified By "Un-named" and no Title
+ * (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
+ */
+function docProps(personal, kind) {
+  const pdf = getDocumentProps(personal);
+  const name = personal?.name || '';
+  return {
+    title: name ? `${name} ${kind}` : kind,
+    subject: kind,
+    creator: pdf.author,
+    lastModifiedBy: pdf.author,
+    keywords: pdf.keywords,
+  };
+}
+
+/**
  * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
  * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them — with the
  * bullets of Design → Lists (bulletNumbering, R2-147). `pageNumbers` (the résumé's Design → Page
  * numbers, R2-147; never the letter's): a footer with them, set in the middle of a bottom margin of at
  * least the PDF's room for it, as the PDF prints it. `running`: the résumé's name and Text colour, for its
- * running header (ATS-7; the letter has none).
+ * running header (ATS-7; the letter has none). `personal` and `kind` ('Resume' or 'Cover Letter'): the
+ * file's properties as the PDF's (docProps).
  */
-function buildDocument(children, settings, { pageNumbers = false, template, running = null } = {}) {
+function buildDocument(children, settings, { pageNumbers = false, template, running = null, personal = null, kind = 'Resume' } = {}) {
   const font = resolveWordFont(settings);
   const margin = wordMargins(settings);
   const rh = running && runningHeader(running.name, running.color, margin);
@@ -74,6 +94,7 @@ function buildDocument(children, settings, { pageNumbers = false, template, runn
   const footerAt = Math.max(0, Math.round((bottom - PAGE_NUMBER_SIZE * 10 * 1.2) / 2));
   const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
+    ...docProps(personal, kind),
     styles: {
       default: {
         document: {
@@ -144,7 +165,7 @@ export async function renderResumeDocx(resume) {
       : paras)),
   ];
   const running = { name: personal?.name, color: resolveTemplateSettings(settings, own).textColor };
-  return Packer.toBlob(buildDocument(children, settings, { pageNumbers: settings.pageNumbers === true, template: own, running }), false, [await wordFontTable(settings)]);
+  return Packer.toBlob(buildDocument(children, settings, { pageNumbers: settings.pageNumbers === true, template: own, running, personal }), false, [await wordFontTable(settings)]);
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {
@@ -156,7 +177,7 @@ export async function renderCoverLetterDocx(resume) {
   // The letterhead's photo as the letter's PDF draws it: the copies its build prints (R4-DOUT-06).
   // Its text without the characters XML forbids (xmlSafe), as the résumé's.
   const letter = await withWordPhoto(xmlSafe(resume), { letter: true });
-  return Packer.toBlob(buildDocument(buildCoverLetter(letter), resume?.settings), false, [await wordFontTable(resume?.settings)]);
+  return Packer.toBlob(buildDocument(buildCoverLetter(letter), resume?.settings, { personal: letter?.personal, kind: 'Cover Letter' }), false, [await wordFontTable(resume?.settings)]);
 }
 
 export async function exportCoverLetterToWord(resume, filename = 'cover-letter.docx') {
