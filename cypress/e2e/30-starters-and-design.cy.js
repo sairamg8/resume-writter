@@ -56,20 +56,26 @@ describe('New Resume → role starters', () => {
     });
   });
 
-  it('a starter opens as a new, filled-in résumé in the editor, printed in the PDF', () => {
-    cy.contains('button', 'Product Manager').click();
-    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
-    cy.get('input[placeholder="John Doe"]').should('have.value', 'Sarah Chen');
-    cy.store().should((s) => {
-      expect(s.resumes).to.have.length(2);
-      const r = active(s);
-      expect(r.name).to.eq('Product Manager');
-      expect(r.personal).to.include({ name: 'Sarah Chen', title: 'Lead Product Manager' });
-      expect(r.sections.map((x) => x.type)).to.include.members(['experience', 'skills', 'education']);
-      expect(r.sections.find((x) => x.type === 'experience').items.length).to.be.greaterThan(0);
+  // The owner's idea (2026-09-29): the starter carries the user's own name and contacts, from the
+  // résumé /new starts from, not its sample person's (Sarah Chen); the role's title stays its example.
+  it('a starter opens as a new, filled-in résumé in the editor, with the user’s own details, printed in the PDF', () => {
+    cy.store().then((s) => {
+      const mine = s.resumes[0].personal;
+      cy.contains('button', 'Product Manager').click();
+      cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
+      cy.get('input[placeholder="John Doe"]').should('have.value', mine.name);
+      cy.store().should((after) => {
+        expect(after.resumes).to.have.length(2);
+        const r = active(after);
+        expect(r.name).to.eq('Product Manager');
+        expect(r.personal).to.include({ name: mine.name, email: mine.email, title: 'Lead Product Manager' });
+        expect(r.personal.name).not.to.eq('Sarah Chen');
+        expect(r.sections.map((x) => x.type)).to.include.members(['experience', 'skills', 'education']);
+        expect(r.sections.find((x) => x.type === 'experience').items.length).to.be.greaterThan(0);
+      });
+      cy.previewReady();
+      cy.preview().should('contain.text', mine.name).and('contain.text', 'Lead Product Manager').and('not.contain.text', 'Sarah Chen');
     });
-    cy.previewReady();
-    cy.preview().should('contain.text', 'Sarah Chen').and('contain.text', 'Lead Product Manager');
   });
 });
 
