@@ -1,0 +1,51 @@
+{
+  "cluster": "r5-hunt3-editor",
+  "branch": "claude/wf-r5-hunt3-editor",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-RICHTEXT-STALE-WHILE-FOCUSED-OVERWRITES",
+      "title": "A summary, description or cover-letter body changed from outside while its box has the caret is never shown, and the next keystroke writes the old text back over it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "a789ba7a11628b315efd99b43103f93c92fa1499",
+        "a200224879608be6b95cd49bdaa4d39b789436b5"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt3-richtext-outside-value.test.mjs"
+      ],
+      "summary": "Now: when a rich-text box (Professional summary, an entry's description, the cover-letter body, job notes, an issue description) has the caret and its value changes from outside (another tab's save, a cloud pull, or a switch to another résumé with the summary focused), the box shows the new text straight away if nothing has been typed since it last matched the store. The next keystroke builds on that text. Before, the editor skipped every new value while focused, so the old text stayed on screen and the next keystroke wrote it back over the newer value. The editor's own echo still leaves the page content alone while focused, so the caret does not move while typing. A value that arrives while an IME word is being composed (every word on most Android keyboards) is shown when the composition ends, or when the box loses focus. The store's newer text wins, and the composed word, typed over text that is no longer there, is dropped. It is not written over the newer value. Echo detection keeps the editor's last emitted values only until the store hands one back. An older value of its own that comes back later (another tab's undo, a stale copy saved elsewhere) is shown instead of being taken for an echo. File: src/components/RichTextEditor.jsx (adopt, emit, the value effect, onBlur, onCompositionEnd). Stored data, exporters and templates are not touched. Every caller stores onChange's value verbatim (updatePersonal, updateCoverLetter, section items via onUpdate, job notes, issue dialogs), so the echo check holds for all of them.",
+      "remaining": "When an outside value is shown while the box is focused, innerHTML is replaced, so the caret goes to the start of the box. This is the cost of showing the newer text and only happens on an outside change. A word being composed with an IME when another tab's save arrives is dropped in favour of the newer text.",
+      "failfirst_run": "36542255338 (a789ba7: 3 failures without the fix, passes with it); 36545431106 (reviewer's a200224: 2 failures without it, passes with it); named-tests runs 36542266866 and 36545470000 (green, 114/114 with the RichTextEditor tests and guards)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT3-RICHTEXT-STALE-WHILE-FOCUSED-OVERWRITES: the IME case was not cured in practice. A browser ends a composition (compositionend) before the box loses focus, and most Android keyboards compose every word. compositionend ran emit(), which wrote the box's text, typed over the old value, back over the outside value that was waiting. The fixer's test reached the blur path only by firing blur without compositionend.",
+          "R5-HUNT3-RICHTEXT-STALE-WHILE-FOCUSED-OVERWRITES: an outside value equal to any of the last 10 values the editor had emitted was taken for its own echo for good. Example: type 'AB', then 'ABC', then another tab puts back 'AB'. The box kept showing 'ABC' while the store and preview held 'AB', and the next keystroke wrote 'ABD' over it."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "compositionend emitted the stale box text over an outside value that came during the composition, so the old text was written back on IME and Android keyboards.",
+        "resolution": "Fixed by the reviewer in a200224: onCompositionEnd adopts the waiting store value instead of emitting when one is pending. A later input event (Firefox fires one after compositionend) emits only what the store already holds, which the store treats as no change. New test in tests/pdf/r5hunt3-richtext-outside-value.test.mjs. Failfirst run 36545431106 shows it fails without the change and passes with it."
+      },
+      {
+        "issue": "Echo detection matched any of the last 10 emitted values, so an older value of the editor's own that came back from outside was never shown.",
+        "resolution": "Fixed by the reviewer in a200224: an echo drops that value and every value emitted before it, so only values the store has not yet handed back count as echoes. emit() also no longer records a value the store already holds, because no echo comes for one. New test in the same file. Failfirst run 36545431106 (2 failures without the change); named-tests run 36545470000 is green, including the existing RichTextEditor tests."
+      }
+    ],
+    "fixedByReviewer": [
+      "a200224879608be6b95cd49bdaa4d39b789436b5"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug, fixed in a789ba7 and completed by the reviewer in a200224. Both fail-first runs were read in the CI logs: 36542255338 has '# fail 3' without the fix, and 36545431106 has '# fail 2' without the reviewer's change. Both pass with the change. Named-tests run 36545470000 on a200224 is green (114/114) and lint is green. Not covered: fake-dom has no caret, so the caret moving to the start when an outside value is shown in a focused box is not asserted."
+}

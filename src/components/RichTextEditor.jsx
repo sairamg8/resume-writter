@@ -25,29 +25,82 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   const dragSource = useRef(null);
   const moveMark = useId();
 
-  // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
-  // pull), but never while this editor has focus: there the DOM is the source of truth and
-  // rewriting innerHTML would reset the caret. The value is sanitized first: it may come from
-  // an imported file, and innerHTML runs <img onerror> and friends.
-  useEffect(() => {
+  // What this editor last wrote through onChange (its last few values, in case the store hands one
+  // back a render late), and what its box held when it last matched the stored value (emitted or
+  // adopted): a `value` among the first is its own echo; a box still holding the second has nothing
+  // typed in it that the store has not got.
+  const emitted = useRef([]);
+  const synced = useRef(null);
+  // An outside value that came while the box had unsaved typing in it (an IME word being composed):
+  // taken in when the box loses focus.
+  const pending = useRef(false);
+
+  // Show `value`, sanitized first: it may come from an imported file, and innerHTML runs
+  // <img onerror> and friends.
+  function adopt(next) {
     const el = ref.current;
-    if (!el || document.activeElement === el) return;
-    const clean = sanitizeRichText(value || '');
+    pending.current = false;
+    emitted.current = []; // what it shows now is no longer its own
+    const clean = sanitizeRichText(next || '');
     if (el.innerHTML !== clean) el.innerHTML = clean;
+    synced.current = el.innerHTML;
     // A value stored with a picture's data in it (before R4-ED-02, a pasted screenshot's megabytes
     // of base64) is stored again without it, so it stops filling the browser's storage and the cloud
     // copy. Only then: showing a value otherwise writes nothing. The data: URL is looked for inside a
     // tag, where a picture keeps it; the same words typed as text stay in the clean value, and matching
     // them wrote the field again every time it was shown.
-    if (DATA_URL.test(value || '')) onChange(clean);
+    if (DATA_URL.test(next || '')) {
+      emitted.current = [clean];
+      onChange(clean);
+    }
+  }
+
+  // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
+  // pull, another tab). While this editor has focus its own echo is left alone: there the DOM is
+  // the source of truth and rewriting innerHTML would reset the caret. An outside value is taken in
+  // at once even then when nothing has been typed since the box last matched the store, else when the
+  // box loses focus. Skipping it for good kept the old text on screen, and the next keystroke wrote
+  // it back over the newer value (R5-HUNT3).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement !== el) { adopt(value); return; }
+    // Its own echo: the store has taken this value and every one emitted before it, so those are
+    // dropped. An older value of its own that comes back later (another tab's undo, a stale copy
+    // saved elsewhere) is then an outside value again, and shown, not kept off screen for good.
+    const echo = emitted.current.lastIndexOf(value ?? '');
+    if (echo !== -1) { emitted.current = emitted.current.slice(echo + 1); return; }
+    if (el.innerHTML === synced.current && !isComposing.current) adopt(value);
+    else pending.current = true;
   }, [value]);
+
+  const latest = useRef(value);
+  latest.current = value;
+  function onBlur() {
+    if (pending.current && ref.current) adopt(latest.current);
+  }
+
+  // A word composed with an IME (and every word on most Android keyboards) ends before the box loses
+  // focus, and emitting then wrote the box's text, typed over the old value, back over an outside
+  // value that came meanwhile. The store's newer text is taken in instead; the composed word, typed
+  // over text that is no longer there, goes (R5-HUNT3).
+  function onCompositionEnd() {
+    isComposing.current = false;
+    if (pending.current && ref.current) adopt(latest.current);
+    else onInput();
+  }
 
   // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
   // an <img> or a data: URL, whichever way the browser put one in.
   function emit() {
     const el = ref.current;
     if (el) dropMedia(el);
-    onChange(el?.innerHTML || '');
+    const html = el?.innerHTML || '';
+    // What the store holds already comes back as no new value, so it is no echo to wait for.
+    if (html !== (latest.current ?? '')) emitted.current = [...emitted.current.slice(-9), html];
+    synced.current = el ? el.innerHTML : null;
+    pending.current = false;
+    onChange(html);
   }
 
   function exec(cmd, val = null) {
@@ -240,12 +293,13 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           contentEditable
           suppressContentEditableWarning
           onInput={onInput}
+          onBlur={onBlur}
           onPaste={onPaste}
           onDrop={onDrop}
           onDragStart={onDragStart}
           onDragEnd={() => { dragSource.current = null; }}
           onCompositionStart={() => { isComposing.current = true; }}
-          onCompositionEnd={() => { isComposing.current = false; onInput(); }}
+          onCompositionEnd={onCompositionEnd}
           className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
           style={{ minHeight: minH }}
           data-placeholder={placeholder}
