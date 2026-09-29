@@ -8,43 +8,80 @@
       "title": "Word import: an entry header laid out as a table row is split into one line per cell, so fields land in the wrong place",
       "severity": "high",
       "outcome": "fixed",
-      "commits": ["7d182ac786de4a7ef170c90398e68ab88f678a7f"],
-      "tests": ["tests/unit/r5-hunt7-docx-table-row-cells.unit.mjs"],
+      "commits": [
+        "7d182ac786de4a7ef170c90398e68ab88f678a7f"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-docx-table-row-cells.unit.mjs"
+      ],
       "summary": "Now: in a Word table that has a row ending in a date, each row whose cells hold one line each is read as one line, with the cells joined by tabs (joinedRows in src/utils/importFile.js). Each job keeps its own company, role, dates and place, and the school is the institution. Tables with no date (skill or certificate grids, including the Word export's Grids) and rows with multi-line cells, list items, nested tables or text boxes are still read one line per paragraph. The existing guard at tests/unit/import-docx-textbox.unit.mjs:73 is unchanged and still passes.",
-      "ci": [36633363404]
+      "ci": [
+        36633363404
+      ]
     },
     {
       "id": "R5-HUNT7-BULLETED-HEADER-CONTACTS",
       "title": "Text/Word/Markdown import: contacts written as a bulleted list are not read (email becomes the job title, the rest goes to Additional Information, a link label starts with a bullet)",
       "severity": "high",
       "outcome": "fixed",
-      "commits": ["c2ee481373f4be785cb7a9637eadc742a871d6aa"],
-      "tests": ["tests/unit/r5-hunt7-import-bulleted-header-contacts.unit.mjs"],
+      "commits": [
+        "c2ee481373f4be785cb7a9637eadc742a871d6aa"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-import-bulleted-header-contacts.unit.mjs"
+      ],
       "summary": "Now: a list mark (• - * etc., not numbering) in front of a header or Contact-section piece is removed before the piece is checked as a contact or a job title (unbulleted in src/utils/importText.js). Bulleted contacts fill email, phone, location and links, and a link's Display label has no bullet. A bulleted header line that is not a contact keeps its mark wherever it goes.",
-      "ci": [36633363404]
+      "ci": [
+        36633363404
+      ]
     },
     {
       "id": "R5-HUNT7-ROLE-AT-COMPANY",
       "title": "Import: a job header 'Role at Company' / 'Role @ Company' is not split, so Company is empty",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["7aac16723abc1a76f10eb70744c846f9c017e727"],
-      "tests": ["tests/unit/r5-hunt7-import-role-at-company.unit.mjs"],
+      "commits": [
+        "7aac16723abc1a76f10eb70744c846f9c017e727"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-import-role-at-company.unit.mjs"
+      ],
       "summary": "Now: inlinePair splits a single job field at ' at ' or ' @ ' when a job-title word comes before it and no singular one comes after it. This fills the role and the company for text, PDF, Word and Markdown headers, including one with a place after it or a comma in the role. A company such as 'Made at Home Bakery' stays whole.",
-      "ci": [36633363404]
+      "ci": [
+        36633363404
+      ]
     },
     {
       "id": "R5-HUNT7-DOCX-ALIGNMENT-TAB-DROPPED",
       "title": "Word import: an alignment tab (<w:ptab/>) between a title and its date is dropped, gluing the text and losing the date",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["131409a176d392d6e9b2e7dd2246dec07a1c54c7"],
-      "tests": ["tests/unit/r5-hunt7-docx-alignment-tab.unit.mjs"],
+      "commits": [
+        "131409a176d392d6e9b2e7dd2246dec07a1c54c7"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-docx-alignment-tab.unit.mjs"
+      ],
       "summary": "Now: <w:ptab/> is read as a tab, so 'Acme Corp' and 'Jan 2020 – Present' import as the company and the dates. There was a second cause: the paragraph-start check (m[0].startsWith('<w:p')) also matched '<w:ptab', which would have opened a new paragraph. It now matches only a real <w:p> start.",
-      "ci": [36633363404]
+      "ci": [
+        36633363404
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT7-ROLE-AT-COMPANY (defect in the fix): the ' at ' split lets a company named with a plural role word ('Senior Engineer at Gensler Architects', 'Associate @ Summit Partners') through, but entryOf then re-ordered the pair with roleFirst. Neither field's words decided, so a company-first section (the default for jobs) swapped them back: the role became 'Gensler Architects' and the company 'Senior Engineer'. With a place after it ('... | Chicago, IL') the place became the company, because headerOf's role/company/place rule needs no role word on the company side, and placeAfterComma turned down 'Gensler Architects, Chicago, IL' for the same reason. Fixed in 36bcccbb: inlinePair marks an 'at' pair as role-first (roleLeads), entryOf keeps that order, and both place rules in headerOf accept the marked pair. Test: tests/unit/r5-hunt7-import-role-at-firm.unit.mjs."
+    ],
+    "commits": [
+      "36bcccbb3e2ab097be57a0ec705e6a6d6bc93407"
+    ],
+    "ci": [
+      36634265233
+    ],
+    "notes": "All four fix commits were reviewed against origin/claude/r4-green. Fail-first run 36633363404 was checked in the job logs: each test fails with its fix reversed and passes with it restored. ptab (131409a1): the paragraph-start check now matches only '<w:p' followed by whitespace or '>', which is the same set TOKEN's first alternative already matches, so <w:p .../> is still skipped as before. Table rows (7d182ac7): only the innermost tables are joined, and only when a row with one-line cells ends in a date. Text boxes, list items and multi-line cells are left as they were. The app's own Word export uses gridTable for skill grids, which have no dates (87-word-grids is green), and frameTable for the header band (92 is green). Bulleted contacts (c2ee4813): unbulleted drops only a list mark followed by a space. A piece that is not a contact goes to the leftovers with its mark (as 'listed'), and a job title is set only after the mark is stripped. No other callers are affected. Role at company: sectionLeads and the readHeader 'above' count still see a plain two-item pair, so the only change is the order kept in entryOf. The limits of the ROLE word list are not new: 'Cashier at Walmart' and 'Receptionist at Summit Partners' are still not split, because 'cashier' and 'receptionist' are not in ROLE. Nothing accessibility-related was seen. Run 36634265233 on 36bcccbb passed: fail-first for the review fix, the named import, r5-hunt, knowledge-docs and Word/PDF import tests, and lint. The full gate has not run on this branch yet."
+  },
   "baselineFailures": [],
   "notes": "Base moved from 9519ef6b to 88819d0 (docs and merges only). CI run 36633363404 (dispatch on 7aac167) passed: failfirst for all 4 fix commits (each test fails with its fix reverted and passes with it restored), plus the named tests tests/unit/*imp*.unit.mjs, tests/unit/r5-hunt*.unit.mjs, tests/unit/knowledge-docs.unit.mjs, tests/pdf/*imp*.test.mjs (Word/PDF round trips), tests/pdf/87-word-grids and tests/pdf/92-word-header-band, and lint. docs/knowledge/ does not describe the import parsing rules at this level, so it needed no change. No new Design keys, contact fields or start-up chunk changes. The full gate has not run yet."
 }
