@@ -658,6 +658,19 @@ export function keywordSkillTarget(sections) {
 }
 
 /**
+ * A section's heading as the ATS report and its fix notices quote it: its title, or for one the user
+ * cleared (it prints no heading), its type's canonical title marked so. They quoted the internal type
+ * id ("experience") or an empty '""' (R5-HUNT8-ATS-FIX-NOTICE-CLEARED-TITLE-TYPE-ID), as Markdown / ATS
+ * text (R5-HUNT5) and the share panel (R5-HUNT6) did before.
+ */
+export function atsHeadingLabel(section) {
+  const title = String(section?.title || '').trim();
+  if (title) return `"${title}"`;
+  const canonical = Object.hasOwn(ATS_STANDARD_SECTIONS, section?.type ?? '') ? ATS_STANDARD_SECTIONS[section.type].canonical : '';
+  return canonical ? `"${canonical}" (no heading)` : '"Untitled"';
+}
+
+/**
  * Checks whether a section title is ATS-friendly for its section type
  */
 export function isStandardAtsTitle(section) {
@@ -936,7 +949,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       detail: 'All section titles match standard Workday and Taleo taxonomy dictionaries.',
     });
   } else {
-    const listStr = nonStandard.map(n => `"${n.title}" → "${n.canonical}"`).join(', ');
+    const listStr = nonStandard.map(n => `${atsHeadingLabel(n)} → "${n.canonical}"`).join(', ');
     results.categories.headings.items.push({
       id: 'std_headings', status: 'warn', text: `${nonStandard.length} Non-standard heading(s) detected`,
       detail: `Custom headings can confuse older ATS: ${listStr}. Click "Standardize Headings" below to fix.`,
