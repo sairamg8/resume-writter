@@ -43,13 +43,15 @@ function FilterButton({ label, count, className, ...rest }) {
 /**
  * The bar over a project's issues (the board, the list, the calendar): search, the Epic / Type /
  * Label / Priority filters, the quick filters, "Clear filters", and — where the view has lanes —
- * "Group by". `filters` in boardQuery.filterIssues' shape; `onChange(next)`.
+ * "Group by". `filters` in boardQuery.filterIssues' shape; `onChange(next)`. `withEpics`: the view
+ * lists epics (the list, the calendar), so Type offers Epic too — without it a ticked type hid every
+ * epic there, with no way to list the epics alone. The board and the backlog show no epics.
  *
  * Below md the search sits beside one "Filters" button (with how many are set) that shows the rest
  * under it: wrapped over three or four rows they took about 150px of a phone's height, above a
  * board that scrolls in what is left (R4-DPH-06). From md up it is the one row it always was.
  */
-export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy, right }) {
+export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy, right, withEpics = false }) {
   const [open, setOpen] = useState(false);
   // An epic or label deleted since it was ticked is neither counted nor kept by the next change.
   const filters = liveFilters(board, raw);
@@ -82,7 +84,7 @@ export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy
         )}
         <MultiSelectPopover
           title="Type"
-          options={ISSUE_TYPES.filter((t) => t.id !== 'epic').map((t) => ({ value: t.id, label: t.name, color: t.color }))}
+          options={ISSUE_TYPES.filter((t) => withEpics || t.id !== 'epic').map((t) => ({ value: t.id, label: t.name, color: t.color }))}
           value={filters.types}
           onChange={(types) => set({ types })}
           trigger={<FilterButton label="Type" count={filters.types.length} />}
