@@ -1088,7 +1088,8 @@ export function resumeFromText(input) {
 
   return {
     id: newId('resume'),
-    name: personal.name ? `${personal.name} Resume` : 'Imported Resume',
+    // The name the Dashboard shows, with a "|" the user typed in theirs back (untyped), as in personal.
+    name: personal.name ? `${untyped(personal.name)} Resume` : 'Imported Resume',
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now: no migration applies
     template: 'classic',
