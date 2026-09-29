@@ -77,3 +77,18 @@ test('generateCoverLetter: the opening says "an" before a title that starts with
     }
   }
 });
+
+// R5-HUNT3-letter-generator-article-before-acronym-title: "as a HR Manager" / "as a SRE" — an
+// initialism spelled out from F, H, L, M, N, R, S or X starts with a vowel sound and takes "an";
+// one read as a word ("NASA") and plain words ("Manager", "Senior …") keep "a".
+test('generateCoverLetter: "an" before a spelled-out initialism with a vowel sound ("an HR Manager", "an SRE"), "a" before one read as a word', () => {
+  for (const archetype of ARCHETYPES) {
+    const opening = (title) => plain(generateCoverLetter({ resume: resume({ name: 'Jane Doe', title }), archetype }));
+    for (const title of ['HR Manager', 'SRE', 'ML Engineer', 'SEO Specialist', 'RN', 'MBA Candidate', 'NLP Engineer', 'SDE II', 'FP&A Analyst', 'LLM Researcher', 'XR Developer']) {
+      assert.ok(opening(title).includes(`as an ${title}`), `${archetype}: ${title}`);
+    }
+    for (const title of ['NASA Engineer', 'NATO Liaison', 'Manager', 'Senior Engineer', 'Hr Generalist', 'QA Engineer', 'PM', 'CTO']) {
+      assert.ok(opening(title).includes(`as a ${title}`), `${archetype}: ${title}`);
+    }
+  }
+});

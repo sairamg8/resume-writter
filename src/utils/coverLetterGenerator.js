@@ -97,6 +97,10 @@ export function extractResumeHighlights(resume) {
  */
 function article(next) {
   if (/^U[A-Z]/.test(next) || /^(uni|use|usu|uti|eu|one\b|once)/i.test(next)) return 'a';
+  // An initialism spelled out letter by letter from F, H, L, M, N, R, S or X starts with a vowel
+  // sound ("an HR Manager", "an SRE"); one read as a word ("a NASA Engineer", "a NATO …") does not.
+  const initialism = /^[A-Z][A-Z&]*[A-Z](?![A-Za-z])/.exec(next)?.[0];
+  if (initialism && /^[FHLMNRSX]/.test(initialism) && !/^[^AEIOU][AEIOU][^AEIOU][AEIOU]/.test(initialism)) return 'an';
   return /^[aeiou]/i.test(next) ? 'an' : 'a';
 }
 
