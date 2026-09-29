@@ -25,9 +25,9 @@
    "head": "8acb6877"
   },
   "7": {
-   "confirmed": 11,
+   "confirmed": 21,
    "head": "7bf94d30",
-   "note": "dash, pdf, boards, sync, editor, jobs; import/export/tools not run"
+   "note": "all 9 areas; 21 fixes"
   }
  },
  "seen": [
@@ -155,6 +155,16 @@
   "A job moved to the wrong status by mistake (a card dropped on the wrong board column, 'Move to', a click on the job page's stepper or status menu) had no Undo, and moving it back by hand left a false history entry and an applied date, so the Summary kept counting it at that step",
   "A blank or eyes-off entry still prints in the PDF and preview: a gap, an empty grid cell, a bare Timeline dot, and a split 'Group roles by company' group",
   "If storage is too full to set aside a job or project list's unsent changes at sign-out, those changes are lost, and the next sign-in deletes that account's whole list from the cloud",
-  "One job the cloud refuses (an imported id with '/', or a nested array) stops the job sync, and every other job in that batch is held back and called 'too large'"
+  "One job the cloud refuses (an imported id with '/', or a nested array) stops the job sync, and every other job in that batch is held back and called 'too large'",
+  "Word import: an entry header laid out as a table row is split into one line per cell, so fields land in the wrong place",
+  "Text/Word/Markdown import: contacts written as a bulleted list are not read (email becomes the job title, the rest goes to Additional Information, a link label starts with a bullet)",
+  "Import: a job header 'Role at Company' / 'Role @ Company' is not split, so Company is empty",
+  "Word import: an alignment tab (<w:ptab/>) between a title and its date is dropped, gluing the text and losing the date",
+  "Word export writes a file Word cannot open when any printed text contains a C0 control character",
+  "The .docx résumé and cover letter carry Author 'Un-named' and no title in their document properties",
+  "Markdown export splits a 'Group roles by company' group at a blank or all-eyes-off entry",
+  "If the description changes in another tab or device while the STAR Optimizer is open, Apply puts the rewrite as loose text at the top of the description and leaves the original bullet in place",
+  "Job scanner reads figures with a unit other than K/M/B ('3x', '10x', '200ms', '#1', '1st') as missing keywords, and '+' writes them into Skills",
+  "Public résumé page keeps showing, and downloading, the previous résumé after the tab moves to another share link"
  ]
 }
