@@ -16,7 +16,7 @@ const resumeIn = (settings) => ({
     { id: 'w', type: 'experience', title: 'Work', items: [{ id: 'i', company: 'Acme', role: 'Dev', startDate: 'Jan 2020', endDate: 'Mar 2023' }, { id: 'j', company: 'Bolt', role: 'Dev', startDate: '2018-05', endDate: 'Dec 2019' }] },
     { id: 'e', type: 'education', title: 'Education', items: [{ id: 'k', institution: 'MIT', degree: 'BSc', startDate: 'Sep 2014', endDate: 'Jun 2018' }] },
     { id: 'c', type: 'certifications', title: 'Certifications', items: [{ id: 'l', name: 'AWS', issuer: 'Amazon', date: 'Feb 2021', expiry: 'Feb 2024' }] },
-    { id: 'a', type: 'awards', title: 'Awards', items: [{ id: 'm', title: 'Best', awarder: 'X', date: 'Nov 2022' }] },
+    { id: 'a', type: 'awards', title: 'Awards', items: [{ id: 'm', title: 'Best', issuer: 'X', date: 'Nov 2022' }] },
   ],
 });
 
