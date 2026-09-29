@@ -416,6 +416,10 @@ export function extractJobKeywords(jobDescriptionText) {
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
     if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
+    // And scaled figures: a pay range "$150K–$180K" was the keywords "150K" and "180K", always
+    // missing and written into Skills by "+" (R5-HUNT2-ats-jd-salary-figures-as-keywords).
+    // ("150k", "1.5m", "2b+", "120k-140k", "150-180k").
+    if (/^\d+(?:\.\d+)?[kmb]?(?:-\d+(?:\.\d+)?)?[kmb]\+?$/.test(lower)) continue;
 
     // Keep capitalization if it looks like an acronym or tech (AWS, SQL, CI/CD, React)
     counts.set(lower, (counts.get(lower) || 0) + 1);
