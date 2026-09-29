@@ -382,15 +382,34 @@ function trailingDate(text) {
   // The earliest split whose rest is a date: "Role - Mar 2021 - Present" keeps the whole range.
   const seps = [...text.matchAll(/\s[-–—|]\s|,\s|\(/g)];
   for (const sep of seps) {
-    // Not a split inside brackets: "Dean’s List (2018, 2019)" is no "Dean’s List (2018" dated 2019 — its
-    // years stay in its title, as written (R5-HUNT8-AWARD-MULTI-YEAR-PAREN).
     const before = text.slice(0, sep.index);
-    if ((before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) continue;
-    const rest = text.slice(sep.index + sep[0].length).replace(/\)\s*$/, '');
+    const after = text.slice(sep.index + sep[0].length);
+    if ((before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) {
+      // A split inside brackets: "Dean’s List (2018, 2019)" is no "Dean’s List (2018" dated 2019 — its
+      // years stay in its title, as written (R5-HUNT8-AWARD-MULTI-YEAR-PAREN). But "Acme (Remote, Jan
+      // 2020 – Present)" is dated, its bracket closed over what it says before its date: "Acme (Remote)".
+      const inner = before.slice(before.lastIndexOf('(') + 1);
+      if (!/\)\s*$/.test(after) || inner.split(/,\s|\s[-–—|]\s/).some((p) => readDateRange(p.trim()))) continue;
+      const date = readDateRange(after.replace(/\)\s*$/, ''));
+      if (date) return { date, rest: `${before.trim()})` };
+      continue;
+    }
+    const rest = after.replace(/\)\s*$/, '');
     const date = readDateRange(rest);
-    if (date) return { date, rest: text.slice(0, sep.index).trim() };
+    if (date) return { date, rest: before.trim() };
   }
   return null;
+}
+
+/**
+ * Several dates in brackets at a text's end — "Dean’s List (2018, 2019)", "(Fall 2018, Spring 2019)" —
+ * which trailingDate leaves in the title: no one date of the entry, but its line an entry's, dated as
+ * the line of a certificate or an award with one date is. Else, not dated, it went into the entry above.
+ */
+function bracketDates(text) {
+  const m = /\(([^()]+)\)\s*$/.exec(text);
+  const dates = m ? m[1].split(/\s*[,;&]\s*|\s+and\s+/) : [];
+  return dates.length > 1 && dates.every((d) => readDateRange(d));
 }
 
 // ── Contacts ─────────────────────────────────────────────────────────────────
@@ -993,7 +1012,7 @@ function entriesOf(type, lines, aside) {
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketDates(p));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));
