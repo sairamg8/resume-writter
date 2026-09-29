@@ -19,6 +19,7 @@ Help users track applications alongside tailored resumes — a differentiator vs
 - **List:** `components/job/ListView.jsx`  
 - Search + status filter on tracker page  
 - Import/export jobs as JSON, export as CSV (`utils/jobCsv.js`)  
+- An imported job's Applied / Deadline / Follow-up days are made 'YYYY-MM-DD' when readable: a timestamp, "15 Jan 2026", "Jan 15, 2026", "January 15 2026", "2026/1/15" (`jobDay`, `src/utils/normalizeJob.js`); an unreadable or ambiguous one ('next week', '10/15/2026') stays as written, and the Summary's "Upcoming deadlines" leaves such a deadline out (`isDeadlineUpcoming`, `src/utils/jobQuery.js`)  
 - ⋯ → "Clear all jobs" (disabled with none) asks with the count, `clearDemoData` empties the list and returns it, and the "N jobs cleared" toast's Undo puts it back (`restoreJobs`; the sync sends them again, R4-DUX-02)  
 
 ## Detail tabs / widgets
