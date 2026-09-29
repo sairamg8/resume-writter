@@ -300,8 +300,10 @@ export function restoreIssue(board, removed) {
     labelIds: i.labelIds.filter((l) => board.labels.some((x) => x.id === l)),
     epicId: epicIdFor(board, i.type, i.epicId, i.id),
   };
-  const children = new Set(removed.childIds || []);
-  const issues = board.issues.map((x) => (children.has(x.id) && !x.epicId ? { ...x, epicId: i.id } : x));
+  // A child made an epic since is not relinked: an epic sits in no epic (updateIssue), or it came
+  // back as an epic inside the restored one, with no picker to take it out (R5-HUNT5 review).
+  const children = new Set(issue.type === 'epic' ? removed.childIds || [] : []);
+  const issues = board.issues.map((x) => (children.has(x.id) && !x.epicId && x.type !== 'epic' ? { ...x, epicId: i.id } : x));
   const at = Math.max(0, Math.min(removed.index ?? issues.length, issues.length));
   return {
     ...board,

@@ -42,3 +42,17 @@ test('a child whose epic is still there comes back in it', () => {
   const back = ops.restoreIssue(ops.deleteIssue(b, 'C'), ops.removedIssue(b, 'C'));
   assert.equal(back.issues.find((i) => i.id === 'C').epicId, 'E');
 });
+
+// Review: the relink of a restored epic's children had the same gap. A child made an epic between
+// the delete and its Undo came back as an epic inside the restored epic: counted in its progress,
+// listed as its child, and with no Parent epic picker (epics have none) to take it out.
+test('an epic brought back by Undo does not relink a child made an epic since', () => {
+  let b = withEpic();
+  b = ops.addIssue(b, { id: 'D', title: 'Buy seeds', epicId: 'E' }, ctx);
+  const epic = ops.removedIssue(b, 'E');
+  const retyped = ops.updateIssue(ops.deleteIssue(b, 'E'), 'C', { type: 'epic' }, ctx);
+  assert.equal(retyped.issues.find((i) => i.id === 'C').type, 'epic');
+  const back = ops.restoreIssue(retyped, epic);
+  assert.equal(back.issues.find((i) => i.id === 'C').epicId, null, 'an epic sits in no epic');
+  assert.equal(back.issues.find((i) => i.id === 'D').epicId, 'E', 'a child still a task is relinked');
+});
