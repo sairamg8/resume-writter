@@ -23,6 +23,11 @@
   "6": {
    "confirmed": 25,
    "head": "8acb6877"
+  },
+  "7": {
+   "confirmed": 11,
+   "head": "7bf94d30",
+   "note": "dash, pdf, boards, sync, editor, jobs; import/export/tools not run"
   }
  },
  "seen": [
@@ -139,6 +144,17 @@
   "Job Tracker's Career History shows the cover letter you last opened, not your résumé: a blank letter shows 'Your Name' and one empty job, and a letter made from a résumé shows an old copy of its jobs (refuted)",
   "STAR Optimizer opened on a selection that spans two bullets (or two paragraphs) joins them with no space ('Led migrationCut costs by 30%'), and Apply saves that joined text as one bullet (refuted)",
   "STAR Optimizer on a word selected with its trailing space (a Windows double-click) glues the rewritten word to the next word on Apply, e.g. 'handled QA' becomes 'ManagedQA' (refuted)",
-  "Cover letter generator cuts a skill list in the middle of a parenthesis, writing '…utilizing Java, Python, Go, AWS (EC2.' into the letter (refuted)"
+  "Cover letter generator cuts a skill list in the middle of a parenthesis, writing '…utilizing Java, Python, Go, AWS (EC2.' into the letter (refuted)",
+  "A double-click on Create project, or pressing Enter twice in its Name field, makes two identical projects, the second keyed HR2",
+  "Closing an issue with its Description editor open, even with nothing typed, writes the old text over a newer description saved meanwhile in another tab or pulled from the cloud",
+  "The own-details role starter on /new drops the user's US Letter paper size and uploaded contact icons, so the new résumé prints on A4 with stock icons",
+  "A lettered or Roman-numbered list (a., i., A., I.) turned into 1., 2. when pasted or when an imported description was edited, and two numbered lists side by side merged into one count",
+  "Design > Spacing > Line Height typed with a decimal comma (1,6) was stored as 1, so the whole resume was squeezed with no message",
+  "The Job Tracker list's Résumé column showed '—' for a job linked to a résumé that was since deleted, as if it had never been linked, while the job page says 'Résumé deleted'",
+  "Importing a file whose entries named neither a company nor a role (another tracker's 'companyName'/'jobTitle' export, or a list of empty objects) added one blank 'Untitled Company' card per entry and reported them as imported",
+  "A job moved to the wrong status by mistake (a card dropped on the wrong board column, 'Move to', a click on the job page's stepper or status menu) had no Undo, and moving it back by hand left a false history entry and an applied date, so the Summary kept counting it at that step",
+  "A blank or eyes-off entry still prints in the PDF and preview: a gap, an empty grid cell, a bare Timeline dot, and a split 'Group roles by company' group",
+  "If storage is too full to set aside a job or project list's unsent changes at sign-out, those changes are lost, and the next sign-in deletes that account's whole list from the cloud",
+  "One job the cloud refuses (an imported id with '/', or a nested array) stops the job sync, and every other job in that batch is held back and called 'too large'"
  ]
 }
