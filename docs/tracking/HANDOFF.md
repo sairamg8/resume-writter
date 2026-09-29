@@ -1,10 +1,14 @@
 # Session Handoff — Resume Here
 
-**STOPPED by the owner 2026-09-29 13:01 UTC. Next: DoD — résumé parsing on real career portals with the owner's own résumé; bugs resume after.**
-**DoD progress (2026-09-29, session 521f8276):** 3 real applications submitted with FlowCV-exported PDFs (GitLab/Greenhouse,
-Atlassian/iCIMS, Netflix/Eightfold). Eightfold parsed the PDF header fully and correctly; Greenhouse doesn't parse; iCIMS
-kept old profile data. No export bug found yet; one editor freeze seen while typing in Personal Info → Website (watch for
-repro). Job-hunt state/next steps live OUTSIDE the repo: `~/Documents/job-hunt/README.md`, `applications.md`,
+**BUG HUNT RESUMED by the owner 2026-09-29 ~17:00 UTC.** The coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL is
+re-enabled (every 3 h). Next: resume hunt round 6 from the state below and loop until two consecutive dry rounds.
+**Commits (owner rule, 2026-09-29):** author and committer `sairamgudiputi <sairamgudiputi8@gmail.com>`, with no
+Co-Authored-By, no Claude-Session trailer and no "Generated with" line. See CLAUDE.md, "Commits carry the owner's identity only".
+**DoD progress (2026-09-29, sessions 521f8276 + 45558ac8):** 8 real applications submitted with the owner's résumé, rendered
+by FlowCV's own react-pdf code: GitLab, Atlassian and Netflix, then abroad Brex, Databricks, Verkada, Harvey and OpenTable.
+Eightfold parsed the PDF header correctly. Greenhouse and Ashby don't parse, and iCIMS kept old profile data. No export
+bug found. One editor freeze was seen while typing in Personal Info → Website, not yet reproduced; worth a hunt finder.
+Do NOT touch `private/` or the owner's FlowCV app data (owner: "repo data is clean, leave it"). Job-hunt state/next steps live OUTSIDE the repo: `~/Documents/job-hunt/README.md`, `applications.md`,
 `shortlist.md` (57 roles abroad, top 20 ranked). Owner's résumé source of truth: `private/sairam-resume.json` (website now
 itsairam.netlify.app — owner does not own sairamg.dev). Idea from the owner (not started): for the owner's account, starter
 templates should prefill from the private résumé instead of sample people ("Alex Morgan").
