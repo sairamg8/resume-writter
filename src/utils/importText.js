@@ -290,7 +290,8 @@ const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
 const RANGE = new RegExp(`^(?:since\\s+)?(${DAY})(?:${SEP}(${DAY}|${NOW}))?$`, 'i');
-const END_ONLY = new RegExp(`^(?:[-–—]|to|until)\\s*(${DAY}|${NOW})$`, 'i');
+// "Expected May 2025", "Anticipated graduation: 2025": a date still to come is when the entry ends.
+const END_ONLY = new RegExp(`^(?:[-–—]|to|until|(?:expected|anticipated)(?:\\s+(?:graduation|completion))?:?)\\s*(${DAY}|${NOW})$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
