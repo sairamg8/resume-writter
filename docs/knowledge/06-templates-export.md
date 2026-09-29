@@ -122,7 +122,9 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
-  roles, R4-LO-01); every line it cannot place in a custom "Additional Information".
+  roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
+  with a title line an entry of its own (R5-HUNT8); every line it cannot place in a custom "Additional
+  Information".
 - The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`). An
   import from the editor's own Export menu ("Import as a new résumé", JSON or document) also says it
   is a new résumé (a letter's JSON: a new cover letter) and the open one is unchanged

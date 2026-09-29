@@ -1111,8 +1111,27 @@ function entriesOf(type, lines, aside) {
     return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && way(n, m) === way(b, L));
   };
 
+  // A block with no date — first in the section, or after a blank line, up to the next one — whose
+  // first line reads as a title, where the section's other entries are dated: an entry of its own (an
+  // undated project, a freelance job, a certificate with no date: the ATS text's own). Before, it went
+  // into the dated entry next to it, its title that entry's text, and a certificate "Additional
+  // Information" (R5-HUNT8-UNDATED-ENTRY-MERGED). Not in a Markdown file's sections, whose entries are
+  // its "###" headings and whose blank lines part an entry's paragraphs; nor in a custom section.
+  const datedSection = type !== 'custom' && !info.some((l) => l.hint === 'entry') && info.some((l) => l.date);
+  const undatedEntry = (L) => {
+    if (!datedSection || L.bullet || L.date || L.hint || (!L.gap && L.index > 0)) return false;
+    if (L.text.length > 100 || /[.!?:;,]$/.test(L.text) || isMetaLine(L.text)) return false;
+    for (let k = L.index + 1; k < info.length && !info[k].gap; k += 1) if (info[k].date || info[k].hint === 'entry') return false;
+    return true;
+  };
+
   for (let i = 0; i < info.length;) {
     const L = info[i];
+    if (undatedEntry(L)) {
+      start([L]);
+      i += 1;
+      continue;
+    }
     if (L.hint === 'entry') {
       const header = [L];
       i += 1;
