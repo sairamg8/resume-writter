@@ -1,0 +1,79 @@
+{
+  "cluster": "r5-hunt2-tools",
+  "branch": "claude/wf-r5-hunt2-tools",
+  "base": "e912aa661378a47f4212987c48c1748aaee7f511",
+  "rows": [
+    {
+      "id": "R5-HUNT2-ATS-JD-PHRASE-AND-ITS-WORDS-COUNTED-SEPARATELY",
+      "title": "Job scanner counts a tech phrase and each of its words as separate keywords (CI/CD also as CI and CD)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "2663b23",
+        "77eae5bcf3b3ed2416bc5fd8fcc52cc731bfb5ba"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt2-ats-jd-phrase-words.unit.mjs",
+        "tests/unit/r5-hunt2-review-ats-jd-figures-phrase-tokens.unit.mjs"
+      ],
+      "summary": "Now: when a job posting contains one of the listed tech phrases ('CI/CD', 'machine learning'), the phrase counts as one keyword. Its words ('CI', 'CD', 'machine', 'learning') are no longer counted a second time in the match percentage, and '+' no longer offers them for Skills. A word the posting also uses on its own (for example 'learning' elsewhere in the text) is still a keyword. One-word phrases ('frontend') are unaffected. The review changed how the words are removed: a word loses a count only where it was read as a separate word inside that phrase. Before, 'machine learning-based ranking with a continuous learning culture' also dropped the separate word 'learning'. The token rule now lives in one helper, jobKeywordOf, which extractJobKeywords uses both for counting and for reading the words inside a phrase.",
+      "failfirst_run": "36534214985 (2663b23: 3 fail without the fix, pass with it); review 36536345765 (77eae5b: 2 fail without, pass with)"
+    },
+    {
+      "id": "R5-HUNT2-ATS-JD-SALARY-FIGURES-AS-KEYWORDS",
+      "title": "Job scanner reads pay figures ('$150K–$180K') as missing keywords that '+' writes into Skills",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "af627d3",
+        "77eae5bcf3b3ed2416bc5fd8fcc52cc731bfb5ba"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt2-ats-jd-salary-figures.unit.mjs",
+        "tests/unit/r5-hunt2-review-ats-jd-figures-phrase-tokens.unit.mjs"
+      ],
+      "summary": "Now: a figure is no job keyword. That covers plain numbers, '5+', numbers with a K/M/B suffix ('150K', '1.5M', '2B+') and ranges joined by a hyphen, with or without a suffix ('120k-140k', '150-180K', '120000-150000', '3-5' years, '12-15'). A pay range such as '$150K–$180K' or '120,000-150,000' is never listed under Missing Keywords, never lowers the match, and '+' never writes it into Skills. Tech names with digits ('S3', 'EC2', '5G', 'Web3') are still keywords, and a guard test pins that. The review extended af627d3, which caught only figures with a K/M/B suffix: plain ranges such as '$120000-150000', '120,000-150,000' (read as '000-150') and '3-5 years' were still keywords.",
+      "failfirst_run": "36534214985 (af627d3: 2 fail without the fix, pass with it); review 36536345765 (77eae5b: 2 fail without, pass with)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "row": "R5-HUNT2-ATS-JD-SALARY-FIGURES-AS-KEYWORDS",
+            "issue": "The new regex skipped a figure only when it had a K/M/B suffix. '$120000-150000' stayed the keyword '120000-150000', '120,000-150,000' stayed '000-150', '3-5 years' stayed '3-5' and '12-15 LPA' stayed '12-15'. All of these were always missing from the résumé and '+' wrote them into Skills.",
+            "resolution": "fixed in 77eae5b: one figure rule (digits, optional decimals, optional K/M/B, ranges joined by a hyphen, optional '+'); fail-first run 36536345765"
+          },
+          {
+            "row": "R5-HUNT2-ATS-JD-PHRASE-AND-ITS-WORDS-COUNTED-SEPARATELY",
+            "issue": "Each word lost one count for every regex match of the phrase, even where the tokenizer had not read that word as a separate token. In 'machine learning-based … continuous learning' the token was 'learning-based', so the separate 'learning' was deleted. The same happened with '#machine learning … machine vision' and 'machine'. This broke the fix's own rule that a word the posting also uses on its own stays a keyword.",
+            "resolution": "fixed in 77eae5b: the tokens around each match are read with the same rule (jobKeywordOf), and a word loses a count only when it is one of them; fail-first run 36536345765"
+          }
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Figure rule missed ranges without a K/M/B suffix",
+        "resolution": "fixed (77eae5b)"
+      },
+      {
+        "issue": "Phrase subtraction removed a word's standalone use when the phrase ran into a hyphenated or '#'-prefixed token",
+        "resolution": "fixed (77eae5b)"
+      },
+      {
+        "issue": "Pay vocabulary around a figure ('USD', 'hr', 'yr', 'LPA', 'Salary', 'Pay') is still read as keywords. This is not the figure bug: those words are missing from the stop list. Adding them risks dropping real keywords (for example 'Payroll', 'Pay' for a payments role).",
+        "resolution": "not fixed; noted for a later hunt as a stop-list product call"
+      }
+    ],
+    "fixedByReviewer": [
+      "77eae5bcf3b3ed2416bc5fd8fcc52cc731bfb5ba"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Both fixer commits change only extractJobKeywords in src/utils/atsChecker.js. Its only caller is matchResumeWithJob, used by the ATS panel's job match. Nothing is stored, so there is no old-data or exporter impact. I read the fail-first logs of run 36534214985: 2663b23 had '# fail 3' and af627d3 had '# fail 2' with the diff reversed, and both passed with the fix restored. Review fix 77eae5b: fail-first '# fail 2' and named-tests run 36536345765 green (lint and 14 ATS/knowledge test files). Playwright, Cypress, build and the full suite were not run, so the batch gate still has to run them. No tests were run locally; extractJobKeywords was only called directly with node on sample postings."
+}

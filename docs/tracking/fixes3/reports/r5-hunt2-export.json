@@ -1,0 +1,76 @@
+{
+  "cluster": "r5-hunt2-export",
+  "branch": "claude/wf-r5-hunt2-export",
+  "base": "54b9ec28f19e9684778b75d74230b204737ff3b2",
+  "rows": [
+    {
+      "id": "R5-HUNT2-MD-EXPORT-DROPS-RICH-TEXT-MARKS",
+      "title": "Markdown export drops the bold, italics and strike-through of the summary and descriptions",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "62e55eae71fb486b6cd78680121bcb2f09edd178"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt2-markdown-marks.unit.mjs",
+        "tests/pdf/70-markdown-parity.test.mjs (updated: the order check now expects 'Led **five** engineers', the fixture's <strong>five</strong>, as the PDF draws it)"
+      ],
+      "summary": "Now: Export > Markdown (.md) keeps the marks the PDF and Word draw in the summary and every description. Bold prints as **text**, italics as *text* and strike-through as GFM ~~text~~. Each mark sits directly against the text it marks, never against a space. A mark that two neighbouring runs share stays open across both ('**Bold *both*** end'). A line break inside a bold run closes the mark at the end of the line and opens it again on the next. A link inside bold keeps its [text](href) inside the mark. Underline has no Markdown syntax, so it is left out on purpose (markdownExport.js says so). The app's Markdown import now also strips ~~ as it already stripped ** and *, so the app's own .md imports back as its words. Before, every run was written as its bare text, so 'I <strong>led</strong> a <em>team</em>' came out 'I led a team'. The bug title also named the cover-letter body: the app has no cover-letter Markdown export, so that part does not apply. Files: src/utils/markdownExport.js (MARKS, markedLine, blockLines), src/utils/importText.js (inlineOff).",
+      "product_call": "Underline is dropped rather than written as raw <u> HTML, because many Markdown viewers print the tag and the app's own import would read it back as text. Where Markdown cannot express a mark without HTML, the export writes the mark anyway and does not fall back to HTML. Two cases: a mark whose edge is punctuation glued to a letter outside it ('word' + bold '(40%)' prints word**(40%)**), and marks that cross inside one word (italic 'a', bold-italic 'b', bold 'c' with no spaces between). A CommonMark viewer then shows the asterisks, but the words are all there and the app's import strips the marks. Both are rare in résumé text. Every common shape renders correctly in a CommonMark/GFM parser (checked with markdown-it): 'by **40%**.', '*React*, ***Node*** and **Go**', '***Title:* rest**', '~~old~~**new**', intra-word 'Java*Script*'.",
+      "remaining": "Intra-word italics ('Java*Script*') render correctly in Markdown viewers, but the app's own Markdown import keeps the asterisks, because its italic pattern (older, unchanged) needs a non-word character before the opening '*'. This only affects re-importing a .md that has italics in the middle of a word. Nothing else remains.",
+      "failfirst_run": "36531859143 (job 109287118693: '# fail 5' with the commit's src/ diff reversed, passes with it); named-tests run 36531859143 (303/303); wider named-tests run 36535486814 (236/236 pass across 29 more named files, lint green)"
+    },
+    {
+      "id": "R5-HUNT2-ATS-TEXT-LIST-ITEM-SECOND-PARAGRAPH-UNINDENTED",
+      "title": "ATS text prints a list item's second paragraph flush left, as a line of its own",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "edf5c318deb1db58bcc2abb0394d2d8760153325"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt2-ats-list-paragraph.unit.mjs"
+      ],
+      "summary": "Now: in the ATS plain text (Export > ATS Text, and the ATS tab's Copy and Download), a paragraph inside a list item starts under that item's text: '* first para\\n  second para\\n* x'. This covers an <li> holding two <p>, a quote inside an item, and text after a nested list inside an item. A level-2 item's continuation is indented to that item's text. A paragraph after the list still starts flush left, and a quote or <dd> after the list stays apart from it (R4-SW-WT-01). This matches the PDF and the Markdown export. Before, only blocks with a marker were indented, so the second paragraph read as a line of its own after the bullet. File: src/utils/atsPlainText.js (richTextLines).",
+      "product_call": "A continuation paragraph that starts with a typed bullet ('• b') now prints indented as typed, as the PDF shows it, instead of being turned into a new top-level '* b'.",
+      "remaining": "Malformed stored HTML with a <p> directly inside a <ul> before any <li> prints indented two spaces with no bullet above it, where the Markdown prints it flush. The app's sanitizer does not produce this HTML, and the text is all there.",
+      "failfirst_run": "36531859143 (job 109287118747: '# fail 2' with the commit's src/ diff reversed, passes with it); wider named-tests run 36535486814 (236/236 pass across 29 more named files, lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "markdown-it check: marks at an alphanumeric/punctuation boundary, and marks crossing inside one word, do not render as emphasis (word**(40%)**, *a**b*****c**)",
+          "Intra-word italics from the export do not strip on the app's own Markdown re-import",
+          "The fixer's named run did not cover every test that touches the Markdown export/import and the ATS text (94-look-*, 88-present-entries, 16-saved-data-text-fields, import-text, r4-sw-wt-01-body-after-list, 104-r5-imp-md-link-label-marks, ...)",
+          "ATS: an inList paragraph with no item before it (malformed <ul><p>) is indented with no bullet above it"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Emphasis at an alphanumeric/punctuation boundary (word**(40%)**) and marks crossing inside one word do not render in CommonMark",
+        "resolution": "Accepted as a product call and not changed. CommonMark's flanking rules cannot express these cases without inline HTML, and the export deliberately writes no HTML. The words are all there, and the app's import strips the marks. Every common shape was checked with markdown-it and renders correctly (see the row's product_call)."
+      },
+      {
+        "issue": "An intra-word italic ('Java*Script*') keeps its asterisks on the app's own Markdown re-import",
+        "resolution": "Noted in remaining and not changed. The italic pattern in importText is older than this change (it avoids snake_case/2*3 false positives). The case is rare, and the export itself is correct Markdown."
+      },
+      {
+        "issue": "The fixer's named-tests run did not include every test that touches these exporters",
+        "resolution": "The reviewer ran 29 more named files on CI (run 36535486814): 236/236 pass across 29 more named files, lint green."
+      },
+      {
+        "issue": "ATS: a paragraph inside a list with no item before it is indented with no bullet",
+        "resolution": "Not changed. Only malformed HTML the sanitizer never produces can reach this, the text is complete, and it is harmless to an ATS."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Both fixes were reviewed against the diff. Both fail-first jobs of run 36531859143 were read. The Markdown job logged 'fail without the fix (its diff reversed): # fail 5' and then passed. The ATS job logged '# fail 2' and then passed. The sixth Markdown test (the re-import) passes without the fix, as expected, since no marks were written then; it guards the importText ~~ strip, which it would catch if the export kept its marks and the import change were lost. The only other caller of the two exporters is useEditorExports/AtsCheckerPanel (download and copy), so no other template or exporter is affected. Stored data is only read, and old résumés without marks export as before. The review found no defect that needed a code change. The four issues above are accepted limitations with reasons. Playwright and Cypress were not run: no UI changed. The full gate belongs to the batch."
+}

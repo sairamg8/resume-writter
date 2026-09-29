@@ -1,0 +1,79 @@
+{
+  "cluster": "r5-hunt2-editor",
+  "branch": "claude/wf-r5-hunt2-editor",
+  "base": "988681d40338da769cb7bc87f794ce722203289d",
+  "rows": [
+    {
+      "id": "R5-HUNT2-IMPORT-NOTICE-LOST-ON-TAB-SWITCH",
+      "title": "The import notice disappears the first time the user picks another editor tab",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "322c5c1200508bae24386f218a58492fc3cf76ac"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt2-tab-keeps-import-notice.test.mjs"
+      ],
+      "summary": "Now: picking the Design, Cover Letter or ATS Check tab no longer clears the import notice. useEditorTab.setTab passes the page's location.state to setParams, the same way useUrlState does, so the notice ('Imported from your file as best we could read it…', or the new-résumé notice after Import JSON) stays on every tab until the user presses Dismiss. This covers document imports, Import JSON, and letter imports that open on ?tab=coverletter. After Dismiss, picking a tab does not bring the notice back. The only other state kept on the editor route is the notice itself (importDocument, useEditorExports), so keeping the state cannot replay anything else.",
+      "failfirst_run": "36531283934 (322c5c1: 2 failures without the fix, passes with it); named-tests run 36533894779 (green, 88/88)"
+    },
+    {
+      "id": "R5-HUNT2-LATE-PHOTO-ICON-UPLOAD-LANDS-ON-OTHER-RESUME",
+      "title": "A photo or icon upload that finishes after another résumé is opened lands on that other résumé",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "b46e835aba3f7182e44b68f42fab29bfa2ba1dac",
+        "8132e482134d3c635aa40a0f82f5d6304905f5b0",
+        "503fd2d4d9490d45a6264df8f99520c1e219ca88"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt2-late-upload.test.mjs"
+      ],
+      "summary": "Now: a photo or icon upload is saved to the résumé it was started on, even if another résumé was opened while the image was being decoded. This covers the Personal Info photo, a contact field's icon Upload and the Cover Letter photo. In the store, patchActive, updatePersonal, updateSetting and updateCoverLetter take an optional résumé id, and updateSetting also accepts a function of the setting's current value. The photo uploads call updatePersonal('photo', dataUrl, id) and updateCoverLetter('clPhoto', dataUrl, id). The icon upload adds its icon to that résumé's icons as they are when the upload finishes, so the other résumé's icons are no longer overwritten, and an icon changed on the same résumé during the upload is kept. Callers that pass no id still write to the open résumé, so all other callers behave as before. Stored data is not changed. If the résumé is deleted before the upload finishes, the upload writes nothing.",
+      "failfirst_run": "36531283934 (b46e835: 3 failures without it; 8132e48: 2 failures without it; both pass with them); 36533894779 (503fd2d: 1 failure without it, passes with it; named-tests green, 88/88)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT2-LATE-PHOTO-ICON-UPLOAD-LANDS-ON-OTHER-RESUME: the fix was incomplete. The Cover Letter panel's photo upload (CoverLetterPanel.handlePhotoChange) waits for the same readImageFile decode, and still wrote through updateCoverLetter, which writes to whichever résumé is open. A letter photo picked on résumé A, with résumé B opened meanwhile, landed on B's letter."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "The Cover Letter photo upload still landed on the résumé opened during the decode (same root cause, not covered by b46e835/8132e48).",
+        "resolution": "Fixed by the reviewer in 503fd2d: updateCoverLetter takes an optional résumé id, like updatePersonal, and CoverLetterPanel writes clPhoto by resume.id. A new test in tests/pdf/105-r5-hunt2-late-upload.test.mjs mounts the real CoverLetterPanel over useAppStore. Failfirst run 36533894779 shows it fails without the change (# fail 1) and passes with it."
+      }
+    ],
+    "fixedByReviewer": [
+      "503fd2d4d9490d45a6264df8f99520c1e219ca88"
+    ]
+  },
+  "rejected": [
+    {
+      "candidate": "Design > Typography: a custom font check that finishes after another résumé was opened applies to the open résumé",
+      "reason": "Intended and documented in DesignPanelTypography.applyCustomFont: 'that choice stands — updateSetting writes to whichever résumé is open now'. It checks latest.current and only keeps the font as a chip."
+    },
+    {
+      "candidate": "The Personal Info photo Remove/Undo writes to the open résumé",
+      "reason": "Already guarded: Undo only restores the photo when latest.current.id is still the résumé it was removed from (PersonalInfoEditorPhoto)."
+    },
+    {
+      "candidate": "Keeping location.state on a tab switch could replay other one-shot route state",
+      "reason": "The editor route carries only importNotice (importDocument.js, useEditorExports.js), and useUrlState already keeps state the same way."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [
+    {
+      "test": "tests/pdf/99-cover-letters.test.mjs",
+      "subtest": "a letter's JSON file, imported, opens on its letter (R2-135 review) — Dashboard",
+      "note": "Also fails on the base branch claude/r4-green @ 3f89207 (run 36531286265, 14 pass and 1 fail), so this branch did not cause it. The fixer suspects 72ead4b (an import no longer opens its résumé), but that has not been checked. It is outside this cluster."
+    }
+  ],
+  "notes": "Two bugs from hunt 2 in the editor are fixed. Review round 1 read every fail-first log in run 36531283934. Each commit's test failed with its src change reversed ('its diff reversed': 322c5c1 # fail 2, b46e835 # fail 3, 8132e48 # fail 2) and passed with the change restored. The review found one gap in the late-upload fix, the Cover Letter photo, and fixed it in 503fd2d. Run 36533894779 is green: failfirst 503fd2d plus 88 named tests covering the new tests, cover-letter, contact-field, photo and knowledge-docs guards, and lint. The full gate has not been run on this head. The baseline failure in 99-cover-letters is shared with claude/r4-green."
+}
