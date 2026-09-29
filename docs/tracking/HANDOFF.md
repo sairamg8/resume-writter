@@ -1,11 +1,10 @@
 # Session Handoff — Resume Here
 
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin 54b9ec2:refs/heads/master` — full gate run 36531535738 on that exact commit is GREEN (a fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters, the start-up size fix, R2-148's public-link
-> takedown, and hunt round 1's 13 fixes incl. two high: a late import took over the open editor; another tab's sign-out
-> could delete every cloud résumé). Then `python3 docs/tracking/tools/r4_tracker.py --deployed 54b9ec2`, commit, push.
-> A newer green sha will replace this line.
+> `git push origin 17c1430:refs/heads/master` — full gate run 36540411545 on that exact commit is GREEN (attempt 2: attempt 1's
+> playwright 2/3 died on an apt 403 before any test ran). A fast-forward from `b8d7667`: 56e42bf's stale-test fix + all eight
+> Round 5 clusters, the start-up size fix, R2-148's public-link takedown, and hunt rounds 1 (13 fixes) and 2 (19 fixes). Then
+> `python3 docs/tracking/tools/r4_tracker.py --deployed 17c1430`, commit, push. A newer green sha will replace this line.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
@@ -26,7 +25,7 @@ fixed test-only in 0cdc8f3 (CI 36531274182 green, 351/351). Candidate for hunt r
 Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Hunt round 2 DONE and merged (8e2ab9e): 19 bugs confirmed + fixed in all 9 areas
 (reports wf-reports/r5-hunt2-<area>.json). Gate 36537511498 on 397f1bb RED only on cypress 06-job-tracker ('Imported 2 job applications.'
 never shows after a jobs JSON round-trip; likely hunt2-jobs backup-restore fix) — stale spec (the file's demo_1 now replaces the untouched
-demo on purpose); fixed spec-only in 7a05d0f (CI 36539433206 green). Full gate on the merged head dispatched.
+demo on purpose); fixed spec-only in 7a05d0f (CI 36539433206 green). Gate 36540411545 on 17c1430 GREEN (deploy line above).
 Running since 07:55: hunt round 3 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
 round script: 9 area finders → skeptic → fixer with fail-first → reviewer, branches claude/wf-r5-hunt<N>-<area>). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
