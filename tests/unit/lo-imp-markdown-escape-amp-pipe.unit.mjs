@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMarkdownResume } from '../../src/utils/markdownExport.js';
 import { generateAtsPlainText } from '../../src/utils/atsPlainText.js';
-import { markdownLines } from '../../src/utils/importText.js';
+import { markdownLines, resumeFromText } from '../../src/utils/importText.js';
 
 const md = (sections, personal = {}) => generateMarkdownResume({
   personal: { name: 'Robin Sample', ...personal },
@@ -28,8 +28,10 @@ test('an "&" that reads as an entity and a typed "|" are escaped; a plain "&" is
 test('the Markdown import reads them back as typed', () => {
   const out = md([{ type: 'experience', title: 'Experience', items: [{ id: 'e', company: 'Acme', role: 'Dev',
     description: '<p>Built &amp;copy; notices and a | b.</p>' }] }]);
-  const texts = markdownLines(out).map((l) => l.text);
-  assert.ok(texts.includes('Built &copy; notices and a | b.'), texts.join(' / '));
+  // The typed "|" is read back by the import, not by markdownLines' lines: they hold it as a character no
+  // split at " | " parts (R4-SW-I-05), and resumeFromText gives it back as "|".
+  const job = resumeFromText(markdownLines(out)).sections.find((s) => s.type === 'experience').items[0];
+  assert.equal(job.description, '<p>Built &amp;copy; notices and a | b.</p>', out);
 });
 
 test('a certificate\'s description prints in no export', () => {

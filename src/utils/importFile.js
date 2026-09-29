@@ -138,7 +138,11 @@ export function docxXmlLines(xml, links = {}) {
       if (!para) continue;
       open.pop();
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
-      const list = /<w:numPr>/.test(para.props);
+      // Word's built-in list styles (List Bullet, List Bullet 2 … List Number 5) keep their numbering in
+      // styles.xml: a paragraph in one is a list item with no numPr of its own (R4-SW-I-02). List
+      // Paragraph has none, so it is one only with a numPr.
+      const styled = /^List\s?(?:Bullet|Number)\s?(\d)?$/i.exec(style);
+      const list = /<w:numPr>/.test(para.props) || Boolean(styled);
       const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
       // Its own line before its text boxes' lines, read while it was open: a side column's box is
       // anchored to the first paragraph, often the name, and the name comes first. A heading's after
@@ -146,8 +150,10 @@ export function docxXmlLines(xml, links = {}) {
       // page's header, over that title.
       const at = heading ? lines.length : para.start;
       levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
-      // A list item's level: a nested one's is 1 and more (R4-LO-02).
-      const depth = list ? Number(/<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1] || 0) : 0;
+      // A list item's level: a nested one's is 1 and more (R4-LO-02). Its own w:ilvl, else its list
+      // style's number less one: List Bullet 2 is a level-1 item (R4-SW-I-02).
+      const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
+      const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
       lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
@@ -381,10 +387,19 @@ export function pdfPageLines(items) {
     // its text starts the marker's share of the run in, where a wrapped line of the item starts.
     const inline = /^\s*[•◦▪▸‣⁃●○■–-]\s+/.exec(its[0].str);
     if (inline && its[0].w) textX = its[0].x + (its[0].w * inline[0].length) / its[0].str.length;
+    // A lone "·" first — in a run of its own or leading one — is the third level's list marker
+    // (richText's BULLETS) or a separator a wrapped line starts with: pdfLinesOfPages tells which
+    // (dotMarker). Where the text after it starts, for when it is a marker, and — in a run of its
+    // own — the gap before that text (R5-IMP-01b).
+    let dotX;
+    let dotGap;
+    const dot = /^\s*·\s+/.exec(its[0].str);
+    if (dot && its[0].str.trim() !== '·' && its[0].w) dotX = its[0].x + (its[0].w * dot[0].length) / its[0].str.length;
     its.forEach((it, i) => {
       if (i) {
         const prev = its[i - 1];
         const gap = it.x - (prev.x + prev.w);
+        if (i === 1 && prev.str.trim() === '·') { dotX = it.x; dotGap = gap; }
         const marker = i === 1 && MARKER.test(prev.str.trim());
         if (marker) { text = `${text.trim()} `; textX = it.x; }
         // A run in a much larger or smaller size is a field of its own: the name and the job title
@@ -396,7 +411,7 @@ export function pdfPageLines(items) {
     });
     const last = its[its.length - 1];
     const links = its.flatMap((it) => it.links || []);
-    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(links.length ? { links } : {}) };
+    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
   });
 }
 
@@ -444,6 +459,32 @@ function withoutPageFurniture(items, index) {
 }
 
 /**
+ * Whether `line`, which starts "· " right under a list item, is a third-level list item — the app's
+ * default Bullet style prints its levels '•', '–', '·' — and not a line of that item wrapped just before
+ * a "·" the user typed as a separator ("Tools: React · Node · … · Terraform"), which the PDF's line
+ * breaking allows (R5-IMP-01b). A '·' marker sits under a '–' item (where its text starts, or at a
+ * sibling '·' marker's x; centred, on its middle), so a '·' starting a wrapped line of any other item is
+ * a separator. Under a '–' item the two start at one x, and these tell them apart, in this order:
+ * - the dot in a run of its own, a marker's gap (over 0.45 em) after it: pdf.js keeps a word space in
+ *   the run, and parts a run only past 0.6 em — the app's gap after '·' at a body size up to ~10.5 pt;
+ * - the line pitch: the app sets list items LIST_GAP (1.5 pt) apart, a wrapped line at the line's own
+ *   pitch — `pitch.wrap` the last wrapped line's step in this list, `pitch.item` the last new item's;
+ * - with neither seen, a line above that ended well short of the block's right edge did not wrap.
+ * `open`: the list items open above it (pdfLinesOfPages), `dy` its step down from `prev`.
+ */
+function dotMarker(line, prev, open, dy, pitch, right) {
+  const mid = (line.x + line.right) / 2;
+  const under = open.some((o) => (o.glyph === '–' && Math.abs(line.x - o.textX) < 2)
+    || (o.glyph === '·' && Math.abs(line.x - o.x) < 2)
+    || ((o.glyph === '–' || o.glyph === '·') && Math.abs(mid - o.mid) < 1.5));
+  if (!under) return false;
+  if (line.dotGap !== undefined && line.dotGap > line.h * 0.45) return true;
+  if (pitch.wrap !== undefined) return dy > pitch.wrap + 0.75;
+  if (pitch.item !== undefined) return dy > pitch.item - 0.75;
+  return prev.right < right - 2 * line.h;
+}
+
+/**
  * The lines of every page as the parser takes them: a line the PDF wrapped joined back to the one
  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
@@ -453,42 +494,87 @@ function withoutPageFurniture(items, index) {
  */
 export function pdfLinesOfPages(pages) {
   const out = [];
+  // The list items open where the last page ended, when it ended in one block across the page: a
+  // sub-point atop the next page nests under its item as it would on one page (IMP-REV-5).
+  let carried = [];
   for (const [index, page] of pages.entries()) {
-    for (const { items, column } of pdfPageBlocks(withoutPageFurniture(page, index))) {
+    const blocks = pdfPageBlocks(withoutPageFurniture(page, index));
+    for (const [b, { items, column }] of blocks.entries()) {
       const lines = pdfPageLines(items);
       const right = Math.max(0, ...lines.map((l) => l.right));
       const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
-      for (const line of lines) {
+      // The list items still open in this block, outermost first: each one's marker x, where its text
+      // starts and its middle — for a list item's depth (R4-SW-I-01).
+      let open = b === 0 && !column ? carried : [];
+      // This list's line steps: a wrapped line's and a new item's, the last of each (dotMarker).
+      let pitch = {};
+      for (let line of lines) {
         if (prev) {
           const dy = prev.y - line.y;
           const near = dy <= Math.max(prev.h, line.h) * 1.9;
           const sameSize = Math.abs(prev.h - line.h) < 1;
-          const plain = !line.text.includes('\t') && !prev.text.includes('\t') && !MARKER.test(line.text.split(' ')[0]);
           const listed = MARKER.test(prev.text.split(' ')[0]) || prev.listed;
+          // A "·" leading a line under a '–' item is the next level's marker (the default Bullet style's
+          // third, '•', '–', '·'): read as a list item's, so the item is not joined to its parent's text
+          // ("B · C") nor split at its gap. A "·" a wrapped line starts with stays the user's separator,
+          // joined to its item (dotMarker, R5-IMP-01b).
+          if (near && listed && /^·\s/.test(line.text) && dotMarker(line, prev, open, dy, pitch, right)) {
+            line = { ...line, text: `• ${line.text.slice(1).trim()}`, textX: line.dotX ?? line.textX, dot: true };
+          }
+          const plain = !line.text.includes('\t') && !prev.text.includes('\t') && !MARKER.test(line.text.split(' ')[0]);
           const continues = near && sameSize && plain && (
             (listed && Math.abs(line.x - prev.textX) < 2 && line.x > prev.x + 2)
             || (!listed && Math.abs(line.x - prev.x) < 2 && prev.right >= right - 60 && !/[.!?:]$/.test(prev.text)
               && !(column && (!/\s/.test(prev.text) || fitsAfter(prev, line, right) || LABELLED.test(line.text))))
           );
+          if (listed && near && sameSize) {
+            if (continues) pitch = { ...pitch, wrap: dy };
+            else if (MARKER.test(line.text.split(' ')[0])) pitch = { ...pitch, item: dy };
+          }
           if (continues) {
             const last = out[out.length - 1];
             last.text = last.text.endsWith('-') && /^\p{Ll}/u.test(line.text) ? last.text + line.text : `${last.text} ${line.text}`;
             if (line.links) last.links = [...(last.links || []), ...line.links];
+            // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
+            if (listed && open.length) open[open.length - 1].right = line.right;
             prev = { ...line, x: prev.x, textX: prev.textX, listed };
             continue;
           }
-          if (!near) out.push({ text: '' });
+          if (!near) { out.push({ text: '' }); open = []; pitch = {}; }
+        }
+        // A list item's depth: its marker right of an open item's (by more than 2 pt) and at or past
+        // where that item's text starts is nested under it — the app prints a nested item's marker where
+        // its parent's text starts — and its depth is how many are still open to its left. Markers at one
+        // x are siblings, and so are centred items (Section Options → Alignment), whose x moves with their
+        // length, not their level, and right-aligned ones (the editor's Align right): the line and the
+        // item above both end at the block's right edge. A line of text at the list's left edge ends it. Before, every PDF list
+        // item was level 0: an award's or a certificate's sub-point came in as an entry of its own.
+        let depth = 0;
+        const mid = (line.x + line.right) / 2;
+        if (MARKER.test(line.text.split(' ')[0])) {
+          while (open.length && open[open.length - 1].x >= line.x - 2) open.pop();
+          const top = open[open.length - 1];
+          // Right-aligned items end at the block's right edge, each (its last line) as the one above.
+          const rightSet = top && Math.abs(line.right - right) <= 2 && Math.abs(top.right - right) <= 2;
+          if (top && (line.x < top.textX - 2 || Math.abs(mid - top.mid) < 1.5 || rightSet)) open.pop();
+          depth = open.length;
+          open.push({ x: line.x, textX: line.textX, mid, right: line.right, glyph: line.dot ? '·' : line.text.split(' ')[0] });
+        } else {
+          // Text is a further paragraph of the open item whose text it starts under; left of that, it
+          // closes the item (an entry's next title line, a paragraph at the margin).
+          while (open.length && line.x < open[open.length - 1].textX - 2) open.pop();
         }
         // One field alone at the right margin, well right of the left edge: set at the end of its line
         // on purpose, as a location right-aligned under a date is (Title "Inline" and "Side by side",
         // Executive's jobs). Hinted, so the parser reads it as the entry's location (importText.js).
         const atEnd = !line.text.includes('\t') && Math.abs(line.right - right) <= 2 && line.x - left > (right - left) / 2;
         const links = line.links ? { links: line.links } : {};
-        out.push(atEnd ? { text: line.text, hint: 'end', ...links } : { text: line.text, ...links });
+        out.push({ text: line.text, ...(atEnd ? { hint: 'end' } : {}), ...(depth ? { depth } : {}), ...links });
         prev = { ...line, listed: false };
       }
       out.push({ text: '' });
+      if (b === blocks.length - 1) carried = column ? [] : open;
     }
   }
   return out;

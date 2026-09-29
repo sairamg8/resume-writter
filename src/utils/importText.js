@@ -86,6 +86,7 @@ function toLines(input) {
       const atEnd = (text) => lines[0].includes('\t') && /^\t[^\t]*\S[^\t]*$/.test(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
       return lines.map((text, i) => ({
         text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
+        ...(l.fields && !i ? { fields: l.fields } : {}),
       }));
     }
     return [{ text: clean(l), depth: indentOf(l) }];
@@ -131,30 +132,114 @@ export function linkText(label, href) {
  * to it, for the rich text to link (richText).
  */
 function unmark(text, as, found) {
-  return String(text)
+  // A link's address is no text to format: kept aside, as written, from the passes over the rest (R5-IMP-01).
+  const kept = [];
+  const keep = (address) => `\uE001${kept.push(address) - 1}\uE001`;
+  return inlineOff(String(text)
     .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
     // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
     .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
-      if (as === 'label') return label || href;
+      if (as === 'label') return label || keep(href);
       const [t, to] = linkParts(label, href);
       if (found) {
         const url = to || linkParts('', href)[0];
-        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: unescape(t), url });
+        // Its label as the line prints it, its marks off too: "[**Bold**](url)" is found as "Bold" (R4-SW-I-04).
+        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: inlineOff(t), url });
       }
       if (!to) return t;
       if (Array.isArray(as)) { as.push(to); return t; }
-      return `${t} (${to})`;
+      return `${t} (${keep(to)})`;
     })
-    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1')
-    .replace(/`([^`]*)`/g, '$1')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1')
-    .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
-    .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
-    .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
+    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, (_, address) => keep(address)), kept)
     .replace(/ {2,}$/, '');
 }
-const unescape = (t) => String(t).replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
+/**
+ * An address written out in Markdown text: "https://x.com/_a_/b", "www.…", "mailto:…". It ends before
+ * a closing emphasis mark or an escape ("**https://x.com**", the export's "https://x.com/\\_a\\_"), and
+ * never takes in an address already kept aside (unmark), nor a backtick: an address in a code span
+ * ("`https://x.com/a`") leaves both its backticks to the code pass, which takes them off (R5-IMP-01).
+ */
+const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"`\uE001]*[^\s<>()"`.,;:!?'’*_\\\uE001]/gi;
+/**
+ * Inline code, bold and italics, and backslash escapes off a run of Markdown text. An address in it is
+ * kept as written: "https://x.com/_foo_" is not "https://x.com/foo" (R5-IMP-01). `kept`: addresses
+ * unmark set aside, each written in the text as its index between two U+E001s (a private-use
+ * character, never a résumé's), put back here.
+ */
+const inlineOff = (text, kept = []) => String(text)
+  .replace(MD_ADDRESS, (address) => `\uE001${kept.push(address.replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')) - 1}\uE001`)
+  .replace(/`([^`]*)`/g, '$1')
+  .replace(/\*\*(.+?)\*\*/g, '$1')
+  .replace(/__(.+?)__/g, '$1')
+  .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
+  .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
+  .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
+  .replace(/\uE001(\d+)\uE001/g, (_, i) => kept[i]);
+
+/**
+ * A "|" the Markdown escapes ("\|", the export's for one the user typed: "R&D \| Ops"), held as this
+ * character through the parse, so no split at " | " parts it from its field (R4-SW-I-05); resumeFromText
+ * gives it back as "|". A Unicode noncharacter: no file holds one. An unescaped " | " (the one the export
+ * writes between a meta line's parts) still parts fields; a text or PDF file has no escapes.
+ */
+const TYPED_PIPE = '\uFDD0';
+const typed = (text) => text.replace(/\\([\\|])/g, (m, c) => (c === '|' ? TYPED_PIPE : m));
+/** `value` with each TYPED_PIPE back as "|": a string, or every string in an array or object. */
+function untyped(value) {
+  if (typeof value === 'string') return value.replaceAll(TYPED_PIPE, '|');
+  if (Array.isArray(value)) return value.map(untyped);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, untyped(v)]));
+  return value;
+}
+
+/**
+ * An entry heading's fields where its marks show where each ends: the export's "**primary** — *secondary*",
+ * or either alone. A dash typed inside one is the user's, not a field's edge: "**Deloitte - Consulting**
+ * — *Engineer*" is the company "Deloitte - Consulting" and the role "Engineer", where splitting its
+ * text at every " - " and " — " made three fields (R5-IMP-02). `{ fields }` only for a heading whose
+ * fields hold such a dash, so every other line reads as before; a heading without these marks (a
+ * hand-written "### Acme — Engineer", a text or PDF file's) is split at its dashes as it always was.
+ */
+function headingFields(raw, hint) {
+  if (hint !== 'entry' && hint !== 'role') return {};
+  const m = /^\*\*((?:\\.|[^*\\])+)\*\*(?:\s+—\s+\*((?:\\.|[^*\\])+)\*)?$|^\*((?:\\.|[^*\\])+)\*$/.exec(raw.trim());
+  if (!m) return {};
+  const fields = [m[1], m[2], m[3]].filter(Boolean).map((f) => unmark(f, []).trim());
+  if (!fields.every(Boolean) || !fields.some((f) => fieldsOf(f).length > 1)) return {};
+  // "**Acme - Engineer** — *Leeds, UK*": a place in the italic run is a hand-written heading's, company
+  // and role bold and the place after them; the export's italic run is a role, a school or an issuer,
+  // never a place. Split at its dashes as before, or the place became the company (IMP-REV-1).
+  if (m[2] && PLACE.test(fields[1]) && !ROLE.test(fields[1]) && !SCHOOL.test(fields[1])) return {};
+  // One bold or italic run alone is the export's only when the file shows it (markdownLines): people
+  // and AI tools also bold a whole "### **Software Engineer — Google**", role and company in one.
+  return { fields, ...(m[2] ? {} : { lone: true }) };
+}
+
+/**
+ * A heading wholly bold or italic (headingFields' `lone`) is one field only where the file is the
+ * export's: a grouped employer (a role heading under it with no date between, as roleEntries reads a
+ * group) or a role under one, or a file whose entry headings use the export's "**primary** —
+ * *secondary*" — its single-field entries print one run. Else it is hand-written, "### **Software
+ * Engineer — Google**" with its date under it (and maybe a "#### Highlights"), and split at its dashes
+ * as it always was.
+ */
+function loneFields(out) {
+  const exported = out.some((l) => (l.hint === 'entry' || l.hint === 'role') && /^\*\*(?:\\.|[^*\\])+\*\*\s+—\s+\*(?:\\.|[^*\\])+\*$/.test(l.raw));
+  let group = false; // whether the entry heading in force is a grouped employer
+  out.forEach((l, k) => {
+    if (l.hint === 'entry') {
+      let next = k + 1;
+      while (next < out.length && !out[next].hint) next += 1;
+      group = out[next]?.hint === 'role' && !out.slice(k + 1, next).some(dated);
+    } else if (l.hint && l.hint !== 'role') group = false;
+    if (l.lone) {
+      if (!exported && !group) delete l.fields;
+      delete l.lone;
+    }
+    delete l.raw;
+  });
+  return out;
+}
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
@@ -179,9 +264,9 @@ export function markdownLines(md) {
       // An entry's linked title keeps its address, as a field of its own at the line's end: a project's
       // URL; a linked company's address (in its description), never its role (R4-IMP-02).
       const links = [];
-      const text = unmark(h[2], hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
+      const text = unmark(typed(h[2]), hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
       if (hint === 'name') named = true;
-      out.push({ text, hint });
+      out.push({ text, hint, raw: typed(h[2]).trim(), ...headingFields(typed(h[2]), hint) });
       continue;
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
@@ -189,10 +274,10 @@ export function markdownLines(md) {
     // Its links' labels and addresses, for the rich text (R4-LO-05).
     const links = [];
     const withLinks = (l) => (links.length ? { ...l, links } : l);
-    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2], undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
-    out.push(withLinks({ text: unmark(line.replace(/^\s*>\s?/, ''), undefined, links) }));
+    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(typed(item[2]), undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
+    out.push(withLinks({ text: unmark(typed(line.replace(/^\s*>\s?/, '')), undefined, links) }));
   }
-  return out;
+  return loneFields(out);
 }
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -244,7 +329,23 @@ const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/]{7,}$/;
 /** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
-const PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+/** A part of a place with a "|" typed in it: "London" in "London | Remote". */
+const PLACE_PART = /^[\p{L}][\p{L}.,'’\- ]{0,60}$/u;
+/**
+ * A place: ONE_PLACE, or places with a "|" the user typed between them (TYPED_PIPE, the Markdown's
+ * "\|"): "Boston, MA | Remote", "London | Remote", one of them a place and the rest words. Before, the
+ * typed "|" failed the test, so the export's own contact line gave no location — the whole of it went
+ * to "Additional Information" — and a grouped employer's or an undated entry's place its description.
+ */
+const PLACE = {
+  test(text) {
+    const s = String(text);
+    if (ONE_PLACE.test(s)) return true;
+    const parts = s.split(TYPED_PIPE).map((p) => p.trim());
+    return parts.length > 1 && parts.every((p) => PLACE_PART.test(p)) && parts.some((p) => ONE_PLACE.test(p));
+  },
+};
 /** A contact's name before it: "Email: …", "LinkedIn - …". */
 const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address|based in)\s*[:\-–]\s*/i;
 
@@ -283,6 +384,8 @@ const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
 const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean);
+/** Whether a line holds a date: an entry heading with one under it is no grouped employer (loneFields, roleEntries). */
+const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate(p));
 /** A header piece's fields: "Company — Role", "Company - Role". */
 const fieldsOf = (text) => text.split(/\s+[—–]\s+|\s+-\s+/).map((s) => s.trim()).filter(Boolean);
 
@@ -320,18 +423,12 @@ const BARE_LINK = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"]*[^\s<>()".,;:!?'’
 /**
  * A line's text as rich text, its links as links (R4-LO-05): each link the file gave (`links`, its
  * label and address — a Markdown [label](url), a Word hyperlink, a PDF's link box), read as linkText
- * wrote it, "label (url)", or as its label alone where that is its address; else an address written
- * out ("see https://…"). Before, all of it was plain text.
+ * wrote it, "label (url)", or as its label alone where that is its address; then every address written
+ * out ("see https://…") outside them. Before, all of it was plain text.
  */
 function linkedHtml(text, links = []) {
   const anchor = (url, label) => `<a href="${escapeHtml(url).replace(/"/g, '&quot;')}">${label}</a>`;
   let html = escapeHtml(text);
-  if (!links.length) {
-    return html.replace(BARE_LINK, (shown) => {
-      const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-      return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
-    });
-  }
   let from = 0;
   for (const { label, url } of links) {
     const shown = escapeHtml(label);
@@ -347,7 +444,12 @@ function linkedHtml(text, links = []) {
     html = html.slice(0, at) + a + html.slice(at + length);
     from = at + a.length;
   }
-  return html;
+  // Then every address written out, outside the links placed: on a line with a link of the file's
+  // too, "… and https://b.com" is a link as it is on a line with none (R4-SW-I-03).
+  return html.split(/(<a\b[^>]*>.*?<\/a>)/).map((part, i) => (i % 2 ? part : part.replace(BARE_LINK, (shown) => {
+    const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
+  }))).join('');
 }
 
 /**
@@ -424,6 +526,8 @@ function readHeader(type, header) {
   let above = 0;
   header.forEach((line, k) => {
     const ps = pieces(line.text);
+    // A Markdown heading's own fields (headingFields), kept whole where its text is still theirs.
+    const whole = line.fields?.join(' — ');
     // The text fields found on the lines above this one: a title line came before it when there are any.
     const titled = out.parts.length;
     let at = -1;
@@ -446,7 +550,7 @@ function readHeader(type, header) {
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
       // field of study and place a line each, and that place is read by the education's own rule (entryOf).
       if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
-      out.parts.push(...fieldsOf(p));
+      out.parts.push(...(p === whole ? line.fields : fieldsOf(p)));
     });
     const gave = out.parts.slice(titled);
     above = (JOB.has(type) ? inlinePair(gave) : gave).length;
@@ -786,10 +890,10 @@ function roleEntries(type, lines) {
       let next = k + 1;
       while (next < lines.length && !lines[next].hint) next += 1;
       const under = lines.slice(k + 1, next);
-      const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
+      const hasDate = under.some(dated);
       // Not an entry whose title holds a role and a company ("### Acme — Engineer" over "#### Highlights").
-      const whole = fieldsOf(l.text).length > 1 || pieces(l.text).length > 1;
-      if (JOB.has(type) && lines[next]?.hint === 'role' && !dated && !whole) {
+      const whole = (l.fields || fieldsOf(l.text)).length > 1 || pieces(l.text).length > 1;
+      if (JOB.has(type) && lines[next]?.hint === 'role' && !hasDate && !whole) {
         const placeAt = under.findIndex((x) => PLACE.test(x.text));
         group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
         k = next - 1;
@@ -1004,13 +1108,14 @@ export function resumeFromText(input) {
 
   return {
     id: newId('resume'),
-    name: personal.name ? `${personal.name} Resume` : 'Imported Resume',
+    // The name the Dashboard shows, with a "|" the user typed in theirs back (untyped), as in personal.
+    name: personal.name ? `${untyped(personal.name)} Resume` : 'Imported Resume',
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now: no migration applies
     template: 'classic',
     settings: getStarterSettings('classic'),
-    personal,
-    sections,
+    personal: untyped(personal),
+    sections: untyped(sections),
     coverLetter: { ...BASE_COVER_LETTER },
   };
 }
