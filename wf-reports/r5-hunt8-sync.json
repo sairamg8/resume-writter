@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt8-sync",
+  "branch": "claude/wf-r5-hunt8-sync",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS",
+      "title": "Deleting a job the cloud refused (an imported id with '/'), or clearing all jobs while one is in the list, stops the job sync",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["6135579a29cb66b6ae838f80f4807e5e561caf72"],
+      "tests": ["tests/unit/r5-hunt8-sync-delete-refused-id.unit.mjs"],
+      "summary": "Now: a flush drops the deletion of any id Firestore cannot name (collectionSyncIo.cloudCanName: empty, containing '/', '.', '..' or '__…__'), since such an item was never in the cloud. Deleting the held 'linkedin/3912345' job ends 'synced' and the next change goes out as usual. 'Clear all jobs' with that job in the list sends every other deletion to the account. The list's order is still sent, so the stale id leaves the cloud's order too.",
+      "ci": [36634023674]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "One dispatch (run 36634023674): failfirst passed, meaning the new test fails with the src change reverted and passes with it restored. The same run's tests job passed: every tests/unit/*sync*.unit.mjs, recovery-leaves-with-account, firestore-rules, knowledge-docs, and the pdf sync/sign-out/clear-all-undo/71-startup-chunks tests. Base is origin/claude/r4-green at 420f4875 (the task named 9519ef6b; r4-green had moved on). docs/knowledge/05-state-auth-sync.md is updated. The fix filters by id validity rather than by 'no version in the sync record': a job written by an in-flight flush has no version until that flush's noteVersions runs, so a version check could drop a real deletion."
+}
