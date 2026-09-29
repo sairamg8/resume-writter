@@ -1,5 +1,10 @@
 # Session Handoff — Resume Here
 
+**DEPLOY PR RULE (2026-09-29 22:15 UTC):** r4-green moves while the hunt runs, so a PR from r4-green can carry untested
+code. To deploy, pin a branch at the exact green-gated commit (`git push origin <sha>:refs/heads/claude/deploy-<tag>-<sha7>`)
+and open the PR from that branch. **PR #4** (`claude/deploy-r7-186c06a`, round 7's 21 fixes, full gate 36636419610 GREEN) is
+the one for the owner to merge. PR #3 (from r4-green) is marked rolling, don't merge.
+
 **2026-09-29 22:35 UTC — ROUND 8 (first six areas) merged: `ca009d49`.** dash and jobs dry; pdf 1 (Skills Stacked/Tags/Bars category
 orphan), boards 2 (+1 review fix), sync 1 (+1 review fix: nested job id), editor 1 (bare 'https://' prints an empty contact). Website-freeze
 lead: the editor finder found no loop or pathological regex (still unreproduced). Seen-list 140. **Full gate on `ca009d49` dispatched
