@@ -24,3 +24,19 @@ test('"Role — Company, Inc." keeps its company', () => {
   assert.deepEqual([job.company, job.role], ['Acme, Inc.', 'Senior Engineer']);
   assert.equal(job.location, '');
 });
+
+// Review: a title with no role word before a company with a legal ending ("Barista — Blue Bottle, LLC")
+// read the company as the job's location after the place rule (and as its role before it): "LLC",
+// "Inc." after a comma is no place, and names the company.
+test('"Title — Company, LLC" with no role word keeps its company', () => {
+  const [a] = jobs('Barista — Blue Bottle, LLC\nOakland store\nJan 2020 - Present');
+  assert.deepEqual([a.company, a.role, a.location], ['Blue Bottle, LLC', 'Barista', '']);
+  assert.equal(a.description, '<p>Oakland store</p>');
+  const [b] = jobs('Member of Technical Staff — Acme, Inc.\nPlatform\nJan 2020 - Present');
+  assert.deepEqual([b.company, b.role, b.location], ['Acme, Inc.', 'Member of Technical Staff', '']);
+});
+
+test('a state code like a legal ending is still a place', () => {
+  const [job] = jobs('Google — Denver, CO\nSoftware Engineer\nJan 2020 - Present');
+  assert.deepEqual([job.company, job.role, job.location], ['Google', 'Software Engineer', 'Denver, CO']);
+});

@@ -412,6 +412,11 @@ const DEGREE_NAME = /\b(?:bachelor|master|doctor|associate)'?s?\s+of\s+(?:fine\s
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
+/**
+ * A company's legal ending after its comma: "Acme, Inc.", "Blue Bottle, LLC" — a name, not a place.
+ * No two-letter code a place shares: "Denver, CO", "Adelaide, SA", "Calgary, AB", "Reno, NV".
+ */
+const CORPORATE = /,\s*(?:inc|incorporated|llc|l\.l\.c|llp|pllc|ltd|limited|corp|corporation|gmbh|plc|pty\.?\s+ltd|pte\.?\s+ltd|s\.a|s\.r\.l|sarl|b\.v|n\.v)\.?$/i;
 /** Types whose header has a second line under the title in the PDF and Word: the role, the degree. */
 const SECOND_LINE = new Set(['experience', 'education', 'volunteering', 'custom']);
 /** Types whose entries carry a location. */
@@ -584,6 +589,9 @@ function roleFirst(a, b, roleLeads) {
   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
   if (ROLE.test(a) && !ROLE.test(b)) return [a, b];
   if (ROLE.test(b) && !ROLE.test(a)) return [b, a];
+  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
+  if (CORPORATE.test(b) && !CORPORATE.test(a)) return [a, b];
+  if (CORPORATE.test(a) && !CORPORATE.test(b)) return [b, a];
   return roleLeads ? [a, b] : [b, a];
 }
 
@@ -596,9 +604,10 @@ function entryOf(type, header, body, aside = () => {}) {
   const h = readHeader(type, header);
   // "Google — Mountain View, CA" over "Software Engineer": a place after the company on its line is
   // the job's location, not its role; the title under it is. Only when neither names a role and a
-  // field is left for the role: "Senior Engineer — Acme, Inc." keeps its company.
+  // field is left for the role: "Senior Engineer — Acme, Inc." keeps its company, and so does a title
+  // with no role word ("Barista — Blue Bottle, LLC"): a company's legal ending is no place.
   if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 3
-    && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
+    && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1]) && !CORPORATE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
