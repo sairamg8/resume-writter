@@ -242,6 +242,24 @@ function loneFields(out) {
   return out;
 }
 
+/** A link reference definition: "[li]: https://…", "[li]: <https://…> "Title"". */
+const REF_DEF = /^\s{0,3}\[((?:\\.|[^\]\\])+)\]:\s*(?:<([^>\s]*)>|(\S+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/;
+/** A reference's label as CommonMark matches it: case and runs of spaces aside. */
+const refKey = (label) => label.trim().replace(/\s+/g, ' ').toLowerCase();
+/**
+ * `line` with each reference link it defines ("[text][id]", "[text][]", "[text]") as an inline one
+ * ("[text](url)"), for unmark to read; a reference with no definition stays as written.
+ */
+const refsOff = (line, defs) => line
+  .replace(/(!?)\[((?:\\.|[^\]\\])*)\]\s?\[((?:\\.|[^\]\\])*)\]/g, (m, bang, text, id) => {
+    const url = defs.get(refKey(id || text));
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  })
+  .replace(/(!?)(?<![\]\\])\[((?:\\.|[^\]\\])+)\](?![([:])/g, (m, bang, text) => {
+    const url = defs.get(refKey(text));
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  });
+
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
  * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off. A
@@ -252,7 +270,23 @@ export function markdownLines(md) {
   const out = [];
   let named = false;
   let entryLevel = 0; // the level of the entry heading in force, 0 under none
-  for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
+  const all = String(md ?? '').split(/\r\n|\r|\n/);
+  // Reference-style links ("[LinkedIn][li]" with a "[li]: https://…" line, CommonMark's): each read as
+  // the inline link it stands for, its definition line no text of the résumé. Before, the contacts lost
+  // their addresses, the labels went to "Additional Information" and the definitions into the last
+  // entry's description (R5-HUNT8-MD-REFERENCE-LINKS).
+  const defs = new Map();
+  const lines = all.filter((line) => {
+    const d = REF_DEF.exec(line);
+    const url = d && (d[2] !== undefined ? d[2] : d[3]);
+    // Only an address: "[Note]: see below" is the résumé's own text.
+    if (!d || !/^(?:[a-z][a-z\d+.-]*:|www\.|[/#]|\S*\.[a-z]{2,}(?:[/?#]|$))/i.test(url)) return true;
+    const key = refKey(d[1]);
+    if (!defs.has(key)) defs.set(key, url);
+    return false;
+  });
+  for (const raw of lines) {
+    const line = defs.size ? refsOff(raw, defs) : raw;
     // A closing run of #s only after a space: "## C#" is the heading "C#" (R4-LO-07).
     const h = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h) {

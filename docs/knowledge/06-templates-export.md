@@ -115,7 +115,8 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
   a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
   `##` headings, `###` entries, a deeper heading under an entry a grouped role; a link as "label
-  (address)"; an indented list item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
+  (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
+  item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
