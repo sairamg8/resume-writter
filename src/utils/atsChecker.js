@@ -309,8 +309,12 @@ export function extractResumeCorpus(resume) {
   const template = templateId(resume.template);
   for (const s of sections) {
     if (s.visible === false) continue;
+    // A section with no shown entry prints no heading anywhere (sectionPrints, R2-057), so its title
+    // is not on the page either (R5-HUNT1-ats-corpus-empty-section-title).
+    const items = shownItems(s, template);
+    if (!items.length) continue;
     if (s.title) parts.push(s.title);
-    for (const item of shownItems(s, template)) {
+    for (const item of items) {
       if (s.type === 'skills') {
         const { category, skills } = skillGroup(item);
         parts.push(category, skills);
