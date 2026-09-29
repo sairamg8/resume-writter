@@ -347,10 +347,13 @@ export function useAppStore() {
    * One Design setting. Layout → "Single · ATS-safe" is the one key that moves the ground the header
    * prints on — the Sidebar's dark column becomes Classic's white page — so it re-checks the picked
    * Name and Job title colours exactly as a template switch does (TUI-1). Without it a white name
-   * picked for the column printed white on the white page, at 1.0:1.
+   * picked for the column printed white on the white page, at 1.0:1. `next` may be a function of the
+   * setting as the résumé holds it, as a state setter's is; `id`: the résumé to write to, when not the
+   * open one (patchActive).
    */
-  function updateSetting(key, value) {
+  function updateSetting(key, next, id) {
     patchActive(r => {
+      const value = typeof next === 'function' ? next(r.settings?.[key]) : next;
       if (r.settings?.[key] === value) return r;
       const settings = { ...r.settings, [key]: value };
       return {
@@ -359,7 +362,7 @@ export function useAppStore() {
           ? withHeaderColorsBack(settings, r.template, { below: HEADER_READS })
           : settings,
       };
-    });
+    }, id);
   }
 
   /**
