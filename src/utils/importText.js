@@ -592,6 +592,11 @@ function roleFirst(a, b, roleLeads) {
  */
 function entryOf(type, header, body, aside = () => {}) {
   const h = readHeader(type, header);
+  // "Google — Mountain View, CA" over "Software Engineer": a place after the company on its line is
+  // the job's location, not its role; the title under it is. Only when neither names a role and a
+  // field is left for the role: "Senior Engineer — Acme, Inc." keeps its company.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 3
+    && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
