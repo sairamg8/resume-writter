@@ -1,0 +1,69 @@
+{
+  "cluster": "r5-hunt5-boards",
+  "branch": "claude/wf-r5-hunt5-boards",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-SCRUM-BACKLOG-FOOT-DROP-ABOVE-CLOSED-SPRINT-ROWS",
+      "title": "A row dropped at the foot of a Scrum backlog lands above its reopened closed-sprint issues, or does not move",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["b1d5cec561c1437cf0e8f920cdc197ec361ce5a0"],
+      "tests": ["tests/unit/r5-hunt5-scrum-backlog-foot-drop.unit.mjs"],
+      "summary": "Now: on a Scrum board, a move to the backlog (sprintId null) is ranked against every issue that is in no open sprint, which is what the Backlog section shows. This covers a drop on the section's foot and the row menu's 'Backlog'. A row dropped at the foot now lands below a reopened issue that is still in a closed sprint. When the row is already the last issue with no sprint, the drop now moves it; before, the drop did nothing. The change is in moveIssue (src/utils/boardIssueOps.js). Kanban's rankIn:{} path and drops into a sprint work as before. Review: the Board page never sends sprintId, so this path is used only by the Backlog. The rank set now also includes done issues and epics, which the section hides. That is harmless: the row still lands after the last visible row, and the no-op check compares a superset order. Both of these were already true with the old sprintId-null set.",
+      "failfirst_run": "36565845518 (green: 3 tests fail with the diff reversed, pass with it; log read by reviewer)"
+    },
+    {
+      "id": "R5-HUNT5-SWIMLANES-EMPTY-BOARD-SAYS-FILTERS",
+      "title": "A board grouped into swimlanes with no issues says 'No issues match these filters.' and offers no column to create in",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["ca204f735d99355ddbb2e3d27d036dad93136022"],
+      "tests": ["tests/pdf/106-r5-hunt5-swimlanes-empty-board.test.mjs"],
+      "summary": "Now: a board grouped by Epic, Priority or Issue type that has no lanes and no filter set shows its normal columns, each with '+ Create issue'. It no longer says 'No issues match these filters.'. When a filter hides every issue, the swimlane view still shows that message with 'Clear filters'. The change is in src/pages/Board.jsx. Review: the drag handlers read the droppable (column or lane:column) and never groupBy, so drops work the same in the fallback view. The same fallback also covers a Scrum board whose active sprint is empty, and a board whose only issues are long-done and hidden. Both showed the wrong filter message before.",
+      "failfirst_run": "36565845518 (green: 3 tests fail with the diff reversed, pass with it; log read by reviewer)"
+    },
+    {
+      "id": "R5-HUNT5-RESTORE-ISSUE-DANGLING-EPIC",
+      "title": "Undo of an issue deleted before its epic brings it back linked to an epic no longer on the board",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["002b6033de357d27bf6c3bab022753579cfa5bc6", "3bb93b127a8c4dadca7e64f6ee093352a16521c4"],
+      "tests": ["tests/unit/r5-hunt5-restore-issue-dangling-epic.unit.mjs"],
+      "summary": "Now: restoreIssue re-checks epicId with epicIdFor. An issue brought back by Undo after its epic was deleted, or changed to another type, comes back with no epic and appears under 'Issues without an epic'. An epic that is still on the board is kept. Reviewer addition (3bb93b1): restoring an epic no longer relinks a former child that was changed to Epic between the delete and the Undo. Before, that child came back as an epic inside the restored epic. updateIssue never allows that state, and no picker can undo it. Former children that are not epics are still relinked.",
+      "failfirst_run": "36565845518 (green, 002b603); 36566872842 (green: the new test fails with 3bb93b1 reversed, # fail 1, and passes with it)"
+    },
+    {
+      "id": "R5-HUNT5-LIST-TITLE-SORT-CODEPOINT",
+      "title": "The project List sorts Summary by code point: 'Éclair' after 'Zoo', 'Step 10' before 'Step 2'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["3d634f97c1360fd1b8c5e9f26835a195b6b94754"],
+      "tests": ["tests/unit/r5-hunt5-list-title-sort.unit.mjs"],
+      "summary": "Now: sortIssues sorts titles with Intl.Collator (sensitivity 'base', numeric), the same way the job list sorts text. Ascending order is apple, Éclair, Step 2, Step 10, Zoo. Titles that differ only by case or accents stay in rank order, in both directions. The change is in src/utils/boardQuery.js. Review: no other board view sorts titles. Stored titles are always strings; the old code already called toLowerCase on them, so the collator adds no new failure case.",
+      "failfirst_run": "36565845518 (green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "row": "R5-HUNT5-RESTORE-ISSUE-DANGLING-EPIC",
+            "issue": "The fix re-checked the restored issue's own epicId, but not the relink of a restored epic's children. A child changed to Epic between the epic's delete and its Undo got epicId set to the restored epic: an epic inside an epic, counted in its progress, with no picker to clear it.",
+            "resolution": "fixed in 3bb93b127a8c4dadca7e64f6ee093352a16521c4: children are relinked only when they are not epics, and only when the restored issue is an epic. A new test in the same file failed without the fix and passed with it (fail-first run 36566872842: # fail 1 without, pass with)."
+          }
+        ]
+      }
+    ],
+    "issues": [
+      "R5-HUNT5-RESTORE-ISSUE-DANGLING-EPIC: the children relink could put an epic inside the restored epic. Fixed by the reviewer in 3bb93b1."
+    ],
+    "fixedByReviewer": ["3bb93b127a8c4dadca7e64f6ee093352a16521c4"]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "The reviewer read all 4 fail-first logs in run 36565845518: foot-drop '# fail 3', swimlanes '# fail 3', and the dangling-epic and title-sort jobs green. One review issue was found and fixed by the reviewer (3bb93b1). It was checked with fail-first plus the named board suites in run 36566872842 (green): the 4 new tests, board-ops, board-store, board-query, 105-r5-hunt4-epic-retype-undo and knowledge-docs, plus lint. Playwright and Cypress were not run: the changes are in board logic and the Board page, and the fake-dom page test covers them. The full gate runs when the batch merges."
+}
