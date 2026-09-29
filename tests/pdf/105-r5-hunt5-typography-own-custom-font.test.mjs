@@ -88,4 +88,31 @@ describe('Font Family marks the résumé\'s custom font missing from this browse
       assert.ok(!view.container.textContent.includes('Your custom fonts'));
     });
   });
+
+  // Review: the panel reads customFont as the PDF does (pdfFontLoader.js: String(customFont || '').trim()).
+  it('a blank stored value shows no chip and marks the picker font the PDF prints in', async () => {
+    await withPanel([], { font: 'inter', customFont: '   ' }, async (view) => {
+      assert.ok(!view.container.textContent.includes('Your custom fonts'), 'no blank chip');
+      const inter = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Inter');
+      assert.match(inter.getAttribute('class') || '', /border-blue-400/, 'Inter, which the PDF prints, is selected');
+    });
+  });
+
+  it('a padded stored name is the saved chip, selected, not a second one', async () => {
+    await withPanel(['Nunito'], { font: '', customFont: ' Nunito ' }, async (view, writes) => {
+      const chips = chipButtons(view, 'Nunito');
+      assert.equal(chips.length, 1, 'one Nunito chip');
+      assert.ok(isSelected(chips[0]), 'and it is selected');
+      const remove = [...elements(view.container)].find((el) => el.getAttribute('aria-label') === 'Remove Nunito');
+      view.act(() => reactProps(remove).onClick());
+      assert.deepEqual(writes, [['customFont', '']], 'removing it clears the résumé\'s font');
+    });
+  });
+
+  it('a non-string stored value (a hand-edited backup) does not break the panel', async () => {
+    await withPanel([], { font: '', customFont: { name: 'Nunito' } }, async (view) => {
+      assert.ok(view.container.textContent.includes('Font Family'), 'the panel still renders');
+      assert.equal(chipButtons(view, '[object Object]').length, 1, 'the name the PDF tries, as a chip');
+    });
+  });
 });
