@@ -1,7 +1,8 @@
 // R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX: a character XML 1.0 forbids (a C0 control but tab, LF and
 // CR — a U+000B from Word's Shift+Enter, a U+0002 a PDF viewer copies for a hyphen) went into the
 // .docx's XML as it was, as docx escapes only & " ' < >, and Word would not open the file. The Word
-// export now leaves those characters out, of the résumé's and of the letter's.
+// export now leaves those characters out, of the résumé's and of the letter's; a line tab or form
+// feed, which parts two words, prints as a space (R5-HUNT8-WORD-XMLSAFE-GLUES-WORDS).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume, experience, readDocx, unzipEntry } from './harness.mjs';
@@ -36,8 +37,8 @@ describe('Word export: characters XML forbids', () => {
     const buffer = await bytesOf(await renderResumeDocx(r()));
     assertWellFormedParts(buffer);
     const doc = readDocx(buffer);
-    assert.ok(doc.texts.some((t) => t.includes('AcmeCorp')), doc.texts.join(' | '));
-    assert.ok(doc.texts.some((t) => t.includes('Linebreak')), doc.texts.join(' | '));
+    assert.ok(doc.texts.some((t) => t.includes('Acme Corp')), doc.texts.join(' | '));
+    assert.ok(doc.texts.some((t) => t.includes('Line break')), doc.texts.join(' | '));
     assert.ok(doc.texts.some((t) => t.includes('Built things')), doc.texts.join(' | '));
   });
 
