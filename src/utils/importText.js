@@ -161,7 +161,7 @@ function unmark(text, as, found) {
  */
 const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"`\uE001]*[^\s<>()"`.,;:!?'’*_\\\uE001]/gi;
 /**
- * Inline code, bold and italics, and backslash escapes off a run of Markdown text. An address in it is
+ * Inline code, bold, italics and strike-through, and backslash escapes off a run of Markdown text. An address in it is
  * kept as written: "https://x.com/_foo_" is not "https://x.com/foo" (R5-IMP-01). `kept`: addresses
  * unmark set aside, each written in the text as its index between two U+E001s (a private-use
  * character, never a résumé's), put back here.
@@ -171,6 +171,7 @@ const inlineOff = (text, kept = []) => String(text)
   .replace(/`([^`]*)`/g, '$1')
   .replace(/\*\*(.+?)\*\*/g, '$1')
   .replace(/__(.+?)__/g, '$1')
+  .replace(/~~(?!\s)(.+?)(?<![\s\\])~~/g, '$1') // GFM strike-through, the export's for struck text
   .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
   .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
   .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
