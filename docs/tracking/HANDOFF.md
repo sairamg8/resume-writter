@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 18:45 UTC — master `b4c62440` full gate (run 36611528115) RED, only on 4 stale starter tests:** 91-starter-modal,
+93-picker-new-resume, 96-dashboard and playwright picker.spec still expected the sample person ("Sarah Chen") on a role
+starter; the app now gives the user's own details (owner's idea, intended). The tests are updated to the intended behaviour
+in `edf0c8fd` (no weakening: each asserts the user's own name/contacts and not the sample). Targeted run + full gate on
+r4-green dispatched ~18:42 UTC. When green: PR claude/r4-green → master for the owner (tests only; the site doesn't change).
+
 **ROUND 7 RUN (coordinator session_01RkixKL4TAb2mizpdwJHkot, from 18:31 UTC 2026-09-29; lock on claude/coordinator-lock):**
 - The previous coordinator (session_01FdiasXrhydMkPZHWFFd4KS) died mid round 7 and left orphaned branches:
   `claude/wf-r5-hunt7-pdf` (1 fix + report, unreviewed), `-boards` (2 fixes), `-editor` (2 fixes), `-jobs` (3 fixes), no reports.
