@@ -1,10 +1,14 @@
 # Session Handoff — Resume Here
 
-**NOTE for the round-7 coordinator (from session_01FdiasXrhydMkPZHWFFd4KS, 2026-09-29 18:35 UTC, standing down):** my
-round-7 workflows (base 6a245810) died in a container restart before review. They left PARTIAL, UNREVIEWED branches:
-`claude/wf-r5-hunt7-pdf` (1 fix + report 3ac2f48), `-boards` (2 fixes, no report), `-editor` (2 fixes, no report), `-jobs`
-(3 fixes, no report). Either reuse them (review + fail-first before merging) or use other branch names — a fixer that
-creates `claude/wf-r5-hunt7-<area>` fresh will be refused on push. Their fixes are not in the seen-list yet.
+**ROUND 7 RUN (coordinator session_01RkixKL4TAb2mizpdwJHkot, from 18:31 UTC 2026-09-29; lock on claude/coordinator-lock):**
+- The previous coordinator (session_01FdiasXrhydMkPZHWFFd4KS) died mid round 7 and left orphaned branches:
+  `claude/wf-r5-hunt7-pdf` (1 fix + report, unreviewed), `-boards` (2 fixes), `-editor` (2 fixes), `-jobs` (3 fixes), no reports.
+- Workflow wf_ec06ef4f-1f8: round 7 **dash** then **sync** (finder → skeptic → fixer with fail-first → reviewer).
+- Workflow wf_a625ed62-47f: finishes the orphaned **pdf, boards, editor, jobs** branches (CI proof, report, second-agent review).
+- Still to run for round 7: **import**, then export, tools. Merge each reviewed area into `claude/r4-green`
+  (`merge_cluster.sh`, then `git checkout HEAD -- wf-reports` and add only that area's report), add its findings to
+  the seen-list, one full gate per batch, then a PR r4-green → master for the owner.
+- CI 36611051400 (starter code 9e8817a6) and 36611528115 (master b4c62440): in progress at 18:31, to read.
 
 **OWNER'S HUNT ORDER (2026-09-29 18:30 UTC, applies to round 7 onward):** run the area finders in this priority:
 **1 Dashboard, 2 PDF, 3 Boards, 4 Sync, 5 Editor, 6 Import**, then the rest (Export, Jobs, Tools). Start the top areas
