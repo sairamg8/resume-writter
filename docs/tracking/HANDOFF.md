@@ -18,7 +18,9 @@ beside it once a field is edited, as the optimizer does) merged into `claude/r4-
 `wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged (27bfddf; full gate 36522551523 GREEN). R2-148 merged (0222f6b: the sync's flush takes a deleted résumé's public copy
 down; the takedown skips a résumé that is back; known limit: an unrecorded stray public/ copy can't be listed). Hunt round 1 DONE and merged (5a471df): 13 bugs confirmed + fixed with fail-first
 and review in 8 areas (reports wf-reports/r5-hunt1-<area>.json; boards: 1 finding refuted). High: a late document import took over the
-open editor (editor); another tab's sign-out could delete every cloud résumé (sync). Running: hunt round 2 (same 9 areas; the round-1
+open editor (editor); another tab's sign-out could delete every cloud résumé (sync). Full gate 36528111587 on 988681d RED: 2 import tests (96-dashboard 'Import (R2-167)', 99-cover-letters
+'letter's JSON… opens on its letter') — likely the hunt1-editor importResume change; being fixed on claude/r4-green-gatefix1.
+Deploy line stays at a89bdd2. Running: hunt round 2 (same 9 areas; the round-1
 titles are passed as 'seen'). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
 (1097 kB, fail-first 36520176676; margin ~3 kB). Full gate 36520793636 on ea59ac6 GREEN (owner deploy line above). The 20 dsg-layout rows
