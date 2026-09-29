@@ -4,7 +4,7 @@
 import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
-import { CONTACT_FIELDS } from './contacts.js';
+import { CONTACT_FIELDS, contactHref } from './contacts.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
 import { DEFAULT_DATE_FORMAT, dateFormatOf } from './dates.js';
@@ -30,14 +30,27 @@ function shown(item) {
 }
 
 /**
+ * The address a shown website, LinkedIn or GitHub links to, as the schema's `url` fields take it: its
+ * Link URL override when set and one the PDF follows (contactHref), else the value as typed. The file
+ * wrote the typed value ('jdoe', 'My site'), a dead link in every other JSON Resume tool, while the
+ * PDF, Word, Markdown and ATS text link to the override (R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE).
+ */
+function linkUrl(p, key) {
+  const override = String(p[`${key}Url`] || '').trim();
+  return override && contactHref(key, p) ? override : p[key];
+}
+
+/**
  * The display label and link URL of the website, LinkedIn and GitHub, the ones set on a shown
  * field, under the app's names beside the schema's (R2-006): the contact line prints the label and
- * links to the URL, and a round trip printed the bare address instead.
+ * links to the URL, and a round trip printed the bare address instead. The value as typed rides as
+ * `${key}Text` when the schema's url holds the Link URL instead (linkUrl), for the import to put back.
  */
 function linkFields(p, shows) {
   const out = {};
   for (const { key } of CONTACT_FIELDS.filter((f) => f.link && shows(f.key))) {
     for (const k of [`${key}Label`, `${key}Url`]) if (isText(p[k]) && String(p[k]).trim()) out[k] = String(p[k]);
+    if (linkUrl(p, key) !== p[key]) out[`${key}Text`] = String(p[key]);
   }
   return out;
 }
@@ -55,8 +68,8 @@ export function cpwtResumeToJsonResume(resume) {
   const NET_LI = ['Linked', 'In'].join('');
   const NET_GH = ['Git', 'Hub'].join('');
   const profiles = [];
-  if (shows('linkedin')) profiles.push({ network: NET_LI, url: p.linkedin });
-  if (shows('github')) profiles.push({ network: NET_GH, url: p.github });
+  if (shows('linkedin')) profiles.push({ network: NET_LI, url: linkUrl(p, 'linkedin') });
+  if (shows('github')) profiles.push({ network: NET_GH, url: linkUrl(p, 'github') });
   const summary = flattened(field('summary'));
 
   const lists = Object.fromEntries(Object.values(SECTION_KEYS).map(({ key }) => [key, []]));
@@ -103,7 +116,7 @@ export function cpwtResumeToJsonResume(resume) {
       image: field('photo'),
       email: field('email'),
       phone: field('phone'),
-      url: field('website'),
+      url: shows('website') ? linkUrl(p, 'website') : '',
       // Plain text for every tool; the summary itself beside it when that alone would print
       // differently — a list, a second paragraph, bold (R2-006: a list came back as lines).
       summary: summary.text,
