@@ -22,10 +22,11 @@ const noAnswer = () => Object.assign(new Error('The cloud did not answer in time
 
 /**
  * createQueue(ctx) — ctx: the engine's { s (its state), io, store, report, held, timers,
- * flushDelay, cloudTimeout, now, isDemo, failed(e, user, what), settled(), scheduleRetry(ms) }.
+ * flushDelay, cloudTimeout, now, isDemo, failed(e, user, what), settled(), scheduleRetry(ms),
+ * unpublishGone(user, ids) — takes down these deleted résumés' public copies }.
  * Returns { dropQueue(), resumesChanged(resumes), withDeadline(promise) }.
  */
-export function createQueue({ s, io, store, report, held, timers, flushDelay, cloudTimeout, now, isDemo, failed, settled, scheduleRetry }) {
+export function createQueue({ s, io, store, report, held, timers, flushDelay, cloudTimeout, now, isDemo, failed, settled, scheduleRetry, unpublishGone }) {
   function dropQueue() {
     timers.clear(s.timer);
     s.timer = null;
@@ -123,6 +124,10 @@ export function createQueue({ s, io, store, report, held, timers, flushDelay, cl
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt, user.uid);
+      // Their public copies go with them (R2-148), now — not at the next first sync, which may be a
+      // reload away: a résumé removed without the Dashboard's Delete (another tab's, an older
+      // build's), or whose own unpublish failed, stayed public meanwhile.
+      if (sent && current()) unpublishGone(user, [...sent.hardDeletes, ...sent.flags]);
       // What the cloud holds now, kept for the next visit's first sync (cloudSyncLineage.js).
       if (sent) {
         store.noteCloudVersions(user.uid, {

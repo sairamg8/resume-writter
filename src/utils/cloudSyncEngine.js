@@ -32,7 +32,8 @@ import { stashOf } from '@/utils/cloudSyncLeave';
  *             list, as the first sync read them
  *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
  *   publicLinks  publicIo(...) (publicLink.js), or null: after each first sync the public copies of
- *             the résumés the account deleted are taken down (unpublishDeleted, R2-148)
+ *             the résumés the account deleted are taken down (unpublishDeleted, R2-148), and after
+ *             each flush those of the résumés it deleted
  *   online    () → whether the browser says it is online; hidden () → whether the tab is hidden
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
  *             cloudTimeout (ms) readCloudCopies waits for an answer; retryDelay (ms) before a
@@ -68,8 +69,8 @@ export function createCloudSync({
   };
   // The résumés the cloud will not take, left out of every batch until they change (V2VF1S-0).
   const held = createHeld({ io, report, online, resumes: () => store.getState().resumes });
-  // The write queue, sending the store's changes after a pause (hoisted: failed, settled, scheduleRetry).
-  const queue = createQueue({ s, io, store, report, held, timers, flushDelay, cloudTimeout, now, isDemo, failed, settled, scheduleRetry });
+  // The write queue, sending the store's changes after a pause (hoisted: failed, settled, scheduleRetry, unpublishGone).
+  const queue = createQueue({ s, io, store, report, held, timers, flushDelay, cloudTimeout, now, isDemo, failed, settled, scheduleRetry, unpublishGone });
   const { dropQueue } = queue;
 
   function setAccount(account) {
@@ -128,6 +129,16 @@ export function createCloudSync({
     }
 
     initialSync(user, s.gen);
+  }
+
+  /**
+   * The public copies of these résumés, deleted in `user`'s account, are taken down (R2-148): a
+   * résumé deleted anywhere takes its copy with it. Not waited for; one that fails is tried again at
+   * the next first sync, as the id stays on the account's deletion list.
+   */
+  function unpublishGone(user, ids) {
+    if (!publicLinks || !ids.length) return;
+    publicLinks.unpublishDeleted(user.uid, ids).catch((e) => log('Taking down the public link of a deleted résumé failed:', e));
   }
 
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
@@ -263,13 +274,10 @@ export function createCloudSync({
       // A résumé deleted anywhere takes its public copy with it (R2-148): the Dashboard's Delete does
       // only on the device that deletes, signed in and online; one deleted elsewhere, offline or signed
       // out stayed public with no panel left to unpublish it. None the merged list holds (R2-029: an
-      // edit the deletion never saw is back). Not waited for; the next first sync tries again.
+      // edit the deletion never saw is back). The flushes take down what they delete (cloudSyncQueue.js).
       const loaded = new Set(plan.merged.map((r) => r.id));
-      const gone = [...new Set([...listed, ...plan.listAdd, ...plan.flags, ...cloud.docs.filter((r) => r.deleted).map((r) => r.id)])]
-        .filter((id) => !loaded.has(id));
-      if (publicLinks && gone.length) {
-        publicLinks.unpublishDeleted(user.uid, gone).catch((e) => log('Taking down the public link of a deleted résumé failed:', e));
-      }
+      unpublishGone(user, [...new Set([...listed, ...plan.listAdd, ...plan.flags, ...cloud.docs.filter((r) => r.deleted).map((r) => r.id)])]
+        .filter((id) => !loaded.has(id)));
     } catch (e) {
       if (gen !== s.gen) return;
       failed(e, user, 'sync');
