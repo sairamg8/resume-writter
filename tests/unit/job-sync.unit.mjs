@@ -142,7 +142,8 @@ test('R2-145: a deleted job leaves the cloud, is listed as deleted, and a device
   await d1.timers.fire();
   assert.equal(cloud.doc(jobPath('A', 'j1')), undefined);
   assert.deepEqual(cloud.doc(metaPath('A')).deleted, ['j1']);
-  assert.deepEqual(Object.keys(d1.meta.read().versions), ['j2']);
+  // j1 is kept as deleted (version 0) until the next first sync, so an Undo after it survives (R5-HUNT2-COLLECTION-UNDO-DELETE-LOST-IF-RESTORE-FLUSH-MISSES).
+  assert.deepEqual(d1.meta.read().versions, { j1: 0, j2: 1 });
 
   const from = cloud.commits.length;
   await d2.refresh();
