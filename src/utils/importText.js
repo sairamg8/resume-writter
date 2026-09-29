@@ -803,6 +803,10 @@ function entriesOf(type, lines, aside) {
       const [company, place = ''] = pieces(b.text);
       found = { n: 1, company, place };
     }
+    // "Google — Mountain View, CA" over "Software Engineer ⇥ Jan 2020 – Present": the employer and its
+    // place on one line, split at its dash — neither names a role, and the second is a place.
+    const [co, at, ...more] = found ? fieldsOf(found.company) : [];
+    if (found && !found.place && at && !more.length && !ROLE.test(co) && !ROLE.test(at) && PLACE.test(at) && !CORPORATE.test(at)) found = { ...found, company: co, place: at };
     // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
     if (!found || fieldsOf(found.company).length !== 1) return null;
     body.splice(body.length - found.n);

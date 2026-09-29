@@ -40,3 +40,19 @@ test('a state code like a legal ending is still a place', () => {
   const [job] = jobs('Google — Denver, CO\nSoftware Engineer\nJan 2020 - Present');
   assert.deepEqual([job.company, job.role, job.location], ['Google', 'Software Engineer', 'Denver, CO']);
 });
+
+// Review: the same title line over a role line that carries the dates ("Software Engineer ⇥ Jan 2020 –
+// Present") read the employer line as two fields of a job title, so it went to the description and the
+// job had no company. It is the employer and its place now, over each of its roles.
+test('"Company — City, ST" over "Role ⇥ dates": the company and its place', () => {
+  const [a, b] = jobs('Google — Mountain View, CA\nSenior Engineer\tJan 2021 - Present\n• x\nEngineer\tJan 2019 - Dec 2020\n• y\n\nMeta — Menlo Park, CA\nIntern\tJun 2018 - Aug 2018\n• z');
+  assert.deepEqual([a.company, a.role, a.location, a.description], ['Google', 'Senior Engineer', 'Mountain View, CA', '<ul><li>x</li></ul>']);
+  assert.deepEqual([b.company, b.role, b.location], ['Google', 'Engineer', 'Mountain View, CA']);
+  const [, , c] = jobs('Google — Mountain View, CA\nSenior Engineer\tJan 2021 - Present\n• x\nEngineer\tJan 2019 - Dec 2020\n• y\n\nMeta — Menlo Park, CA\nIntern\tJun 2018 - Aug 2018\n• z');
+  assert.deepEqual([c.company, c.role, c.location], ['Meta', 'Intern', 'Menlo Park, CA']);
+});
+
+test('"Acme - Engineer ⇥ dates" is still one job title', () => {
+  const [job] = jobs('Acme - Engineer\tJan 2020 - Present\n• x');
+  assert.deepEqual([job.company, job.role, job.location], ['Acme', 'Engineer', '']);
+});
