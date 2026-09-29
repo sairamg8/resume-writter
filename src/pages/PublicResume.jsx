@@ -18,10 +18,17 @@ const renderResumePreview = (resume) =>
  */
 export function PublicResume({ io = firebasePublicIo }) {
   const { shareId } = useParams();
-  // { state: 'loading' | 'ready' | 'missing' | 'error' | 'off', resume }
-  const [view, setView] = useState(() => ({ state: io ? 'loading' : 'off', resume: null }));
-  const [exporting, setExporting] = useState(false);
+  // { shareId, state: 'ready' | 'missing' | 'error', resume }: what the read of `shareId` found. The page
+  // stays mounted when the tab moves to another link (an address-bar edit, Back/Forward), and it showed
+  // the previous link's résumé, and saved its PDF, until the new read settled
+  // (R5-HUNT7-PUBLIC-PAGE-STALE-ON-LINK-CHANGE). A read, a download under way and its error each belong
+  // to the link they were for, and show only there.
+  const [read, setRead] = useState(null);
+  const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
+  // { state: 'loading' | 'ready' | 'missing' | 'error' | 'off', resume }
+  const view = !io ? { state: 'off', resume: null }
+    : read?.shareId === shareId ? read : { state: 'loading', resume: null };
 
   useEffect(() => {
     if (!io) return undefined;
@@ -29,28 +36,32 @@ export function PublicResume({ io = firebasePublicIo }) {
     io.readPublic(shareId)
       .then((copy) => {
         if (!live) return;
-        setView(copy ? { state: 'ready', resume: normalizeResume({ ...copy, id: `public_${shareId}`, name: copy.personal?.name || 'Résumé' }) } : { state: 'missing', resume: null });
+        setRead(copy ? { shareId, state: 'ready', resume: normalizeResume({ ...copy, id: `public_${shareId}`, name: copy.personal?.name || 'Résumé' }) } : { shareId, state: 'missing', resume: null });
       })
       .catch((e) => {
         console.error('Reading the public résumé failed:', e);
-        if (live) setView({ state: 'error', resume: null });
+        if (live) setRead({ shareId, state: 'error', resume: null });
       });
     return () => { live = false; };
   }, [io, shareId]);
 
   async function download() {
-    setExporting(true);
+    const id = shareId;
+    const { resume } = view;
+    setExporting(id);
     setExportError(null);
     try {
       const { exportResumePdf } = await import('@/utils/pdfBuild');
-      await exportResumePdf(view.resume, `${buildExportFilename(view.resume)}.pdf`);
+      await exportResumePdf(resume, `${buildExportFilename(resume)}.pdf`);
     } catch (e) {
       console.error('PDF download failed:', e);
-      setExportError('The PDF could not be made. Check your connection and try again.');
+      setExportError({ shareId: id, message: 'The PDF could not be made. Check your connection and try again.' });
     } finally {
-      setExporting(false);
+      setExporting((was) => (was === id ? null : was));
     }
   }
+  const busy = exporting === shareId;
+  const failed = exportError?.shareId === shareId ? exportError.message : null;
 
   const message = {
     loading: 'Loading the résumé…',
@@ -64,11 +75,11 @@ export function PublicResume({ io = firebasePublicIo }) {
       {view.state === 'ready' ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-            <button onClick={download} disabled={exporting} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
-              <Download size={12} aria-hidden="true" /> {exporting ? 'Preparing PDF…' : 'Download PDF'}
+            <button onClick={download} disabled={busy} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+              <Download size={12} aria-hidden="true" /> {busy ? 'Preparing PDF…' : 'Download PDF'}
             </button>
           </div>
-          {exportError && <p role="alert" className="mb-3 text-xs text-red-700">{exportError}</p>}
+          {failed && <p role="alert" className="mb-3 text-xs text-red-700">{failed}</p>}
           <PdfPreview title="Résumé" textId="resume-preview" input={view.resume} render={renderResumePreview} zoom={1} active />
         </>
       ) : (

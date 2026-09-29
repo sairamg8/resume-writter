@@ -262,7 +262,9 @@ sections and data version, each of its type (`isPublishedCopy`, R2-148-d) —
 the only world-readable documents. The copy is not live: the panel says when the résumé changed since
 (its data version aside) and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
 (`src/pages/PublicResume.jsx`): the editor's PDF preview of the copy and a Download PDF button; a
-missing copy says it is not published. Tests: `tests/pdf/99-public-link.test.mjs` (over
+missing copy says it is not published. The page stays mounted when the tab moves to another link
+(only the hash changes): it says it is loading until the new link's copy is read, and a download or
+its error shows only on the link it was for (R5-HUNT7). Tests: `tests/pdf/99-public-link.test.mjs` (over
 `tests/pdf/fake-firestore.mjs`, which applies the same rule), `tests/unit/firestore-rules.unit.mjs`.
 
 ### What is NOT synced
