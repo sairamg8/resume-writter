@@ -1,0 +1,43 @@
+{
+  "cluster": "r5-hunt1-pdf",
+  "branch": "claude/wf-r5-hunt1-pdf",
+  "base": "a89bdd239fc446369f4022218388e4f8e83c4daa",
+  "rows": [
+    {
+      "id": "R5-HUNT1-ONE-PAGE-FIT-LOOSENS-TIGHT-SPACING-AND-SHRINKS-TEXT",
+      "title": "1-Page Fit loosens spacing the résumé already has tighter than its ladder, then shrinks the text",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "f40a7fcfc4beb20f592f047363206f49ff4c40b4"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt1-fit-keeps-tight-spacing.test.mjs"
+      ],
+      "summary": "Now: every 1-Page Fit step takes, for marginV, marginH, sectionGap, itemGap and lineHeightValue, the smaller of the step's own value and the value the résumé has stored (fitLadder in src/utils/pageFit.js). This includes the preset that is written at once: DesignPanel now takes it from fitLadder(settings)[0] instead of ONE_PAGE_FIT. A step that comes out the same as the one before it is dropped. Before, the preset (10/14 mm, gaps 10/5 px, line height 1.35) was written over whatever the résumé had, and the tightest step stopped at 5/8 mm, 4/2 px and 1.2, while the panel goes down to 0 mm, 0 px and 1.0. A résumé that fitted on one page at hand-tuned tighter spacing was loosened onto a second page, and the ladder then brought the text down ('Fits on 1 page — text size 11 → 10 pt'). Now such a résumé keeps its spacing and its text size, and no notice is shown. The text size comes down only when the user's own spacing, tightened as far as the ladder goes, still runs past one page. A résumé that is tighter on only some keys keeps those keys and still takes the ladder's values for the others. Unset keys print at the renderer's defaults (1.5, 14/18 mm, 16/8 px), which are all looser than the preset, so their behaviour is unchanged. Stored values are already numbers clamped to the panel's ranges (withSpacingNumbers at load), so old data cannot put a non-number or an out-of-range value into a step. Not done (by design): an 'already fits, change nothing' check before the preset, because R2-149 writes the preset at once and 91-page-fit, 86-line-height-shown, 69-word-spacing, Cypress 30-starters-and-design and the Playwright pdf-typography-spacing spec rely on that. Also not done: Undo for 1-Page Fit.",
+      "failfirst_run": "36524176271 (failfirst job 109263456364: '# fail 3' with the diff reversed, all pass with it restored; the named-tests job ran 11 files, 63 of 63 pass; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": [],
+    "checked": [
+      "The per-key minimum keeps the ladder monotonic. Each step is no looser than the one before it, so 'the first step that fits is the loosest that fits' still holds. 91-page-fit's fit.step and ladder index checks use the same deduplicated fitLadder.",
+      "Unset keys: the render defaults (lineHeightValue 1.5, margins 14/18 mm, gaps 16/8 px in templateSettings and pageMargins; Sidebar's sectionGap ?? 12) are all at least the preset, so a résumé with nothing stored behaves as before.",
+      "Old or imported data: normalizeResume -> withSpacingNumbers turns a numeric string into a number and clamps it to LINE_HEIGHT 1–3, MARGIN_MM and 0–60 / 0–40 px, so Math.min never sees a string, NaN or a 0 line height (which `|| 1.5` in PdfSections* would print as 1.5).",
+      "Templates that bring their own spacing (Academic 1.35/12/6, Compact 1.3/10/5/12/10) store it as settings, so the minimum applies to them. Compact's 10/5 gaps and 12/10 margins stay as they are where they are tighter than a step.",
+      "DesignPanel's stop check: printedKey(measured) is built from the same preset that is written, so writing values equal to the stored ones does not count as an edit. fitSizeNotice is unchanged.",
+      "Other callers: nothing else imports ONE_PAGE_FIT or fitLadder. The Word exporter reads the same stored keys, so it follows whatever the fit leaves."
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug, fixed in f40a7fc. The fail-first CI log (run 36524176271) shows 3 of 3 new tests failing without the fix and passing with it. The 11 related test files (91-page-fit, 102-r4-dux-15/25, 86-line-height-shown, 69-word-spacing, 91-design-presets/resets, 97-pdf-worker, 31-contact-fields, knowledge-docs) pass 63 of 63. The adversarial review found no problem, so the reviewer made no commits. Suite, build, Playwright and Cypress were not run on this branch; they belong to the batch's full gate."
+}
