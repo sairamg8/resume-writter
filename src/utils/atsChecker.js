@@ -424,11 +424,16 @@ const FIGURE = new RegExp(`^#?\\d+(?:\\.\\d+)*${FIGURE_UNIT}(?:-\\d+(?:\\.\\d+)*
  * by "+" (R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS). A bare host is read by the endings no tech
  * name has (".com", ".org", ".gov", ".edu"): "Node.js", "socket.io" and "ASP.NET" stay. A "#" after a
  * letter ("C#", "F#") is no hashtag; "#1" is a rank (FIGURE).
+ * A host is read whole with a country ending ("seek.com.au", "acme.gov.in") and so is one under
+ * ".co." or ".ac." ("acme.co.uk", "ox.ac.uk"): blanked only to its ".com", "seek.com.au" left the
+ * keyword ".au", found after any word ending in "au" and written into Skills by "+", and "acme.co.uk"
+ * stayed a keyword. "B.Com" and "M.Com" are degrees (Bachelor, Master of Commerce) and stay keywords
+ * (review of R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS).
  */
 const POSTING_ADDRESS = new RegExp([
   String.raw`(?:(?<![\p{L}\p{N}])[a-z][a-z0-9+.-]*:\/\/|(?<![\p{L}\p{N}.])www\.)\S*`,
   String.raw`\S*[^\s@]@[^\s@]\S*`,
-  String.raw`(?<![\p{L}\p{M}\p{N}_.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.(?:com|org|gov|edu)(?![\p{L}\p{N}])(?:\/\S*)?`,
+  String.raw`(?<![\p{L}\p{M}\p{N}_.-])(?![bm]\.com(?![\p{L}\p{N}-]|\.[\p{L}\p{N}]))[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.(?:(?:com|org|gov|edu)(?:\.\p{L}{2})?|(?:co|ac)\.\p{L}{2})(?![\p{L}\p{N}])(?:\/\S*)?`,
   String.raw`(?<![\p{L}\p{M}\p{N}_+#])#\p{L}[\p{L}\p{M}\p{N}_-]*`,
 ].join('|'), 'giu');
 /** The text with its addresses and hashtags blanked at their length, so the phrase finds keep their indexes. */
