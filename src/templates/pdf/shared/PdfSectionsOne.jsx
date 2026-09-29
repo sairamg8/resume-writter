@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
@@ -27,7 +28,7 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   const titleStyle = s.titleStyle || 'stacked';
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
@@ -281,7 +282,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
   const titleStyle = s.titleStyle || 'stacked';
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';

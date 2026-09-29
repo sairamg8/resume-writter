@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText, safeHref } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf, entryTextWidth } from './PdfSections';
 import { CentredLine, EmployerHeader, EndRow, centredLines, endField, endRowLines, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
@@ -135,7 +136,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const textColor  = settings?.textColor || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
   const shade      = shadesOf(settings); // body and date follow Design → Text colour
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
@@ -282,7 +283,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const textColor  = settings?.textColor || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
   const shade      = shadesOf(settings); // body and date follow Design → Text colour
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
