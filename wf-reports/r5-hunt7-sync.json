@@ -1,0 +1,32 @@
+{
+  "cluster": "r5-hunt7-sync",
+  "branch": "claude/wf-r5-hunt7-sync",
+  "base": "a5b1814a",
+  "rows": [
+    {
+      "id": "R5-HUNT7-SYNC-LEAVE-META-WRITE-DROPPED",
+      "title": "If storage is too full to set aside a job or project list's unsent changes at sign-out, those changes are lost, and the next sign-in deletes that account's whole list from the cloud",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["8b69ce8db187c4f11d01c25dff44b3543dde8d2c"],
+      "tests": ["tests/unit/r5-hunt7-sync-leave-meta-full.unit.mjs"],
+      "summary": "Now: localMeta.write (and memoryMeta.write) returns whether storage took the record. collectionSyncEngine's leave() no longer clears the list while the record holding what was set aside is unsaved. If the first write is refused, the list is cleared first to free room and the record is written again. If that is refused too, the list is put back unchanged, still the account's, and leave() returns false. That account's next sign-in then sends the unsent items and deletes nothing. When another account signs in, its first sync throws a retryable 'resource-exhausted' error (status 'error', retried with backoff). It does not merge the last account's list into the new one. The three tests pin the exact repro (the record cannot grow: list kept, and the next sign-in sends j3 and keeps j1/j2), the room-freeing path (a total quota: the list leaves and j3 is set aside, then sent at the next sign-in) and another account signing in meanwhile.",
+      "product_call": "When storage cannot hold the set-aside record even after the list is cleared, the signed-out browser keeps showing the account's jobs or projects until the next sign-in. Deleting them would lose data. Another account's first sync waits, retried, until there is room. The owner may want a notice explaining this.",
+      "remaining": null
+    },
+    {
+      "id": "R5-HUNT7-SYNC-COLLECTION-BATCH-REFUSED-HOLDS-ALL",
+      "title": "One job the cloud refuses (an imported id with '/', or a nested array) stops the job sync, and every other job in that batch is held back and called 'too large'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["d659e62ef6553c9745e645369f0f277ab5e640b1"],
+      "tests": ["tests/unit/r5-hunt7-sync-batch-refused-apart.unit.mjs"],
+      "summary": "Now: when a first sync's batch of several items is refused for good (failureKind 'stop'), the new commitApart in collectionSyncEngine.js takes it apart, as the résumés' commitHolding does. The deletions and order are sent on their own, then each item on its own. Only an item refused on its own is held; the rest reach the account. When a flush is refused for good with several items, or when its read is refused before anything is sent (an id Firestore cannot name makes fs.doc throw), the batch is no longer held whole or stopped. It is handed to a first sync after the flush pause, and that sync takes it apart. A single refused item is still held as before, and a batch with nothing to hold still stops until the next change. The tests cover an id containing '/' in an imported batch of 20, a nested array in a flush, and a first sign-in on a new browser. In each, only the bad job is held, and the other jobs are written.",
+      "product_call": "SyncHeldNotice still says a held item is 'too large ... make it smaller' even when the cloud refused it for another reason, such as an id containing '/'. Changing that copy needs a reason carried with each held item. Also, mergeImport/completeJob keep an imported id containing '/', so that job stays on this device only until it is re-created.",
+      "remaining": "Possible follow-ups, not fixed here: give a reason-specific wording in SyncHeldNotice for a refused, not oversized, item, and have import (jobMerge.js/completeJob) replace ids Firestore cannot use as a document id."
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI on d659e62e: failfirst run 36614636156 succeeded. Both pairs, 8b69ce8d with the leave-meta-full test and d659e62e with the batch-refused-apart test, failed without their src changes and passed with them, and lint passed. Tests run 36614645842 succeeded: the 2 new files plus the 19 existing tests exercising collectionSyncEngine/Meta/Plan/Io and the collection stores (board-sync, collection-sync-order, collection-sync-status, firestore-rules, job-sync*, r5-hunt6-*, recovery-leaves-with-account, board-store-sync, job-store-resync, pdf 100/102/95, r5hunt6-signout-*). A docs commit updates docs/knowledge/05-state-auth-sync.md. No accessibility issues were touched."
+}
