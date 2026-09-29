@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CheckSquare, Copy, Link2, ListPlus, MoreHorizontal, Trash2, X } from 'lucide-react';
-import { useBoardStore } from '@/hooks/useBoardStore';
+import { boardsNow, useBoardStore } from '@/hooks/useBoardStore';
 import { Button, Dialog, IconButton, InlineEdit, Menu, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -106,6 +106,12 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
   const epic = issue.epicId ? issueById(board, issue.epicId) : null;
   const column = statusColumn(board, issue);
   const update = (patch) => store.updateIssue(board.id, issue.id, patch);
+  // The checklist as stored now: an Undo on a deleted item can be clicked after this view (or the
+  // checklist that did the delete) has gone, and must not write back the list it last saw.
+  const checklistNow = () => {
+    const b = boardsNow().find((x) => x.id === board.id);
+    return b ? issueById(b, issue.id)?.checklist : undefined;
+  };
   const link = () => `${window.location.origin}${window.location.pathname}#/boards/${encodeURIComponent(board.id)}?issue=${encodeURIComponent(key)}`;
 
   async function remove() {
@@ -198,7 +204,7 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
             <Description value={issue.description} onSave={(description) => update({ description })} />
           </section>
           {(issue.checklist.length > 0 || checklistOpen) && (
-            <IssueChecklist key={checklistOpen ? 'open' : 'closed'} items={issue.checklist} onChange={(checklist) => update({ checklist })} autoFocus={checklistOpen} />
+            <IssueChecklist key={checklistOpen ? 'open' : 'closed'} items={issue.checklist} onChange={(checklist) => update({ checklist })} readNow={checklistNow} autoFocus={checklistOpen} />
           )}
           {issue.type === 'epic' && (
             <ChildIssues board={board} epic={issue} onOpen={onOpenIssue} onAdd={() => workspace?.openCreate({ boardId: board.id, epicId: issue.id })} />

@@ -7,13 +7,15 @@ import { useRemoveWithUndo } from '@/hooks/useRemoveWithUndo';
 /**
  * An issue's checklist, as the issue view shows it: a progress bar ("2 of 5 done"), each item
  * with its tick, its text (click to rename) and a delete (with Undo); a field to add the next one (Enter adds
- * and stays, Escape leaves). `items` in, `onChange(items)` out — the store records the change.
+ * and stays, Escape leaves). `items` in, `onChange(items)` out — the store records the change;
+ * `readNow()` gives the checklist as the store has it now, for an Undo clicked after this list
+ * unmounted (useRemoveWithUndo).
  */
-export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
+export function IssueChecklist({ items = [], onChange, readNow, autoFocus = false }) {
   const [text, setText] = useState('');
   const done = items.filter((c) => c.done).length;
   // A delete is one click, so it offers Undo, as an issue's own delete does (R4-DUX-20).
-  const remove = useRemoveWithUndo(items, onChange);
+  const remove = useRemoveWithUndo(items, onChange, readNow);
   const set = (id, patch) => onChange(items.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   function add() {
