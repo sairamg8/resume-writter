@@ -96,7 +96,59 @@ export function deleteColumn(board, columnId, targetColumnId = null, ctx = {}) {
   const ids = board.issues.filter((i) => i.columnId === columnId).map((i) => i.id);
   if (ids.length && (!columnById(board, targetColumnId) || targetColumnId === columnId)) return board;
   const moved = ids.length ? setStatus(board, ids, targetColumnId, ctx) : board;
-  return { ...moved, columns: moved.columns.filter((c) => c.id !== columnId) };
+  const columns = moved.columns.filter((c) => c.id !== columnId);
+  if (!moved.issues.some((i) => i.columnId === columnId)) return { ...moved, columns };
+  // A repeating issue the move resolved made its next occurrence in the first to-do column while this
+  // one was still on the board: when that is this column, the occurrence goes where it would be made
+  // without it (as spawnNext picks), not left in a column no longer there, hidden everywhere.
+  const home = columns.find((c) => c.category === 'todo') ?? columns.find((c) => !isDoneColumn(c)) ?? columns[0];
+  const now = nowOf(ctx);
+  const issues = moved.issues.map((i) => (i.columnId === columnId
+    ? { ...i, columnId: home.id, resolvedAt: isDoneColumn(home) ? (i.resolvedAt ?? now) : i.resolvedAt } : i));
+  return { ...moved, columns, issues };
+}
+
+/** Two stored values alike (the same object, or the same data read back from storage). */
+const alike = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Undo a column delete (R4-SW-B-01): `removed` is `{ columnId, before, after }`, the board just
+ * before and just after deleteColumn. The column comes back at its old place with its title,
+ * category and WIP limit; each issue the delete changed and nothing changed since goes back as it
+ * was (its column, resolvedAt, history), and a next occurrence the delete made for a repeating
+ * issue goes again while untouched and that issue is put back. An edit made after the delete is
+ * kept: an issue edited since stays as it is, with its next occurrence. Refused (the board as
+ * it is) when the column is not in `before`, or is on the board again.
+ */
+export function restoreColumn(board, removed) {
+  const { columnId, before, after } = removed ?? {};
+  const column = before && columnById(before, columnId);
+  if (!column || !after || columnById(board, columnId)) return board;
+  const was = new Map(before.issues.map((i) => [i.id, i]));
+  const made = new Map(after.issues.map((i) => [i.id, i]));
+  // An issue the delete changed and nothing has changed since: it goes back as it was.
+  const putBack = (i) => was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id)) && !alike(was.get(i.id), i);
+  const back = new Set(board.issues.filter(putBack).map((i) => i.id));
+  // The issue each next occurrence was made for by the delete.
+  const madeFor = new Map(after.issues
+    .filter((i) => i.recurrenceNextId && was.has(i.id) && was.get(i.id).recurrenceNextId !== i.recurrenceNextId)
+    .map((i) => [i.recurrenceNextId, i.id]));
+  // What the delete made (a repeat's next occurrence), still as it made it, goes, but only when the
+  // issue it came from is put back: one kept as edited since keeps its next occurrence.
+  const spawned = (i) => !was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id))
+    && (!madeFor.has(i.id) || back.has(madeFor.get(i.id)));
+  const issues = board.issues.filter((i) => !spawned(i));
+  const kept = new Set(issues.map((i) => i.id));
+  const restored = issues.map((i) => {
+    const old = was.get(i.id);
+    if (!back.has(i.id)) return i;
+    // A next occurrence that stays (edited since) is still this issue's: it is not made twice.
+    const nextId = i.recurrenceNextId && i.recurrenceNextId !== old.recurrenceNextId && kept.has(i.recurrenceNextId) ? i.recurrenceNextId : old.recurrenceNextId;
+    return nextId === old.recurrenceNextId ? old : { ...old, recurrenceNextId: nextId };
+  });
+  const columns = [...board.columns];
+  columns.splice(Math.max(0, Math.min(before.columns.indexOf(column), columns.length)), 0, column);
+  return { ...board, columns, issues: restored };
 }
 
 /** Move a column to `toIndex` (clamped). */
@@ -183,6 +235,8 @@ export function deleteComment(board, issueId, commentId, ctx = {}) {
 // ── Sprints (scrum) ───────────────────────────────────────────────────────────────────────
 
 const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
+/** A default sprint name, "<KEY> Sprint <n>" (case aside); its group 1 is n. */
+const sprintNamePattern = (board) => new RegExp(`^${String(board.key ?? '').replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
 
 /**
  * The name of the next unnamed sprint: "<KEY> Sprint <n>", n one past the sprint count and past the
@@ -190,10 +244,27 @@ const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
  * next one repeat the last one's name).
  */
 function nextSprintName(board) {
-  const key = String(board.key ?? '');
-  const pattern = new RegExp(`^${key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
+  const pattern = sprintNamePattern(board);
   const numbers = board.sprints.map((s) => Number(pattern.exec(s.name)?.[1] ?? 0));
-  return `${key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+  return `${String(board.key ?? '')} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+}
+
+/**
+ * `name`, or — when another sprint on the board has it, case aside — a free one (R5-BRD-02: a sprint
+ * made while a deleted one's Undo was on offer can take its default name): a default name becomes the
+ * next default name (nextSprintName), any other name gets " (2)", " (3)"… `had` is each other sprint's
+ * name when the sprint was deleted (id → name): one that had this name already then is no clash, since
+ * sprints may share a name (addSprint and a rename take any), so the sprint comes back as it was.
+ */
+function freeSprintName(board, name, had = null) {
+  const taken = (n) => board.sprints.some((s) => sameName(String(s.name ?? ''), n));
+  const clash = board.sprints.some((s) => sameName(String(s.name ?? ''), name)
+    && !(had && typeof had[s.id] === 'string' && sameName(had[s.id], name)));
+  if (!clash) return name;
+  if (sprintNamePattern(board).test(name)) return nextSprintName(board);
+  let n = 2;
+  while (taken(`${name} (${n})`)) n += 1;
+  return `${name} (${n})`;
 }
 
 /** Add a future sprint; unnamed, it is "<KEY> Sprint <n>" (nextSprintName). */
@@ -259,6 +330,37 @@ export function completeSprint(board, sprintId, { moveOpenTo = null } = {}, ctx 
     return { ...i, sprintId: to, updatedAt: now };
   });
   return { ...board, issues, sprints: mapById(board.sprints, sprintId, (x) => ({ ...x, state: 'closed', completedAt: now })) };
+}
+
+/**
+ * What deleteSprint takes away, for its Undo (restoreSprint): the sprint, its place, its issues' ids,
+ * and the other sprints' names then (id → name), so a name clash that was already there is kept.
+ */
+export function removedSprint(board, sprintId) {
+  const index = board.sprints.findIndex((s) => s.id === sprintId);
+  if (index === -1) return null;
+  const names = Object.fromEntries(board.sprints.filter((s) => s.id !== sprintId).map((s) => [s.id, String(s.name ?? '')]));
+  return { sprint: board.sprints[index], index, issueIds: board.issues.filter((i) => i.sprintId === sprintId).map((i) => i.id), names };
+}
+
+/**
+ * Put back what deleteSprint took (`removed` from removedSprint, R5-BRD-02): the sprint at its old
+ * place, as it was — or future, when it was active and another sprint was started since (a project
+ * never has two active) — and its issues that are still in the backlog; one moved elsewhere since
+ * stays where it is. A name another sprint took meanwhile is made free (freeSprintName); one a sprint
+ * already shared with it when it was deleted is kept.
+ */
+export function restoreSprint(board, removed, ctx = {}) {
+  if (!removed?.sprint || sprintById(board, removed.sprint.id)) return board;
+  const second = removed.sprint.state === 'active' && board.sprints.some((s) => s.state === 'active');
+  const name = freeSprintName(board, removed.sprint.name, removed.names);
+  const sprint = second || name !== removed.sprint.name ? { ...removed.sprint, name, ...(second ? { state: 'future' } : {}) } : removed.sprint;
+  const sprints = [...board.sprints];
+  sprints.splice(Math.max(0, Math.min(removed.index ?? sprints.length, sprints.length)), 0, sprint);
+  const ids = new Set(removed.issueIds || []);
+  const now = nowOf(ctx);
+  const issues = board.issues.map((i) => (ids.has(i.id) && (i.sprintId ?? null) === null ? { ...i, sprintId: sprint.id, updatedAt: now } : i));
+  return { ...board, sprints, issues };
 }
 
 /** Delete a sprint: its issues go to the backlog. */

@@ -157,8 +157,9 @@ export function Board() {
       });
       if (!ok) return;
     }
-    store.deleteColumn(board.id, list.id, target.id);
-    toast({ title: `Column “${list.title || 'Untitled'}” deleted` });
+    // Undo puts back what the delete changed, as a project's or an issue's delete does (R4-SW-B-01).
+    const removed = store.deleteColumn(board.id, list.id, target.id);
+    if (removed) toast({ title: `Column “${list.title || 'Untitled'}” deleted`, action: { label: 'Undo', onClick: () => store.restoreColumn(removed) } });
   }
 
   const columnMenu = (list, index) => {

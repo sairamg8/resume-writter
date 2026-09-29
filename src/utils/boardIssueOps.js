@@ -183,8 +183,11 @@ export function recategorized(board, columnId, done, { from, to }, ctx = {}) {
  * issues in that column and/or sprint) when beforeId is null; into an empty group it keeps its
  * rank. So a drop below a column's last card appends it (B-05), and every index of the column
  * can be reached. A column or sprint that does not exist (or a closed sprint) is not a target.
+ * `rankIn` is the group the rank is read off when it is not the target group: a Kanban backlog
+ * shows issues of every sprint in one list, so a row it takes out of a sprint (sprintId null)
+ * still goes after the last row of that whole list, `{}` (R4-SW-B-02).
  */
-export function moveIssue(board, issueId, { columnId, sprintId, beforeId = null } = {}, ctx = {}) {
+export function moveIssue(board, issueId, { columnId, sprintId, beforeId = null, rankIn } = {}, ctx = {}) {
   const from = board.issues.findIndex((i) => i.id === issueId);
   if (from === -1) return board;
   const now = nowOf(ctx);
@@ -198,15 +201,16 @@ export function moveIssue(board, issueId, { columnId, sprintId, beforeId = null 
     const entry = fieldEntry('sprint', sprintName(board, issue.sprintId), sprintName(board, group.sprintId));
     moved = logged({ ...moved, sprintId: group.sprintId, updatedAt: now }, entry, now);
   }
+  const rank = rankIn ?? group;
   const rest = board.issues.filter((_, n) => n !== from);
   let at = beforeId && beforeId !== issueId ? rest.findIndex((i) => i.id === beforeId) : -1;
   if (at === -1) {
-    const last = rest.findLastIndex((i) => matchesGroup(i, group));
+    const last = rest.findLastIndex((i) => matchesGroup(i, rank));
     at = last === -1 ? from : last + 1; // an empty group: its place in the rank is as good as any
   }
   const issues = [...rest.slice(0, at), moved, ...rest.slice(at)];
   // Same fields, same order within the group the view shows: nothing to save.
-  const order = (list) => list.filter((i) => i.id === issueId || matchesGroup(i, group)).map((i) => i.id).join('\n');
+  const order = (list) => list.filter((i) => i.id === issueId || matchesGroup(i, rank)).map((i) => i.id).join('\n');
   if (moved === issue && order(issues) === order(board.issues)) return board;
   const next = { ...board, issues };
   return moved.resolvedAt && !issue.resolvedAt ? spawnNext(next, issueId, ctx) : next;

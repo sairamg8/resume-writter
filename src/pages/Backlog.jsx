@@ -70,7 +70,10 @@ export function Backlog() {
   // it, including one still in a sprint from when the project used sprints (R4-BRD-08).
   const all = backlogSections(scrum ? board : { ...board, sprints: [] }, board.issues.filter((i) => i.type !== 'epic'));
   const sections = all.map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
-  const targets = [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' });
+  // Where a row's ⋯ menu can move it: a sprint or the backlog — on a Scrum project only. A Kanban
+  // backlog is one section, whose board ignores sprints: a sprint picked there changed nothing
+  // the user could see, and 'Backlog' was ticked for a row still in one (R4-SW-B-03).
+  const targets = scrum ? [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' }) : [];
   const toggleFold = (sid) => setFolded((f) => { const n = new Set(f); if (n.has(sid)) n.delete(sid); else n.add(sid); return n; });
 
   function onDragEnd({ active: a, over }) {
@@ -91,12 +94,17 @@ export function Backlog() {
         if (ids.indexOf(over.id) > ids.indexOf(a.id)) beforeId = ids[ids.indexOf(over.id) + 1] ?? null;
       }
     }
-    store.moveIssue(board.id, a.id, { sprintId, beforeId });
+    // Kanban ranks over that whole backlog too, so a drop on its foot lands after its last row,
+    // not after the last issue in no sprint with rows still in a sprint below it (R4-SW-B-02).
+    store.moveIssue(board.id, a.id, { sprintId, beforeId, ...(scrum ? {} : { rankIn: {} }) });
   }
 
   async function removeSprint(sprint) {
-    const ok = await confirm({ title: `Delete ${sprint.name}?`, body: 'Its issues move to the backlog.', confirmLabel: 'Delete sprint', tone: 'danger' });
-    if (ok) { store.deleteSprint(board.id, sprint.id); toast({ title: `${sprint.name} deleted` }); }
+    const ok = await confirm({ title: `Delete ${sprint.name}?`, body: 'Its issues move to the backlog. You can undo this for a few seconds.', confirmLabel: 'Delete sprint', tone: 'danger' });
+    if (!ok) return;
+    // Undo brings the sprint back with its issues, as an issue's or a project's delete does (R5-BRD-02).
+    const removed = store.deleteSprint(board.id, sprint.id);
+    if (removed) toast({ title: `${sprint.name} deleted`, action: { label: 'Undo', onClick: () => store.restoreSprint(board.id, removed) } });
   }
 
   const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;

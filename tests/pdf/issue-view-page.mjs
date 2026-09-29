@@ -4,7 +4,7 @@
 // tests/pdf/82-board-summary-labels.test.mjs does, in a router whose history a test reads.
 // One file per row, so a fail-first run on CI tells which fix a failure belongs to.
 import { before, after, beforeEach, afterEach } from 'node:test';
-import { createElement as h } from 'react';
+import { createElement as h, useState } from 'react';
 import { MemoryRouter, Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
@@ -69,7 +69,7 @@ export const issueNow = (id) => boardNow().issues.find((i) => i.id === id);
  * test can read where Back goes. Navigations commit at once (useTransitions: false), inside the
  * act() that caused them.
  */
-export function mountBoard(path, { toasts = false, confirms = false, stuck = null } = {}) {
+export function mountBoard(path, { toasts = false, confirms = false, stuck = null, deferred = null } = {}) {
   globalThis.localStorage = new Storage([['cpwtcv_boards_v2', JSON.stringify({ boards: [project()], dataVersion: 2 })]]);
   store.subscribe(() => {});
   let nav = null;
@@ -90,7 +90,27 @@ export function mountBoard(path, { toasts = false, confirms = false, stuck = nul
   // `calls` and the address stays `path` with `state` (a browser tab restored without its back
   // entries, where history.go() past the start does nothing).
   const [pathname, search = ''] = path.split('?');
-  const Page = stuck
+  // `deferred` ({ state, calls }): a history whose pushes land only when the test says so, as the
+  // app's HashRouter commits a navigation later, in a transition. Each navigation is recorded in
+  // `calls`; a push or replace waits in a queue until page.commit() lands it (a new key); go() is
+  // only recorded. The address starts at `path` with `state` (key 'k0').
+  const queue = [];
+  let setLocation = null;
+  let landed = 0;
+  function DeferredRouter() {
+    const [location, set] = useState({ pathname, search: search && `?${search}`, hash: '', state: deferred.state ?? null, key: 'k0' });
+    setLocation = set;
+    return h(Router, {
+      location,
+      navigator: {
+        createHref: (to) => (typeof to === 'string' ? to : `${to.pathname ?? ''}${to.search ?? ''}`),
+        go: (n) => deferred.calls.push(['go', n]),
+        push: (to, state) => { deferred.calls.push(['push', to]); queue.push({ to, state }); },
+        replace: (to, state) => { deferred.calls.push(['replace', to]); queue.push({ to, state }); },
+      },
+    }, ...inner);
+  }
+  const Page = deferred ? DeferredRouter : stuck
     ? () => h(Router, {
       location: { pathname, search: search && `?${search}`, hash: '', state: stuck.state ?? null, key: 'stuck' },
       navigator: {
@@ -142,6 +162,14 @@ export function mountBoard(path, { toasts = false, confirms = false, stuck = nul
       view.act(() => reactProps(root).onKeyDown(ev({ key: 'Escape' })));
     },
     back: () => view.act(() => nav(-1)),
+    /** `deferred` only: the oldest push or replace waiting lands, under a new key. */
+    commit: () => {
+      const next = queue.shift();
+      if (!next) throw new Error('nothing is waiting to land');
+      landed += 1;
+      const { to, state } = next;
+      view.act(() => setLocation({ pathname: to.pathname ?? pathname, search: to.search ?? '', hash: to.hash ?? '', state: state ?? null, key: `k${landed}` }));
+    },
     async settle() { for (let i = 0; i < 5; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); } },
   };
   return page;

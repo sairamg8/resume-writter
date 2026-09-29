@@ -7,9 +7,10 @@ import { TypePicker } from './IssueFields';
  * "+ Create issue" at the foot of a column or a backlog section: a button that opens a small
  * composer — the type and "What needs to be done?"; Enter creates and keeps it open for the next
  * one, Escape (or leaving it empty) closes it. `onCreate({ title, type })`. `showType={false}`
- * hides the type picker where the type is fixed (the Epic panel makes only epics).
+ * hides the type picker where the type is fixed (the Epic panel makes only epics); `placeholder`
+ * is the field's prompt, for a composer that makes something else than an issue (R4-SW-B-04).
  */
-export function InlineCreate({ onCreate, label = 'Create issue', className, variant = 'column', showType = true }) {
+export function InlineCreate({ onCreate, label = 'Create issue', className, variant = 'column', showType = true, placeholder = 'What needs to be done?' }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [type, setType] = useState('task');
@@ -58,7 +59,7 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
           if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); create(); }
           if (e.key === 'Escape') { e.stopPropagation(); setText(''); setOpen(false); }
         }}
-        placeholder="What needs to be done?"
+        placeholder={placeholder}
         aria-label="Summary of the new issue"
         // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
         className="min-w-0 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-subtlest focus:outline-none pointer-coarse:text-base"

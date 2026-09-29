@@ -39,16 +39,19 @@ export function hiddenDoneCount(board, { now = Date.now() } = {}) {
  * a question and take them along — and `target`, the column they move to: the nearest other column
  * of the same category, so the delete neither resolves nor reopens them, else the one beside it
  * (after, else before); null for the only column. `change` is what the move does to them: 'reopen'
- * (out of a done column), 'resolve' (into one) or null.
+ * (out of a done column), 'resolve' (into one) or null. `targetId`, a column picked instead (in
+ * Project settings), is the target when it is another column of the board, so `change` says what
+ * the move to it does (R5-BRD-01b).
  */
-export function columnDeletion(board, columnId) {
+export function columnDeletion(board, columnId, targetId = null) {
   const at = board.columns.findIndex((c) => c.id === columnId);
   const column = board.columns[at];
   if (!column) return { count: 0, target: null, change: null };
   const count = board.issues.filter((i) => i.columnId === columnId).length;
   const distance = (c) => Math.abs(board.columns.indexOf(c) - at) * 2 - (board.columns.indexOf(c) > at ? 1 : 0);
   const same = board.columns.filter((c) => c !== column && c.category === column.category).sort((a, b) => distance(a) - distance(b));
-  const target = same[0] ?? board.columns[at + 1] ?? board.columns[at - 1] ?? null;
+  const picked = targetId !== columnId ? board.columns.find((c) => c.id === targetId) : null;
+  const target = picked ?? same[0] ?? board.columns[at + 1] ?? board.columns[at - 1] ?? null;
   let change = null;
   if (target && isDoneColumn(column) && !isDoneColumn(target)) change = 'reopen';
   if (target && !isDoneColumn(column) && isDoneColumn(target)) change = 'resolve';

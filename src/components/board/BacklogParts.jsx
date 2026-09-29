@@ -45,6 +45,12 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
   const epic = issue.epicId ? board.issues.find((i) => i.id === issue.epicId) : null;
   const statuses = board.columns.map((c) => ({ id: c.id, name: c.title || 'Untitled', category: c.category }));
   const stop = { onClick: (e) => e.stopPropagation(), onKeyDown: (e) => e.stopPropagation(), onPointerDown: (e) => e.stopPropagation() };
+  const moveItem = (t) => {
+    const here = (t.id ?? null) === (sprintId ?? null);
+    // The section it is in (the ticked one) moves nothing: sent on, it put the row at that
+    // section's foot. The board card's Move to does the same (R5-BRD-01).
+    return { id: t.id ?? 'backlog', label: t.name, checked: here, radio: true, onSelect: () => { if (!here) onMove(t.id ?? null); } };
+  };
   return (
     <li
       ref={setNodeRef}
@@ -75,8 +81,8 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
         <Menu
           label={`${key} actions`}
           items={[
-            { id: 'move', label: 'Move to', items: targets.map((t) => ({ id: t.id ?? 'backlog', label: t.name, checked: (t.id ?? null) === (sprintId ?? null), radio: true, onSelect: () => onMove(t.id ?? null) })) },
-            { type: 'separator' },
+            // Only where there is somewhere else to go: a Kanban backlog has one section (R4-SW-B-03).
+            ...(targets.length > 1 ? [{ id: 'move', label: 'Move to', items: targets.map(moveItem) }, { type: 'separator' }] : []),
             { id: 'del', label: 'Delete', danger: true, onSelect: onDelete },
           ]}
           trigger={<IconButton icon={MoreHorizontal} label={`${key} actions`} size="sm" tooltip={false} className="opacity-0 group-hover/row:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />}
@@ -114,8 +120,9 @@ export function EpicPanel({ board, selected = [], onToggle, onOpen, onCreate, on
           );
         })}
       </ul>
-      {/* Only epics are made here: a Task/Story/Bug picker would be ignored (R4-BRD-10). */}
-      <InlineCreate label="Create epic" showType={false} onCreate={({ title }) => onCreate(title)} />
+      {/* Only epics are made here: a Task/Story/Bug picker would be ignored (R4-BRD-10), and the
+          prompt asks for an epic, not a task (R4-SW-B-04). */}
+      <InlineCreate label="Create epic" showType={false} placeholder="What is this epic?" onCreate={({ title }) => onCreate(title)} />
     </aside>
   );
 }

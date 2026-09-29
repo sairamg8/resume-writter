@@ -91,12 +91,24 @@ function ColumnRow({ board, column, index, store }) {
   // as a pick alone, a column deleted meanwhile stayed the target the select no longer showed,
   // and "Delete column" did nothing (R4-BRD-12).
   const target = others.some((c) => c.id === picked) ? picked : nearest?.id ?? '';
+  // What the move to the column picked does to the issues, said as the board's delete says it: a
+  // pick of another done state resolves or reopens them (R5-BRD-01b).
+  const { change } = columnDeletion(board, column.id, target);
+  const effect = { reopen: 'and will be reopened', resolve: 'and will be marked done' }[change];
   const last = board.columns.length === 1;
   const confirm = useConfirmOptional();
+  const { toast } = useToast();
+
+  /** Delete the column (its issues to `to`); a toast says so, with Undo, as the board's delete does (R4-SW-B-01). */
+  function drop(to) {
+    const removed = store.deleteColumn(board.id, column.id, to);
+    if (removed) toast({ title: `Column “${column.title || 'Untitled'}” deleted`, action: { label: 'Undo', onClick: () => store.restoreColumn(removed) } });
+    return removed;
+  }
 
   async function remove() {
     if (count === 0) {
-      if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) store.deleteColumn(board.id, column.id);
+      if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) drop(null);
       return;
     }
     setDeleting(true);
@@ -129,8 +141,9 @@ function ColumnRow({ board, column, index, store }) {
             <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className={`${CONTROL} min-w-0 max-w-full px-2 py-1`}>
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
+            {effect && <span data-effect="">{effect}</span>}
           </label>
-          <Button variant="danger" size="sm" onClick={() => { const done = store.deleteColumn(board.id, column.id, target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
+          <Button variant="danger" size="sm" onClick={() => { const done = drop(target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
           <Button variant="ghost" size="sm" onClick={() => { setDeleting(false); setRefused(false); }}>Cancel</Button>
           {refused && <p role="alert" className="w-full text-red-600">The column could not be deleted. Pick where its issues go and try again.</p>}
         </div>
