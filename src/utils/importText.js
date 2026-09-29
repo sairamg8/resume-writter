@@ -1049,7 +1049,16 @@ function roleEntries(type, lines) {
 
 /** Skills lines: "Category: a, b" as a group; a short line alone over a list as its category. */
 function skillsOf(lines) {
-  const texts = lines.map((l) => l.text.replace(BULLET, '').trim()).filter(Boolean);
+  // Skills set apart at | • · as the editor writes them, at commas: "Python • SQL" is two skills, as
+  // Tags, Bars and the Sidebar's Stacked print them. Before, each such line was one skill. A cell with
+  // two categories in it ("Languages: Go | Tools: Git") is two groups.
+  const NAMED = /^[^:,]{1,60}?\s*:/;
+  const commas = (cell) => {
+    const parts = cell.split(/\s+[|•·]\s+/).map((s) => s.trim()).filter(Boolean);
+    const named = parts.filter((p) => NAMED.test(p)).length > 1;
+    return parts.reduce((out, p) => (out.length && !(named && NAMED.test(p)) ? [...out.slice(0, -1), `${out[out.length - 1]}, ${p}`] : [...out, p]), []);
+  };
+  const texts = lines.map((l) => l.text.replace(BULLET, '').trim().split('\t').flatMap(commas).join('\t')).filter(Boolean);
   const items = [];
   for (let i = 0; i < texts.length; i += 1) {
     const cells = texts[i].split('\t').map((s) => s.trim()).filter(Boolean);
