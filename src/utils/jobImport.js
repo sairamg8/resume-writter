@@ -2,6 +2,7 @@
 // message the tracker shows. No React and no path aliases: Node's test runner loads this file as it
 // is (tests/unit/job-import.unit.mjs).
 import { newId } from './ids.js';
+import { isUntouchedDemoJob } from './jobEdits.js';
 import { completeJob, isJobEntry, readJob } from './normalizeJob.js';
 
 const READ_FAILED = 'Could not read that file.';
@@ -74,6 +75,7 @@ function asOver(theirs, kept, mine) {
  *   the same job is here            → skipped
  *   a newer copy (updatedAt) of one → replaces it, in its place
  *   an older copy, or as new        → skipped: a backup never overwrites a later edit
+ *   the untouched demo job is here  → the file's copy replaces it (isUntouchedDemoJob)
  *   different, and no time to tell  → added as a copy with a new id: nothing is dropped
  * `lossy` is true when an entry, or a detail of one, could not be read and was left out. A job
  * with no time of its own gets `now`. The input is never changed.
@@ -98,6 +100,10 @@ export function mergeImport(current, incoming, now = Date.now()) {
     if (i !== undefined) {
       const mine = jobs[i];
       if (stable(mine) === stable(asOver(theirs, kept, mine))) { skipped += 1; continue; }
+      // The demo job a fresh browser shows is dated from today, so it looked newer than the demo the
+      // user filled in and backed up days ago, and that job was dropped: the file's copy wins over
+      // an untouched demo, as it does in the cloud sync's first merge (R5-HUNT2).
+      if (isUntouchedDemoJob(mine) && !isUntouchedDemoJob(theirs)) { jobs[i] = theirs; updated += 1; continue; }
       if (isTime(kept.updatedAt)) {
         if (!isTime(mine.updatedAt) || kept.updatedAt > mine.updatedAt) { jobs[i] = theirs; updated += 1; } else skipped += 1;
         continue;

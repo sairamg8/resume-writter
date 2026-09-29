@@ -121,3 +121,31 @@ test('a changed job with no times in the file is still kept, as a copy: nothing 
   assert.equal(changed.added, 1);
   assert.deepEqual(changed.jobs.map((j) => j.role), ['Dev', 'Lead']);
 });
+
+// ── R5-HUNT2: a backup of the edited demo job, restored in a fresh browser ───────────────────
+// A fresh browser shows the demo job dated from today; the user's own demo_1 in a backup made days
+// ago looked older, so it was skipped as 'already in the tracker' and the untouched demo stayed.
+
+test('R5-HUNT2: the backup\'s edited demo job replaces the untouched demo a fresh browser shows', async () => {
+  const { demoJobs } = await import('../../src/utils/jobEdits.js');
+  const now = new Date(2026, 8, 29, 12);
+  const [demo] = demoJobs(now);
+  const [old] = demoJobs(new Date(2026, 7, 1, 12));
+  const mine = {
+    ...old, role: 'Staff Engineer', status: 'offer', todos: [{ id: 'x1', text: 'Negotiate', done: false }],
+    statusHistory: [...old.statusHistory, { status: 'offer', changedAt: old.updatedAt + 1000 }], updatedAt: old.updatedAt + 1000,
+  };
+  const r = mergeImport([demo], [mine], now.getTime());
+  assert.equal(r.jobs.length, 1);
+  assert.equal(r.jobs[0].id, 'demo_1');
+  assert.equal(r.jobs[0].role, 'Staff Engineer');
+  assert.equal(r.jobs[0].status, 'offer');
+  assert.deepEqual(r.jobs[0].todos.map((t) => t.text), ['Negotiate']);
+  assert.deepEqual([r.added, r.updated, r.skipped], [0, 1, 0]);
+  // An older untouched demo in the file does not replace today's; an edited demo here is kept by date as before.
+  assert.equal(mergeImport([demo], [old], now.getTime()).jobs[0].updatedAt, demo.updatedAt);
+  const edited = { ...demo, role: 'Mine', updatedAt: demo.updatedAt + 1 };
+  const kept = mergeImport([edited], [mine], now.getTime());
+  assert.equal(kept.jobs[0].role, 'Mine');
+  assert.equal(kept.skipped, 1);
+});
