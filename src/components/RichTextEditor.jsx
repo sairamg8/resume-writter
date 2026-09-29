@@ -150,13 +150,19 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   function handleApplyOptimizedText(optimizedText) {
     const el = ref.current;
     const text = String(optimizedText || '').trim();
-    const statement = optimizerTarget.current;
+    let statement = optimizerTarget.current;
     optimizerTarget.current = null;
     if (!el || !text) return;
+    // A value taken in from outside while the optimizer was open (another tab's save, a cloud pull)
+    // replaced the editor's nodes, and the saved Range collapsed to the editor's start: Apply wrote the
+    // result there, as loose text above the bullets, and left the statement as it was
+    // (R5-HUNT7-OPTIMIZER-APPLY-AFTER-OUTSIDE-CHANGE). A Range that no longer covers the statement the
+    // optimizer opened on is found again by its text; with none, the result is a new bullet.
+    if (statement && !covers(el, statement, optimizerText)) statement = findStatement(el, optimizerText);
     el.focus();
     const range = statement?.target ?? statement;
     const removals = statement?.removals ?? [];
-    if (range && [range, ...removals].every((r) => el.contains(r.commonAncestorContainer))) {
+    if (range) {
       const sel = window.getSelection();
       // The item's own elements before the edit, each with whether it was blank: dropPlaceholders
       // removes only what the edit added or emptied.
@@ -384,6 +390,50 @@ export function statementRange(el) {
   range.setStartBefore(leaves[i]);
   range.setEndAfter(leaves[j]);
   return range.toString().trim() ? range : null;
+}
+
+/** A statement's text as the optimizer shows it: runs of white space as one space, trimmed. */
+const flat = (s) => String(s).replace(/\s+/g, ' ').trim();
+
+/** Whether `statement` (statementRange) is still in `el` and still covers the text `opened`. */
+function covers(el, statement, opened) {
+  const ranges = [statement.target ?? statement, ...(statement.removals ?? [])];
+  return ranges.every((r) => el.contains(r.commonAncestorContainer)) && flat(statement.toString()) === opened;
+}
+
+/**
+ * The statement in `el` whose text is `opened`, as statementRange reads it with the caret in each line
+ * in turn; else the first text node holding `opened` as it is (a selection inside a line); else null.
+ */
+function findStatement(el, opened) {
+  if (!opened) return null;
+  const sel = window.getSelection?.();
+  const texts = [];
+  (function read(node) {
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3) { if (child.nodeValue.trim()) texts.push(child); } else read(child);
+    }
+  })(el);
+  if (sel) {
+    for (const node of texts) {
+      const caret = document.createRange();
+      caret.setStart(node, 0);
+      caret.setEnd(node, 0);
+      sel.removeAllRanges();
+      sel.addRange(caret);
+      const statement = statementRange(el);
+      if (statement && flat(statement.toString()) === opened) return statement;
+    }
+  }
+  for (const node of texts) {
+    const at = node.nodeValue.indexOf(opened);
+    if (at < 0) continue;
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + opened.length);
+    return range;
+  }
+  return null;
 }
 
 /** The list item a statement host belongs to: itself, or the item its paragraph sits in; else null. */
