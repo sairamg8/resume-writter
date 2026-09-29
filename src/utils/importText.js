@@ -539,9 +539,9 @@ const ROLE_ALL = new RegExp(ROLE.source, 'gi');
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
-/** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
 /** A GPA after a comma, a semicolon or in brackets, and an honour right after it: "…, GPA: 3.9/4.0, Cum Laude". */
 const GPA_AFTER = /\s*(?:[,;]|\()\s*c?gpa\s*:?\s*(\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?)\s*\)?(?:\s*[,;]\s*((?:(?:summa|magna)\s+)?cum laude|with (?:high(?:est)?\s+)?(?:honou?rs|distinction)|(?:first[- ]class\s+)?honou?rs|distinction))?(?=\s*(?:[,;(]|$))/i;
+/** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
 const HONOURS = /\b(honou?rs|distinction|merit|cum laude|summa|magna|first|second|third|class|minor|major|concentration|speciali[sz]ation|track|option|gpa|grade)\b/i;
 /** A degree's own name, which is no subject it is in: the "of Science" of "Bachelor of Science". */
 const DEGREE_NAME = /\b(?:bachelor|master|doctor|associate)'?s?\s+of\s+(?:fine\s+|applied\s+|liberal\s+)?(?:science|arts?|engineering|business\s+administration|laws?|philosophy|education|technology|commerce|music|nursing|medicine|social\s+work|public\s+(?:health|policy|administration)|architecture|design|computer\s+applications)\b/i;
