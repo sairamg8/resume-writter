@@ -303,13 +303,19 @@ const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${N
 const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
 const END_ONLY = new RegExp(`^(?:(?:[-${DASHES}–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
+// "Jun – Aug 2021", "May to August 2020": a range inside one year prints the year once, at its end.
+// The first month takes the end's year (the year before when it comes later in the year: "Dec – Feb
+// 2021"). Before, "Jun" was no date: it became the job's role and "Aug 2021" its start.
+const SAME_YEAR = new RegExp(`^(${MONTH})(?=${SEP}(${MONTH}),?\\s+(\\d{4})(?!\\d))`, 'i');
+const MONTH_AT = (m) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m.slice(0, 3).toLowerCase());
+const withYear = (t) => t.replace(SAME_YEAR, (first, _, end, year) => `${first} ${MONTH_AT(first) > MONTH_AT(end) ? Number(year) - 1 : year}`);
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
 export function readDateRange(text) {
   let t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
   if (!t) return null;
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
-  let m = RANGE.exec(t);
+  let m = RANGE.exec(withYear(t));
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
   if (/\([^)]*$/.test(t)) t = `${t})`;
   // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
