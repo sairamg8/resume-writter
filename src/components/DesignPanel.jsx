@@ -25,7 +25,7 @@ import {
   getIconSetId,
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
-import { MIN_FIT_BASE_PT, ONE_PAGE_FIT, fitOnePage, fitSizeNotice, printedKey } from '@/utils/pageFit';
+import { MIN_FIT_BASE_PT, fitLadder, fitOnePage, fitSizeNotice, printedKey } from '@/utils/pageFit';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize', 'sectionLetterSpacing', 'fontSizeTitleDelta', 'nameFont', 'headingFont'];
@@ -94,9 +94,11 @@ export default function DesignPanel({
     fitRun.current = true;
     setFitting(true);
     setFitNotice('');
-    Object.entries(ONE_PAGE_FIT).forEach(([k, v]) => updateSetting(k, v));
+    // The preset, but never looser than a number the résumé already has tighter (fitLadder).
+    const preset = fitLadder(settings)[0];
+    Object.entries(preset).forEach(([k, v]) => updateSetting(k, v));
     const id = resume.id;
-    const measured = { ...resume, settings: { ...settings, ...ONE_PAGE_FIT } };
+    const measured = { ...resume, settings: { ...settings, ...preset } };
     // As clicked (the preset's writes not rendered yet) or with the preset: anything else is an edit.
     const keys = new Set([printedKey(resume), printedKey(measured)]);
     const stopped = () => !mounted.current || latest.current?.id !== id || !keys.has(printedKey(latest.current));
@@ -105,7 +107,7 @@ export default function DesignPanel({
     try {
       const fit = await fitOnePage(measured, { stopped });
       if (!fit || stopped()) return;
-      Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
+      Object.entries(fit.settings).forEach(([k, v]) => { if (preset[k] !== v) updateSetting(k, v); });
       printed = { ...measured.settings, ...fit.settings };
       if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
       else notice = fitSizeNotice(settings, fit); // a smaller text size is said, never done silently
