@@ -59,15 +59,17 @@ const SALARY_UNIT = { k: 1e3, m: 1e6, mn: 1e6, lpa: 1e5, lakh: 1e5, lakhs: 1e5, 
  * comma, the last one is the decimal point ('1.234,5', '1,234.5'); with one of them, it groups
  * thousands when it repeats or has three digits after it ('€60.000', '$120,000'), else it is the
  * decimal point ('65.5k', '2,5 LPA'). Every comma was dropped and every dot kept: '€60.000' read as
- * 60 and '2,5 LPA' as 25 LPA (R5-HUNT2).
+ * 60 and '2,5 LPA' as 25 LPA (R5-HUNT2). With a unit after it (`scaled`), a lone dot stays the
+ * decimal point, as it always was: '$1.125M' is 1,125,000, not a thousand times that (R5-HUNT2 review).
  */
-function amount(text) {
+function amount(text, scaled) {
   const digits = text.replace(/['’\s]/g, '');
   const point = Math.max(digits.lastIndexOf('.'), digits.lastIndexOf(','));
   if (point < 0) return Number.parseFloat(digits);
   const mark = digits[point];
   const both = digits.includes('.') && digits.includes(',');
-  const grouping = !both && (digits.indexOf(mark) !== point || digits.length - point - 1 === 3);
+  const grouping = !both && (digits.indexOf(mark) !== point
+    || (digits.length - point - 1 === 3 && !(scaled && mark === '.')));
   const whole = digits.slice(0, grouping ? digits.length : point).replace(/[.,]/g, '');
   return Number.parseFloat(grouping ? whole : `${whole}.${digits.slice(point + 1)}`);
 }
@@ -80,8 +82,9 @@ function amount(text) {
 export function salaryValue(text) {
   const m = SALARY.exec(String(text ?? ''));
   if (!m) return null;
-  const n = amount(m[1]);
-  return Number.isFinite(n) ? n * (SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()] || 1) : null;
+  const scale = SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()];
+  const n = amount(m[1], Boolean(scale));
+  return Number.isFinite(n) ? n * (scale || 1) : null;
 }
 
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });

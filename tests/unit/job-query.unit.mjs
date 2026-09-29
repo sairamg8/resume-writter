@@ -252,3 +252,17 @@ test('R5-HUNT2: salaries written with European separators sort by their real amo
   const jobs = ['€70.000', '€48k', '€55.000', '12 LPA', '2,5 LPA'].map((salary, n) => ({ id: String(n), salary }));
   assert.deepEqual(sortJobs(jobs, 'salary', 'asc').map((j) => j.salary), ['€48k', '€55.000', '€70.000', '2,5 LPA', '12 LPA']);
 });
+
+// R5-HUNT2 review: a lone dot with three digits after it was read as grouping thousands even
+// before a unit, so '$1.125M' sorted as 1,125,000,000 — above every other salary.
+test('R5-HUNT2 review: a dot before a unit (k, M, Cr, LPA) is still the decimal point', () => {
+  assert.equal(salaryValue('$1.125M'), 1125000);
+  assert.equal(salaryValue('₹1.125 Cr'), 11250000);
+  assert.equal(salaryValue('₹12.500 LPA'), 1250000);
+  assert.equal(salaryValue('$1.250-1.5M'), 1250000);
+  // Without a unit, a dot still groups thousands; a comma before a unit groups them as before.
+  assert.equal(salaryValue('€60.000'), 60000);
+  assert.equal(salaryValue('$1,500k'), 1500000);
+  const jobs = ['$1.125M', '$950k', '€60.000'].map((salary, n) => ({ id: String(n), salary }));
+  assert.deepEqual(sortJobs(jobs, 'salary', 'desc').map((j) => j.salary), ['$1.125M', '$950k', '€60.000']);
+});
