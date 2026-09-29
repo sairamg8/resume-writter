@@ -1,0 +1,53 @@
+{
+  "cluster": "r5-hunt3-dash",
+  "branch": "claude/wf-r5-hunt3-dash",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-LETTER-GENERATOR-ARTICLE-BEFORE-ACRONYM-TITLE",
+      "title": "Cover letter generator writes 'as a HR Manager' / 'as a SRE' before a spelled-out initialism title",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "cbe1852b45896fd51bad61e17886ef67fcca186a",
+        "fc871f655973e1c5ac5cf4adcfb6aabbea013a88"
+      ],
+      "tests": [
+        "tests/unit/letter-generator-sentences.unit.mjs"
+      ],
+      "summary": "Now: the generated opening says 'as an HR Manager', 'as an SRE', 'as an ML Engineer', 'as an SEO Specialist', 'as an RN', 'as an MBA Candidate', 'as an FP&A Analyst', 'as an R&D Engineer', 'as an HTML Developer', 'as an L2 Support Engineer' and 'as an R Developer'. The rule is in article() in src/utils/coverLetterGenerator.js. A leading run of capitals that starts with F, H, L, M, N, R, S or X takes 'an' only when it is read letter by letter: either it has no vowel (HR, NLP, HTML, L2, R), or it has at most three letters and is not a consonant-vowel-consonant syllable (SRE, SEO, MBA, SDE). A capitalised word keeps 'a'. That covers longer words with a vowel ('a NASA Engineer', 'a SWAT Officer', 'a SCADA Engineer') and titles typed in capitals or kept in capitals by a PDF import ('a SOFTWARE ENGINEER', 'a STAFF ENGINEER', 'a MARKETING MANAGER', 'a NURSE'). It also covers three-letter syllables ('a LAN Administrator', 'a LAW CLERK'). 'a QA Engineer', 'a PM', 'a CTO', 'a Hr Generalist', 'a UX Designer', 'an IT Manager' and ordinary words are unchanged. The PDF, Word and text exports all print the same generated body, and stored letters are not touched: only a newly generated letter changes.",
+      "product_call": "Some initialisms can be read either way, and the rule settles them as follows. 'SAP Consultant' keeps 'a', as it did before this cluster. 4-letter initialisms that contain a vowel keep 'a' ('a HVAC Technician', 'a SDET'), also as before. SQL, spelled out, gets 'an SQL Developer'.",
+      "remaining": "None required. A dictionary of vowel-bearing 4+ letter initialisms (HVAC, SDET) would make them read 'an', but they had 'a' before too, so nothing regressed.",
+      "failfirst_run": "36543637829 (green: the fixer's test fails without cbe1852 with 1 failure and passes with it); 36547380944 (green: the review test fails without fc871f6 with 1 failure and passes with it; 13 named files, 105/105 pass; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "The first fix read any leading run of capitals from F/H/L/M/N/R/S/X as an initialism. A title typed in capitals, or 'SOFTWARE ENGINEER' kept in capitals by a PDF/text import (importText keeps personal.title as typed), then opened 'as an SOFTWARE ENGINEER', 'as an STAFF ENGINEER', 'as an MARKETING MANAGER', 'as an LEAD DEVELOPER', 'as an NURSE'. At the base all of these correctly had 'a', so this was a regression. The CVCV exception covered only NASA-like words. 'SWAT Officer', 'SCADA Engineer' and 'LAN Administrator' also got 'an'. A single spelled letter ('L2 Support Engineer', 'R Developer') was not covered."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Titles in capitals and capitalised words were read as initialisms, so the letter said 'as an SOFTWARE ENGINEER' / 'as an NURSE' / 'as an SWAT Officer'. This regressed from the base.",
+        "severity": "medium",
+        "resolution": "fixed in fc871f655973e1c5ac5cf4adcfb6aabbea013a88. A run of capitals is read as spelled out only when it has no vowel, or has at most 3 letters and is not a CVC syllable. Single letters followed by a non-letter are included. A new test in tests/unit/letter-generator-sentences.unit.mjs covers every archetype. Fail-first run 36547380944 is green."
+      },
+      {
+        "issue": "Fail-first run 36543637829 was checked in its CI log: 'fail without the fix (its diff reversed): # fail 1', then 'pass with it'.",
+        "severity": "info",
+        "resolution": "verified"
+      }
+    ],
+    "fixedByReviewer": [
+      "fc871f655973e1c5ac5cf4adcfb6aabbea013a88"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug in this cluster. The fixer's commit cbe1852 fixed 'as a HR Manager' but broke titles typed in capitals. The review commit fc871f6 narrows the rule to letter-by-letter initialisms and adds single letters. Both fail-first runs are green (36543637829 and 36547380944). The named cover-letter, JSON Resume, letter PDF/text and knowledge-docs tests pass (105/105), and lint is green. Playwright and Cypress were not run (none): the change is confined to one pure helper whose output is text."
+}

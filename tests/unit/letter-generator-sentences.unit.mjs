@@ -77,3 +77,34 @@ test('generateCoverLetter: the opening says "an" before a title that starts with
     }
   }
 });
+
+// R5-HUNT3-letter-generator-article-before-acronym-title: "as a HR Manager" / "as a SRE" — an
+// initialism spelled out from F, H, L, M, N, R, S or X starts with a vowel sound and takes "an";
+// one read as a word ("NASA") and plain words ("Manager", "Senior …") keep "a".
+test('generateCoverLetter: "an" before a spelled-out initialism with a vowel sound ("an HR Manager", "an SRE"), "a" before one read as a word', () => {
+  for (const archetype of ARCHETYPES) {
+    const opening = (title) => plain(generateCoverLetter({ resume: resume({ name: 'Jane Doe', title }), archetype }));
+    for (const title of ['HR Manager', 'SRE', 'ML Engineer', 'SEO Specialist', 'RN', 'MBA Candidate', 'NLP Engineer', 'SDE II', 'FP&A Analyst', 'LLM Researcher', 'XR Developer']) {
+      assert.ok(opening(title).includes(`as an ${title}`), `${archetype}: ${title}`);
+    }
+    for (const title of ['NASA Engineer', 'NATO Liaison', 'Manager', 'Senior Engineer', 'Hr Generalist', 'QA Engineer', 'PM', 'CTO']) {
+      assert.ok(opening(title).includes(`as a ${title}`), `${archetype}: ${title}`);
+    }
+  }
+});
+
+// Review of R5-HUNT3-letter-generator-article-before-acronym-title: any run of capitals from F, H, L,
+// M, N, R, S or X read as an initialism, so a title typed in capitals — or a PDF import's "SOFTWARE
+// ENGINEER", kept as it is — opened "as an SOFTWARE ENGINEER", "as an STAFF ENGINEER", "as an NURSE",
+// and "SWAT Officer" / "LAN Administrator" got "an" too. A single spelled letter ("L2", "R") was missed.
+test('generateCoverLetter: a title typed in capitals, or a capitalised word, keeps "a"; a spelled-out letter or initialism takes "an"', () => {
+  for (const archetype of ARCHETYPES) {
+    const opening = (title) => plain(generateCoverLetter({ resume: resume({ name: 'Jane Doe', title }), archetype }));
+    for (const title of ['SOFTWARE ENGINEER', 'STAFF ENGINEER', 'MARKETING MANAGER', 'LEAD DEVELOPER', 'HEAD OF SALES', 'NURSE', 'FULL STACK DEVELOPER', 'SYSTEMS ANALYST', 'SENIOR ENGINEER', 'SWAT Officer', 'SCADA Engineer', 'LAN Administrator', 'LAW CLERK', 'NEW GRAD ENGINEER', 'PRODUCT MANAGER']) {
+      assert.ok(opening(title).includes(`as a ${title}`), `${archetype}: ${title}`);
+    }
+    for (const title of ['HR MANAGER', 'SRE', 'MBA CANDIDATE', 'R&D Engineer', 'M&A Analyst', 'HTML Developer', 'L2 Support Engineer', 'R Developer', 'SDE II', 'ENGINEER']) {
+      assert.ok(opening(title).includes(`as an ${title}`), `${archetype}: ${title}`);
+    }
+  }
+});
