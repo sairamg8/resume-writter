@@ -1,5 +1,5 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
-import { contactItems } from './contacts.js';
+import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
@@ -288,6 +288,9 @@ const PRINTED_FIELDS = [
   'language', 'proficiency', 'jobTitle', 'relationship', 'email', 'phone', 'interests',
 ];
 
+/** The contact fields that print as a bare web address unless given a display label. */
+const ADDRESS_KEYS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
+
 /** A stored field as text: a number from imported data as written, anything else not text as ''. */
 const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '');
 
@@ -296,29 +299,38 @@ const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? Strin
  * section or field (R2-033), every field an export prints, the header's contact lines as it prints
  * them, and rich text as its words, never its markup (R2-022).
  */
-export function extractResumeCorpus(resume) {
+export function extractResumeCorpus(resume, { addresses = true } = {}) {
   if (!resume) return '';
   const parts = [];
   const p = resume.personal || {};
   if (p.name) parts.push(p.name);
   if (p.title) parts.push(p.title);
-  for (const { value } of contactItems(p)) parts.push(value);
+  for (const { key, value } of contactItems(p)) {
+    // `addresses: false` leaves out what prints as an e-mail or web address (a link's display label
+    // is words and stays): see matchResumeWithJob.
+    if (!addresses && (key === 'email' || (ADDRESS_KEYS.has(key) && !String(p[`${key}Label`] || '').trim()))) continue;
+    parts.push(value);
+  }
   parts.push(printedText(shownField(p, 'summary')));
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   const template = templateId(resume.template);
   for (const s of sections) {
     if (s.visible === false) continue;
+    // A section with no shown entry prints no heading anywhere (sectionPrints, R2-057), so its title
+    // is not on the page either (R5-HUNT1-ats-corpus-empty-section-title).
+    const items = shownItems(s, template);
+    if (!items.length) continue;
     if (s.title) parts.push(s.title);
-    for (const item of shownItems(s, template)) {
+    for (const item of items) {
       if (s.type === 'skills') {
         const { category, skills } = skillGroup(item);
         parts.push(category, skills);
         continue;
       }
-      parts.push(...PRINTED_FIELDS.map((key) => fieldText(item[key])));
+      parts.push(...PRINTED_FIELDS.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
       // A certificate prints its link's label where it has one, a project its link.
-      parts.push(fieldText(item.urlLabel) || fieldText(item.url));
+      parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
       parts.push(printedText(fieldText(item.description)));
       if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }
@@ -352,6 +364,19 @@ const APOSTROPHES = /[\u2018\u2019\u02BC\u2032\uFF07]/g;
 const CONTRACTION = /^\p{L}+'(?:ll|re|ve|d|m)$|n't$/iu;
 
 /**
+ * A case-insensitive search for `keyword` as a whole word or phrase: boundaries of Unicode letters,
+ * as the keywords are read — with `\w` the keyword "rich" was found inside "Zürich" (R2-023).
+ */
+function wholeWord(keyword) {
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // A leading dot is its own boundary: ".NET" is found in "ASP.NET", never in "net".
+  const lead = keyword.startsWith('.') ? ''
+    : /^[\p{L}\p{M}\p{N}_]/u.test(keyword) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
+  const trail = /[\p{L}\p{M}\p{N}_]$/u.test(keyword) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
+  return new RegExp(`${lead}${esc}${trail}`, 'iu');
+}
+
+/**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
  * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
@@ -374,7 +399,12 @@ export function extractJobKeywords(jobDescriptionText) {
   for (let raw of tokens) {
     let word = raw.trim();
     // Strip trailing periods/commas
-    word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
+    word = word.replace(/[^\p{L}\p{M}\p{N}_+#]+$/u, '');
+    // And leading ones, but for the one dot of a name such as ".NET": stripped, it was the keyword
+    // "NET", matched by "net revenue" and written into Skills so (R5-HUNT1-ats-jd-dotnet-stripped).
+    const lead = word.match(/^[^\p{L}\p{M}\p{N}_+#]+/u)?.[0] || '';
+    word = word.slice(lead.length);
+    if (/(?:^|[^.])\.$/.test(lead) && /^\p{L}/u.test(word)) word = `.${word}`;
     if (word.length < 2 || word.length > 30) continue;
     if (LETTER_ABBREVIATION.test(word)) continue;
     if (COMMON_STOP_WORDS.has(word.toLowerCase())) continue;
@@ -402,13 +432,15 @@ export function extractJobKeywords(jobDescriptionText) {
     'microservices architecture', 'problem solving', 'system design',
   ];
 
-  const lowerJd = jobDescriptionText.toLowerCase();
+  // As whole words, and cased from the text they were found in: found with a bare indexOf, "front
+  // end" was read inside "storefront endpoints", and sliced at a lowercased index a posting's "İ"
+  // shifted the casing ("achine Learning") (R5-HUNT1-ats-jd-phrase-substring-match).
+  const text = jobDescriptionText.normalize('NFC');
   for (const phrase of multiWordPhrases) {
-    const idx = lowerJd.indexOf(phrase);
-    if (idx !== -1) {
+    const found = wholeWord(phrase).exec(text);
+    if (found) {
       counts.set(phrase, Math.max(counts.get(phrase) || 0, 2));
-      const actual = jobDescriptionText.slice(idx, idx + phrase.length);
-      casingMap.set(phrase, actual || phrase);
+      casingMap.set(phrase, found[0] || phrase);
     }
   }
 
@@ -428,26 +460,23 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   if (!jdKeywords.length) return null;
 
   // Composed, as the keywords are read (extractJobKeywords).
-  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
+  const read = (text) => text.normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
+  const resumeCorpus = read(extractResumeCorpus(resume));
+  // A keyword that starts with a dot (".NET") is found after letters too, as in "ASP.NET", and so
+  // at the end of any .net address: it is looked for without the résumé's e-mail and web addresses,
+  // where "anna@weber.net" or "annaweber.net" names no .NET (R5-HUNT1-ats-jd-dotnet-stripped).
+  let wordsCorpus;
   const matched = [];
   const missing = [];
 
   for (const item of jdKeywords) {
     const kw = item.keyword;
     const lowerKw = kw.toLowerCase();
-    // Word boundary regex for single words, direct include for phrases
-    let isPresent = false;
-    if (lowerKw.includes(' ') || lowerKw.includes('/') || lowerKw.includes('.')) {
-      isPresent = resumeCorpus.includes(lowerKw);
-    } else {
-      // Boundaries of Unicode letters, as the keywords are read: with `\w` the keyword "rich" was
-      // found inside "Zürich" (R2-023).
-      const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lead = /^[\p{L}\p{M}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
-      const trail = /[\p{L}\p{M}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
-      const regex = new RegExp(`${lead}${esc}${trail}`, 'iu');
-      isPresent = regex.test(resumeCorpus);
-    }
+    // A whole word, a phrase too: found with a bare includes, "system design" was matched by
+    // "ecosystem design" (R5-HUNT1-ats-jd-phrase-substring-match).
+    const isPresent = wholeWord(lowerKw).test(lowerKw.startsWith('.')
+      ? (wordsCorpus ??= read(extractResumeCorpus(resume, { addresses: false })))
+      : resumeCorpus);
 
     if (isPresent) {
       matched.push(kw);
