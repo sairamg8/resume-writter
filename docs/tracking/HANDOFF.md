@@ -1,5 +1,10 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 22:00 UTC — HUNT ROUND 7 DONE (all 9 areas, 21 fixes) and merged into claude/r4-green `186c06ab`.** import (4 +1 review fix),
+export (3 +1 review fix: lone surrogate), tools (3 +1 review fix: optimizer Apply anchor) merged after the six below; seen-list 135.
+**Full gate on `186c06ab` dispatched ~22:00 UTC** (PR #3's head now includes it; 9519ef6b was the last green). Round 8 running:
+wf_e11feb54-e85 (dash, pdf, boards, sync, editor, jobs; base 9519ef6b) and wf_df15e7b0-cf8 (import, export, tools; base 186c06ab).
+
 **2026-09-29 21:20 UTC — COORDINATOR RUN session_01CAwUZJx2CYW1r6VSh7tBT6 (scheduled; lock on claude/coordinator-lock, refreshed every 30 min):**
 - The 18:31 coordinator (session_01RkixKL4TAb2mizpdwJHkot) stalled at 18:54 on a permission prompt; its six round-7 areas were all
   finished (CI fail-first + second-agent review) and are now **merged into claude/r4-green** (dash, pdf, boards, sync, editor, jobs:
