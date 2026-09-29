@@ -11,7 +11,7 @@ import { customItem, fileEntries, PUBLICATIONS, SECTION_KEYS } from './jsonResum
 import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
 import { presetOf, presetSettings, withOwnDesign } from '../constants/templatePresets.js';
-import { DATE_FORMATS } from './dates.js';
+import { DATE_FORMATS, DEFAULT_DATE_FORMAT } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -188,9 +188,23 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     template,
     settings: { ...getStarterSettings(template), ...design, ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}), ...(pageSize !== DEFAULT_PAGE_SIZE ? { pageSize } : {}) },
     personal,
-    sections: [...sectionsOf(jsonResume), ...(profiles.length ? [sectionOf('custom', 'Profiles', profiles)] : [])],
+    sections: [...enteredDates(sectionsOf(jsonResume), dateFormat === DEFAULT_DATE_FORMAT && jsonResume?.meta?.enteredDates), ...(profiles.length ? [sectionOf('custom', 'Profiles', profiles)] : [])],
     coverLetter: { ...BASE_COVER_LETTER },
   };
+}
+
+/** An entry's dates: the fields a date of the file is read into. */
+const DATE_KEYS = new Set(['startDate', 'endDate', 'date', 'expiry']);
+
+/**
+ * `sections` with each date back in the form the résumé stored it, for a file As entered: the
+ * export's `meta.enteredDates` holds each stored date ("Jan 2020") by the ISO one the file prints
+ * ("2020-01"). Before, the round trip printed every date As entered in its ISO form.
+ */
+function enteredDates(sections, map) {
+  if (!isRecord(map)) return sections;
+  const back = (v) => (typeof v === 'string' && Object.hasOwn(map, v) && isText(map[v]) && storedText(map[v]).trim() ? storedText(map[v]).trim() : v);
+  return sections.map((s) => ({ ...s, items: s.items.map((item) => Object.fromEntries(Object.entries(item).map(([k, v]) => [k, DATE_KEYS.has(k) ? back(v) : v]))) }));
 }
 
 /**

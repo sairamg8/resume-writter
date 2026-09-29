@@ -29,7 +29,8 @@ test('a current education, project or volunteering role comes back current (R2-1
   const file = cpwtResumeToJsonResume(resume);
   assert.deepEqual(file.education.map((e) => [e.endDate, Boolean(e.current)]), [['', true], ['2022-06', false]]);
   const back = jsonResumeToCpwtResume(JSON.parse(JSON.stringify(file)));
-  assert.deepEqual(ends(back, 'education'), ['Present', '2022-06']);
+  // As entered (settings {}): the past end comes back as stored, "Jun 2022", not the file's ISO "2022-06" (R5-HUNT4).
+  assert.deepEqual(ends(back, 'education'), ['Present', 'Jun 2022']);
   assert.deepEqual(ends(back, 'projects'), ['Present']);
   assert.deepEqual(ends(back, 'volunteering'), ['Present']);
 });

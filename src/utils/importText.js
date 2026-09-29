@@ -390,6 +390,36 @@ function contactOf(segment) {
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
 const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
 
+/** Whether a header piece is a contact: one alone, or a link as linkText writes it, "GitHub (https://…)". */
+const isContact = (piece) => Boolean(contactOf(piece) || (LINKED.exec(piece) && contactOf(LINKED.exec(piece)[2])));
+
+/**
+ * A header piece that is contacts set apart at dashes, slashes or commas ("alex@kim.dev — (206)
+ * 555-0100 — Seattle, WA", "a@b.com, (206) 555-0100, Seattle, WA"), as its pieces — a place's own
+ * comma kept ("Seattle, WA") — else null. Two contacts at least, one of them no place, and any other
+ * piece short ("Backend Engineer"): a sentence with a dash in it stays whole. Before, headerPieces
+ * split only at | • · and tabs, so such a line gave no contact and printed as "Additional Information".
+ */
+function contactRun(piece) {
+  if (isContact(piece)) return null;
+  const out = [];
+  for (const part of piece.split(/\s+[—–/-]\s+/)) {
+    if (isContact(part)) { out.push(part); continue; }
+    const cells = part.split(/\s*,\s+/);
+    for (let k = 0; k < cells.length;) {
+      // The longest run of cells from here that is one contact: a place is two or three ("Austin, TX, USA").
+      let j = Math.min(cells.length, k + 3);
+      while (j > k + 1 && !isContact(cells.slice(k, j).join(', '))) j -= 1;
+      out.push(cells.slice(k, j).join(', '));
+      k = j;
+    }
+  }
+  const found = out.filter(isContact);
+  const ok = out.length > 1 && found.length >= 2 && found.some((p) => (contactOf(p) || {}).key !== 'location')
+    && out.every((p) => isContact(p) || (p.length <= 40 && !/[.!?]$/.test(p)));
+  return ok ? out : null;
+}
+
 // ── Entries ──────────────────────────────────────────────────────────────────
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
@@ -620,6 +650,17 @@ function entryOf(type, header, body, aside = () => {}) {
   // with no role word ("Barista — Blue Bottle, LLC"): a company's legal ending is no place.
   if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 3
     && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1]) && !CORPORATE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
+  // "Product Manager, Google — Mountain View, CA", "Software Engineer | Google | Mountain View, CA":
+  // the role, its company, then a place is the job's location too. Before, the place became the
+  // company (the role kept "Google"), or a paragraph of the description.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 2) {
+    const place = h.parts[h.parts.length - 1];
+    const pair = h.parts.length === 2 ? inlinePair(h.parts.slice(0, 1)) : h.parts.slice(0, -1);
+    if (pair.length === 2 && ROLE.test(pair[0]) && !ROLE.test(pair[1]) && PLACE.test(place) && !ROLE.test(place) && !CORPORATE.test(place)) {
+      h.location = place;
+      h.parts = pair;
+    }
+  }
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
@@ -851,24 +892,43 @@ function entriesOf(type, lines, aside) {
   const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
     && !isMetaLine(b.text) && pieces(b.text).length === 1;
   const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
-  const names = (b, L) => Boolean(KIND && KIND.test(b.text) && !KIND.test(datedFields(L.text)[0]));
+  // How `b` names its entry over `L`: 'kind' for the role (or degree) its dated line does not name;
+  // for a school, 'school' for the school over a dated line that names the degree ("Stanford
+  // University" over "MBA ⇥ 2013 – 2015"), the mirror of the degree over its school. Else null.
+  const way = (b, L) => {
+    const [field = ''] = datedFields(L.text);
+    if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
+    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
+    return null;
+  };
+  const names = (b, L) => Boolean(way(b, L));
+  // A school right after the entry above is this entry's only where that entry's school is over its
+  // dated line too: its header ends at its date (and named fields). Under "MBA ⇥ 2013 – 2015" over
+  // "Stanford University", a line such as "Exchange semester at University of Tokyo" is that entry's
+  // description, not the next degree's school (which is under the next degree's dated line).
+  const schoolFirstAbove = () => {
+    const last = cur?.header.filter((h) => !isMetaLine(h.text)).at(-1);
+    return !cur || Boolean(last?.date);
+  };
   /** That line over `L`, or null. */
   const titleOver = (L) => {
     const body = pool();
     const b = body[body.length - 1];
     const before = b && info[b.index - 1];
     return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
-      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L))) ? b : null;
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L)
+        && (way(b, L) !== 'school' || schoolFirstAbove()))) ? b : null;
   };
   // The line under a dated line that is the next entry's title over its own dated line (the next degree
   // over the next school), where this entry's is over it too and names its degree (or role) the same
   // way: that entry's, not this one's second line. Before, "Bachelor of Science" under "Stanford
   // University ⇥ 2018 – 2020" became Stanford's degree, Stanford's own ("Master of Science", over it)
-  // went into its description, and the University of Oregon had none.
+  // went into its description, and the University of Oregon had none. So with each school over its
+  // "Degree ⇥ dates" line: the next school became this entry's, and this one's its description.
   const titleOfNext = (L, n) => {
     const b = titleOver(L);
     const m = info[n.index + 1];
-    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && names(n, m));
+    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && way(n, m) === way(b, L));
   };
 
   for (let i = 0; i < info.length;) {
@@ -998,7 +1058,16 @@ function roleEntries(type, lines) {
 
 /** Skills lines: "Category: a, b" as a group; a short line alone over a list as its category. */
 function skillsOf(lines) {
-  const texts = lines.map((l) => l.text.replace(BULLET, '').trim()).filter(Boolean);
+  // Skills set apart at | • · as the editor writes them, at commas: "Python • SQL" is two skills, as
+  // Tags, Bars and the Sidebar's Stacked print them. Before, each such line was one skill. A cell with
+  // two categories in it ("Languages: Go | Tools: Git") is two groups.
+  const NAMED = /^[^:,]{1,60}?\s*:/;
+  const commas = (cell) => {
+    const parts = cell.split(/\s+[|•·]\s+/).map((s) => s.trim()).filter(Boolean);
+    const named = parts.filter((p) => NAMED.test(p)).length > 1;
+    return parts.reduce((out, p) => (out.length && !(named && NAMED.test(p)) ? [...out.slice(0, -1), `${out[out.length - 1]}, ${p}`] : [...out, p]), []);
+  };
+  const texts = lines.map((l) => l.text.replace(BULLET, '').trim().split('\t').flatMap(commas).join('\t')).filter(Boolean);
   const items = [];
   for (let i = 0; i < texts.length; i += 1) {
     const cells = texts[i].split('\t').map((s) => s.trim()).filter(Boolean);
@@ -1143,7 +1212,7 @@ export function resumeFromText(input) {
   const takeContacts = (ls, { spill }) => {
     for (const l of ls) {
       const leftover = [];
-      for (const piece of headerPieces(l.text)) {
+      for (const piece of headerPieces(l.text).flatMap((p) => contactRun(p) || [p])) {
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
         // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
         // it was shown as its Display label (R4-IMP-02).
@@ -1173,9 +1242,15 @@ export function resumeFromText(input) {
     // The job title is the next line, or the one field set beside the name on its line (Compact's
     // Inline layout, "Name ⇥ Job Title"); a name line with more fields than that is a contact line.
     const t = rest[0] && more.length <= 1 ? rest[0] : null;
-    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
+    // A contact line set apart at dashes or commas is none either; one led by a field that is no
+    // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
+    const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
+    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
+    } else if (run && !isContact(run[0])) {
+      personal.title = run[0];
+      rest[0] = { ...t, text: run.slice(1).join('\t') };
     }
     takeContacts(rest, {
       spill: (text, links) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push({ text, links }),
