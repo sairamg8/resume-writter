@@ -851,7 +851,16 @@ function entriesOf(type, lines, aside) {
   const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
     && !isMetaLine(b.text) && pieces(b.text).length === 1;
   const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
-  const names = (b, L) => Boolean(KIND && KIND.test(b.text) && !KIND.test(datedFields(L.text)[0]));
+  // How `b` names its entry over `L`: 'kind' for the role (or degree) its dated line does not name;
+  // for a school, 'school' for the school over a dated line that names the degree ("Stanford
+  // University" over "MBA ⇥ 2013 – 2015"), the mirror of the degree over its school. Else null.
+  const way = (b, L) => {
+    const [field = ''] = datedFields(L.text);
+    if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
+    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
+    return null;
+  };
+  const names = (b, L) => Boolean(way(b, L));
   /** That line over `L`, or null. */
   const titleOver = (L) => {
     const body = pool();
@@ -864,11 +873,12 @@ function entriesOf(type, lines, aside) {
   // over the next school), where this entry's is over it too and names its degree (or role) the same
   // way: that entry's, not this one's second line. Before, "Bachelor of Science" under "Stanford
   // University ⇥ 2018 – 2020" became Stanford's degree, Stanford's own ("Master of Science", over it)
-  // went into its description, and the University of Oregon had none.
+  // went into its description, and the University of Oregon had none. So with each school over its
+  // "Degree ⇥ dates" line: the next school became this entry's, and this one's its description.
   const titleOfNext = (L, n) => {
     const b = titleOver(L);
     const m = info[n.index + 1];
-    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && names(n, m));
+    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && way(n, m) === way(b, L));
   };
 
   for (let i = 0; i < info.length;) {
