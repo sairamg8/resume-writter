@@ -96,7 +96,16 @@ export function deleteColumn(board, columnId, targetColumnId = null, ctx = {}) {
   const ids = board.issues.filter((i) => i.columnId === columnId).map((i) => i.id);
   if (ids.length && (!columnById(board, targetColumnId) || targetColumnId === columnId)) return board;
   const moved = ids.length ? setStatus(board, ids, targetColumnId, ctx) : board;
-  return { ...moved, columns: moved.columns.filter((c) => c.id !== columnId) };
+  const columns = moved.columns.filter((c) => c.id !== columnId);
+  if (!moved.issues.some((i) => i.columnId === columnId)) return { ...moved, columns };
+  // A repeating issue the move resolved made its next occurrence in the first to-do column while this
+  // one was still on the board: when that is this column, the occurrence goes where it would be made
+  // without it (as spawnNext picks), not left in a column no longer there, hidden everywhere.
+  const home = columns.find((c) => c.category === 'todo') ?? columns.find((c) => !isDoneColumn(c)) ?? columns[0];
+  const now = nowOf(ctx);
+  const issues = moved.issues.map((i) => (i.columnId === columnId
+    ? { ...i, columnId: home.id, resolvedAt: isDoneColumn(home) ? (i.resolvedAt ?? now) : i.resolvedAt } : i));
+  return { ...moved, columns, issues };
 }
 
 /** Two stored values alike (the same object, or the same data read back from storage). */
