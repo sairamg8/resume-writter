@@ -6,8 +6,12 @@
 // Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { completeJob, jobDay, readJob } from '../../src/utils/normalizeJob.js';
-import { isFollowUpDue } from '../../src/utils/jobQuery.js';
+// As a namespace: without the fix, jobDay is missing and only its own tests fail (not the whole file).
+import * as normalizeJob from '../../src/utils/normalizeJob.js';
+import { isFollowUpDue, sortJobs } from '../../src/utils/jobQuery.js';
+
+const { completeJob, readJob } = normalizeJob;
+const jobDay = (v) => normalizeJob.jobDay(v);
 
 const imported = {
   company: 'Acme', role: 'Engineer', status: 'Applied',
@@ -25,6 +29,8 @@ test('an imported job with timestamps gets its days as YYYY-MM-DD, the day as wr
 test('a passed follow-up written as a timestamp is due', () => {
   const done = completeJob(readJob(imported).kept);
   assert.equal(isFollowUpDue(done, new Date(2026, 8, 29, 12)), true);
+  const blank = { id: 'job_3', status: 'applied', appliedDate: '' };
+  assert.deepEqual(sortJobs([blank, done], 'appliedDate', 'asc').map((j) => j.id), ['job_2', 'job_3'], 'a date sorts before a blank');
 });
 
 test('jobDay: other readable forms; a day already so, blank, or unreadable stays as it is', () => {
@@ -39,4 +45,13 @@ test('jobDay: other readable forms; a day already so, blank, or unreadable stays
 test('a job whose days are already YYYY-MM-DD comes back as the same object', () => {
   const j = { id: 'job_1', status: 'applied', appliedDate: '2026-09-20', deadline: '', followUpDate: 'next week' };
   assert.equal(completeJob(j), j);
+});
+
+test('a day with spaces around it is the bare day: a passed follow-up is due, and sorts as a date', () => {
+  const done = completeJob({ id: 'job_2', status: 'applied', followUpDate: ' 2026-09-25 ', appliedDate: '2026-09-20\n' });
+  assert.equal(done.followUpDate, '2026-09-25');
+  assert.equal(done.appliedDate, '2026-09-20');
+  assert.equal(isFollowUpDue(done, new Date(2026, 8, 29, 12)), true);
+  const blank = { id: 'job_3', status: 'applied', appliedDate: '' };
+  assert.deepEqual(sortJobs([blank, done], 'appliedDate', 'asc').map((j) => j.id), ['job_2', 'job_3'], 'a date sorts before a blank');
 });
