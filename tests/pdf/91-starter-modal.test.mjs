@@ -118,7 +118,8 @@ describe('New Resume → the starter picker (R2-157)', () => {
       try {
         await view.open();
         view.pick(starter.name);
-        assert.deepEqual(view.created, [['Untitled Resume', starter.id]], starter.id);
+        // No look picked and no résumé of the user's to start from: both null (starterFrom keeps the starter).
+        assert.deepEqual(view.created, [['Untitled Resume', starter.id, null, null]], starter.id);
         await settle(() => view.seen.path !== '/new');
         assert.equal(view.picker(), null, `${starter.id}: closed`);
         assert.equal(view.seen.path, '/resume/resume_new', `${starter.id}: the editor`);
