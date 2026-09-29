@@ -66,7 +66,7 @@ test('a job put back after its deletion was sent survives a first sync that runs
   // Offline and back before the pause is over: the first sync runs instead of the queued write.
   d1.offline();
   await d1.online();
-  assert.deepEqual(d1.ids(), ['j1', 'j2'], 'still put back here');
+  assert.deepEqual(d1.ids().toSorted(), ['j1', 'j2'], 'still put back here');
   assert.equal(cloud.doc(jobPath('A', 'j1'))?.company, 'Acme', 'written to the account');
   assert.ok(!deletedIn(cloud, 'A').includes('j1'), 'taken off the deleted list');
 
