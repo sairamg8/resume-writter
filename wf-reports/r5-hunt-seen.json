@@ -19,6 +19,17 @@
   "5": {
    "confirmed": 14,
    "head": "1b82c51"
+  },
+  "6": {
+   "partialB": {
+    "areas": [
+     "boards",
+     "jobs",
+     "dash",
+     "sync"
+    ],
+    "confirmed": 13
+   }
   }
  },
  "seen": [
@@ -102,6 +113,22 @@
   "Undo of an issue deleted before its epic was deleted brings it back linked to the gone epic: 'Issues without an epic' hides it and the Parent epic picker can't clear it",
   "List view: sorting by Summary uses raw code-point order, so accented titles sort after 'z' and 'Item 10' before 'Item 2'",
   "Clicking into an issue title, sprint name or project name and clicking away without typing puts back the old text over another tab's newer edit",
-  "ATS Check says 'Missing or invalid candidate name' (critical, 0 pts) for a full name that includes pronouns or a nickname in parentheses"
+  "ATS Check says 'Missing or invalid candidate name' (critical, 0 pts) for a full name that includes pronouns or a nickname in parentheses",
+  "Changing a Done column's category, even by mistake and then back, reopens every done issue and wipes its resolved date, with no warning and no Undo; long-done issues then flood back onto the board",
+  "A comment typed in the issue view disappears without a word when the view is closed or another issue (epic, child, copy) is opened",
+  "With 'Group by' set, dropping a card into another swimlane's cell is accepted, but the card lands back in its own lane: its epic, priority or type never changes (refuted)",
+  "On the List and Calendar, which show epics, the Type filter has no 'Epic' option: there is no way to list only epics, and ticking any type hides every epic",
+  "If you sign out with a job's Edit form open, the form says the job was 'deleted in another tab' and offers 'Save as a new job'. That button copies the previous account's job into the signed-out browser, and the next account to sign in uploads it.",
+  "Re-importing a jobs JSON file whose entries have no id (or a numeric id), such as an export from another tool, adds every job again each time and reports them as new imports (refuted)",
+  "A job's interview stage cannot be cleared on the job form when that stage is not in this browser's stage lists (imported, synced from another device, or a custom stage removed since)",
+  "List view Salary sort treats a range written with the thousands only on the second number ('$40-50,000', '€40-50.000') as 40, so it sorts below every real salary",
+  "The Summary's 'Upcoming deadlines' card shows only the first six deadlines and hides the rest with no count, unlike the fixed 'Follow-ups due' card beside it (refuted)",
+  "Deleting a résumé from the Dashboard silently removes every saved design that only that résumé held, so it is gone from Design → Template → Your designs on all other résumés and from the /new page",
+  "Browser Back from the editor (or from Job Tracker/Projects) returns to the Dashboard at the top, not where the user had scrolled",
+  "A PDF/Word import started on the Dashboard that finishes after the user signs out adds that person's résumé to the signed-out browser's list (and to the next account that signs in)",
+  "After a cover letter is opened, the Dashboard's Career History switches to the oldest résumé instead of the one the user was working on",
+  "When a second tab of the app is open, one conflict between devices produces two identical \"(conflict copy)\" résumés, and they show up on every device",
+  "Undo on a deleted job, cleared job list or deleted project after signing out puts the previous account's data back in the browser with no owner, and the next account to sign in uploads it to its own cloud",
+  "An old sign-in error bubble reappears under 'Sign in with Google' after signing out, although a later sign-in worked"
  ]
 }
