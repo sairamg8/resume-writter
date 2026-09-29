@@ -17,10 +17,22 @@
         "tests/pdf/r5hunt8-empty-website-contact.test.mjs"
       ],
       "summary": "Now: contactItems (src/utils/contacts.js) leaves out a contact whose printed value is empty, so a Website, LinkedIn or GitHub holding only a scheme or 'www.' prints no bare icon and no empty slot between separators, and the ATS check and header spacing do not count it, in every template and export. A Display label over such an address still prints.",
-      "ci": [36634654504]
+      "ci": [
+        36634654504
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36634654504,
+      36635784939
+    ],
+    "notes": "Reviewed e04e328 and f2a8cf5 against origin/claude/r4-green (420f487). Root cause: contactItems kept a Website/LinkedIn/GitHub whose raw text was non-empty but whose printed value (displayUrl) was empty; the fix filters on the printed value in the one place every consumer reads (PdfContactRow and contactRowMinWidth, the Modern and Sidebar PDF headers, CoverLetterHeaderPDF's hasContacts and 2 Grid check, wordExportHeader, wordExportCoverLetter, markdownExport, atsPlainText, atsChecker's corpus, LinkedIn and 2 Grid checks, headerSpacingRows, coverLetterText), so item counts, separators, 2 Grid cell sizing and spacing rows all agree. A Display label over an empty address still prints; contactHref already returns null for 'https://' and 'www.' (safeHref), so no dead link is added. Stored data is not changed, so sync, undo and JSON Resume round trips keep the value as typed (JSON Resume and the share panel's publicSummary list raw data by design). Fail-first run 36634654504: both tests fail without e04e328 (# fail 3; the label/real-domain case is a passing guard) and pass with it, plus 17 contact, ATS, Markdown, JSON Resume and letter files green. Wider area run 36635784939: header spacing rows and gaps (27, 45-50, 92), Word contact size, links look, visibility exports, import round trip, ATS hidden fields, Markdown escaping and text-export options, all green. Behaviour change noted, not a defect: an address typed as just 'https://' with a Link URL override and no label printed an empty linked slot in the PDF and the override in the ATS text; it now prints in neither, consistent across exports. Pre-existing edge noted for a later hunt (not introduced here): safeHref accepts 'https://www.' and 'https:///' as hrefs, so a Display label over such an address links to a dead URL."
+  },
   "baselineFailures": [],
   "notes": "Base was origin/claude/r4-green at 420f487 when the branch was cut (the task text named 9519ef6b). First dispatch 36634419420 failed only because the unit test imported coverLetterText.js, which uses @/ aliases; the letter check moved to a harness test in f2a8cf5. Run 36634654504 was green: failfirst proves both tests fail without e04e328 and pass with it, and the contact, ATS, Markdown, JSON Resume, knowledge-docs and 31-contact-fields tests pass."
 }
