@@ -894,15 +894,19 @@ function entriesOf(type, lines, aside) {
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
       // Nothing under it, and one field before its date: the title prints on the line over it ("Bachelor
       // of Science" over "University of Oregon ⇥ 2014 – 2018", "Senior Engineer" over "Acme Corp ⇥ …"),
-      // where it starts a block. Before, that line went into the description, or the job above's.
-      if (!L.date.first && !header[0].group && header.length === 1 && SECOND_LINE.has(type)
-        && datedFields(L.text).length === 1) {
+      // where it starts a block. Right after the entry above (its list or its title), only a line that
+      // plainly names the role (or the degree) its dated line does not: not the job above's last line
+      // ("Promoted twice in two years").
+      // Before, that line went into the description, or the job above's.
+      const fields = datedFields(L.text);
+      if (!L.date.first && !header[0].group && header.length === 1 && SECOND_LINE.has(type) && fields.length === 1) {
         const body = pool();
         const b = body[body.length - 1];
         const before = b && info[b.index - 1];
+        const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
         if (b && b.index === L.index - 1 && !L.gap && !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100
           && !/[.!?:;,]$/.test(b.text) && !isMetaLine(b.text) && pieces(b.text).length === 1
-          && (b.gap || !before || before.bullet || cur?.header.includes(before))) header.unshift(body.pop());
+          && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && KIND && KIND.test(b.text) && !KIND.test(fields[0])))) header.unshift(body.pop());
       }
       start(header);
       continue;
