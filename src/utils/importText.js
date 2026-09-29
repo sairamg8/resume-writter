@@ -390,6 +390,36 @@ function contactOf(segment) {
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
 const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
 
+/** Whether a header piece is a contact: one alone, or a link as linkText writes it, "GitHub (https://…)". */
+const isContact = (piece) => Boolean(contactOf(piece) || (LINKED.exec(piece) && contactOf(LINKED.exec(piece)[2])));
+
+/**
+ * A header piece that is contacts set apart at dashes, slashes or commas ("alex@kim.dev — (206)
+ * 555-0100 — Seattle, WA", "a@b.com, (206) 555-0100, Seattle, WA"), as its pieces — a place's own
+ * comma kept ("Seattle, WA") — else null. Two contacts at least, one of them no place, and any other
+ * piece short ("Backend Engineer"): a sentence with a dash in it stays whole. Before, headerPieces
+ * split only at | • · and tabs, so such a line gave no contact and printed as "Additional Information".
+ */
+function contactRun(piece) {
+  if (isContact(piece)) return null;
+  const out = [];
+  for (const part of piece.split(/\s+[—–/-]\s+/)) {
+    if (isContact(part)) { out.push(part); continue; }
+    const cells = part.split(/\s*,\s+/);
+    for (let k = 0; k < cells.length;) {
+      // The longest run of cells from here that is one contact: a place is two or three ("Austin, TX, USA").
+      let j = Math.min(cells.length, k + 3);
+      while (j > k + 1 && !isContact(cells.slice(k, j).join(', '))) j -= 1;
+      out.push(cells.slice(k, j).join(', '));
+      k = j;
+    }
+  }
+  const found = out.filter(isContact);
+  const ok = out.length > 1 && found.length >= 2 && found.some((p) => (contactOf(p) || {}).key !== 'location')
+    && out.every((p) => isContact(p) || (p.length <= 40 && !/[.!?]$/.test(p)));
+  return ok ? out : null;
+}
+
 // ── Entries ──────────────────────────────────────────────────────────────────
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
@@ -1164,7 +1194,7 @@ export function resumeFromText(input) {
   const takeContacts = (ls, { spill }) => {
     for (const l of ls) {
       const leftover = [];
-      for (const piece of headerPieces(l.text)) {
+      for (const piece of headerPieces(l.text).flatMap((p) => contactRun(p) || [p])) {
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
         // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
         // it was shown as its Display label (R4-IMP-02).
@@ -1194,9 +1224,15 @@ export function resumeFromText(input) {
     // The job title is the next line, or the one field set beside the name on its line (Compact's
     // Inline layout, "Name ⇥ Job Title"); a name line with more fields than that is a contact line.
     const t = rest[0] && more.length <= 1 ? rest[0] : null;
-    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
+    // A contact line set apart at dashes or commas is none either; one led by a field that is no
+    // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
+    const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
+    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
+    } else if (run && !isContact(run[0])) {
+      personal.title = run[0];
+      rest[0] = { ...t, text: run.slice(1).join('\t') };
     }
     takeContacts(rest, {
       spill: (text, links) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push({ text, links }),
