@@ -49,7 +49,25 @@
       "remaining": "A range such as '90-120', with no thousands and no unit anywhere, still reads as 90, since nothing in it says the thousands are implied."
     }
   ],
-  "review": null,
+  "review": {
+    "issuesFound": [
+      "R5-HUNT6-SIGNOUT-OTHER-TAB (medium): the sign-out fix only reached the tab that ran the cloud sync's leave (collectionSyncEngine.leave -> leaveRecovery). A sign-out reaches every tab, and the leave runs in whichever tab hears it first; every other tab's own leave then finds the sync record naming no account and does nothing, and only hears its list empty. A job Edit form open there still showed 'deleted in another tab' and 'Save as a new job', which copied the account's job into the signed-out list for the next account to upload. An Add job draft kept in a tab with no job page open was also restored for the next account."
+    ],
+    "issuesFixed": [
+      "R5-HUNT6-SIGNOUT-OTHER-TAB, commit 591e46f6e3cdc4252b1e953da3b056eb78995663. In src/hooks/useJobStore.js, the storage listener that job pages hold now also watches the jobs sync record (cpwtcv_jobs_sync_v1). When another tab takes the account out of it, this tab runs the same leave step as leaveRecovery (listLeft: drop this tab's jobform:* drafts, bump `left`), so an open form goes back to the tracker. In src/pages/JobForm.jsx a draft typed on an account's list now names that account (_owner, from the new listOwner()), and is restored only while this browser holds that account's list. A draft typed while signed out names none and restores as before. Test: tests/pdf/r5hunt6-signout-other-tab.test.mjs."
+    ],
+    "open": [
+      "Not blocking: the full gate (all shards, Playwright, build) has not run on this branch and is left for the batch.",
+      "Noted, not fixed (another area): the boards list (boardStoreState.leaveRecovery) has the same same-tab-only leave, but it has no form that saves a copy of a missing item, so no leak was found there."
+    ],
+    "ciRuns": [
+      "36605246314: fail-first for 591e46f6 (tests/pdf/r5hunt6-signout-other-tab.test.mjs, '# fail 2' without the fix, pass with it), plus a tests run over 39 node test files (the 4 new ones and the existing tests for useJobStore, JobForm, jobQuery, InterviewStageSelector, the collection sync and other-tab storage), 173 of 173 passing, Cypress cypress/e2e/06-job-tracker.cy.js green, and lint green",
+      "36602223369 (fixer): fail-first for 89121a4, 4482e35 and c26c335, green",
+      "36602242674 (fixer): tests run, 206 of 206 passing, Cypress 06-job-tracker green"
+    ],
+    "verified": "All three fixer rows were re-read. The fixes address the root causes. Salary: salaryValue is the only salary parser, and it is used only for the list sort. Stage: the pill X shows only for unlisted stages. The J-16 deleted-in-another-tab flow is kept. No existing test was weakened. All commits are authored and committed as sairamgudiputi <sairamgudiputi8@gmail.com>, with no trailers.",
+    "readyToMerge": true
+  },
   "baselineFailures": [],
   "notes": "Three bugs were confirmed and fixed, one commit each: 89121a4 (salary), 4482e35 (stage), c26c335 (sign-out). Fail-first run 36602223369 is green, read from its logs. Salary: 'fail without the fix (its diff reversed): # fail 2', then pass with it. Stage: '# fail 1', then pass; the test's second case checks that listed stages keep no pill X. Sign-out: '# fail 2', then pass; the third case checks that J-16's deleted-in-another-tab flow is kept. Lint was green in both runs. Tests run 36602242674 is green. It ran 43 node test files: the 3 new ones plus the existing tests for jobQuery, InterviewStageSelector, JobForm and useJobStore, 206 tests with 206 passing. It also ran Cypress cypress/e2e/06-job-tracker.cy.js, 10 of 10 passing. Nothing prints differently, so the PDF, Word, Markdown and ATS exporters are untouched. The full gate has not run on this branch; it is left for the batch."
 }
