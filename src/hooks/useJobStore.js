@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
+import { backupRaw, loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
 import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
@@ -59,13 +59,20 @@ let stored = null;
 let initialized = false;
 /** What storage held when this tab last took its list while no job page listened (catchUp). */
 let seenRaw = null;
+/** The value catchUp took but could not read in full: copied to a backup before this tab writes over it. */
+let unreadRaw = null;
 
 /**
  * Pure read of the stored jobs (writing nothing, no listeners added) so getSnapshot
  * is completely free of side effects during React render (NB-6).
  */
 function peek() {
-  const { saved, list } = readSavedList(KEY, 'jobs', readJob);
+  return { jobs: readStored().jobs, recovery: pendingRecovery(KEY), persistError: null };
+}
+
+/** The stored jobs as peek reads them, and the raw value when some of it could not be read (else null). */
+function readStored() {
+  const { saved, list, unreadable } = readSavedList(KEY, 'jobs', readJob);
   let jobs;
   if (!list) jobs = demoJobs();
   else if (!saved) jobs = [];
@@ -74,7 +81,7 @@ function peek() {
     if (saved.dataVersion !== JOB_VERSION) jobs = [...demoJobs(), ...jobs.filter(j => !j.id.startsWith('demo_'))];
     jobs = addressableJobs(jobs);
   }
-  return { jobs, recovery: pendingRecovery(KEY), persistError: null };
+  return { jobs, unreadable };
 }
 
 /**
@@ -88,6 +95,7 @@ function init() {
   if (found) forgetSynced(JOBS_SYNC_KEY);
   const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
   stored = jobs;
+  unreadRaw = null;
   const persistError = persist(jobs);
   seenRaw = rawNow();
   current = { jobs, recovery, persistError };
@@ -121,7 +129,9 @@ function catchUp() {
   const raw = rawNow();
   if (raw === null || raw === seenRaw) return;
   seenRaw = raw;
-  const incoming = peek().jobs;
+  // Read without a backup (render must write nothing); setJobs makes it before it writes over this.
+  const { jobs: incoming, unreadable } = readStored();
+  unreadRaw = unreadable;
   const jobs = keepUnsaved(incoming, current.jobs, stored);
   stored = incoming;
   current = { ...current, jobs };
@@ -137,7 +147,8 @@ function onStorage(e) {
  * was dropped a job this tab could not save, while the notice still said it was unsaved (R6-2).
  */
 function takeOtherTabsList() {
-  const incoming = load().jobs;
+  const incoming = load().jobs; // backs up what it cannot read in full (loadSavedList)
+  unreadRaw = null;
   const jobs = keepUnsaved(incoming, snapshot().jobs, stored);
   stored = incoming;
   // The same list: nothing here is unsaved any more. Else what storage refused is written again.
@@ -193,6 +204,11 @@ function update(patch) {
 function setJobs(change) {
   if (!initialized) init();
   const jobs = change(snapshot().jobs);
+  // What catchUp could not read in full is about to be replaced: keep its copy, as load does.
+  if (unreadRaw !== null) {
+    backupRaw(KEY, unreadRaw);
+    unreadRaw = null;
+  }
   const persistError = persist(jobs);
   if (!persistError) stored = jobs;
   if (listeners.size === 0) seenRaw = rawNow();
@@ -328,6 +344,7 @@ export function _resetJobStoreForTest() {
   current = null;
   stored = null;
   seenRaw = null;
+  unreadRaw = null;
   initialized = false;
   listeners.clear();
 }

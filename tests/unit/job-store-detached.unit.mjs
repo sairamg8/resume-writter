@@ -114,3 +114,31 @@ test('a job this tab could not save survives the re-read with no job page open',
   otherTabSaves([job('a', 'Acme'), job('s', 'Stripe')]);
   assert.deepEqual(store.snapshot().jobs.map((j) => j.company), ['Acme', 'Stripe', 'Unsaved']);
 });
+
+// Review: the re-read with no job page open read what it could not read in full (another tab of a
+// newer build saving a status this one does not know) without the backup load makes, so the next
+// write here replaced it with nothing kept. Now the write backs it up first; render writes nothing.
+const backups = () => [...localStorage.map.keys()].filter((k) => k.startsWith(`${KEY}_backup_`));
+
+test('a list the re-read could not read in full is backed up before a write here replaces it', () => {
+  save([job('a', 'Acme')]);
+  store.subscribe(() => {})();
+  otherTabSaves([job('a', 'Acme', { status: 'ghosted' }), job('s', 'Stripe')]);
+  const raw = localStorage.getItem(KEY);
+
+  assert.equal(store.snapshot().jobs.find((j) => j.id === 'a').status, 'saved', 'read as far as it can');
+  assert.deepEqual(backups(), [], 'reading in render writes nothing');
+
+  store.addJob({ company: 'New' });
+  assert.equal(backups().length, 1, 'the unreadable value is copied before it is written over');
+  assert.equal(localStorage.getItem(backups()[0]), raw);
+  assert.deepEqual(storedCompanies(), ['Acme', 'Stripe', 'New']);
+});
+
+test('a readable list taken with no job page open makes no backup when written over', () => {
+  save([job('a', 'Acme')]);
+  store.subscribe(() => {})();
+  otherTabSaves([job('a', 'Acme'), job('s', 'Stripe')]);
+  store.addJob({ company: 'New' });
+  assert.deepEqual(backups(), []);
+});
