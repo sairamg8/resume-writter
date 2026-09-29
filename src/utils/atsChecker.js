@@ -686,8 +686,11 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // Name check (4 pts)
   const nameTrimmed = String(p.name || '').trim();
-  const nameWords = nameTrimmed.split(/\s+/).filter(Boolean);
-  if (nameWords.length >= 2 && !/[0-9@#$%^&*()_+=]/.test(nameTrimmed)) {
+  // Pronouns or a nickname in parentheses ("Jane Smith (she/her)", "Robert (Bob) Smith") sit beside
+  // the name, so only the words outside them are checked (R5-HUNT5-ATS-NAME-WITH-PARENTHESES).
+  const nameCore = nameTrimmed.replace(/\([^()]*\)/g, ' ').trim();
+  const nameWords = nameCore.split(/\s+/).filter(Boolean);
+  if (nameWords.length >= 2 && !/[0-9@#$%^&*()_+=]/.test(nameCore)) {
     contactPts += 4;
     results.categories.contact.items.push({
       id: 'name', status: 'pass', text: 'Full Name detected (First & Last Name)',

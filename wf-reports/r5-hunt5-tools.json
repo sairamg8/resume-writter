@@ -1,0 +1,44 @@
+{
+  "cluster": "r5-hunt5-tools",
+  "branch": "claude/wf-r5-hunt5-tools",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-ATS-NAME-WITH-PARENTHESES-CRITICAL-FAIL",
+      "title": "ATS Check fails a full name that has pronouns or a nickname in parentheses",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "545b90f1f8dcc42d137051ef8265860623c1dd3d"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-ats-name-parentheses.unit.mjs"
+      ],
+      "summary": "Now: the ATS name check in src/utils/atsChecker.js removes any group in parentheses and checks only the words left outside it. 'Jane Smith (she/her)', 'Robert (Bob) Smith' and 'Jane Smith (Jay)' pass and get 4 of 4 points. 'Bob (he/him)' now gets the single-word warning (2 points); before, it failed. '(she/her)' on its own still fails. Other names score as before: 'Jane Smith' passes, 'Bob' warns, and '' and 'Jane Smith2' fail. An unbalanced or nested parenthesis still fails, because a leftover '(' or ')' is still a forbidden character. Before the fix, the '(' and ')' themselves matched the forbidden-character test, so a full name with pronouns fell to a critical 'Missing or invalid candidate name' with 0 of 4 points. That was worse than a bare first name, which gets 2 points. The pass detail still quotes the whole name as typed. analyzeAtsScore is the only name scorer: AtsCheckerPanel.jsx is its only caller, and no exporter reads this check, so the PDF, Word, Markdown and ATS text exports and stored résumés are unchanged.",
+      "failfirst_run": "36563986158 (green: failfirst job 109391379371 logs 'fail without the fix (its diff reversed): # fail 2' and 'pass with it'; the tests job ran the new file and the ATS guard tests, 74 passed and 0 failed; lint passed)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "Digits or symbols inside parentheses now go unchecked, so 'Jane Smith (#1)' passes.",
+            "resolution": "No change. Text in parentheses sits beside the name and does not change the first and last name a parser reads. Other side notes such as 'Jane Smith [she/her]' or 'Jane Smith, she/her' already passed before this fix, so parentheses are now treated the same way."
+          },
+          {
+            "issue": "Checked whether a stored or imported name that had failed now changes elsewhere.",
+            "resolution": "No change needed. The check is computed each time the score is worked out and nothing is saved. The only other place that reads p.name in atsChecker (line 306) builds text and never scores the name."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Adversarial review of 545b90f. The fix cures the root cause: the forbidden-character test counted the parentheses themselves. It covers pronouns, nicknames, a nickname in the middle, and a single word with pronouns. I read the CI logs of fail-first run 36563986158, which confirm the test fails with the diff reversed (2 failures) and passes with it restored. No confirmed problems, so the reviewer made no commits."
+}
