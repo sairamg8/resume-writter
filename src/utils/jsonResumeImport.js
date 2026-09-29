@@ -137,7 +137,9 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   let website = storedText(b.url) || storedText(b.website); // `website`, `picture`: the pre-1.0 schema's names
   const webAt = website ? -1 : others.findIndex((o) => /website|portfolio|homepage|personal|blog/i.test(o.network) && !o.address.startsWith('@'));
   if (webAt >= 0) website = others.splice(webAt, 1)[0].address;
-  const profiles = others.map((o) => ({ id: newId('cust'), title: o.network || 'Profile', subtitle: o.address, date: '', location: '', description: '' }));
+  // Not the website again, nor one address twice ("Portfolio" and "Website" to one page).
+  const listed = new Set([website]);
+  const profiles = others.filter((o) => !listed.has(o.address) && listed.add(o.address)).map((o) => ({ id: newId('cust'), title: o.network || 'Profile', subtitle: o.address, date: '', location: '', description: '' }));
 
   const personal = {
     name: storedText(b.name),
