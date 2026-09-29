@@ -430,17 +430,22 @@ export function statementRange(el) {
  * empty list item or paragraph ({ host }), or a blank line between line breaks ({ parent, child }: the
  * caret is before `child` in `parent`, at its end with none), with the editor's HTML as it was
  * ({ html }): Apply fills it only when nothing has changed since. null elsewhere, and in an empty
- * editor, where the result is a new bullet.
+ * editor, where the result is a new bullet. An empty bullet is filled even in an editor with no
+ * text yet: a list started from the toolbar in an empty box is <ul><li><br></li></ul>, and Apply
+ * added a second list under it, the empty bullet left printing a bare "•" (review of
+ * R5-HUNT8-OPTIMIZER-EMPTY-BULLET-APPLY-AT-END).
  */
 function blankSpot(el) {
   const sel = window.getSelection?.();
-  if (!el || !sel || !sel.rangeCount || !el.contains(sel.anchorNode) || !el.textContent.trim()) return null;
+  if (!el || !sel || !sel.rangeCount || !el.contains(sel.anchorNode)) return null;
   const at = sel.getRangeAt(0);
   if (at.toString().trim()) return null;
   let host = null;
   for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
     if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
   }
+  if (host && host.nodeName === 'LI' && isBlank(host)) return { host, html: el.innerHTML };
+  if (!el.textContent.trim()) return null;
   if (host && isBlank(host)) return { host, html: el.innerHTML };
   const parent = at.startContainer;
   if (parent.nodeType !== 1 || (parent !== el && parent !== host)) return null;
