@@ -8,8 +8,12 @@
       "title": "The Job Tracker list's Résumé column showed '—' for a job linked to a résumé that was since deleted, as if it had never been linked, while the job page says 'Résumé deleted'",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["73e58b7950cc9bccae61f4019667e76f8ea7d789"],
-      "tests": ["tests/pdf/105-r5-hunt7-list-resume-deleted.test.mjs"],
+      "commits": [
+        "73e58b7950cc9bccae61f4019667e76f8ea7d789"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt7-list-resume-deleted.test.mjs"
+      ],
       "summary": "Now: a job whose linked résumé was deleted reads 'Résumé deleted' in the list's Résumé column, the same as on the job page. A job never linked still shows '—', and a linked job still shows the résumé's name. src/components/job/ListView.jsx uses the same linkedResume(job, resumes) helper from src/utils/jobQuery.js as the job page (J-21), instead of its own resumes.find.",
       "product_call": null,
       "remaining": null
@@ -19,8 +23,12 @@
       "title": "Importing a file whose entries named neither a company nor a role (another tracker's 'companyName'/'jobTitle' export, or a list of empty objects) added one blank 'Untitled Company' card per entry and reported them as imported",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["4254eed17eba3a86a5c8873818776b76250b913b"],
-      "tests": ["tests/unit/r5-hunt7-job-import-blank.unit.mjs"],
+      "commits": [
+        "4254eed17eba3a86a5c8873818776b76250b913b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-job-import-blank.unit.mjs"
+      ],
       "summary": "Now: an imported entry with no company and no role is left out, because the job form will not save such an entry either. A file of only such entries says 'No job applications found in that file.' and adds nothing, so importing it again does not pile up blank cards. A mixed file imports the named jobs and shows the partial-import warning ('Imported N job applications; what could not be read ...'). The check is in mergeImport (src/utils/jobMerge.js): an entry that is not named is skipped and marks the import lossy.",
       "product_call": null,
       "remaining": "Entries from another tracker's format ('companyName'/'jobTitle') are dropped, not mapped. Mapping foreign field names would be a separate feature."
@@ -30,14 +38,35 @@
       "title": "A job moved to the wrong status by mistake (a card dropped on the wrong board column, 'Move to', a click on the job page's stepper or status menu) had no Undo, and moving it back by hand left a false history entry and an applied date, so the Summary kept counting it at that step",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["c7c321991bd73508a5d08957f449fad773551138"],
-      "tests": ["tests/unit/r5-hunt7-job-status-undo.unit.mjs", "tests/pdf/105-r5-hunt7-status-move-undo.test.mjs"],
+      "commits": [
+        "c7c321991bd73508a5d08957f449fad773551138"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-job-status-undo.unit.mjs",
+        "tests/pdf/105-r5-hunt7-status-move-undo.test.mjs"
+      ],
       "summary": "Now: every status move on the board (drag or 'Move to') shows a toast such as 'Acme moved to Offer' with an Undo button. A move on the job page's Application Stage stepper or its status menu shows 'Moved to Offer' with Undo. Undo puts back the status and the status history. It also clears an applied date that the move filled in, unless the user has changed that date since. Other edits made since the move stay. Undo does nothing if the job has moved on since, and it is ignored after the list has left the browser (sign-out). The Summary's funnel and applied count no longer count the job at that step. How it works: the store in src/hooks/useJobStore.js has changeStatus(id, status), which returns the change, and undoStatus(change). They use the new pure helper undoStatusChange in src/utils/jobEdits.js. src/pages/JobTracker.jsx and src/pages/JobDetail.jsx now call them. docs/knowledge/07-job-tracker.md is updated.",
       "product_call": null,
       "remaining": null
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [
+      "None blocking. Checked: KanbanView calls its updateJob prop only as updateJob(id, {status}) (Move to, drag end), so routing it to moveStatus drops nothing; JobDetail set(\"status\") is reached only from the Pipeline stepper and StatusMenu; other edits still go through updateJob.",
+      "undoStatusChange only acts while the job is still at the change (same status and history length), so an older Undo after a later move, or after a sync brought a different move, is a no-op; edits made since stay; updatedAt is now so last-writer-wins sync keeps the undo; stillOwner blocks an Undo after sign-out.",
+      "mergeImport is only reached from importJobs (JobTracker file import); every in-app path that creates or edits a job (JobForm canSave, OverviewTab) requires a company or a role, so an app export never holds an unnamed job for the new check to drop. Only older data from before canSave could, and it is reported through the lossy warning, not dropped silently.",
+      "ListView now uses linkedResume like the job page; same lookup as before for linked and never-linked jobs.",
+      "CI checked: run 36612479614 (failfirst, head c7c32199) completed/success, each pair logged fail-without then pass-with (e.g. 4254eed1: # fail 3, then pass); run 36612502244 (named node tests, Cypress 4 shards, lint) completed/success. Commits carry the owner identity and no trailers.",
+      "Note (not a defect): the unit test r5-hunt7-job-status-undo imports undoStatusChange, so without the fix it fails at import; the behaviour is still pinned by the pdf test 105-r5-hunt7-status-move-undo, which fails on missing toast/Undo."
+    ],
+    "commits": [],
+    "ci": [
+      36612479614,
+      36612502244
+    ]
+  },
   "baselineFailures": [],
   "notes": "All CI ran on c7c32199, the branch head before this report; this commit changes only wf-reports/. Fail-first run 36612479614 was green for all three commits. 73e58b79: 1 test fails without the fix and all pass with it. 4254eed1: 3 fail without it and all pass with it. c7c32199: 3 fail without it and all pass with it. Named-tests run 36612502244 was green: 226/226 node tests passed (the 4 new files plus 45 existing job-area files and knowledge-docs), the Cypress job specs passed on 4 shards (including 06-job-tracker.cy.js and 20-regressions-job-unsaved.cy.js), and lint passed. No red runs, so there was no baseline to compare. The coordinator died before writing the report. This finishing pass checked each fix commit, confirmed it has a test that fails without its src/ change, read both CI runs, and made no code changes."
 }
