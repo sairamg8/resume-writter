@@ -8,14 +8,18 @@
       "title": "A blank or eyes-off entry still prints in the PDF and preview: a gap, an empty grid cell, a bare Timeline dot, and a split 'Group roles by company' group",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["06f6f0c866fdd10194974f564d97e0110f766a05"],
-      "tests": ["tests/pdf/r5hunt7-blank-entry.test.mjs"],
+      "commits": [
+        "06f6f0c866fdd10194974f564d97e0110f766a05"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt7-blank-entry.test.mjs"
+      ],
       "summary": "Now: every PDF renderer draws only the entries that print. It uses the same entryPrints rule as Word's `shown`, so a blank entry, or one whose fields are all hidden with their eyes, takes no item gap, grid cell, Timeline dot or role group, and the heading's keep is measured on the first entry that prints. The new helper printedEntries(section) in src/utils/entryPrints.js replaces `(section.items || []).filter(i => i.visible !== false)` in PdfSectionsOne/Two/Three.jsx, PdfTimelineSections.jsx, PdfSidebarColumn.jsx and PdfSidebarSections.jsx. Skills already filtered with skillGroupPrints and are unchanged. The PDF now agrees with Word, Markdown and the ATS text.",
       "product_call": null,
-      "remaining": "CI runs 36612482108 (failfirst) and 36612494843 (named tests) were still in progress when this report was written. Their results must be read before merging."
+      "remaining": "Nothing for this row. Fail-first (run 36612482108) and named tests (run 36612494843) are both green on 06f6f0c."
     }
   ],
   "review": null,
   "baselineFailures": [],
-  "notes": "CI: failfirst run 36612482108, tests run 36612494843 (both dispatched on 06f6f0c, pending at report time)."
+  "notes": "CI on 06f6f0c (the fix commit): failfirst run 36612482108 green — tests/pdf/r5hunt7-blank-entry.test.mjs fails without the src/ change (40 failures, its diff reversed) and passes with it; named-tests run 36612494843 green — 28 files (the new test plus the PDF/Word/ATS tests that exercise entryPrints, the grids, Timeline, sidebar, grouped roles and title keeps), 1939 tests, 1937 pass, 0 fail, 2 todo; lint green on both. No baseline failures. The full gate still runs once for the batch before master is moved."
 }
