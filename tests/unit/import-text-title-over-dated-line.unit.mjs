@@ -50,3 +50,22 @@ test('a heading in capitals after a gap still starts a section of its own, dated
   const r = resumeFromText('JANE DOE\n\nEXPERIENCE\nSenior Engineer\tAcme\tJan 2020 – Present\n• x\n\nTEACHING\nLecturer\t2016\n• z');
   assert.deepEqual(r.sections.map((s) => [s.type, s.title]), [['experience', 'Experience'], ['custom', 'Teaching']]);
 });
+
+test('each degree over its "School ⇥ dates" line is that school\'s, with no gap between them or a GPA under (R5-HUNT2-TEXT-IMPORT-DEGREE-OVER-SCHOOL-DATE-GOES-TO-DESCRIPTION, review)', () => {
+  for (const gpa of [['', ''], ['\nGPA: 3.9', '\nGPA: 3.7']]) {
+    const r = resumeFromText(`Jane Doe\njane@x.com\n\nEducation\nMaster of Science in Data Science\nStanford University\t2018 – 2020${gpa[0]}\nBachelor of Science in Computer Science\nUniversity of Oregon\t2014 – 2018${gpa[1]}`);
+    assert.deepEqual(section(r, 'education').items.map((e) => [e.institution, e.degree, e.startDate, e.endDate, e.gpa || '', e.description]), [
+      ['Stanford University', 'Master of Science in Data Science', '2018', '2020', gpa[0] ? '3.9' : '', ''],
+      ['University of Oregon', 'Bachelor of Science in Computer Science', '2014', '2018', gpa[1] ? '3.7' : '', ''],
+    ], JSON.stringify(gpa));
+  }
+  const jobs = section(resumeFromText('Jane Doe\njane@x.com\n\nExperience\nSenior Engineer\nAcme Corp\tJan 2020 – Present\nSoftware Engineer\nGlobex\t2017 – 2019'), 'experience').items;
+  assert.deepEqual(jobs.map((j) => [j.company, j.role, j.description]), [['Acme Corp', 'Senior Engineer', ''], ['Globex', 'Software Engineer', '']]);
+});
+
+test('a degree under its "School ⇥ dates" line stays that school\'s, a line over the first school or not', () => {
+  for (const over of ['', 'Graduate Studies\n']) {
+    const r = resumeFromText(`Jane Doe\njane@x.com\n\nEducation\n${over}Stanford University\t2018 – 2020\nMaster of Science\nUniversity of Oregon\t2014 – 2018\nBachelor of Science`);
+    assert.deepEqual(section(r, 'education').items.map((e) => [e.institution, e.degree]), [['Stanford University', 'Master of Science'], ['University of Oregon', 'Bachelor of Science']], over);
+  }
+});

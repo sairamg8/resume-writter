@@ -832,6 +832,35 @@ function entriesOf(type, lines, aside) {
     return next;
   };
 
+  // The title printed on the line over its dated line, one field before its date ("Bachelor of Science"
+  // over "University of Oregon ⇥ 2014 – 2018", "Senior Engineer" over "Acme Corp ⇥ …"). A line is one
+  // where it starts a block (first in the section or after a gap); right after the entry above (its
+  // list or its title), only where it plainly names the role (or the degree) its dated line does not:
+  // not the job above's last line ("Promoted twice in two years").
+  const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
+  const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
+    && !isMetaLine(b.text) && pieces(b.text).length === 1;
+  const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
+  const names = (b, L) => Boolean(KIND && KIND.test(b.text) && !KIND.test(datedFields(L.text)[0]));
+  /** That line over `L`, or null. */
+  const titleOver = (L) => {
+    const body = pool();
+    const b = body[body.length - 1];
+    const before = b && info[b.index - 1];
+    return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L))) ? b : null;
+  };
+  // The line under a dated line that is the next entry's title over its own dated line (the next degree
+  // over the next school), where this entry's is over it too and names its degree (or role) the same
+  // way: that entry's, not this one's second line. Before, "Bachelor of Science" under "Stanford
+  // University ⇥ 2018 – 2020" became Stanford's degree, Stanford's own ("Master of Science", over it)
+  // went into its description, and the University of Oregon had none.
+  const titleOfNext = (L, n) => {
+    const b = titleOver(L);
+    const m = info[n.index + 1];
+    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && names(n, m));
+  };
+
   for (let i = 0; i < info.length;) {
     const L = info[i];
     if (L.hint === 'entry') {
@@ -888,26 +917,14 @@ function entriesOf(type, lines, aside) {
         }
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
-        if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)) { header.push(n); i += 1; }
+        if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
+          && !titleOfNext(L, n)) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
-      // Nothing under it, and one field before its date: the title prints on the line over it ("Bachelor
-      // of Science" over "University of Oregon ⇥ 2014 – 2018", "Senior Engineer" over "Acme Corp ⇥ …"),
-      // where it starts a block. Right after the entry above (its list or its title), only a line that
-      // plainly names the role (or the degree) its dated line does not: not the job above's last line
-      // ("Promoted twice in two years").
-      // Before, that line went into the description, or the job above's.
-      const fields = datedFields(L.text);
-      if (!L.date.first && !header[0].group && header.length === 1 && SECOND_LINE.has(type) && fields.length === 1) {
-        const body = pool();
-        const b = body[body.length - 1];
-        const before = b && info[b.index - 1];
-        const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
-        if (b && b.index === L.index - 1 && !L.gap && !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100
-          && !/[.!?:;,]$/.test(b.text) && !isMetaLine(b.text) && pieces(b.text).length === 1
-          && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && KIND && KIND.test(b.text) && !KIND.test(fields[0])))) header.unshift(body.pop());
-      }
+      // Nothing under it but its named fields ("GPA: 3.9"), and its title over it (titleOver). Before,
+      // that line went into the description, or the job above's.
+      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) header.unshift(pool().pop());
       start(header);
       continue;
     }
