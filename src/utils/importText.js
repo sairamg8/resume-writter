@@ -405,9 +405,18 @@ const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
+/** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
+const HONOURS = /\b(honou?rs|distinction|merit|cum laude|summa|magna|first|second|third|class|minor|major|concentration|speciali[sz]ation|track|option|gpa|grade)\b/i;
+/** A degree's own name, which is no subject it is in: the "of Science" of "Bachelor of Science". */
+const DEGREE_NAME = /\b(?:bachelor|master|doctor|associate)'?s?\s+of\s+(?:fine\s+|applied\s+|liberal\s+)?(?:science|arts?|engineering|business\s+administration|laws?|philosophy|education|technology|commerce|music|nursing|medicine|social\s+work|public\s+(?:health|policy|administration)|architecture|design|computer\s+applications)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
+/**
+ * A company's legal ending after its comma: "Acme, Inc.", "Blue Bottle, LLC" — a name, not a place.
+ * No two-letter code a place shares: "Denver, CO", "Adelaide, SA", "Calgary, AB", "Reno, NV".
+ */
+const CORPORATE = /,\s*(?:inc|incorporated|llc|l\.l\.c|llp|pllc|ltd|limited|corp|corporation|gmbh|plc|pty\.?\s+ltd|pte\.?\s+ltd|s\.a|s\.r\.l|sarl|b\.v|n\.v)\.?$/i;
 /** Types whose header has a second line under the title in the PDF and Word: the role, the degree. */
 const SECOND_LINE = new Set(['experience', 'education', 'volunteering', 'custom']);
 /** Types whose entries carry a location. */
@@ -580,6 +589,9 @@ function roleFirst(a, b, roleLeads) {
   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
   if (ROLE.test(a) && !ROLE.test(b)) return [a, b];
   if (ROLE.test(b) && !ROLE.test(a)) return [b, a];
+  // With no role word on either side, a company's legal ending names the company: "Barista — Blue Bottle, LLC".
+  if (CORPORATE.test(b) && !CORPORATE.test(a)) return [a, b];
+  if (CORPORATE.test(a) && !CORPORATE.test(b)) return [b, a];
   return roleLeads ? [a, b] : [b, a];
 }
 
@@ -590,6 +602,12 @@ function roleFirst(a, b, roleLeads) {
  */
 function entryOf(type, header, body, aside = () => {}) {
   const h = readHeader(type, header);
+  // "Google — Mountain View, CA" over "Software Engineer": a place after the company on its line is
+  // the job's location, not its role; the title under it is. Only when neither names a role and a
+  // field is left for the role: "Senior Engineer — Acme, Inc." keeps its company, and so does a title
+  // with no role word ("Barista — Blue Bottle, LLC"): a company's legal ending is no place.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 3
+    && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1]) && !CORPORATE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
@@ -618,7 +636,13 @@ function entryOf(type, header, body, aside = () => {}) {
         const field = /^in\s+(.+)$/i.exec(part);
         if (gpa && !fields.gpa) fields.gpa = gpa[1];
         else if (field && !fields.fieldOfStudy) fields.fieldOfStudy = field[1];
-        else if (!fields.institution && SCHOOL.test(part) && !DEGREE.test(part.split(',')[0])) fields.institution = part;
+        else if (!fields.institution && SCHOOL.test(part) && !DEGREE.test(part.split(',')[0])) {
+          // "Massachusetts Institute of Technology, BSc Computer Science": the school, then its degree.
+          const pair = /^([^,]+),\s*(.+)$/.exec(part);
+          // Not "Harvard University, Cambridge, MA": a place after the school, its state no degree ("MA", "MD").
+          if (pair && !fields.degree && SCHOOL.test(pair[1]) && DEGREE.test(pair[2]) && !SCHOOL.test(pair[2]) && !PLACE.test(pair[2])) [fields.institution, fields.degree] = [pair[1].trim(), pair[2].trim()];
+          else fields.institution = part;
+        }
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
         else left.push(part);
       }
@@ -643,7 +667,16 @@ function entryOf(type, header, body, aside = () => {}) {
       // "B.S., Computer Science": the degree and its field, as the exports print them — a degree the
       // import does not know too ("Bootcamp, Full Stack"): the exports print a degree and its field so.
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
-      if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
+      // "BSc Computer Science, Stanford University", "B.S. Computer Science, Georgia Tech": with no
+      // school found, what follows a degree that names its subject is the school — a school's name,
+      // or one that is no subject nor a grade ("Master of Science, Computer Science" is a field). A
+      // degree's own name names no subject ("Bachelor of Science, Biochemistry" is a field), and a
+      // grade ("2:1", "3.8/4.0") or a place ("Boston, MA") after the comma is no school.
+      const school = comma && !fields.institution && DEGREE.test(comma[1]) && !DEGREE.test(comma[2])
+        && (SCHOOL.test(comma[2]) || (SUBJECT.test(comma[1].replace(DEGREE_NAME, '').replace(DEGREE, '')) && !SUBJECT.test(comma[2])
+          && !HONOURS.test(comma[2]) && /^\p{L}\D*$/u.test(comma[2]) && !PLACE.test(comma[2])));
+      if (school) { fields.degree = comma[1].trim(); fields.institution = comma[2].trim(); }
+      else if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
       if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
       return itemOf(type, { ...fields, location, ...dates, description: description(left) });
@@ -770,6 +803,10 @@ function entriesOf(type, lines, aside) {
       const [company, place = ''] = pieces(b.text);
       found = { n: 1, company, place };
     }
+    // "Google — Mountain View, CA" over "Software Engineer ⇥ Jan 2020 – Present": the employer and its
+    // place on one line, split at its dash — neither names a role, and the second is a place.
+    const [co, at, ...more] = found ? fieldsOf(found.company) : [];
+    if (found && !found.place && at && !more.length && !ROLE.test(co) && !ROLE.test(at) && PLACE.test(at) && !CORPORATE.test(at)) found = { ...found, company: co, place: at };
     // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
     if (!found || fieldsOf(found.company).length !== 1) return null;
     body.splice(body.length - found.n);

@@ -76,7 +76,7 @@ export const SECTION_KEYS = {
       const endDate = month(w.endDate);
       return {
         id: newId('exp'),
-        company: text(w.name),
+        company: text(w.name) || text(w.company), // `company`: the pre-1.0 schema's name for it
         role: text(w.position),
         location: text(w.location),
         startDate,
@@ -113,7 +113,7 @@ export const SECTION_KEYS = {
       startDate: month(ed.startDate),
       endDate: month(ed.endDate),
       ...ongoing(ed),
-      gpa: text(ed.score),
+      gpa: text(ed.score) || text(ed.gpa), // `gpa`: the pre-1.0 schema's name for it
       description: richDescription(ed.summary, ed.highlights, Array.isArray(ed.courses) && ed.courses.length > 0 ? `Relevant courses: ${joined(ed.courses)}` : ''),
     })),
   },
@@ -272,7 +272,7 @@ export const PUBLICATIONS = {
     subtitle: text(p.publisher),
     date: month(p.releaseDate),
     location: '',
-    description: richDescription(p.summary, [], p.url),
+    description: richDescription(p.summary, [], text(p.url) || text(p.website)), // `website`: the pre-1.0 schema's
   })),
 };
 
