@@ -26,10 +26,17 @@ const DEFAULT_BASE_PT = 11; // what an unset fontSizeBase prints at (DesignPanel
  * tightest spacing with the base font size a point smaller at a time down to MIN_FIT_BASE_PT (never
  * larger than the résumé's own). A smaller base keeps each stored size delta printing in its row's
  * range, as the Typography panel's Base control does.
+ * No step loosens a spacing number the résumé already has tighter (R5-HUNT1): each is the smaller
+ * of the step's and the stored one — the panel goes below the ladder (line height 1.0, 0 mm), and a
+ * résumé that fitted at its own spacing was loosened past a page and its text shrunk. Steps that come
+ * out the same as the one before are dropped: they would print the same page again.
  */
 export function fitLadder(settings = {}) {
-  const steps = [ONE_PAGE_FIT, ...SPACING_STEPS];
-  const tightest = SPACING_STEPS.at(-1);
+  const own = (step) => Object.fromEntries(Object.entries(step).map(([k, v]) => [k, Number.isFinite(settings[k]) ? Math.min(v, settings[k]) : v]));
+  const spacing = [ONE_PAGE_FIT, ...SPACING_STEPS].map(own)
+    .filter((step, i, all) => i === 0 || Object.keys(step).some((k) => step[k] !== all[i - 1][k]));
+  const steps = [...spacing];
+  const tightest = spacing.at(-1);
   const base = Number.isFinite(settings.fontSizeBase) ? settings.fontSizeBase : DEFAULT_BASE_PT;
   for (let size = Math.ceil(base) - 1; size >= MIN_FIT_BASE_PT; size -= 1) {
     const step = { ...tightest, fontSizeBase: size };
