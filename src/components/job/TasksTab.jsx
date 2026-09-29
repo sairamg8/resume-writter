@@ -9,12 +9,13 @@ import { useRemoveWithUndo } from '@/hooks/useRemoveWithUndo';
 
 const DONE_PAGE_SIZE = 5;
 
-export function TasksTab({ todos, onChange }) {
+export function TasksTab({ todos, onChange, readNow }) {
   const [input, setInput] = useState('');
   const [showAllDone, setShowAllDone] = useState(false);
   const inputRef = useRef(null);
   // A delete is one click, so it offers Undo, as a job's own delete does (R4-DUX-20).
-  const removeWithUndo = useRemoveWithUndo(todos, onChange);
+  // `readNow()` gives the tasks as stored now, for an Undo clicked after this tab unmounted.
+  const removeWithUndo = useRemoveWithUndo(todos, onChange, readNow);
 
   const pending = todos.filter(t => !t.done);
   // Newest completed first: the task just ticked never hides behind 'Show more' (J-27).

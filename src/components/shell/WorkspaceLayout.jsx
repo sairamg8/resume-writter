@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, matchPath, useLocation } from 'react-router-dom';
 import { ConfirmProvider, ToastProvider } from '../ui/index.js';
 import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
@@ -80,6 +80,10 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   const openNav = useCallback(() => setDrawerOpen(true), []);
   const closeNav = useCallback(() => setDrawerOpen(false), []);
   const openCreate = useCallback((defaults = {}) => setCreateDefaults(defaults), []);
+  // On a project's page (Board, Backlog, List, Calendar, …) the top bar's Create and the `c` key
+  // open the dialog in that project, not in the first one listed (R5-HUNT3).
+  const viewedBoardId = matchPath('/boards/:id/*', location.pathname)?.params.id;
+  const createFromTopBar = () => openCreate(viewedBoardId ? { boardId: viewedBoardId } : {});
   const workspace = useMemo(
     () => ({ openNav, closeNav, openCreate, projects }),
     [openNav, closeNav, openCreate, projects],
@@ -97,7 +101,7 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
             >
               Skip to content
             </button>
-            <TopBar projects={projects} onCreate={() => openCreate({})} search={search} auth={auth} />
+            <TopBar projects={projects} onCreate={createFromTopBar} search={search} auth={auth} />
             <div className="flex min-h-0 flex-1">
             <Sidebar
               projects={projects}
