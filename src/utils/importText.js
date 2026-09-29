@@ -360,8 +360,15 @@ function trailingDate(text) {
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
-/** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
-const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+/**
+ * "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. With its postcode
+ * too ("Chicago, IL 60601", "Toronto, ON M5V 2T6"), and then its street before it ("123 Main St,
+ * Chicago, IL 60601"): before, the digits failed the test, and the place printed as "Additional Information".
+ */
+const TOWN = "[\\p{L}][\\p{L}.'’\\- ]{0,40},\\s*[\\p{L}][\\p{L}.'’\\- ]{0,40}(?:,\\s*[\\p{L}][\\p{L}.'’\\- ]{0,30})?";
+const POSTCODE = `,?\\s+(?:\\d{5}(?:-\\d{4})?|[a-z]\\d[a-z] ?\\d[a-z]\\d|[a-z]{1,2}\\d[a-z\\d]? ?\\d[a-z]{2})(?:,\\s*[\\p{L}][\\p{L}.'’\\- ]{0,30})?`;
+const STREET = "\\d{1,6}[a-z]?\\s+[\\p{L}\\d.'’#\\- ]{1,40},\\s*";
+const ONE_PLACE = new RegExp(`^(?:${TOWN}|(?:${STREET})?${TOWN}${POSTCODE}|remote|hybrid)$`, 'iu');
 /** A part of a place with a "|" typed in it: "London" in "London | Remote". */
 const PLACE_PART = /^[\p{L}][\p{L}.,'’\- ]{0,60}$/u;
 /**
