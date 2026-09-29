@@ -1,6 +1,7 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { safeHref, hasRichText } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, startDateOf } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
@@ -199,7 +200,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const showLoc   = s.showLocation !== false;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const degreeBreaks = sideBreaks(settings, { fontSize: 10, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   // Rich text past its list marker or indent. A break sees the word, not its run: measured as bold, so
@@ -246,7 +247,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
 }
 
 export function SideLanguages({ section, sectionGap, itemGap, accent = '#2563eb', shades = NAVY, titleCase, settings }) {
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const room = sideColumnRoom(settings);
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   // Section Options → Level (R2-147): Dots or Bar on a line of its own under a known proficiency's
@@ -287,7 +288,7 @@ export function SideLanguages({ section, sectionGap, itemGap, accent = '#2563eb'
 export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
@@ -329,7 +330,7 @@ const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
  * printed it — the controls used to do nothing here (R2-6).
  */
 export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY, titleCase, settings }) {
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
   );
@@ -350,7 +351,7 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
 }
 
 export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   const first = visibleItems[0];

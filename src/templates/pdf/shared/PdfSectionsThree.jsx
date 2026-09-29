@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { contactHref } from '@/utils/contacts';
 import { formatDate } from '@/utils/dates';
 import { tint } from './pdfColors';
@@ -27,7 +28,7 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
   const textColor = settings?.textColor   || '#1a1a1a';
   const accent    = settings?.accentColor || '#2563eb';
   const shade     = shadesOf(settings);
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const alignStyle = centered ? { textAlign: 'center' } : {};
   // A card is unbreakable: its title keeps the first row's tallest card with it — each field's lines,
   // wrapped at the card's text width (a Grids cell's, less its padding and border), one more, its padding
@@ -74,7 +75,7 @@ const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
 export function InterestsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const baseSize = settings?.fontSizeBase || 11;
   const accent   = settings?.accentColor || '#2563eb';
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
   );
@@ -100,7 +101,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
   const showDates  = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';

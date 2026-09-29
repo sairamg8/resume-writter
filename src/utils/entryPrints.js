@@ -35,3 +35,11 @@ export function entryPrints(type, item) {
  * page leaves out (R2-057, R1-LEFT-d, R5-HUNT6-BLANK-SECTION-HEADING).
  */
 export const sectionPrints = (s) => s.visible !== false && (s.items || []).some((i) => entryPrints(s.type, i));
+
+/**
+ * Section `s`'s entries that print (entryPrints), in order: the list every PDF renderer draws, groups
+ * ("Group roles by company"), grids and measures its heading's keep on, as Word's `shown` does. A blank
+ * entry, or one whose fields are all hidden with their eyes, took a dot on the Timeline rail, a grid
+ * cell, an item gap, and split a company's roles in two groups (R5-HUNT7-BLANK-ENTRY).
+ */
+export const printedEntries = (s) => (s.items || []).filter((i) => entryPrints(s.type, i));

@@ -8,6 +8,7 @@ import { tint } from './pdfColors';
 import { PdfLevel } from './PdfLevel';
 import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 import { hasRichText, safeHref } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { dateRange, endDateOf, formatDate, startDateOf } from '@/utils/dates';
 import {
   SPACER,
@@ -30,7 +31,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
   const baseSize   = settings?.fontSizeBase || 11;
   const textColor  = settings?.textColor  || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const textAlign  = centered ? 'center' : 'left';
   const dateColor  = getDateColor(settings);
@@ -112,7 +113,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const textColor  = settings?.textColor   || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   // Left: stretched, so the date row spans the entry and puts the date at its right end.
   const flexAlign  = centered ? 'center' : 'stretch';
@@ -191,7 +192,7 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
   const baseSize = settings?.fontSizeBase || 11;
   const textColor = settings?.textColor   || '#1a1a1a';
   const sub       = shadesOf(settings).sub;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   // Section Options → Level (R2-147): Dots or Bar drawn in front of a known proficiency's word, in the
   // accent on a faint track of it (the skill bars' pair); Text (unset) prints the word alone, as before.
   const levelStyle = languageLevelStyle(s);
@@ -234,7 +235,7 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
   const baseSize   = settings?.fontSizeBase || 11;
   const textColor  = settings?.textColor   || '#1a1a1a';
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const flexAlign  = centered ? 'center' : 'flex-start';
   const textAlign  = centered ? 'center' : 'left';
@@ -298,7 +299,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
   const titleStyle = s.titleStyle || 'stacked';
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH      = settings?.lineHeightValue || 1.5;
-  const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const visibleItems = printedEntries(section);
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';

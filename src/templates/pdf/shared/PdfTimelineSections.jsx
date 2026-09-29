@@ -4,6 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
+import { printedEntries } from '@/utils/entryPrints';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
 import { TimelineEntries, TimelineHead, railTextWidth, timelineHeadPresence } from './PdfTimeline';
@@ -122,7 +123,7 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   const s = section.settings || {};
   // By its own key only: a type named like an Object member ('constructor') is a custom section's (R2-109).
   const fields = Object.hasOwn(FIELDS, section.type) ? FIELDS[section.type] : FIELDS.custom;
-  const items = (section.items || []).filter((i) => i.visible !== false);
+  const items = printedEntries(section);
   const entrySize = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH = settings?.lineHeightValue || 1.5;
   const body = shadesOf(settings).body;
