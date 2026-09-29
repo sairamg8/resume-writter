@@ -674,8 +674,11 @@ function inlinePair(parts) {
 
 /** "Google, Mountain View, CA" → ["Google", "Mountain View, CA"]: a name, then its city and state or country after a comma; else null. */
 function placeAfterComma(text) {
-  const m = /^(.+?),\s*([^,]+,\s*[^,]+)$/.exec(text);
-  return m && PLACE.test(m[2]) && REGION_END.test(m[2]) && !ROLE.test(m[1]) && !ROLE.test(m[2]) ? [m[1].trim(), m[2].trim()] : null;
+  const m = /^(.+?),\s*([^,]+),(\s*[^,]+)$/.exec(text);
+  // "Google, Inc., CA": a legal ending is the company's, no city ("Inc., CA" was the job's location).
+  if (!m || CORPORATE.test(`, ${m[2].trim()}`)) return null;
+  const place = `${m[2]},${m[3]}`;
+  return PLACE.test(place) && REGION_END.test(place) && !ROLE.test(m[1]) && !ROLE.test(place) ? [m[1].trim(), place.trim()] : null;
 }
 
 /** Whether of two fields the first is the role: true, false, or null when neither's words say. */
