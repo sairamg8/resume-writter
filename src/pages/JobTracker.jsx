@@ -59,7 +59,7 @@ function ViewTabs({ view, onChange }) {
  */
 export function JobTracker({ store }) {
   const navigate = useNavigate();
-  const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs } = useJobStore();
+  const { jobs, persistError, recovery, dismissRecovery, changeStatus, undoStatus, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs } = useJobStore();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
   const { appState } = store;
@@ -98,6 +98,15 @@ export function JobTracker({ store }) {
     if (!await confirm({ title: `Delete ${name}?`, body: 'The application, its tasks and notes will be deleted. You can undo this for a few seconds.', confirmLabel: 'Delete', tone: 'danger' })) return;
     const removed = deleteJob(id);
     toast({ title: `${name} deleted`, action: removed ? { label: 'Undo', onClick: () => restoreJob(removed.job, removed.index) } : undefined });
+  }
+  // A card dragged or moved ("Move to") to another column offers Undo: moving it back by hand left
+  // a false history entry and an applied date, and the Summary counted it at that step (R5-HUNT7).
+  function moveStatus(id, { status }) {
+    const change = changeStatus(id, status);
+    if (!change) return;
+    const name = change.after.company || change.after.role || 'Job';
+    const label = JOB_STATUSES.find(s => s.id === change.after.status)?.label || change.after.status;
+    toast({ title: `${name} moved to ${label}`, action: { label: 'Undo', onClick: () => undoStatus(change) } });
   }
   // Says how many go, and offers Undo, as deleting one job does: a slip used to lose the whole list (R4-DUX-02).
   async function clearAll() {
@@ -219,7 +228,7 @@ export function JobTracker({ store }) {
               <ListView jobs={filteredJobs} resumes={resumes} onNavigate={open} onDelete={confirmDelete} />
             ) : (
               <KanbanView
-                jobs={filteredJobs} updateJob={updateJob} onNavigate={open} onDelete={confirmDelete} scrollToStatus={filterStatus}
+                jobs={filteredJobs} updateJob={moveStatus} onNavigate={open} onDelete={confirmDelete} scrollToStatus={filterStatus}
                 // A search left from earlier over no jobs at all: clearing it would show nothing more.
                 filtering={filtering && jobs.length > 0}
                 onClearFilters={() => { setSearch(''); setFilterStatus(''); }}

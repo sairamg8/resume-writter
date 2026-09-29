@@ -48,6 +48,24 @@ export function applyStatusChange(job, status, now = Date.now()) {
   return out;
 }
 
+/**
+ * `job` with one status change taken back — Undo: `before` is the job as it was, `after` as
+ * applyStatusChange left it. Its status and its history go back to `before`'s, and so does the
+ * applied date when the change filled it in and nothing changed it since; what else was edited
+ * stays. Moving the job back by hand left a false history entry and that date, and the Summary
+ * counted it at the step for good (R5-HUNT7). `updatedAt` is now, so a sync takes the undo as the
+ * newer copy. The same job when it has moved on since (another status or history entry).
+ */
+export function undoStatusChange(job, before, after, now = Date.now()) {
+  const entries = (j) => (Array.isArray(j?.statusHistory) ? j.statusHistory.length : 0);
+  if (!job || !before || !after || job.status !== after.status || entries(job) !== entries(after)) return job;
+  const out = { ...job, status: before.status, updatedAt: now };
+  if (Array.isArray(before.statusHistory)) out.statusHistory = before.statusHistory;
+  else delete out.statusHistory;
+  if (after.appliedDate !== before.appliedDate && job.appliedDate === after.appliedDate) out.appliedDate = before.appliedDate ?? '';
+  return out;
+}
+
 /** What an edit may never write: the id pages open the job by, its creation, and its history. */
 const NOT_EDITABLE = new Set(['id', 'createdAt', 'updatedAt', 'statusHistory', 'status']);
 

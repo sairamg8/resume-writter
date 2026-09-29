@@ -46,7 +46,7 @@ function Row({ label, children }) {
 export function JobDetail({ store }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { jobs, persistError, updateJob, deleteJob, restoreJob } = useJobStore();
+  const { jobs, persistError, updateJob, changeStatus, undoStatus, deleteJob, restoreJob } = useJobStore();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
   const { appState } = store;
@@ -59,7 +59,18 @@ export function JobDetail({ store }) {
     return <EmptyState className="m-auto" title="Job not found" description="It may have been deleted, or the link is wrong." action={<Button variant="primary" to="/jobs">← Back to Job Tracker</Button>} />;
   }
 
-  function set(key, val) { updateJob(job.id, { [key]: val }); }
+  function set(key, val) {
+    if (key === 'status') moveStatus(val);
+    else updateJob(job.id, { [key]: val });
+  }
+  // A click on a stepper step or the status menu offers Undo: moving back by hand left a false
+  // history entry and an applied date, and the Summary counted the job at that step (R5-HUNT7).
+  function moveStatus(status) {
+    const change = changeStatus(job.id, status);
+    if (!change) return;
+    const label = JOB_STATUSES.find(s => s.id === change.after.status)?.label || change.after.status;
+    toast({ title: `Moved to ${label}`, action: { label: 'Undo', onClick: () => undoStatus(change) } });
+  }
   // The tasks as stored now: an Undo on a deleted task can be clicked after the Tasks tab that did
   // the delete has gone (another tab opened, then Tasks again), and must not write back the list
   // it last saw over the tasks added or ticked since (useRemoveWithUndo).
