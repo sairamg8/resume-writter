@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt9-sync",
+  "branch": "claude/wf-r5-hunt9-sync",
+  "base": "22fb602e3abb77edfff8874b2152362ed6efa980",
+  "rows": [
+    {
+      "id": "R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED",
+      "title": "If storage is too full for a job or project list's first sync record, the list quietly stops syncing while the icon says 'synced'. Deleted jobs come back, and at sign-out the account's list stays in the browser, where the next account to sign in uploads it",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["e1f592578a635ac0a1a14be7542f8c9c0165c9dc"],
+      "tests": ["tests/unit/r5-hunt9-sync-first-record-full.unit.mjs"],
+      "summary": "Now: when storage refuses the record naming the account (and the stored record is not already that account's), firstSync throws noRoom ('resource-exhausted') before taking the account's items into the list. The list stays as it was, the status is 'error' (it will retry), and the retry that gets through finishes the sync. Deletions are then sent, and at sign-out the list leaves the browser, so no account's jobs are left for the next account to upload. A record already owned by the account, but refused because it would grow, keeps its ownership and behaves as before (R5-HUNT7's tests still pass).",
+      "ci": [36645045773]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "The run with ID 36645045773 did three things: the failfirst check (2 tests fail with the diff reversed, and pass with the fix), a tests run of the 17 collection-sync unit files plus knowledge-docs, sign-out-leave and the 5 sync harness tests, and lint. All passed. The base is origin/claude/r4-green as fetched (22fb602e); it had moved on from ca009d49, the head the task named. No earlier fixer branch existed. docs/knowledge/05-state-auth-sync.md was updated."
+}
