@@ -370,6 +370,15 @@ const PLACE = {
     return parts.length > 1 && parts.every((p) => PLACE_PART.test(p)) && parts.some((p) => ONE_PLACE.test(p));
   },
 };
+/**
+ * A place's last part, a state, province or country: "…, SC", "…, Ohio", "…, United Kingdom". A job title
+ * with a comma ("Product Manager, Payments", "Engineer, QA") ends in none (the header's title test).
+ */
+const REGION_END = {
+  CODE: /,\s*(?:A[BKLRZ]|C[AOT]|D\.?C\.?|DE|FL|GA|HI|I[ADLN]|KS|KY|LA|M[ABDEINOST]|N[BCDEHJLMSTUVY]|O[HKNR]|P[AE]|QC|RI|S[CDK]|T[NX]|UT|V[AT]|W[AIVY]|YT|NSW|VIC|QLD|TAS|ACT|UK|USA?|UAE)\.?$/,
+  NAME: /,\s*(?:alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|ontario|quebec|british columbia|alberta|united states(?: of america)?|united kingdom|england|scotland|wales|ireland|canada|australia|new zealand|india|germany|france|spain|italy|netherlands|portugal|poland|sweden|switzerland|singapore|japan|china|brazil|mexico|south africa|nigeria|kenya|pakistan|philippines|united arab emirates)$/i,
+  test(text) { return this.CODE.test(text) || this.NAME.test(text); },
+};
 /** A contact's name before it: "Email: …", "LinkedIn - …". */
 const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address|based in)\s*[:\-–]\s*/i;
 
@@ -1268,8 +1277,11 @@ export function resumeFromText(input) {
     // A job title with a comma in it ("Product Manager, Payments") reads as a place: a role word says
     // it is the title, as the entries' rules check. Before, it became the location, and the real one
     // on the contact line went to "Additional Information".
+    // Not a town with a role word in its name ("Hilton Head, SC", "Mentor, Ohio", "Lead, SD") alone under
+    // the name: one that ends in a state or country is the title only when the header has its place elsewhere.
     const contact = t && contactOf(t.text);
-    const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text);
+    const placeElsewhere = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => contactRun(p) || [p]).some((p) => contactOf(p)?.key === 'location'));
+    const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text) && (!REGION_END.test(t.text) || placeElsewhere());
     if (t && headerPieces(t.text).length === 1 && (!contact || role) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
