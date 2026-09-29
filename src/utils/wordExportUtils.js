@@ -16,17 +16,22 @@ import { storedNumber } from '@/constants/spacingNumbers';
 // (half an emoji, from a JSON import's "\ud83d" or text cut short between a pair's halves) is no XML
 // character either: in the browser docx's zip writes it as bytes that are not UTF-8, and Word would not
 // open that file (R5-HUNT7-REVIEW-WORD-LONE-SURROGATE). A whole pair (an emoji) matches as two units and
-// is kept.
+// is kept. A line tab (U+000B, Word's Shift+Enter) or form feed (U+000C) parts two words, so it turns
+// into a space, as the Markdown and ATS text print it, not into nothing, which glued the words
+// together (R5-HUNT8-WORD-XMLSAFE-GLUES-WORDS).
 // eslint-disable-next-line no-control-regex
 const XML_FORBIDDEN = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFE\uFFFF]/g;
 
 /**
  * `value` with every string in it (deep: plain objects and arrays) cleared of the characters XML
- * forbids — the résumé or letter the Word export builds from, so no run, link or property of the
+ * forbids (a line tab or form feed becomes a space) — the résumé or letter the Word export builds from, so no run, link or property of the
  * .docx carries one. The PDF, Markdown and text exports print the same text; nothing else changes.
  */
 export function xmlSafe(value) {
-  if (typeof value === 'string') return value.replace(XML_FORBIDDEN, (m) => (m.length === 2 ? m : ''));
+  if (typeof value === 'string') return value.replace(XML_FORBIDDEN, (m) => {
+    if (m.length === 2) return m;
+    return m === '\u000B' || m === '\u000C' ? ' ' : '';
+  });
   if (Array.isArray(value)) return value.map(xmlSafe);
   if (value && Object.getPrototypeOf(value) === Object.prototype) {
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, xmlSafe(v)]));

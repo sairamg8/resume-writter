@@ -1,0 +1,36 @@
+{
+  "cluster": "r5-hunt8-export",
+  "branch": "claude/wf-r5-hunt8-export",
+  "base": "3d6ce27296ff0c635c46eba0303bb68049dc0853",
+  "rows": [
+    {
+      "id": "R5-HUNT8-WORD-XMLSAFE-GLUES-WORDS",
+      "title": "Word export joins the two words around a line-tab (U+000B) or form feed (U+000C) into one word, where Markdown and ATS text keep them apart",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "2714caa2daca2ea50e3717c4e888d9ef26ba1dd1"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-word-line-tab.test.mjs",
+        "tests/pdf/r5hunt7-word-control-chars.test.mjs"
+      ],
+      "summary": "Now: xmlSafe turns a line tab or form feed into a space (other C0 controls and lone surrogates are still dropped), so the résumé and cover-letter .docx read 'Cut costs Saved time' / 'Led the team Shipped v2', as the Markdown and ATS text do, and the file still opens. The R5-HUNT7 test's glued 'AcmeCorp'/'Linebreak' expectations were updated to 'Acme Corp'/'Line break' (they only recorded that fix's side effect).",
+      "ci": [
+        36638058733
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36638058733
+    ],
+    "notes": "2714caa2 reviewed against origin/claude/r4-green. Root cause fixed where it lives: xmlSafe, the one place the Word résumé and letter strip XML-forbidden characters, now maps U+000B/U+000C to a space (surrogate pairs still kept, other C0 controls and lone surrogates still dropped). CI 36638058733: failfirst ok (4 fail with the diff reversed, pass with it), 496 named Word/docx/r5hunt7/contact/knowledge tests green, lint green. The R5-HUNT7 test edit (AcmeCorp/Linebreak -> Acme Corp/Line break) only replaced that fix side effect with the intended output; its no-forbidden-character and well-formed-XML checks are unchanged. Checked other effects: links: a URL holding U+000B/U+000C now fails safeHref (\\s) in Word as it already does in the PDF and Markdown, so no link where the PDF has none (before, Word alone linked the glued URL); contact lines and items: trim() drops a lone U+000B/U+000C as before; rich text: parseRichText collapses the space with its neighbours, so no double space; object keys, ids, photo data URLs and settings hold no such characters. A field that is only U+000B is now truthy in Word, as it already is in the PDF (pre-existing cross-format quirk, not this fix). No sync, undo or stored-data path touches xmlSafe (export-only). No accessibility items noted."
+  },
+  "baselineFailures": [],
+  "notes": "CI run 36638058733: failfirst ok (4 fail without the fix, pass with it), named Word/docx/guard tests green, lint green. Base is origin/claude/r4-green at 3d6ce272 (the task text said 186c06ab; the branch had moved on)."
+}

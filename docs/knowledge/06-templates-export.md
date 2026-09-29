@@ -86,7 +86,9 @@ Both .docx files are built from the résumé with the characters XML 1.0 forbids
 `wordExportUtils.js`: C0 controls but tab, LF and CR — a pasted U+000B or U+0002 — U+FFFE/U+FFFF, and
 a lone surrogate, half an emoji, which the browser's zip writes as bytes that are not UTF-8; a whole emoji
 is kept), which docx would write as they are and Word would then refuse the file
-(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX, R5-HUNT7-REVIEW-WORD-LONE-SURROGATE). Their document properties are the PDF's
+(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX, R5-HUNT7-REVIEW-WORD-LONE-SURROGATE). A line tab (U+000B, Word's
+Shift+Enter) or form feed (U+000C) becomes a space instead, so the two words it parts stay apart, as in
+the Markdown and ATS text (R5-HUNT8-WORD-XMLSAFE-GLUES-WORDS). Their document properties are the PDF's
 (`getDocumentProps`): Title "<Name> Resume" or "<Name> Cover Letter", Author and Last Modified By the
 name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
 
