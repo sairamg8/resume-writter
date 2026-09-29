@@ -26,7 +26,7 @@ Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Hunt round 2 DONE and mer
 (reports wf-reports/r5-hunt2-<area>.json). Gate 36537511498 on 397f1bb RED only on cypress 06-job-tracker ('Imported 2 job applications.'
 never shows after a jobs JSON round-trip; likely hunt2-jobs backup-restore fix) — stale spec (the file's demo_1 now replaces the untouched
 demo on purpose); fixed spec-only in 7a05d0f (CI 36539433206 green). Gate 36540411545 on 17c1430 GREEN (deploy line above).
-Hunt round 3 DONE and merged (6770951): 15 bugs confirmed + fixed in 9 areas. Next: hunt round 4
+Hunt round 3 DONE and merged (6770951): 15 bugs confirmed + fixed in 9 areas; full gate dispatched on e164a94. Running since 09:22: hunt round 4
 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
 round script: 9 area finders → skeptic → fixer with fail-first → reviewer, branches claude/wf-r5-hunt<N>-<area>). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
