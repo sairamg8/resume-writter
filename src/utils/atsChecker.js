@@ -377,6 +377,38 @@ function wholeWord(keyword) {
 }
 
 /**
+ * The keyword one token of a cleaned job posting reads as (cased as written), or null for none: a
+ * stop word, a contraction, an abbreviation or a figure. One rule for extractJobKeywords' count and
+ * for the words it reads inside a tech phrase.
+ */
+function jobKeywordOf(raw) {
+  let word = raw.trim();
+  // Strip trailing periods/commas
+  word = word.replace(/[^\p{L}\p{M}\p{N}_+#]+$/u, '');
+  // And leading ones, but for the one dot of a name such as ".NET": stripped, it was the keyword
+  // "NET", matched by "net revenue" and written into Skills so (R5-HUNT1-ats-jd-dotnet-stripped).
+  const lead = word.match(/^[^\p{L}\p{M}\p{N}_+#]+/u)?.[0] || '';
+  word = word.slice(lead.length);
+  if (/(?:^|[^.])\.$/.test(lead) && /^\p{L}/u.test(word)) word = `.${word}`;
+  if (word.length < 2 || word.length > 30) return null;
+  if (LETTER_ABBREVIATION.test(word)) return null;
+  if (COMMON_STOP_WORDS.has(word.toLowerCase())) return null;
+  // "Stripe's" is the keyword "Stripe"; any other contraction ("it'll", "ain't") is no keyword.
+  // A name with an apostrophe ("O'Reilly") stays as it is.
+  word = word.replace(/'s$/i, '');
+  if (CONTRACTION.test(word)) return null;
+  if (word.length < 2) return null;
+  const lower = word.toLowerCase();
+  if (COMMON_STOP_WORDS.has(lower)) return null;
+  // A figure is no keyword: a number, "5+", a scaled one and a range of them. A pay range "$150K–$180K"
+  // was the keywords "150K" and "180K", always missing and written into Skills by "+"
+  // (R5-HUNT2-ats-jd-salary-figures-as-keywords): "150k", "1.5m", "2b+", "120k-140k", "150-180k", and
+  // with no scale, "120000-150000", "120,000-150,000" (read "000-150") and "3-5" (years), "12-15".
+  if (/^\d+(?:\.\d+)*[kmb]?(?:-\d+(?:\.\d+)*[kmb]?)*\+?$/.test(lower)) return null;
+  return word;
+}
+
+/**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
  * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
@@ -396,27 +428,10 @@ export function extractJobKeywords(jobDescriptionText) {
   const counts = new Map();
   const casingMap = new Map();
 
-  for (let raw of tokens) {
-    let word = raw.trim();
-    // Strip trailing periods/commas
-    word = word.replace(/[^\p{L}\p{M}\p{N}_+#]+$/u, '');
-    // And leading ones, but for the one dot of a name such as ".NET": stripped, it was the keyword
-    // "NET", matched by "net revenue" and written into Skills so (R5-HUNT1-ats-jd-dotnet-stripped).
-    const lead = word.match(/^[^\p{L}\p{M}\p{N}_+#]+/u)?.[0] || '';
-    word = word.slice(lead.length);
-    if (/(?:^|[^.])\.$/.test(lead) && /^\p{L}/u.test(word)) word = `.${word}`;
-    if (word.length < 2 || word.length > 30) continue;
-    if (LETTER_ABBREVIATION.test(word)) continue;
-    if (COMMON_STOP_WORDS.has(word.toLowerCase())) continue;
-    // "Stripe's" is the keyword "Stripe"; any other contraction ("it'll", "ain't") is no keyword.
-    // A name with an apostrophe ("O'Reilly") stays as it is.
-    word = word.replace(/'s$/i, '');
-    if (CONTRACTION.test(word)) continue;
-    if (word.length < 2) continue;
+  for (const raw of tokens) {
+    const word = jobKeywordOf(raw);
+    if (!word) continue;
     const lower = word.toLowerCase();
-    if (COMMON_STOP_WORDS.has(lower)) continue;
-    if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
-
     // Keep capitalization if it looks like an acronym or tech (AWS, SQL, CI/CD, React)
     counts.set(lower, (counts.get(lower) || 0) + 1);
     casingMap.set(lower, chooseBestCasing(word, casingMap.get(lower)));
@@ -435,10 +450,35 @@ export function extractJobKeywords(jobDescriptionText) {
   // As whole words, and cased from the text they were found in: found with a bare indexOf, "front
   // end" was read inside "storefront endpoints", and sliced at a lowercased index a posting's "İ"
   // shifted the casing ("achine Learning") (R5-HUNT1-ats-jd-phrase-substring-match).
+  // A phrase counts once: its words, each read above as a token ("CI/CD" as "CI" and "CD", "machine
+  // learning" as "machine" and "learning"), lose the times they were read inside it, so they are no
+  // keywords of their own that doubled the phrase in the match and "+" wrote into Skills
+  // (R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately).
+  // Only a word read as its own token there loses a time: in "machine learning-based" the token is
+  // "learning-based", and taking a time off "learning" dropped the posting's own "continuous
+  // learning" (review of R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately). The phrase's
+  // tokens are read from the text around each find, cleaned as above but kept at the text's length.
   const text = jobDescriptionText.normalize('NFC');
+  const spaced = text.replace(APOSTROPHES, "'")
+    .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, (c) => ' '.repeat(c.length));
   for (const phrase of multiWordPhrases) {
     const found = wholeWord(phrase).exec(text);
     if (found) {
+      const parts = phrase.split(/[^\p{L}\p{N}]+/u);
+      if (parts.length > 1) {
+        for (const at of text.matchAll(new RegExp(wholeWord(phrase).source, 'giu'))) {
+          let from = at.index;
+          let to = at.index + at[0].length;
+          while (from > 0 && !/\s/.test(spaced[from - 1])) from--;
+          while (to < spaced.length && !/\s/.test(spaced[to])) to++;
+          const read = spaced.slice(from, to).split(/\s+/).map((raw) => jobKeywordOf(raw)?.toLowerCase());
+          for (const part of parts) {
+            if (!read.includes(part) || !counts.has(part)) continue;
+            if (counts.get(part) > 1) counts.set(part, counts.get(part) - 1);
+            else counts.delete(part);
+          }
+        }
+      }
       counts.set(phrase, Math.max(counts.get(phrase) || 0, 2));
       casingMap.set(phrase, found[0] || phrase);
     }
