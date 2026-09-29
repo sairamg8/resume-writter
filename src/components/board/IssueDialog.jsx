@@ -23,15 +23,20 @@ import { AddButton } from './IssueFields';
  */
 function Description({ value, onSave }) {
   const [draft, setDraft] = useState(null);
-  // The draft and this issue's value and save, as last rendered, for the unmount below: it runs
-  // after the view has moved on, and must save into the issue the draft was typed in.
-  const latest = useRef({ draft, value, onSave });
+  // The text the editor opened on: closing saves the draft only when it was changed from that. Set
+  // against the current value, an untouched draft wrote the old text over a newer one another tab or
+  // a cloud pull had saved meanwhile.
+  const [opened, setOpened] = useState('');
+  const edit = () => { setOpened(value || ''); setDraft(value || ''); };
+  // The draft and this issue's save, as last rendered, for the unmount below: it runs after the view
+  // has moved on, and must save into the issue the draft was typed in.
+  const latest = useRef({ draft, opened, onSave });
   useLayoutEffect(() => {
-    latest.current = { draft, value, onSave };
+    latest.current = { draft, opened, onSave };
   });
   useEffect(() => () => {
-    const { draft: left, value: saved, onSave: save } = latest.current;
-    if (left !== null && left !== (saved || '')) save(left);
+    const { draft: left, opened: from, onSave: save } = latest.current;
+    if (left !== null && left !== from) save(left);
   }, []);
   if (draft !== null) {
     return (
@@ -48,7 +53,7 @@ function Description({ value, onSave }) {
   return (
     <button
       type="button"
-      onClick={() => setDraft(value || '')}
+      onClick={edit}
       aria-label="Edit description"
       className="-mx-2 w-[calc(100%+1rem)] rounded px-2 py-1.5 text-left transition-colors hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
     >
