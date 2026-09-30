@@ -2,7 +2,7 @@ import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
-import { CONTACT_FIELDS, contactItems } from './contacts.js';
+import { CONTACT_FIELDS, contactItems, linkOverride, namesAddress } from './contacts.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -173,10 +173,14 @@ export function generateAtsPlainText(resume) {
   // carries no links, so the full URL is what a parser or recruiter can still follow (R4-DOUT-13). A
   // website / LinkedIn / GitHub with a "Link URL" override prints that address instead — the one the
   // PDF, Word and Markdown link to — so a handle typed in the field does not lose it; one the PDF would
-  // not follow (a javascript: address) is not printed (R5-HUNT4-ATS-TEXT-IGNORES-LINK-URL-OVERRIDE).
-  const contacts = contactItems(p).map(({ key, href }) => {
-    const url = LINK_KEYS.has(key) && href ? String(p[`${key}Url`] || '').trim() : '';
-    return url || String(p[key]).trim();
+  // not follow (a javascript: address) is not printed (R5-HUNT4-ATS-TEXT-IGNORES-LINK-URL-OVERRIDE). One
+  // typed as just a scheme ("https://", "www.", "https://www") names no address: it prints its Display
+  // label, as every other export does, not the bare scheme (R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL,
+  // R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL).
+  const contacts = contactItems(p).map(({ key, value, href }) => {
+    const url = LINK_KEYS.has(key) && href ? linkOverride(key, p) : '';
+    const typed = String(p[key]).trim();
+    return url || (LINK_KEYS.has(key) && !namesAddress(typed) ? value : typed);
   });
   if (contacts.length) lines.push(contacts.join(' | '));
   lines.push('');
