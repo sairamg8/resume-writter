@@ -1,0 +1,24 @@
+{
+  "cluster": "r5-hunt11-editor",
+  "branch": "claude/wf-r5-hunt11-editor",
+  "base": "b616be3e954dbcfb3d8f30b6b1851f991e659c7a",
+  "rows": [
+    {
+      "id": "R5-HUNT11-RENAME-BOX-RENAMES-IMPORTED-RESUME",
+      "title": "If an import finishes while the editor's rename box is open, the name you typed for your résumé is given to the imported résumé instead",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "f558521c3ee00337fd7726802656219098ae7a40",
+        "4c38ea03e0dd859ef966a6b8e942d5f9e52a6bd9",
+        "09abe9d5a67967a6945fe1c4299274d5f862f56c"
+      ],
+      "tests": ["tests/pdf/r5hunt11-rename-other-resume.test.mjs"],
+      "summary": "Now: the rename box belongs to the résumé it was opened on (useRename records its id at start). When another résumé takes the still-mounted editor (an import landing, Back/Forward), the box closes as that render runs and its draft is dropped; Enter or blur renames nobody, and opening the box again starts from the new résumé's name and renames that one. docs/knowledge/02-architecture.md notes it.",
+      "ci": [36656426698]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "The base given was 79dc42a2; origin/claude/r4-green was at b616be3e when the branch was cut, so that is the base. Fail-first proven on f558521c (the fix commit) in run 36656426698: the test fails with the src change reversed and passes with it; the same run's tests job passed r5hunt11-rename-other-resume, 89-rename-fresh-name, 99-import-ui and knowledge-docs. The two later commits change only the test: the first asserts on plain values (an AssertionError carrying a fake-DOM node ran the reporter out of memory, run 36655756369), the second finds the box by its aria-label, because the Export menu's file <input> is also in the header (run 36656227913)."
+}
