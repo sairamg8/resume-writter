@@ -29,7 +29,21 @@ export function entryPrints(type, item) {
   // A proficiency is its language's label: alone ("Professional", every new row's default) it prints
   // nothing, as Markdown and the ATS text already had it (R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE).
   if (type === 'languages') return !hidden.has('language') && valuePrints('language', item.language);
-  return Object.entries(item).some(([k, v]) => !NOT_PRINTED.has(k) && !hidden.has(k) && valuePrints(k, v));
+  // What the type's renderers draw, not every stored field: a certificate's Link label only beside its
+  // Link URL (the editor hides the label's box but keeps it when the URL is cleared), and interests
+  // only as the parts left after splitting at commas (", " draws no chip). Either alone printed the
+  // section's heading over nothing in the PDF and Word (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS).
+  const urlShown = Boolean(item.url) && !hidden.has('url');
+  const prints = (k, v) => {
+    if (type === 'certifications' && k === 'urlLabel') return urlShown && valuePrints(k, v);
+    // "Present" is the End Date's text: its eye off, a current role prints no end (endDateOf), so a
+    // current job with every eye off printed its heading over nothing, and went into the JSON Resume
+    // file as an empty job (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS).
+    if (k === 'current') return v === true && !hidden.has('endDate');
+    if (type === 'interests' && k === 'interests') return String(v ?? '').split(',').some((s) => s.trim());
+    return valuePrints(k, v);
+  };
+  return Object.entries(item).some(([k, v]) => !NOT_PRINTED.has(k) && !hidden.has(k) && prints(k, v));
 }
 
 /**
