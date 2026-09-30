@@ -1,10 +1,12 @@
 # Session Handoff — Resume Here
 
-**2026-09-30 04:25 UTC — DEPLOYED by the owner's order (no CI wait): master = `33c7c1da`** = r4-green `21e3ada2` + round 11
-(dash, editor, export, jobs, sync, tools) + old master. One merge conflict in `src/utils/normalizeResume.js` (withFontChoices from
-r4-green + withProjectRoles from hunt11-export): both kept. Cloudflare Workers Build, build and lint green; the full gate on
-`33c7c1da` was still running at deploy — read it and fix anything red first. Not merged: `claude/wf-r5-hunt10-pdf-probe` (review
-probe test only). PRs #3-#8 are superseded. Next hunt rounds base on master `33c7c1da`.
+**2026-09-30 04:25 UTC — DEPLOYED BY THE OWNER: master = `33c7c1da`.** PR #8 (rounds 7-10, gated 11ba2ea1) was merged at 04:15,
+and the owner then pushed `claude/deploy-all-0930` to master: it also merges the round-11 branches dash, editor, export, jobs,
+sync and tools **before their second-agent reviews** (a usage limit, reset 04:00, killed review:sync, review:jobs, review:editor,
+fix:dash, fix:import and fix:tools mid-run). Master's own push gate is run 36668036603. If it's red, fix it first: the live site
+has the failure. r4-green was fast-forwarded to master. Resumed: wf_8ef0f8a5-e12 and wf_93d8eea6-b09, which finish the round-11
+fixes and reviews. A review fix now lands on r4-green, and needs a new deploy PR. Merge note: one conflict in
+`src/utils/normalizeResume.js` (withFontChoices + withProjectRoles), both kept. `claude/wf-r5-hunt10-pdf-probe` (probe test) not merged.
 
 **2026-09-30 01:45 UTC — DEPLOY: PR #8** (`claude/deploy-r10-11ba2ea`, rounds 7-10 = 60 fixes, full gate 36654399622 on `11ba2ea1`
 GREEN) replaces #7 (marked superseded). Owner: merge #8 (or `git push origin 11ba2ea1:refs/heads/master`), then close #4-#7.
