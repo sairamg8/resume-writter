@@ -101,7 +101,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   its default "Professional") prints in none of the four exports, and its section alone prints no
   heading (`entryPrints`, R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE). Nor does a certificate
   holding only a Link label with its Link URL cleared, or interests that are only commas: `entryPrints`
-  counts what the renderers draw (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS)
+  counts what the renderers draw (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS). A current role's
+  "Present" counts only while its End Date's eye is on: a current job with every eye off prints
+  nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS)
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema); only
   what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that

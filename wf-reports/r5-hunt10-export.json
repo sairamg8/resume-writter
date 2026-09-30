@@ -18,7 +18,12 @@
         "tests/pdf/16-saved-data-text-fields.test.mjs"
       ],
       "summary": "Now: Export → JSON Resume writes only entries that print (entryPrints, skills via skillGroupPrints): a blank entry, a job with every field's eye off and a language row holding only its default 'Professional' stay out of the file. Their section keeps its place in meta.sections with entries: 0, so a round trip keeps the layout (json-resume-sections round-trip test still passes) and the section prints nothing. The stale expectation in tests/pdf/16-saved-data-text-fields (a skill group whose category and skills are both blank after normalizing, which the PDF does not print) was updated to leave that group out.",
-      "ci": [36651172802, 36651180137, 36651654226, 36651661669]
+      "ci": [
+        36651172802,
+        36651180137,
+        36651654226,
+        36651661669
+      ]
     },
     {
       "id": "R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS",
@@ -32,10 +37,30 @@
         "tests/unit/r5-hunt10-entryprints-unprinted-leftovers.unit.mjs"
       ],
       "summary": "Now: entryPrints counts what the renderers draw: a certificate's Link label only when its Link URL is set and not hidden, and interests only when a part left after splitting at commas has text. A certificate holding only a leftover label, or interests of ', ', no longer print a lone heading in the PDF/preview or Word, and the ATS Check no longer counts the section present, matching Markdown and the ATS text.",
-      "ci": [36651172802, 36651180137, 36651654226, 36651661669]
+      "ci": [
+        36651172802,
+        36651180137,
+        36651654226,
+        36651661669
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS: the JSON Resume fix (entryPrints filter) still wrote a CURRENT job with every eye off as an empty job (current:false after shown()). The job editor's eyes are company, role, location, startDate, endDate, description; `current` has none, and entryPrints counted current:true as its 'Present' even with the End Date eye off, where endDateOf, Markdown and ATS text print no end. The same gap made the PDF and Word print the Experience heading over nothing and the ATS Check count the section present. The row's test covered only a non-current job. Fixed in entryPrints: `current` counts only while endDate is not hidden."
+    ],
+    "commits": [
+      "c89d2368b0acef2d50c599e7591f2559b645c395",
+      "ba507f042f11541d0c8678bfed31a707be9242fc"
+    ],
+    "ci": [
+      36652342304,
+      36652349198
+    ],
+    "notes": "Checked: fail-first run 36651654226 really failed each row test without its fix (# fail 2; 2747b0a reverted to its parent's files) and passed with it; the pdf/16 expectation change is correct (the 4th group normalizes to blank category and skills, which no renderer prints); meta.sections keeps entries: 0, so the import layout round-trips (the same shape a section of only hidden entries already produced); the certificate urlLabel and interests rules match PdfSectionsTwo/Three, PdfSidebarColumn, Word and the ATS text. Review fix proved by failfirst 36652342304 (ba507f0: # fail 2 without, pass with) and targeted run 36652349198 (26 files: r5-hunt10 x3, json-resume x8, ATS hidden/blank, Markdown, pdf blank-section/blank-entry/language/hidden-dates/public-link/16-saved-data-text-fields) green. Noted, not fixed (pre-existing, outside this row): entryPrints ignores a section's Show dates / Show location off, so an entry holding only dates with Show dates off still counts as printing; the JSON Resume skills `out` falls back to a legacy `name` (item.skills || item.name) that the PDF does not print when a category is set (tests/pdf/16 group 'Old' / 'Go'). No accessibility issues noted."
+  },
   "baselineFailures": [],
   "notes": "Fail-first run 36651654226 proved all three fix commits (2747b0a, 104ccfc, de9a917) at head de9a917; targeted tests run 36651661669 (JSON Resume, entryPrints, ATS, Markdown, sidebar/interests PDF tests, plus guards 31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs) green. The first tests run 36651180137 failed on json-resume-sections 'two sections of one type…' because the first cut also dropped sections with no printing entries from meta.sections; de9a917 keeps them with entries: 0 instead of changing that test. docs/knowledge/06-templates-export.md updated for both."
 }
