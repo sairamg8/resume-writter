@@ -2,7 +2,7 @@ import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
-import { CONTACT_FIELDS, contactItems } from './contacts.js';
+import { CONTACT_FIELDS, contactItems, linkOverride } from './contacts.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -175,7 +175,7 @@ export function generateAtsPlainText(resume) {
   // PDF, Word and Markdown link to — so a handle typed in the field does not lose it; one the PDF would
   // not follow (a javascript: address) is not printed (R5-HUNT4-ATS-TEXT-IGNORES-LINK-URL-OVERRIDE).
   const contacts = contactItems(p).map(({ key, href }) => {
-    const url = LINK_KEYS.has(key) && href ? String(p[`${key}Url`] || '').trim() : '';
+    const url = LINK_KEYS.has(key) && href ? linkOverride(key, p) : '';
     return url || String(p[key]).trim();
   });
   if (contacts.length) lines.push(contacts.join(' | '));

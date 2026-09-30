@@ -522,13 +522,25 @@ function isBareEmail(v) {
 }
 
 /**
+ * The host of an http(s) address past a leading "www.", '' when there is none ("https://www.",
+ * "https:///", "http://www"): such an address links to nothing (R5-HUNT12-LINK-URL-OVERRIDE-BARE-SCHEME).
+ * Any other address (mailto:, tel:) → true.
+ */
+function httpHost(v) {
+  const m = /^https?:\/\/([^/?#]*)/i.exec(v);
+  if (!m) return true;
+  const host = m[1].replace(/^[^@]*@/, '').replace(/^www\./i, '');
+  return host && !/^www\.?$/i.test(host) && !/^:/.test(host) ? host : '';
+}
+
+/**
  * A link target safe to put in a PDF, a .docx or an <a href>: http(s), mailto and tel only.
  * Bare "github.com/me" gets https://, a bare e-mail address gets mailto:. Anything else → null.
  */
 export function safeHref(value) {
   const v = String(value || '').trim();
   if (!v || /\s/.test(v)) return null;
-  if (/^(https?:\/\/|mailto:|tel:)/i.test(v)) return /^[a-z]+:\/\/?$/i.test(v) ? null : v;
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(v)) return /^[a-z]+:\/\/?$/i.test(v) || !httpHost(v) ? null : v;
   if (/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^[^:/]+:\d+(\/|$)/.test(v)) return null; // javascript:, data:, …
   if (isBareEmail(v)) return `mailto:${v}`;
   if (/^(\/\/)?[\w-]+(\.[\w-]+)+([:/?#].*)?$/i.test(v)) return `https://${v.replace(/^\/\//, '')}`;
