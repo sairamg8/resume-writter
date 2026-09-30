@@ -4,7 +4,7 @@
 import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
-import { CONTACT_FIELDS, contactHref } from './contacts.js';
+import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems } from './contacts.js';
 import { entryPrints } from './entryPrints.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
@@ -68,7 +68,11 @@ export function cpwtResumeToJsonResume(resume) {
   if (!resume) return {};
   const p = resume.personal || {};
   const hidden = new Set(Array.isArray(p.hiddenFields) ? p.hiddenFields : []);
-  const shows = (key) => Boolean(p[key]) && !hidden.has(key);
+  // A contact goes in only when the résumé prints it (contactItems): a website, LinkedIn or GitHub
+  // typed as just "https://" or "www.", or an e-mail of only spaces, prints nothing and was written as
+  // a link to nothing (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT).
+  const printed = new Set(contactItems(p, [...hidden]).map(({ key }) => key));
+  const shows = (key) => (CONTACT_KEYS.includes(key) ? printed.has(key) : Boolean(p[key]) && !hidden.has(key));
   const field = (key) => (shows(key) ? p[key] : '');
 
   const NET_LI = ['Linked', 'In'].join('');

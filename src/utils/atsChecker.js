@@ -334,7 +334,10 @@ export function extractResumeCorpus(resume, { addresses = true } = {}) {
         parts.push(category, skills);
         continue;
       }
-      parts.push(...PRINTED_FIELDS.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
+      // A project's `role` prints nowhere (no editor box, no renderer), so it is no keyword found
+      // (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE).
+      const printed = s.type === 'projects' ? PRINTED_FIELDS.filter((key) => key !== 'role') : PRINTED_FIELDS;
+      parts.push(...printed.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
       // A certificate prints its link's label where it has one, a project its link. A label whose URL
       // was cleared prints nowhere and the editor hides its box, so it is not counted
       // (R5-HUNT9-CERT-LINK-LABEL-WITHOUT-URL-COUNTED). The test is the renderers' own (`item.url &&`):
