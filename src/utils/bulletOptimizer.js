@@ -49,7 +49,10 @@ const weak = (phrases, replacement, alternatives, after = '') => ({
 // ATS score reads this list too (atsChecker.js), so every phrase it counts has a replacement here.
 export const WEAK_PHRASE_REPLACEMENTS = [
   weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
-  weak(['worked on', 'worked with'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  weak(['worked on'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  // "Worked with" takes people as its object: "Engineered product managers to define the roadmap" was
+  // what Auto-Fix wrote (R5-HUNT10-AUTOFIX-WORKED-WITH-ENGINEERED).
+  weak(['worked with'], 'Collaborated with', ['Partnered with', 'Coordinated with', 'Liaised with']),
   weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
   // "Helped to cut costs" has a verb after it, as "tried to" has: "Facilitated cut costs" was no sentence.
   weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to']),
