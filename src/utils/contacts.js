@@ -38,7 +38,17 @@ const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key
  */
 export function linkOverride(key, personal) {
   const override = String(personal?.[`${key}Url`] || '').trim();
-  return displayUrl(override).replace(/^www\.?$/i, '') ? override : '';
+  return namesAddress(override) ? override : '';
+}
+
+/**
+ * Whether a website / LinkedIn / GitHub value names an address: not '' nor just a scheme and "www"
+ * ("https://", "www.", "https://www.", "http://www") — the values safeHref links nowhere. The one
+ * test linkOverride, the ATS text and JSON Resume share, so "https://www" under a Display label is
+ * no address in any of them (R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL).
+ */
+export function namesAddress(value) {
+  return Boolean(displayUrl(value).replace(/^www\.?$/i, ''));
 }
 
 /**

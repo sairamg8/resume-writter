@@ -113,8 +113,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   its Link label (else the URL) as plain text, as the PDF and Word do (R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL)
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`); its contact line prints
   each value as typed (or its Link URL), not the Display label, so the full address stays followable —
-  but a website, LinkedIn or GitHub typed as just "https://" or "www." under a label prints the label,
-  as every other export does (R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL)
+  but a website, LinkedIn or GitHub typed as just "https://", "www." or "https://www" under a label
+  prints the label, as every other export does — `namesAddress`, the test `linkOverride` and JSON Resume
+  share (R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL, R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL)
 - **ATS Check** — its score items (roles, dates, degrees, skills, grids) and "What a parser reads" (`printedJobs`) read only the entries that print (`entryPrints`): a blank entry just added is no role missing its title or dates, and splits no grouped roles (R5-HUNT11-ATS-SCORES-BLANK-ENTRIES)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema); only
   what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that
