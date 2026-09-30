@@ -1,0 +1,92 @@
+{
+  "cluster": "r5-hunt12-import",
+  "branch": "claude/wf-r5-hunt12-import",
+  "base": "dd02d2ef6427b9b04f0ce8d5f7401807d425f59d",
+  "rows": [
+    {
+      "id": "R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY",
+      "title": "Text/PDF/Word/Markdown import: a job stacked as Company, Role, City and Dates gets the city as its company, and the real company goes into the job above's description",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "297b10cda510d721ddf516bf5dfc038385e4ac57"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-stacked-place-line.unit.mjs"
+      ],
+      "summary": "Now: a job printed as its company, role and place a line each over its dates (in any order) keeps its company and role, the place becomes its location, and nothing moves into the job above's description. In Markdown, '### Company' (or '### School') over the role (or degree) line and the place line is one entry with that location.",
+      "ci": [
+        36672401523
+      ]
+    },
+    {
+      "id": "R5-HUNT12-HEADER-ONE-WORD-CITY-LOST",
+      "title": "Import: a header location of one word ('London', 'Singapore', 'San Francisco Bay Area') prints as an 'Additional Information' section and is lost on export and re-import",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "588a05dd752b61a42be79b48fa6350942480f121"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-header-one-word-city.unit.mjs"
+      ],
+      "summary": "Now: a capitalised town with no region next to an email, phone or link on the contact line (or LinkedIn's '... Area' alone under the headline) is read as the location, so the app's own Markdown and ATS-text exports import it back. Work-status words ('US Citizen') still go to Additional Information.",
+      "ci": [
+        36672401523
+      ]
+    },
+    {
+      "id": "R5-HUNT12-LINKEDIN-DEGREE-ABBR-FIELD",
+      "title": "PDF/text import of LinkedIn's 'Bachelor of Science - BS, Computer Science' leaves Field of Study empty and puts 'BS, Computer Science' in the description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "f21a4b16048a50bfa13eeb1a7033c945ad881348"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-linkedin-degree-abbr.unit.mjs"
+      ],
+      "summary": "Now: the degree is 'Bachelor of Science', Field of Study is 'Computer Science', and the description stays empty. A short form on its own ('Master of Science - MS') leaves no stray paragraph either.",
+      "ci": [
+        36672401523
+      ]
+    },
+    {
+      "id": "R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY",
+      "title": "PDF/text import of LinkedIn's grouped roles: a role's one-line description with no closing period becomes the next role's company",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "10f506a9fb35b308065d6796022d4a7ddde08499"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-linkedin-grouped-role-desc.unit.mjs"
+      ],
+      "summary": "Now: a short description with lower-case words ('Leading the storage team') stays that role's description, and the next role keeps the employer as its company. A next employer over its role ('Microsoft') still starts a new job.",
+      "ci": [
+        36672401523
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY (297b10cd): the line over a job's role and place was taken for its company whatever it said, so the job above's last unbulleted line of text ('Mentored junior engineers', 'Kubernetes migration') left that job and became this job's role or company; and a job printed 'Software Engineer', 'Google, Mountain View, CA', dates under such a line lost Google (role 'Mentored junior engineers', location 'Google, Mountain View, CA') where the base had it right. Fixed in 9eaf806c: that line is the company only when it reads as a name (no lower-case word but 'of', 'the' or a name's particle); otherwise the job above keeps it, and a place alone that ends in a region or is 'Remote' is still this job's location, never its company ('Google, Mountain View, CA' is left to entryOf to part).",
+      "R5-HUNT12-HEADER-ONE-WORD-CITY-LOST (588a05dd): BARE_TOWN took any capitalised words beside a contact for a town, so 'Eagle Scout', 'Spanish Speaker', 'Green Card Holder', 'Kaggle Grandmaster', 'Open Source Enthusiast', 'Python Go Rust', 'Bilingual' or 'New Grad' on the contact line became the location and left 'Additional Information'; and a bare 'Mumbai' on the contact line beat the full 'New York, NY' on the next header line (the base took New York). Fixed in 828a7ec9: of more words than one only a known multi-word town, state or country, one with a town's linking word ('Frankfurt am Main', 'Rio de Janeiro') or LinkedIn's '... Area'/'... Region'; a single word unless it is one a contact line prints for something else; a full place on a later header line wins.",
+      "R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY (10f506a9): any lower-case word marked the line over the next role as the role above's text, so a next employer with a name's particle ('Universidad de Chile', 'Banco do Brasil') went into the last Google role's description and its own role joined the Google group (the base had it as a new job). Fixed in 61f5e1ff with a shared nameLike test that treats particles (de, do, van, von, ...) as a name's words."
+    ],
+    "commits": [
+      "61f5e1ff49d875cf1acc1bd93f968d12a444d66e",
+      "9eaf806c3c504377643a9c7fc33bf77bd87eadae",
+      "828a7ec9be48df64a177c4de01e45a4fc19c40c0"
+    ],
+    "ci": [
+      36672401523,
+      36674414602
+    ],
+    "notes": "Checked the author's run 36672401523: each of the four failfirst jobs logged its test failing with the fix's diff reversed and passing with it; tests job and lint green. R5-HUNT12-LINKEDIN-DEGREE-ABBR-FIELD (f21a4b16) reviewed clean: it fires only after a full degree name ('Bachelor of Science') on a part that is a one-word degree short form, optionally with ', field'; probes of 'Bachelor of Science, MIT', 'Master of Arts, MA', 'Bachelor of Science, Honors', 'Degree, School, City, ST' read as on the base. Run 36674414602: the three review failfirst jobs each failed without and passed with their fix; the tests job ran tests/unit/*.unit.mjs and the import round-trip, link, page, saved-data and cover-letter tests in tests/pdf (1743 of 1743 passed), and lint, all green. Not fixed, noted: a multi-word town not in the known list ('Palo Alto' is listed, 'Walnut Creek' is not) beside a contact still goes to Additional Information as on the base; a one-word non-place not in the stop list ('jane@x.com | Python') would read as the location. docs/knowledge/06-templates-export.md updated for the three review changes."
+  },
+  "baselineFailures": [],
+  "notes": "CI run 36672401523: all four failfirst jobs passed (each test fails with its fix undone and passes with it). The tests job ran tests/unit/*.unit.mjs plus the import round-trip, section-shape and link tests in tests/pdf: 1690 of 1690 passed. Lint is green. Base is dd02d2ef, a docs-only commit on top of b414cd6a."
+}
