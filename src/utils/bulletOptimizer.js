@@ -147,11 +147,55 @@ export function leadsWithActionVerb(text) {
   const firstWord = trimmed.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   // "Took part in" is "participated in", no strong verb: it read as one once "took" was listed, and the
   // chip left "Spearheaded part in the hackathon" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
-  return firstWord !== '' && VERB_KEYS.has(verbKey(firstWord)) && !TOOK_PART.test(trimmed.replace(/^[^a-zA-Z]+/, ''));
+  if (firstWord === '') return false;
+  const rest = trimmed.replace(/^[^a-zA-Z]+/, '');
+  return (VERB_KEYS.has(verbKey(firstWord)) || isPresentActionVerb(firstWord, rest.slice(firstWord.length)))
+    && !TOOK_PART.test(rest);
 }
 
-/** "Took part", which opens no action: see leadsWithActionVerb. */
-const TOOK_PART = /^took\s+part(?![\p{L}\d])/iu;
+// ── A current job's present tense: "Manage a team of 8", "Develop REST APIs", "Lead quarterly planning" ──
+// The verb list holds past tense only, so those read "Verb Missing", scored "Limited Action Verbs" and
+// took a chip's verb in front — "Spearheaded Manage a team of 8…"
+// (R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). A word counts when a listed verb is its past tense.
+
+/** Present forms whose past tense is not the word plus "ed"/"d". */
+const PRESENT_IRREGULAR = {
+  lead: 'led', build: 'built', rebuild: 'rebuilt', run: 'ran', drive: 'drove', grow: 'grew', oversee: 'oversaw',
+  write: 'wrote', rewrite: 'rewrote', teach: 'taught', sell: 'sold', win: 'won', speak: 'spoke', take: 'took',
+  spin: 'spun', stand: 'stood', troubleshoot: 'troubleshot',
+};
+
+/**
+ * Present forms that as often open a noun phrase, a title or an adjective's: "Design system for…", "Test
+ * automation…", "Engineer on the payments team", "Double major in…", "Head TA for…". They are not
+ * counted, so a chip goes in front of them and no word is lost.
+ */
+const PRESENT_NOUNS = new Set([
+  'design', 'test', 'model', 'code', 'budget', 'plan', 'research', 'review', 'survey', 'track', 'host',
+  'audit', 'program', 'prototype', 'pilot', 'interview', 'monitor', 'benchmark', 'forecast', 'document',
+  'draft', 'release', 'award', 'contract', 'author', 'brief', 'moderate', 'complete', 'craft', 'trim',
+  'secure', 'direct', 'head', 'partner', 'engineer', 'architect', 'pioneer', 'broker', 'compute', 'close',
+  'upgrade', 'double', 'triple',
+]);
+
+/** A word after a present form that makes it a noun: "Mentor to 5 interns", "Lead for the payments team". */
+const NOUN_AFTER = /^\s+(?:to|for|of|at|in|on|from|by|as)(?![\p{L}\d])/iu;
+/** A title after "Lead": "Lead engineer for payments" is a role, not "Led engineer…". */
+const TITLE_AFTER_LEAD = /^\s+(?:engineer|developer|designer|architect|analyst|scientist|researcher|consultant|instructor|organi[sz]er|maintainer|contributor|author|writer|editor|manager|coordinator|mentor|member|volunteer|role|position|ta|teaching)s?(?![\p{L}\d])/iu;
+
+/** Whether `word`, followed by `after`, is the present tense of a listed action verb. */
+function isPresentActionVerb(word, after) {
+  const w = word.toLowerCase();
+  if (w.length < 3 || PRESENT_NOUNS.has(w)) return false;
+  // Followed by a word, not by punctuation or nothing ("Chair, ACM chapter", "Mentor to 5 interns").
+  if (!/^\s+[^\s,;:.()\-–—|/@]/u.test(after) || NOUN_AFTER.test(after)) return false;
+  if (w === 'lead' && TITLE_AFTER_LEAD.test(after)) return false;
+  const pasts = [PRESENT_IRREGULAR[w], `${w}ed`, `${w}d`, `${w}${w.at(-1)}ed`, w.replace(/y$/, 'ied')];
+  return pasts.some((p) => p && p !== w && VERB_KEYS.has(verbKey(p)));
+}
+
+/** "Took part" and "Take part", which open no action: see leadsWithActionVerb. */
+const TOOK_PART = /^(?:took|take)\s+part(?![\p{L}\d])/iu;
 
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
@@ -308,7 +352,7 @@ export function insertActionVerb(text, verb) {
     // The verb's particle goes with it ("Set up", "Rolled back", "Took on"), or the chip left
     // "Spearheaded back a bad release" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
     const after = rest.slice(first[0].length);
-    const particle = after.match(verbKey(first[0]) === 'took' ? TOOK_PARTICLE : VERB_PARTICLE);
+    const particle = after.match(['took', 'take'].includes(verbKey(first[0])) ? TOOK_PARTICLE : VERB_PARTICLE);
     return lead + verb + after.slice(particle ? particle[0].length : 0);
   }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
@@ -382,7 +426,7 @@ const TOOK_PARTICLE = /^\s+(?:on|over(?!\s*[\d$€£¥~+]))(?![\p{L}\d'’-])/iu
  * member of", "Collaborated with") lost those words to the chip — "Streamlined HIPAA", "Spearheaded the
  * ACM chapter" (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE). Its verb is replaced like any other.
  */
-const PHRASAL_VERBS = ['Took part in', 'Set out to'];
+const PHRASAL_VERBS = ['Took part in', 'Take part in', 'Set out to'];
 const PHRASE_TAIL = new Set(['on', 'in', 'to', 'efforts', 'out', 'part']);
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
