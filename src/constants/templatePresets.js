@@ -9,6 +9,9 @@
 // atsRating over its engine and settings — so a design cannot claim what its page does not print.
 
 import { offersTemplate, templateId, templateStyleDefaults } from './templates.js';
+import { withDesignNumbers } from './designNumbers.js';
+import { withFontChoices } from './designFonts.js';
+import { withNormalizedColors } from '../utils/colors.js';
 
 /**
  * Every design, in the order the picker lists them:
@@ -87,9 +90,19 @@ export function ownDesign(settings, id) {
   const valid = own && typeof own === 'object' && typeof own.label === 'string' && offersTemplate(own.engine)
     && own.settings && typeof own.settings === 'object' && !Array.isArray(own.settings);
   // The engine as the app writes it: a file may store "Modern" or " sidebar " (offersTemplate accepts
-  // any case, R5-5), and the picker looks its card up by the written id.
-  return valid ? { ...own, engine: templateId(own.engine) } : null;
+  // any case, R5-5), and the picker looks its card up by the written id. Its settings as normalizeResume
+  // stores a résumé's (checkedLook): picking it copies them onto the résumé.
+  return valid ? { ...own, engine: templateId(own.engine), settings: checkedLook(own.settings) } : null;
 }
+
+/**
+ * A saved design's settings with the checks a résumé's get where it comes in (normalizeResume): the
+ * Design numbers as numbers in range, colours as '#rrggbb', Name Font and Heading Font as text. The app
+ * saves only its own values, but an imported .json can carry anything in `myDesigns`, and picking the
+ * design copied it onto the résumé unchecked: fontSizeBase "12" printed the name at 128 pt ("12" + 8,
+ * R5-HUNT11-SAVED-DESIGN-SETTINGS-UNCHECKED). The same object when nothing needs a change.
+ */
+const checkedLook = (settings) => withFontChoices(withNormalizedColors(withDesignNumbers({ settings }))).settings;
 
 /**
  * The design a résumé on `template` with `settings` is on: `settings.templatePreset` where it names a
