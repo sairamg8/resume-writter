@@ -38,8 +38,8 @@
    "note": "all 9 areas; import 3 were regressions from round 8's import fixes"
   },
   "10": {
-   "confirmed": 4,
-   "note": "boards and editor dry (1 finding each refuted); import/export/tools running"
+   "confirmed": 12,
+   "note": "all 9 areas; boards and editor dry"
   }
  },
  "seen": [
@@ -208,6 +208,14 @@
   "A native .json whose personal (or an entry's) hiddenFields is not a list crashes the editor on every open, and its preview and PDF never build",
   "PDF: a Skills title in Bars, Stacked or Tags style could be left alone at the foot of a page, because the first group's category (kept with its skills since R5-HUNT8) moved to the next page and the title never kept room for it (main column and the Sidebar's dark column)",
   "When storage has room for a job or project list's small sync record but not for the list itself, the next reload deletes those jobs or projects from the account's cloud and from every device",
-  "Re-importing a jobs file whose entries have ids but no numeric updatedAt adds one more duplicate of every job touched since, on every import"
+  "Re-importing a jobs file whose entries have ids but no numeric updatedAt adds one more duplicate of every job touched since, on every import",
+  "Text/PDF/Word import (no heading styles): two Title-Case sub-labels in a row in a job made the first an Awards section that swallowed every later job",
+  "Markdown import: a blank line between a '### ' entry heading and its date line split every entry in two",
+  "Text/PDF/Word import: an award dated by several years not in brackets got the earlier years as its Issuer",
+  "JSON Resume export writes entries that print nothing: a new section's blank entry, a job with every eye off, and a language row with no language (written as a lone fluency 'Professional')",
+  "A section prints a lone heading (and an empty entry) in the PDF/preview when its only entry holds nothing but a certificate's leftover Link label or interests that are only commas; Markdown and ATS text leave it out",
+  "Auto-Fix turns 'Worked with <people>' into 'Engineered <people>'",
+  "Present-tense bullets for a current job ('Manage', 'Develop', 'Lead', 'Build') count as having no action verb",
+  "A power-verb chip on 'Maintained compliance with...', 'Active member of...' or 'Supported delivery of...' deletes the noun as well"
  ]
 }
