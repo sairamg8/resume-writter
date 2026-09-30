@@ -683,6 +683,17 @@ const SUBHEADING = /^(?:(?:key|main|major|core|notable|selected|relevant|select|
 
 /** Title Case for a line typed in capitals ("PROFESSIONAL EXPERIENCE", "AVERY QUINN"); others as they are. */
 const SMALL = new Set(['and', 'of', 'the', 'in', 'for', 'at', 'on', 'to', 'a', 'an', 'or', '&']);
+/** A name's own words in lower case: "Universidad de Chile", "Banco do Brasil", "Ludwig van Beethoven". */
+const PARTICLE = new Set(['de', 'del', 'della', 'der', 'den', 'di', 'da', 'do', 'dos', 'das', 'du', 'des', 'la', 'le', 'les', 'y', 'e', 'et', 'und', 'van', 'von', 'zu', 'am', 'im', 'sans', 'al', 'el', 'bin', 'ibn']);
+/**
+ * Whether a line can be a name (an employer's): no word in lower case but "of", "the" or a name's
+ * particle, and none of those first. "Leading the storage team" or "and Kubernetes" (a paragraph's last
+ * line) is a role's text; "Bank of America" and "Universidad de Chile" are names.
+ */
+const nameLike = (text) => {
+  const words = String(text).trim().split(/\s+/);
+  return !SMALL.has(words[0]) && !PARTICLE.has(words[0]) && !words.some((w) => /^\p{Ll}+$/u.test(w) && !SMALL.has(w) && !PARTICLE.has(w));
+};
 function tamed(text) {
   if (!/\p{Lu}/u.test(text) || /\p{Ll}/u.test(text)) return text;
   return text.toLowerCase().split(/(\s+)/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase()).replace(/([-'’.])(\p{L})/gu, (_, a, c) => a + c.toUpperCase()))).join('');
@@ -1348,8 +1359,10 @@ function entriesOf(type, lines, aside) {
           // The next role, over its dates: not a next employer's job, its company over its role ("Microsoft" over "Senior Engineer").
           // A role's text over it is no employer: "Leading the storage team" has words in lower case a
           // name has none of (R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY: it was the next role's company).
+          // A name's particle is no such word: "Universidad de Chile" is the next employer (R5-HUNT12 review:
+          // it went into the role above's text, and its role joined the group).
           && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text)
-            && !body.at(-2).text.split(/\s+/).some((w) => /^\p{Ll}+$/u.test(w) && !SMALL.has(w)))) {
+            && nameLike(body.at(-2).text))) {
           onRole(body.pop());
         } else {
           lengthGroup = null;
