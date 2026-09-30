@@ -1,0 +1,60 @@
+{
+  "cluster": "r5-hunt11-import",
+  "branch": "claude/wf-r5-hunt11-import",
+  "base": "93794b3224ec5b1ef388ccc07903fc7651a9b06a",
+  "rows": [
+    {
+      "id": "R5-HUNT11-MD-ENTRY-HEADING-ROLE-LINE-SPLITS-ENTRY",
+      "title": "Markdown (and Word with heading styles) import: a '### Company' heading with the role on the next line and the dates under that is split into two entries",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["69d8ad13b8c469da31077a61149ce58a9d12bb48"],
+      "tests": ["tests/unit/r5-hunt11-md-entry-heading-role-line.unit.mjs"],
+      "summary": "Now: an undated entry heading takes the one short title line under it (the role or the degree, past a blank line too) into its header when a date line follows, so '### Amazon' / '**Senior Engineer**' / '*Jan 2020 – Present*' is one job (company Amazon, role Senior Engineer, dates, bullets) and '### University of Washington' / 'B.S. Computer Science' / '2012 – 2016' is one school; the same for a Word file with the employer in a deeper Heading style. A paragraph under an undated heading stays its text.",
+      "ci": [36669437353]
+    },
+    {
+      "id": "R5-HUNT11-EDU-SCHOOL-TAB-PLACE-OVER-DEGREE-DATE",
+      "title": "Text/PDF/Word import: 'School ⇥ City, ST' over 'Degree ⇥ Date' leaves Institution empty and gives the degree the next school",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["3e5550ea20b8f63d21b987bdbe7e60c885f118cc"],
+      "tests": ["tests/unit/r5-hunt11-edu-school-tab-place.unit.mjs"],
+      "summary": "Now: in Education a school line with its place at the right tab is a title line over its degree's dated line: the school is the institution and the place the location. A school over its degree's dated line (with or without a place) ends that entry's header, so the line under the dated line (the next school, or 'Relevant Coursework: …') is no longer taken as this degree's school: the coursework goes to the description and the next school starts its own entry. 'School ⇥ Date' over 'Degree ⇥ City' reads as before.",
+      "ci": [36669437353]
+    },
+    {
+      "id": "R5-HUNT11-TITLECASE-HEADING-NO-BLANK-LINE",
+      "title": "Word/text import (no heading styles): a Title-Case section title with no blank line before it is not read as a heading, so every later section is folded into the one above",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["0da42b85d276ec649c4bb92009435358a471c580"],
+      "tests": ["tests/unit/r5-hunt11-titlecase-heading-no-blank-line.unit.mjs"],
+      "summary": "Now: in a file with no heading marks, a known title in Title Case with no blank line before it ('Education', 'Skills', 'Experience') starts its section when it names another type than the section it is in. Excluded: summary/contact titles (so a 'Summary' first no longer swallows the résumé, and 'Experience' after it is a section), SUBHEADING labels inside an entry ('Projects', 'Awards', 'Technologies'), a 'Languages' category inside Skills, and a role word right over or under a dated line ('Volunteer'). A 'Skills' label inside a job with another dated job after it stays the job's (partInEntry).",
+      "ci": [36669437353]
+    },
+    {
+      "id": "R5-HUNT11-TITLECASE-UNKNOWN-HEADING-BECOMES-ENTRY",
+      "title": "Text/PDF/Word import: an unknown Title-Case section title ('Research Experience', 'Teaching Experience') becomes a blank entry of the section above",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["3e5cacd94795e700a385b2d0e40e3bfa517ff3ea"],
+      "tests": ["tests/unit/r5-hunt11-titlecase-unknown-heading.unit.mjs"],
+      "summary": "Now: in a file with no heading marks, an unknown title in Title Case after a blank line that ends in a section word (SECTION_WORD: Experience, Research, Teaching, Leadership, Involvement, Service, Publications, Projects, Activities…), with no role word and no SUBHEADING label, starts a custom section, as it does in capitals. The research and teaching jobs are entries of those sections, and Education keeps only the Ph.D. A job title such as 'Head of Customer Experience' and a label such as 'Notable Projects' inside a job are unaffected.",
+      "ci": [36669437353]
+    },
+    {
+      "id": "R5-HUNT11-LINKEDIN-GROUPED-ROLES-COMPANY",
+      "title": "PDF/text import of LinkedIn's 'Save to PDF': a company with several roles gives its roles the company '5 years 2 months' (or the previous role's city)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["5647c732bf0bc9197eecac381f8457cb6bbe01d9"],
+      "tests": ["tests/unit/r5-hunt11-linkedin-grouped-roles.unit.mjs"],
+      "summary": "Now: in Experience, an employer line, then a total-length line alone ('5 years 2 months'), then a role over a date-first line makes that role, and each next role (the one line right over its dates, while no two title lines mark a next employer), a role of that employer, with the employer as company. A job's place alone on the line under its date line is its location (single-role jobs too), so the role above's city no longer becomes the next role's company, and the job above's description no longer ends with the employer.",
+      "ci": [36669437353]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "All five fixes are in src/utils/importText.js, one commit each; docs/knowledge/06-templates-export.md updated. CI run 36669437353: fail-first green for all five commits (each test fails with its diff reversed and passes with it restored), and 719/719 in the import-area node tests plus knowledge-docs (unit import, r5-hunt*, lo-imp, 104/105-r5, and the pdf import round trips). The full gate was not run: the batch gate is the merger's. Known limits, not fixed here: a Title-Case known heading that is also a SUBHEADING label ('Projects', 'Awards') with no blank line before it is still no heading; 'Selected Projects'/'Key Projects' after a blank line inside a job still starts a Projects section (pre-existing known-heading rule); a school with no school word ('MIT') over its degree, right after another entry's text, still goes to the entry above (pre-existing)."
+}

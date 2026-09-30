@@ -674,6 +674,10 @@ function tamed(text) {
   return text.toLowerCase().split(/(\s+)/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase()).replace(/([-'’.])(\p{L})/gu, (_, a, c) => a + c.toUpperCase()))).join('');
 }
 const isCaps = (text) => /\p{Lu}/u.test(text) && !/\p{Ll}/u.test(text);
+/** The word a section's title ends in, where the import does not know the title: "Research Experience". */
+const SECTION_WORD = /\b(?:experiences?|research|teaching|leadership|involvement|service|publications|presentations|talks|conferences|grants|fellowships|patents|affiliations|memberships|appointments|outreach|employment|projects|activities)$/i;
+/** Title Case: each word from a capital, but the small ones ("Tools and Technologies", "Education & Training"). */
+const titleCase = (text) => /\p{Ll}/u.test(text) && text.split(/\s+/).every((w, k) => !/\p{L}/u.test(w) || /^[^\p{L}]*\p{Lu}/u.test(w) || (k > 0 && SMALL.has(w.toLowerCase())));
 
 /** A blank entry of `type`, the editor's own, with `fields` over it. */
 function itemOf(type, fields) {
@@ -1073,6 +1077,7 @@ function entriesOf(type, lines, aside) {
   // the line under it (Word's) — then each role with its dates and one field, the role. Before, the
   // employer line went into the job above as text, and each role had no company.
   let group = null;
+  let lengthGroup = null; // LinkedIn's employer over its roles, its total length under it (below)
   /** The employer lines right over a dated line, taken out of the text above: { company, place }, or null. */
   const employerOver = (L, timeline = false) => {
     const body = pool();
@@ -1129,14 +1134,26 @@ function entriesOf(type, lines, aside) {
   // list or its title), only where it plainly names the role (or the degree) its dated line does not:
   // not the job above's last line ("Promoted twice in two years").
   const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
+  // A school with its place at the right tab ("Harvard University ⇥ Cambridge, MA" over "Bachelor of
+  // Arts in Economics ⇥ May 2025", the most common US student layout) is such a line too, as an employer
+  // with its place is over a role (employerOver). Before, it was none: the school went into the
+  // description, and the next school (or a "Relevant Coursework: …" line) became this degree's
+  // (R5-HUNT11-EDU-SCHOOL-TAB-PLACE-OVER-DEGREE-DATE).
+  const schoolPlaced = (b) => {
+    const ps = pieces(b.text);
+    return type === 'education' && ps.length === 2 && SCHOOL.test(ps[0]) && !DEGREE.test(ps[0]) && PLACE.test(ps[1]);
+  };
   const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
-    && !isMetaLine(b.text) && pieces(b.text).length === 1;
+    && !isMetaLine(b.text) && (pieces(b.text).length === 1 || schoolPlaced(b));
   const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
   // How `b` names its entry over `L`: 'kind' for the role (or degree) its dated line does not name;
   // for a school, 'school' for the school over a dated line that names the degree ("Stanford
   // University" over "MBA ⇥ 2013 – 2015"), the mirror of the degree over its school. Else null.
   const way = (b, L) => {
     const [field = ''] = datedFields(L.text);
+    // A school with its place: the school's name alone ("…, MA" is no degree), over any dated line that
+    // names no school ("Study Abroad Program ⇥ Jan 2024 – May 2024" names no degree either).
+    if (schoolPlaced(b)) return !SCHOOL.test(field) ? 'school' : null;
     if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
     if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
     return null;
@@ -1147,7 +1164,7 @@ function entriesOf(type, lines, aside) {
   // "Stanford University", a line such as "Exchange semester at University of Tokyo" is that entry's
   // description, not the next degree's school (which is under the next degree's dated line).
   const schoolFirstAbove = () => {
-    const last = cur?.header.filter((h) => !isMetaLine(h.text)).at(-1);
+    const last = cur?.header.filter((h) => !isMetaLine(h.text) && !h.over).at(-1); // a school's place over it aside (schoolPlaced)
     return !cur || Boolean(last?.date);
   };
   /** That line over `L`, or null. */
@@ -1156,8 +1173,15 @@ function entriesOf(type, lines, aside) {
     const b = body[body.length - 1];
     const before = b && info[b.index - 1];
     return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
-      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L)
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before) || way(b, L) === 'school') && names(b, L)
         && (way(b, L) !== 'school' || schoolFirstAbove()))) ? b : null;
+  };
+  // A school over its degree's dated line is its entry's title: the line under that dated line is no
+  // second line of its header (a school the degree already has), but its place alone, or its text
+  // ("Relevant Coursework: …"), or the next school's. Before, it became the degree's school.
+  const schoolOver = (L) => {
+    const b = type === 'education' && titleOver(L);
+    return Boolean(b && (way(b, L) === 'school' || ((b.gap || !info[b.index - 1]) && SCHOOL.test(pieces(b.text)[0]) && !DEGREE.test(pieces(b.text)[0]))));
   };
   // The line under a dated line that is the next entry's title over its own dated line (the next degree
   // over the next school), where this entry's is over it too and names its degree (or role) the same
@@ -1228,6 +1252,15 @@ function entriesOf(type, lines, aside) {
       // untitled entry of its own, with the entry's place and text, the titled one left undated
       // (R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING-SPLITS-ENTRY). Not a sentence of its text.
       const dateLine = (n) => Boolean(n.date && (n.date.first || pieces(n.text).length > 1));
+      // An undated heading's second field on the line under it, over its date line ("### Amazon", then
+      // "**Senior Engineer**", then "*Jan 2020 – Present*"; "### University of Washington", "B.S. Computer
+      // Science", "2012 – 2016"): the role or the degree, the entry's own. Before, it ended the header,
+      // and the date line took it into an untitled entry of its own, the company left alone in the
+      // titled one (R5-HUNT11-MD-ENTRY-HEADING-ROLE-LINE-SPLITS-ENTRY).
+      const second = (n) => Boolean(n && !n.bullet && !n.date && !n.hint && n.text.length <= 100 && !/[.!?:;,]$/.test(n.text)
+        && !isMetaLine(n.text) && pieces(n.text).length <= 2 && !sentence(n.text));
+      const m = info[i + 1];
+      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) header.push(info[i++]);
       while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
@@ -1256,12 +1289,31 @@ function entriesOf(type, lines, aside) {
         // A school in a side column stacks each field on a line of its own over its dates (Sidebar's
         // degree, school, field and place): up to four lines.
         const body = pool();
-        let next = L;
-        while (header.length < (type === 'education' ? 5 : 3) && body.length) {
-          const prev = body[body.length - 1];
-          if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
-          header.unshift(body.pop());
-          next = prev;
+        // LinkedIn's "Save to PDF": an employer with several roles prints its name, then its total length
+        // alone on a line ("5 years 2 months"), then each role over its dates and its place. The employer
+        // is each role's company. Before, the length (or the role above's place) became the company, and
+        // the employer went into the job above's text (R5-HUNT11-LINKEDIN-GROUPED-ROLES-COMPANY).
+        const run = (ns) => ns.every((n, k) => n && !n.bullet && !n.date && (info[n.index + 1] === (ns[k + 1] || L)) && !(ns[k + 1] || L).gap);
+        const one = (n) => n && !n.hint && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && pieces(n.text).length === 1 && !isMetaLine(n.text);
+        const [co, length, role] = body.slice(-3);
+        const onRole = (n) => { header.unshift({ ...n, group: lengthGroup }); };
+        if (type === 'experience' && body.length >= 3 && run([co, length, role]) && one(co) && LENGTH_ONLY.test(length.text) && one(role)) {
+          body.splice(-3);
+          lengthGroup = { company: co.text, place: '', lead: [] };
+          onRole(role);
+        } else if (type === 'experience' && lengthGroup && cur?.header[0]?.group === lengthGroup && run(body.slice(-1)) && one(body.at(-1))
+          // The next role, over its dates: not a next employer's job, its company over its role ("Microsoft" over "Senior Engineer").
+          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text))) {
+          onRole(body.pop());
+        } else {
+          lengthGroup = null;
+          let next = L;
+          while (header.length < (type === 'education' ? 5 : 3) && body.length) {
+            const prev = body[body.length - 1];
+            if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
+            header.unshift(body.pop());
+            next = prev;
+          }
         }
         // None over it, and the date alone on its line: the date prints above its entry's title (the
         // Timeline's rail: "Mar 2021 – Present", then "Role ⇥ Company", then the location). Its title is
@@ -1274,16 +1326,30 @@ function entriesOf(type, lines, aside) {
           const n = info[i];
           if (SECOND_LINE.has(type) && titleLike(n) && (pieces(n.text).length > 1 || PLACE.test(n.text))) header.push(info[i++]);
         }
+        // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
+        // Francisco, California, United States"): its location. Before, it went into the description, or
+        // became the next role's company.
+        const n = info[i];
+        if (JOB.has(type) && header[0] !== L && n && !n.bullet && !n.gap && !n.date && !n.hint && pieces(n.text).length === 1
+          && PLACE.test(n.text) && !ROLE.test(n.text) && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
-          && !titleOfNext(L, n)) { header.push(n); i += 1; }
+          && !titleOfNext(L, n) && !(schoolOver(L) && !(pieces(n.text).length === 1 && PLACE.test(n.text)))) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
       // Nothing under it but its named fields ("GPA: 3.9"), and its title over it (titleOver). Before,
       // that line went into the description, or the job above's.
-      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) header.unshift(pool().pop());
+      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) {
+        const t = pool().pop();
+        // A school with its place at the right tab: the school, and the place its location (the right tab's).
+        if (schoolPlaced(t)) {
+          const [school, place] = pieces(t.text);
+          header.unshift({ ...t, text: school });
+          header.push({ ...t, text: place, hint: 'end', over: true });
+        } else header.unshift(t);
+      }
       start(header);
       continue;
     }
@@ -1482,7 +1548,18 @@ export function resumeFromText(input) {
   const headingLike = (n) => {
     const t = n.text.replace(/\s*:$/, '').trim();
     if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
-    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
+    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t)) || titleHeading(t);
+  };
+  // A known title in Title Case with no blank line before it ("Education", "Skills", "Experience"): a
+  // Word résumé with no Heading styles sets its sections apart by a paragraph's space before, no empty
+  // paragraph, and a compact text file by nothing. It is a heading too — not the header's (summary,
+  // contact) nor a label a job or a school prints over a part of it (SUBHEADING: "Projects", "Awards",
+  // "Technologies"; a "Skills" one is such a part only with another dated entry after it, partInEntry).
+  // Before, it stayed in the section above, and every later section with it: the schools became jobs
+  // and the skills a job's text (R5-HUNT11-TITLECASE-HEADING-NO-BLANK-LINE).
+  const titleHeading = (t, skills = false) => {
+    const known = headingType(t);
+    return Boolean(known && titleCase(t) && known !== 'summary' && known !== 'contact' && (!SUBHEADING.test(t) || (skills && known === 'skills')));
   };
   const isAchievement = (text) => /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   // Such a label itself: Title Case, not over a rule, of an achievement or skills title.
@@ -1531,9 +1608,22 @@ export function resumeFromText(input) {
       else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
-      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)
+      // In Title Case with no gap (titleHeading): of another type than the section it is in, and in a
+      // skills section no "Languages" over a list of them (skillsOf's category); not an entry's own line
+      // right under its dated one, nor a role over it ("Volunteer" under "Red Cross ⇥ 2019 – 2020").
+      const underDate = i > 0 && pieces(lines[i - 1].text).some((p) => readDateRange(p) || trailingDate(p));
+      const titled = titleHeading(text, true) && known !== within && !(within === 'skills' && known === 'languages')
+        && !(ROLE.test(text) && (underDate || overDate(i)));
+      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0 || titled)
         && !partInEntry(l, text, i)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
+      // An unknown title in Title Case after a blank line, named as a section is ("Research Experience",
+      // "Teaching Experience", "Leadership Experience", "Community Involvement"): a custom section, as it
+      // is in capitals. Before, it became a blank entry of the section above (a fake degree), and that
+      // section's entries took its jobs (R5-HUNT11-TITLECASE-UNKNOWN-HEADING-BECOMES-ENTRY). No role
+      // ("Head of Customer Experience"), nor a label inside an entry (SUBHEADING: "Selected Projects").
+      else if (seen && l.gap && titleCase(text) && SECTION_WORD.test(text) && !ROLE.test(text) && !SUBHEADING.test(text)
+        && !/\d/.test(text) && text.split(/\s+/).length <= 5) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
     }

@@ -149,13 +149,18 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
   a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
-  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10), a deeper heading under an entry a grouped role; a link as "label
+  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10; an undated one's role or degree line over its date line too, R5-HUNT11), a deeper heading under an entry a grouped role; a link as "label
   (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
-  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom — but in a file with no
+  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases; in a file with no heading marks one in
+  Title Case with no blank line before it too, of another type than the section it is in — not a
+  summary's or a contact's, a `SUBHEADING` label, a "Languages" category in Skills nor a role over or under
+  its dated line, R5-HUNT11), others custom (in a file with no marks one in capitals or over a rule, or
+  one in Title Case after a blank line that ends as a section's title does, "Research Experience",
+  `SECTION_WORD`, no role and no `SUBHEADING`, R5-HUNT11) — but in a file with no
   heading marks, a Title-Case "Key Achievements", "Tech Stack" or "Tools" inside a job or project with
   another dated entry after its own lines (past a blank line or a list; no "Label: value" line) is that
   entry's part, no section (R5-HUNT9) — a second such label on the way ("Key Achievements", then "Tech
@@ -164,7 +169,10 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   Certifications and Awards (there, several after a tab or a comma, "Dean's List ⇥ 2014, 2015", are put
   in brackets, no issuer — an entry's own line, not the text under it; R5-HUNT10), or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
-  roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
+  roles, R4-LO-01; LinkedIn's employer over its total length alone, "5 years 2 months", then each role
+  over its dates, R5-HUNT11 — a job's place alone under its date line its location; in Education a school over its degree's dated line, alone or with its place at the
+  right tab, "Harvard University ⇥ Cambridge, MA", is that entry's school and location, the line under
+  the dated line no second header line but its text or the next school's, R5-HUNT11), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
   ("Key Responsibilities", "Highlights", "Relevant Coursework", "Activities": `SUBHEADING`, R5-HUNT9),
   which stays that entry's text; every line it cannot place in a custom "Additional
