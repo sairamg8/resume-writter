@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 00:45 UTC — ROUND 9 DONE (all 9 areas, 14 fixes): `0373b9e9`.** Import's 3 were REGRESSIONS from round 8's import
+fixes (a sub-heading under a job becomes a blank entry; a line ending in bracketed years splits off; a Title-Case sub-heading starts a
+section). **PR #6 (1f7ed0e) carries them: marked [Hold], don't merge.** Full gate on `0373b9e9` dispatched ~00:45; when green, pin
+`claude/deploy-r9-0373b9e` and open the deploy PR replacing #6. Round 10 running: wf_98d5855d-049 (dash, pdf, boards, sync, editor,
+jobs; base 5c6c1e38) and wf_4af2d4d7-c83 (import, export, tools; base 0373b9e9). Seen-list 162.
+
 **2026-09-30 00:25 UTC — ROUND 9 six areas merged: `5c6c1e38`** (8 fixes: dash 1 — a non-text résumé name crashed the editor and
 Dashboard; pdf 1 — picked icons fetched as images; boards 1 — float noise in point sums; sync 1 — first-sync record dropped when storage
 is full; editor 2; jobs 2). Seen-list 156. **Full gate on `5c6c1e38` dispatched ~00:25.** Running: wf_3bfd91c4-700 (round 9
