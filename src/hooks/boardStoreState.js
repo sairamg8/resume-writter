@@ -110,6 +110,15 @@ function boardsNow() {
   return snapshot().boards;
 }
 
+/**
+ * The list storage holds, loaded first: what the cloud sync may record as synced here — the boards
+ * shown, but for what storage refused (collectionSyncEngine's claimed).
+ */
+function savedBoards() {
+  if (!initialized) init();
+  return stored ?? snapshot().boards;
+}
+
 /** Set when the saved list could not be read in full; the board pages show it until dismissed. */
 function dismissRecovery() {
   if (!initialized) init();
@@ -137,4 +146,4 @@ function replaceBoards(list) {
   setBoards((boards) => (list === boards ? boards : addressableBoards(list)));
 }
 
-export { snapshot, subscribe, setBoards, boardsNow, replaceBoards, dismissRecovery, leaveRecovery };
+export { snapshot, subscribe, setBoards, boardsNow, savedBoards, replaceBoards, dismissRecovery, leaveRecovery };

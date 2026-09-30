@@ -31,7 +31,9 @@ const noRoom = (what = 'the last account\'s list could not be set aside') => Obj
  *   store     { items() → the list now, replace(list), subscribe(fn) → unsubscribe, fromCloud(doc)
  *             → the item as the store holds one (null: not one), label(item) → its name, seed(item)
  *             → whether it is the first visit's demo, untouched (optional), leaveRecovery() → the list's
- *             recovery notice and backups forgotten as it leaves this browser (optional) }
+ *             recovery notice and backups forgotten as it leaves this browser (optional), saved() → the
+ *             list storage holds, which differs from items() when storage refused a save (optional:
+ *             items()) }
  *   meta      { read(), write(m) } — collectionSyncMeta.js
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]) }
  *   online, hidden, timers, flushDelay, retryDelay, maxRetryDelay, refreshAfter, now, log — as
@@ -106,8 +108,27 @@ export function createCollectionSync({
     if (m.uid !== uid) return;
     const versions = { ...m.versions, ...versionsOf(sets) };
     deletes.forEach((id) => { versions[id] = DELETED; });
-    meta.write({ ...m, versions, ...(order ? { order } : {}) });
+    meta.write({ ...m, versions: claimed(versions), ...(order ? { order } : {}) });
   };
+
+  /**
+   * `versions` without the items shown here that storage refused to hold: the record is saved under
+   * its own key, apart from the list. Storage full, the list's save was refused (kept in memory
+   * only) while the few bytes of the record fitted, and the record said this browser held items it
+   * never stored: at the next reload they were "known here, gone from the list" — deleted here — and
+   * the first sync deleted them from the account and every other device. With no version, an item
+   * the cloud has and storage lacks is one this browser never saw: the next first sync brings it
+   * back (R5-HUNT10-SYNC-RECORD-SAVED-LIST-REFUSED-DELETES-CLOUD). Only those: an item gone from
+   * the list and from storage alike was deleted here, and keeps its version until its deletion is
+   * sent — dropped with the rest of what storage lacks, a reload or a failed flush before then had
+   * the next first sync take it for one never seen here and bring it back from the cloud (review).
+   */
+  function claimed(versions) {
+    if (!store.saved) return versions;
+    const saved = new Set(store.saved().map((x) => x.id));
+    const refused = new Set(store.items().filter((x) => !saved.has(x.id)).map((x) => x.id));
+    return refused.size ? Object.fromEntries(Object.entries(versions).filter(([id]) => !refused.has(id))) : versions;
+  }
 
   function dropQueue() {
     timers.clear(s.timer);
@@ -317,7 +338,8 @@ export function createCollectionSync({
       // "synced", and at sign-out the account's list stayed for the next account to take in. Not
       // done then: the list is left as it was, and the first sync is tried again
       // (R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED).
-      if (!meta.write({ uid, versions: cloudVersions, order: plan.order, stashed }) && meta.read().uid !== uid) {
+      const written = { uid, versions: cloudVersions, order: plan.order, stashed };
+      if (!meta.write(written) && meta.read().uid !== uid) {
         throw noRoom('this account\'s list could not be recorded');
       }
       s.prev = plan.merged;
@@ -325,6 +347,10 @@ export function createCollectionSync({
       s.readAt = now();
       s.attempts = 0;
       store.replace(next);
+      // The merged list refused by storage (full): the record claims only what storage holds
+      // (claimed) — a smaller write, which fits where the one before did.
+      const onDisk = claimed(cloudVersions);
+      if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk });
       changed(next);
       if (!s.timer) settled();
     } catch (e) {

@@ -377,6 +377,15 @@ function jobsNow() {
   return snapshot().jobs;
 }
 
+/**
+ * The list storage holds, loaded first: what the cloud sync may record as synced here — the jobs
+ * shown, but for what storage refused (collectionSyncEngine's claimed).
+ */
+function savedJobs() {
+  if (!initialized) init();
+  return stored ?? snapshot().jobs;
+}
+
 /** Replace the list with the cloud sync's result (or [] as the account's list leaves); the same list writes nothing. */
 function replaceJobs(jobs) {
   if (jobs !== jobsNow()) setJobs(() => jobs);
@@ -449,7 +458,7 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, changeStatus, undoStatus, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
+export { snapshot, subscribe, addJob, updateJob, changeStatus, undoStatus, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, savedJobs, replaceJobs };
 
 export function useJobStore() {
   const { jobs, persistError, recovery, left } = useSyncExternalStore(subscribe, snapshot);
