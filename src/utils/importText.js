@@ -1129,14 +1129,26 @@ function entriesOf(type, lines, aside) {
   // list or its title), only where it plainly names the role (or the degree) its dated line does not:
   // not the job above's last line ("Promoted twice in two years").
   const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
+  // A school with its place at the right tab ("Harvard University ⇥ Cambridge, MA" over "Bachelor of
+  // Arts in Economics ⇥ May 2025", the most common US student layout) is such a line too, as an employer
+  // with its place is over a role (employerOver). Before, it was none: the school went into the
+  // description, and the next school (or a "Relevant Coursework: …" line) became this degree's
+  // (R5-HUNT11-EDU-SCHOOL-TAB-PLACE-OVER-DEGREE-DATE).
+  const schoolPlaced = (b) => {
+    const ps = pieces(b.text);
+    return type === 'education' && ps.length === 2 && SCHOOL.test(ps[0]) && !DEGREE.test(ps[0]) && PLACE.test(ps[1]);
+  };
   const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
-    && !isMetaLine(b.text) && pieces(b.text).length === 1;
+    && !isMetaLine(b.text) && (pieces(b.text).length === 1 || schoolPlaced(b));
   const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
   // How `b` names its entry over `L`: 'kind' for the role (or degree) its dated line does not name;
   // for a school, 'school' for the school over a dated line that names the degree ("Stanford
   // University" over "MBA ⇥ 2013 – 2015"), the mirror of the degree over its school. Else null.
   const way = (b, L) => {
     const [field = ''] = datedFields(L.text);
+    // A school with its place: the school's name alone ("…, MA" is no degree), over any dated line that
+    // names no school ("Study Abroad Program ⇥ Jan 2024 – May 2024" names no degree either).
+    if (schoolPlaced(b)) return !SCHOOL.test(field) ? 'school' : null;
     if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
     if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
     return null;
@@ -1147,7 +1159,7 @@ function entriesOf(type, lines, aside) {
   // "Stanford University", a line such as "Exchange semester at University of Tokyo" is that entry's
   // description, not the next degree's school (which is under the next degree's dated line).
   const schoolFirstAbove = () => {
-    const last = cur?.header.filter((h) => !isMetaLine(h.text)).at(-1);
+    const last = cur?.header.filter((h) => !isMetaLine(h.text) && !h.over).at(-1); // a school's place over it aside (schoolPlaced)
     return !cur || Boolean(last?.date);
   };
   /** That line over `L`, or null. */
@@ -1156,8 +1168,15 @@ function entriesOf(type, lines, aside) {
     const b = body[body.length - 1];
     const before = b && info[b.index - 1];
     return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
-      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L)
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before) || way(b, L) === 'school') && names(b, L)
         && (way(b, L) !== 'school' || schoolFirstAbove()))) ? b : null;
+  };
+  // A school over its degree's dated line is its entry's title: the line under that dated line is no
+  // second line of its header (a school the degree already has), but its place alone, or its text
+  // ("Relevant Coursework: …"), or the next school's. Before, it became the degree's school.
+  const schoolOver = (L) => {
+    const b = type === 'education' && titleOver(L);
+    return Boolean(b && (way(b, L) === 'school' || ((b.gap || !info[b.index - 1]) && SCHOOL.test(pieces(b.text)[0]) && !DEGREE.test(pieces(b.text)[0]))));
   };
   // The line under a dated line that is the next entry's title over its own dated line (the next degree
   // over the next school), where this entry's is over it too and names its degree (or role) the same
@@ -1286,13 +1305,21 @@ function entriesOf(type, lines, aside) {
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
-          && !titleOfNext(L, n)) { header.push(n); i += 1; }
+          && !titleOfNext(L, n) && !(schoolOver(L) && !(pieces(n.text).length === 1 && PLACE.test(n.text)))) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
       // Nothing under it but its named fields ("GPA: 3.9"), and its title over it (titleOver). Before,
       // that line went into the description, or the job above's.
-      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) header.unshift(pool().pop());
+      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) {
+        const t = pool().pop();
+        // A school with its place at the right tab: the school, and the place its location (the right tab's).
+        if (schoolPlaced(t)) {
+          const [school, place] = pieces(t.text);
+          header.unshift({ ...t, text: school });
+          header.push({ ...t, text: place, hint: 'end', over: true });
+        } else header.unshift(t);
+      }
       start(header);
       continue;
     }
