@@ -8,23 +8,56 @@
       "title": "A phone typed with an extension or a second number gets a clickable tel: link that dials a wrong, merged number",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["a52ea499df1466b7042a0f0d986cc3ad4e1e0415"],
-      "tests": ["tests/unit/r5-hunt12-phone-tel-link.unit.mjs"],
+      "commits": [
+        "a52ea499df1466b7042a0f0d986cc3ad4e1e0415"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-phone-tel-link.unit.mjs"
+      ],
       "summary": "Now: contactHref's phone link (telHref in src/utils/contacts.js) dials the first number only, cut at '/', ',', ';', '|' or 'or' once seven digits are in (so '030/1234567' stays one number), with an extension (ext., extension, x, #) as RFC 3966 ';ext='. '+1 (555) 123-4567 ext. 890' links to tel:+15551234567;ext=890 and '+91 98765 43210 / +91 91234 56789' to tel:+919876543210, in the PDF, Word and Markdown. The printed text is unchanged. docs/knowledge/03-data-model.md notes it.",
-      "ci": [36672718662]
+      "ci": [
+        36672718662
+      ]
     },
     {
       "id": "R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK",
       "title": "A website/LinkedIn/GitHub 'Link URL' box holding only 'https://' (or 'www.') removes the contact's link, although the typed value is a good link",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["f8e4142f03c5e6cba368ef84fa4319bc5caaa145"],
-      "tests": ["tests/unit/r5-hunt12-link-url-placeholder.unit.mjs"],
+      "commits": [
+        "f8e4142f03c5e6cba368ef84fa4319bc5caaa145"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-link-url-placeholder.unit.mjs"
+      ],
       "summary": "Now: a new linkOverride helper (src/utils/contacts.js) gives the Link URL only when safeHref accepts it. Otherwise ('https://', 'www.', a javascript: address) the box counts as empty, and contactHref links the typed value. The ATS text, cover-letter text and JSON Resume export use the same helper, so every format agrees. docs/knowledge/03-data-model.md notes it.",
-      "ci": [36672718662]
+      "ci": [
+        36672718662
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT12-REVIEW-TEL-EXT-BRACKET-COMMA (defect in a52ea499): the extension was read only right after the number, so '+1 555 123 4567 (ext 12)' still linked to tel:+1555123456712 (the merged number the fix set out to end) and '(555) 123-4567, ext. 890' was cut at the comma and lost its extension. Fixed in caa004e0: an extension in brackets, or after the separator, stays with its number as ;ext=.",
+      "R5-HUNT12-REVIEW-TEL-TRUNK-ZERO (next to a52ea499, there before it): '+44 (0) 20 7946 0958' linked to tel:+4402079460958, which does not dial. Fixed in 9a3e52af: after a '+', a bracketed trunk (0) is left out of the link. A national '(0) 20 ...' keeps its 0.",
+      "R5-HUNT12-REVIEW-IMPORT-PHONE-OWN-TEL-LINK (caused by a52ea499 and 9a3e52af): the import kept a linked phone's text only when the link held exactly its digits. Once the link dials only the first number and drops the trunk 0, the app's own Markdown/PDF/Word export of '+91 98765 43210 / +91 91234 56789' or '+44 (0) 20 7946 0958' imported as the link's bare digits. Fixed in 05f823c3: linkParts keeps the text when the link is the one contactHref writes for it.",
+      "R5-HUNT12-REVIEW-IMPORT-PHONE-EXTENSION (there before the branch, and it made the new ;ext= links pointless on a round trip): the import's PHONE test rejected letters, so a phone with an extension ('... ext. 890', 'x12', '(ext 12)') came back as no phone at all, from pasted text or from the app's own exports. Fixed in 162012c5: PHONE_EXT reads the number before the extension and keeps the value as typed.",
+      "f8e4142f (linkOverride) reviewed clean. A javascript:/bare-scheme Link URL now falls back to the typed value's link in contactHref, the ATS text, the letter text and JSON Resume alike. The existing javascript: tests (markdown-export-contacts, r5-hunt4 ATS, r5-hunt6 JSON Resume, 98-exp/r5hunt6 letter text) still hold; the editor never reads the override on its own."
+    ],
+    "commits": [
+      "caa004e0910b7642f3c1716c68d8b0a04c056dc0",
+      "9a3e52afbda47a378782c0dd3131b71fc6dad040",
+      "05f823c3b9e613ece3a4da97088d7f8c3abed483",
+      "162012c5688ecd5ed41d56876e10c753c16e6f4d"
+    ],
+    "ci": [
+      36672718662,
+      36673300021
+    ],
+    "notes": "Run 36673300021 at 162012c5: each of the 4 review commits' tests failed without its fix (# fail 2 each; caa004e0 was checked against its parent's files) and passed with it. The named tests passed 1969/1969: tests/unit/*, every import and round-trip pdf test, and the contact, Word, header, sidebar, cover-letter, Markdown-parity and letter-text tests. Lint green. The branch merges cleanly with origin/claude/r4-green 8e646a61, which changed only HANDOFF.md since dd02d2ef. Noted, not fixed (there before the branch, low): a vanity number '1-800-FLOWERS' links to tel:1800. The second number of a two-number phone still goes to 'Additional Information' on import, as on the base. The full gate was not run: it waits for the batch gate."
+  },
   "baselineFailures": [],
-  "notes": "CI run 36672718662 (failfirst for both fix commits plus the named tests: tests/unit/*.unit.mjs and the contact, export and guard pdf tests) was still in progress when this report was written. Its result has not been read yet. Base is origin/claude/r4-green at dd02d2ef (the task named b414cd6a, but the branch had moved on)."
+  "notes": "CI run 36672718662 (failfirst for both fix commits plus the named tests: tests/unit/*.unit.mjs and the contact, export and guard pdf tests) was still in progress when this report was written. Its result has not been read yet. Base is origin/claude/r4-green at dd02d2ef (the task named b414cd6a, but the branch had moved on). CI run 36672718662 later read green: both failfirst jobs failed without each fix (# fail 3 each) and passed with it; the named tests passed 1799/1799."
 }
