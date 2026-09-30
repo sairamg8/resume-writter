@@ -423,6 +423,8 @@ function bracketYears(text) {
   for (const sep of text.matchAll(/\t|\s[-–—|]\s|,\s/g)) {
     const before = text.slice(0, sep.index).trim();
     const after = text.slice(sep.index + sep[0].length).trim();
+    // Not inside brackets: "Dean’s List (2017, 2018, 2019)" is bracketed already.
+    if (/[()]/.test(after) || (before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) continue;
     const dates = after.split(/\s*[,;&]\s*|\s+and\s+/);
     if (before && dates.length > 1 && dates.every((d) => readDateRange(d))) return `${before} (${after})`;
   }
