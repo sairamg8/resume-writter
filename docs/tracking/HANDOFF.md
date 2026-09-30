@@ -1,5 +1,9 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 05:20 UTC — master `e1267bc9` (live, the owner's deploy) is GREEN (run 36670757485). DEPLOY: PR #9**
+(`claude/deploy-r11-b414cd6`, full gate 36671003710 on `b414cd6a` GREEN) = master + the 5 round-11 import review fixes (live
+regressions from the unreviewed import changes). Owner: merge #9 (or `git push origin b414cd6a:refs/heads/master`). Round 12 running.
+
 **2026-09-30 04:55 UTC — ROUND 11 DONE and merged: r4-green `b414cd6a`** (17 seen-list rows; import 5 +review fixes merged now;
 jobs review fix 0403359c; dash/sync review fixes). The Website-freeze lead is fixed (33647938: two regexes in displayUrl/safeHref
 took quadratic time on long values; test r5-hunt11-website-typing-linear-time). boards DONE (dry in rounds 10 and 11); pdf dry in 11.
