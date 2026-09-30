@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt9-export",
+  "branch": "claude/wf-r5-hunt9-export",
+  "base": "185192d798cef3b09aa3206e2b18db1ff80333b2",
+  "rows": [
+    {
+      "id": "R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE",
+      "title": "A newly added Languages section or language row prints a lone 'Professional' under the Languages heading in the preview, PDF and Word; Markdown and ATS text leave the section out, and the ATS Check counts it as printed.",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["829cc00cb71f9354554b78db2c0b4bb4ae6009b9", "bb2bc62342aff9c5daafd9b176824a9667e7ad54"],
+      "tests": ["tests/pdf/r5hunt9-language-proficiency-alone.test.mjs"],
+      "summary": "Now: a language row prints only when it has a language (entryPrints). A proficiency on its own, such as a new row's default 'Professional', prints nothing. So a Languages section that was just added prints no heading, and an extra 'Add Language' row adds no cell in the PDF/preview (every template, sidebar included) or in Word. The four exports and the ATS Check now agree.",
+      "ci": [36647829013]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "The earlier fixer's commit 829cc00 held the correct fix, but its test also matched the filler Experience heading 'Professional Experience' (run 36647389289 failed on executive, linen and Word). bb2bc62 retitles that filler section to 'Work History'. It weakens no assertion. Run 36647829013: failfirst proves the test fails without the fix and passes with it, and 25 area and guard test files pass (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs among them), plus lint. Not changed, outside this row: the finding's secondary note (an Experience entry holding only a field its section hides, e.g. a start date while Show dates is off, still prints a heading over an empty entry in PDF and Word)."
+}
