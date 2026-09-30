@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt11-sync",
+  "branch": "claude/wf-r5-hunt11-sync",
+  "base": "b616be3e954dbcfb3d8f30b6b1851f991e659c7a",
+  "rows": [
+    {
+      "id": "R5-HUNT11-SYNC-COLLECTION-FIRST-SYNC-READS-RECORD-AFTER-CLOUD",
+      "title": "With two tabs open, a job or project just created in one tab can be deleted from both tabs and from the account's cloud, if the other tab starts a first sync at that moment (and a job just deleted can come back)",
+      "severity": "high (data loss across devices)",
+      "outcome": "fixed",
+      "commits": ["5df9fc524692ec871d9d0cf036bde8e1aa58a06f"],
+      "tests": ["tests/unit/r5-hunt11-sync-first-sync-record-before-read.unit.mjs"],
+      "summary": "Now: collectionSyncEngine's firstSync reads this browser's sync record (meta.read()) BEFORE io.read, and builds the versions and local deletions for this account from that snapshot (`seen`), the same guard as the resume engine's `known` (R5-HUNT6). If another tab's flush writes the shared record while the cloud read is in flight, a job or project that tab just added is no longer taken as removed from the cloud and dropped (it is sent as an addition, a no-op overwrite). A job it just deleted is no longer taken as changed elsewhere and brought back (it stays deleted). If the record named no account or another account before the read, the snapshot gives no versions, so nothing is dropped. The test holds the cloud read's answer while the 'other tab' writes, and covers both the add case and the delete case. docs/knowledge/05-state-auth-sync.md updated.",
+      "ci": ["36655647308"]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI run 36655647308: failfirst ok (2 tests fail without the fix, pass with it). The named-files run of the sync area tests passed: the job, board and collection sync tests, the r5-hunt7 to r5-hunt10 sync tests, job-store-resync and knowledge-docs. Lint passed. The task named base 79dc42a2, but origin/claude/r4-green was b616be3e, and the branch starts from that."
+}
