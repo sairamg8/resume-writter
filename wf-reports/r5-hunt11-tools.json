@@ -8,23 +8,54 @@
       "title": "Auto-Fix after 'Was' / 'Is' / 'Were' writes broken grammar: 'Was tasked with rebuilding…' becomes 'Was led rebuilding…', 'Was in charge of onboarding' becomes 'Was oversaw onboarding'",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["88507d0c49fd6ac68140a8762eaccbd1e372a005"],
-      "tests": ["tests/unit/r5-hunt11-autofix-helper-verb.unit.mjs"],
+      "commits": [
+        "88507d0c49fd6ac68140a8762eaccbd1e372a005"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-autofix-helper-verb.unit.mjs"
+      ],
       "summary": "Now: autoFixWeakPhrases drops a helper verb (was/were/is/are/am/been) in front of 'responsible for', 'tasked with', 'in charge of' and 'involved in' before replacing the phrase: 'Was tasked with rebuilding the billing API' becomes 'Led rebuilding the billing API', 'Was in charge of onboarding' becomes 'Oversaw onboarding', 'Were responsible for payroll' becomes 'Led payroll'. A passive such as 'was handled by' keeps its 'was'.",
-      "ci": [36655800914, 36656499065]
+      "ci": [
+        36655800914,
+        36656499065
+      ]
     },
     {
       "id": "R5-HUNT11-ATS-SCORES-BLANK-ENTRIES",
       "title": "ATS Check marks down an unprinted blank Experience or Education entry: 'Some roles missing Job Title or Company' and 'Missing employment dates on some roles', minus 5 points",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["a9755f8c1f2ca46a644e0a01475954bd147bfe36"],
-      "tests": ["tests/unit/r5-hunt11-ats-blank-entries.unit.mjs"],
+      "commits": [
+        "a9755f8c1f2ca46a644e0a01475954bd147bfe36"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-ats-blank-entries.unit.mjs"
+      ],
       "summary": "Now: shownItems in atsChecker.js keeps only entries that print (entryPrints), so a blank Add-entry row in Experience or Education no longer triggers the role/company, employment-date or degree warnings or costs points, no longer shows as an empty job in 'What a parser reads', and no longer splits a company's grouped roles.",
-      "ci": [36655800914, 36656499065]
+      "ci": [
+        36655800914,
+        36656499065
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB: the helper verb went only when it stood right before the phrase. With an adverb between them, the usual resume wording, Auto-Fix still wrote broken grammar: 'Was solely responsible for the budget' became 'Was solely led the budget', 'Was also tasked with hiring' became 'Was also led hiring'. A negation became 'Was not led billing' and 'Wasn't oversaw QA'. Fixed in 368ac861: the adverb moves in front of the verb, capitalised at a sentence start ('Solely led the budget'). A negated 'responsible for' / 'tasked with' / 'in charge of' is left as it is. 'Was directly involved in' is still no weak phrase and stays unchanged, and a negated passive ('was not handled by') still becomes 'was not managed by'.",
+      "R5-HUNT11-ATS-SCORES-BLANK-ENTRIES: clean. shownItems now filters with entryPrints, the same rule as the PDF's and Word's printedEntries, so the score, printedJobs/role groups and printsSideBySide (Grids) all agree with the page. Hidden-with-eye entries that print nothing are also dropped, which matches the exports. Fail-first run 36656499065 shows 3 of the 4 tests failing without the fix.",
+      "R5-HUNT11-VERB-CHIP-ON-WORKED-WITH (0f34a4d9, e2e813a1, f407267d, on this branch and outside the fixer's rows): clean. A 'with' verb chip replaces the verb and keeps 'with'; any other chip leaves the statement and shows the tip, and the tip goes once one is applied. All the verbs the tip names (Partnered, Liaised, Coordinated) are chips in the Collaboration & Strategy category. 'Working with' (a gerund) is out of WITH_LEAD and keeps its earlier behaviour. Fail-first is green in 36656499065 for both commits.",
+      "Every fail-first job in 36656499065 was checked in its log: each test failed without its fix and passed with it."
+    ],
+    "commits": [
+      "368ac8613f6016caf80566905853918239942a7a"
+    ],
+    "ci": [
+      36656499065,
+      36668718771
+    ],
+    "notes": "Run 36668718771 at 368ac861: fail-first green (2 of 3 tests fail without the fix and pass with it). The named area tests are green: 46/46 across all four round-11 tools tests, bullet-optimizer*, r4-sw-wt-03-*, r4-lo-10, r5-hunt10-autofix-worked-with and the Worked-with modal test. The fix is not yet on r4-green: the branch needs to be merged again. No accessibility findings."
+  },
   "baselineFailures": [],
   "notes": "Both fixes were committed by an earlier fixer on this branch (cut off by a usage limit) and are already merged into origin/claude/r4-green (33c7c1da). Fail-first proven green in run 36656499065 (and 36655800914), with the named-tests run green in 36656499065 at head f407267d. The branch also carries R5-HUNT11-VERB-CHIP-ON-WORKED-WITH (0f34a4d9, e2e813a1, f407267d), proven in run 36656499065 but not among this fixer's findings. Docs updated in docs/knowledge/04-features.md and 06-templates-export.md within the fix commits."
 }
