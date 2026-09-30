@@ -1454,9 +1454,15 @@ export function resumeFromText(input) {
     if (!entriesIn(within) || l.ruled || isCaps(text) || headingAt.has(i - 1)) return false;
     const achievement = /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
     if (!achievement && headingType(text) !== 'skills') return false;
+    // Only a line past the label's own block (after a blank line or a list) that is no "Label: value"
+    // line: a next entry's. A dated line of the section's own ("Technical Skills" over "Languages:
+    // Python" and "Certified: AWS Solutions Architect, 2021") kept it no section, the skills a bogus job.
+    let past = false;
     for (let j = i + 1; j < lines.length && !headingLike(lines[j]) && !lines[j].ruled; j += 1) {
       const n = lines[j];
-      if (BULLET.test(n.text)) continue;
+      if (n.gap) past = true;
+      if (BULLET.test(n.text)) { past = true; continue; }
+      if (!past || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
       const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
       if (dates.some((d) => !achievement || (d.start && (d.end || d.current)))) return true;
     }
