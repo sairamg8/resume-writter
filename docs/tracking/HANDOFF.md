@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 01:50 UTC — ROUND 10 six areas merged: `79dc42a2`** (boards and editor DRY; dash 1 — a non-list hiddenFields in an
+imported .json crashed the editor/PDF; pdf 1 — Skills title orphaned by the category keep; sync 1; jobs 1 — repeat job import
+duplicated; each with review fixes). Seen-list 166. Full gate on `79dc42a2` dispatched. Running: wf_4af2d4d7-c83 (round 10 import/
+export/tools) and wf_8ef0f8a5-e12 (round 11 dash, pdf, boards, sync, editor, jobs; base 79dc42a2). PR #7 (0373b9e) is the deploy PR.
+Dry tally: boards and editor have one dry round (round 10); an area is done after two dry rounds in a row.
+
 **2026-09-30 01:05 UTC — DEPLOY: PR #7** (`claude/deploy-r9-0373b9e`, rounds 7-9 = 48 fixes, full gate 36650099739 on `0373b9e9`
 GREEN) replaces #4/#5/#6 (#6 has round-8 import regressions). Owner: merge #7 (or `git push origin 0373b9e9:refs/heads/master`),
 then close #4, #5, #6. Round 10 running (wf_98d5855d-049, wf_4af2d4d7-c83).
