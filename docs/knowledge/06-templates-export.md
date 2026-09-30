@@ -97,7 +97,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
 - **Markdown** — `markdownExport.js`; an entry section's entries are the ones that print (`printedEntries`
   in `entryPrints.js`), as the PDF's and Word's, so a blank or all-hidden entry never splits a company's
   grouped roles (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY); a list section (skills, languages,
-  interests) leaves its blank entries out itself
+  interests) leaves its blank entries out itself. A language row with no language (a new row keeps
+  its default "Professional") prints in none of the four exports, and its section alone prints no
+  heading (`entryPrints`, R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE)
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema)
 

@@ -1,7 +1,7 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
-import { sectionPrints } from './entryPrints.js';
+import { entryPrints, sectionPrints } from './entryPrints.js';
 import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
@@ -325,6 +325,10 @@ export function extractResumeCorpus(resume, { addresses = true } = {}) {
     const items = shownItems(s, template);
     if (s.title) parts.push(s.title);
     for (const item of items) {
+      // Only an entry that prints (entryPrints, as the PDF's and Word's printedEntries): a language row
+      // with no language prints nothing, so its proficiency alone (a new row's "Professional") is not
+      // on the page (R5-HUNT9-REVIEW-ATS-CORPUS-LANGUAGELESS-PROFICIENCY).
+      if (!entryPrints(s.type, item)) continue;
       if (s.type === 'skills') {
         const { category, skills } = skillGroup(item);
         parts.push(category, skills);
