@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt10-dash",
+  "branch": "claude/wf-r5-hunt10-dash",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-HIDDEN-FIELDS-NOT-LIST-CRASHES-EDITOR",
+      "title": "A native .json whose personal (or an entry's) hiddenFields is not a list crashes the editor on every open, and its preview and PDF never build",
+      "severity": "High",
+      "outcome": "fixed",
+      "commits": ["d82cf13b0a2d3ef2186830ac90ebbc4b089ce46b"],
+      "tests": ["tests/pdf/r5hunt10-hidden-fields-list.test.mjs"],
+      "summary": "Now: normalizeResume (withTextFields -> withHiddenList in src/utils/textFields.js) stores personal.hiddenFields and each entry's hiddenFields as a list of keys: an object, a number, true or a string hides nothing ([]), and a list keeps its text members. The imported résumé opens in the editor (Personal Info and the entry editors render), and the preview and PDF build on every template, with the listed fields still hidden. A list of text or none is left as the same object.",
+      "ci": [36651086133]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base is origin/claude/r4-green at 2a3f9dc (the task named 5c6c1e38; the branch head had moved). CI run 36651086133: failfirst proved 5 of 6 tests fail without the fix and all pass with it; the tests job (new test plus 16-saved-data-text-fields, r5hunt9-resume-name-text, 31-contact-fields, 91-design-resets, 19-demo-seed-normalize, 103-r4-dph-29-personal-info, knowledge-docs, 71-startup-chunks) and lint are green. The cover letter's own hiddenFields was left alone: null/absent there means 'follow the résumé', and its only reader (letterHiddenFields) already guards with Array.isArray."
+}
