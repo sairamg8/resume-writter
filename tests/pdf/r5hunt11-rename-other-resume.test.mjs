@@ -49,9 +49,11 @@ describe('the editor header’s rename box when another résumé takes the page'
         call(view, input(view), 'onChange', { target: { value: 'Google PM – A' } });
         show(cv('resume_b', 'Imported B')); // the editor navigates to the imported résumé
         const box = input(view);
-        assert.equal(box, undefined, 'before: the box stayed open with A’s draft over résumé B');
+        // A primitive, not the element: an AssertionError carrying a fake-DOM node (its fiber, its
+        // document) is more than the test reporter can serialise.
+        assert.equal(box ? 'open' : 'closed', 'closed', 'before: the box stayed open with A’s draft over résumé B');
         if (box) call(view, box, leave === 'Enter' ? 'onKeyDown' : 'onBlur', leave === 'Enter' ? { key: 'Enter' } : {});
-        assert.deepEqual(renames, [], 'before: [["resume_b","Google PM – A"]] — B lost its imported name');
+        assert.equal(JSON.stringify(renames), '[]', 'before: [["resume_b","Google PM – A"]] — B lost its imported name');
       } finally { await view.unmount(); }
     });
   }
@@ -63,10 +65,10 @@ describe('the editor header’s rename box when another résumé takes the page'
       call(view, input(view), 'onChange', { target: { value: 'Draft for A' } });
       show(cv('resume_b', 'Imported B'));
       call(view, byTitle(view, 'Rename resume'), 'onClick');
-      assert.equal(input(view).value, 'Imported B');
+      assert.equal(String(input(view)?.value), 'Imported B');
       call(view, input(view), 'onChange', { target: { value: 'B renamed' } });
       call(view, input(view), 'onKeyDown', { key: 'Enter' });
-      assert.deepEqual(renames, [['resume_b', 'B renamed']]);
+      assert.equal(JSON.stringify(renames), JSON.stringify([['resume_b', 'B renamed']]));
     } finally { await view.unmount(); }
   });
 });
