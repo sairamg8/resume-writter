@@ -172,10 +172,13 @@ function entryLines(title, meta, body) {
   return lines;
 }
 
-/** A link the PDF follows as [label](href); one it would not follow as the address it prints. */
+/**
+ * A link the PDF follows as [label](href); one it would not follow as plain text, its label when it has
+ * one, as the PDF and Word print it — the raw address printed instead (R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL).
+ */
 function link(url, label) {
   const href = safeHref(url);
-  return href ? `[${esc(label || url)}](${href})` : lead(esc(url));
+  return href ? `[${esc(label || url)}](${href})` : lead(esc(label || url));
 }
 
 /**

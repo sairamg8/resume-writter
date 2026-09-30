@@ -109,7 +109,8 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   holding only a Link label with its Link URL cleared, or interests that are only commas: `entryPrints`
   counts what the renderers draw (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS). A current role's
   "Present" counts only while its End Date's eye is on: a current job with every eye off prints
-  nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS)
+  nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS). A certificate whose URL cannot be linked prints
+  its Link label (else the URL) as plain text, as the PDF and Word do (R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL)
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`); its contact line prints
   each value as typed (or its Link URL), not the Display label, so the full address stays followable —
   but a website, LinkedIn or GitHub typed as just "https://" or "www." under a label prints the label,
