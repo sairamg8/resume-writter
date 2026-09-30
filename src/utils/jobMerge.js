@@ -30,17 +30,24 @@ function asOver(theirs, kept, mine) {
   const out = { ...theirs };
   if (!isTime(kept.createdAt)) out.createdAt = mine.createdAt;
   if (!isTime(kept.updatedAt)) out.updatedAt = mine.updatedAt;
-  out.todos = idsFrom(theirs.todos || [], kept.todos, mine.todos);
+  // A file's todos: null is saved as it came; made [] here, it never matched the saved job, and each
+  // import of the file added it again (R5-HUNT11-IMPORT-NULL-TODOS-DUPLICATE).
+  if (Array.isArray(theirs.todos)) out.todos = idsFrom(theirs.todos, kept.todos, mine.todos);
   // An interview with no id gets a new one too (completeJob), so a job with one never matched the
   // copy an earlier import saved, and each import of the file added it again (R5-HUNT10 review).
   if (Array.isArray(theirs.interviews)) out.interviews = idsFrom(theirs.interviews, kept.interviews, mine.interviews);
   return out;
 }
 
-/** `list` (to-dos or interviews) with the id `mine` gave each one the file gave none. */
+/**
+ * `list` (to-dos or interviews) with the id `mine` gave each one whose id completeJob made up: the
+ * file gave none, one that is not text (another tracker's 1, 2, 3) or one an earlier entry used.
+ * Asking only whether the file gave an id kept the made-up one, and each import of a file with
+ * numeric ids added the job again (R5-HUNT11-IMPORT-SUBITEM-IDS-DUPLICATE).
+ */
 function idsFrom(list, given, mine) {
   const had = Array.isArray(given) ? given : [];
-  return list.map((e, n) => (had[n]?.id || !mine?.[n] ? e : { ...e, id: mine[n].id }));
+  return list.map((e, n) => (e.id === had[n]?.id || !mine?.[n] ? e : { ...e, id: mine[n].id }));
 }
 
 /**
