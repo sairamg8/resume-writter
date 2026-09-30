@@ -489,13 +489,36 @@ const LABELLED_KEYS = new Set(['website', 'linkedin', 'github']);
  * A town named alone, with no state or country after a comma: "London", "Singapore", "Frankfurt am
  * Main", LinkedIn's "San Francisco Bay Area". Each word capitalised (a small linking word between), no
  * job title's word and none a work status or a contact's label says ("US Citizen", "Portfolio").
+ * Of more words than one, only what names a place: a known town, state or country of more words ("San
+ * Francisco", "Hong Kong"), one with a town's linking word ("Frankfurt am Main"), or LinkedIn's "… Area".
+ * Before, any capitalised words were: "Eagle Scout", "Spanish Speaker", "Green Card Holder" or "Kaggle
+ * Grandmaster" beside the email became the location (R5-HUNT12 review). A single word is a town unless
+ * it is a word a contact line prints for something else ("Bilingual", "Freelance", "Kaggle").
  */
+const TOWN_OF_WORDS = new RegExp(`^(?:${[
+  'new york(?: city)?', 'los angeles', 'san francisco', 'san diego', 'san jose', 'san antonio', 'san juan', 'santa clara', 'santa monica',
+  'santa barbara', 'santa cruz', 'santa fe', 'palo alto', 'mountain view', 'menlo park', 'redwood city', 'foster city', 'sunnyvale',
+  'las vegas', 'salt lake city', 'kansas city', 'oklahoma city', 'jersey city', 'new orleans', 'st\\.? louis', 'saint louis', 'st\\.? paul',
+  'fort worth', 'fort lauderdale', 'el paso', 'long beach', 'long island', 'baton rouge', 'des moines', 'ann arbor', 'grand rapids',
+  'colorado springs', 'virginia beach', 'washington,? d\\.?c\\.?', 'research triangle', 'silicon valley', 'new delhi', 'navi mumbai',
+  'hong kong', 'kuala lumpur', 'tel aviv', 'buenos aires', 'mexico city', 'são paulo', 'sao paulo', 'rio de janeiro', 'cape town',
+  'abu dhabi', 'ho chi minh city', 'quezon city', 'st\\.? petersburg', 'saint petersburg', 'the hague', 'den haag', 'isle of man',
+  'milton keynes', 'newcastle upon tyne', 'kuwait city', 'panama city', 'guatemala city', 'port louis', 'addis ababa', 'dar es salaam',
+  'phnom penh', 'san salvador', 'santo domingo', 'costa rica', 'puerto rico', 'sri lanka', 'saudi arabia', 'south korea', 'north carolina',
+  'south carolina', 'north dakota', 'south dakota', 'west virginia', 'new jersey', 'new mexico', 'new hampshire', 'rhode island',
+  'british columbia', 'nova scotia', 'new south wales', 'new zealand', 'united kingdom', 'united states(?: of america)?',
+  'united arab emirates', 'south africa', 'czech republic', 'hong kong sar',
+].join('|')})$`, 'iu');
 const BARE_TOWN = {
   test(text) {
     const s = String(text).trim();
+    const words = s.split(/\s+/);
     return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
-      && s.split(/\s+/).length <= 5 && !ROLE.test(s) && !BARE_LABEL.test(s) && !headingType(s)
-      && !/\b(?:citizen|citizenship|clearance|visa|available|availability|immediately|relocat\w*|authori[sz]ed|permit|resident|pronouns?|he|she|they|him|her|them|twitter|blog|resume|cv|references?|mr|mrs|ms|dr|phd|mba|md|jr|sr)\b/i.test(s);
+      && words.length <= 5 && !ROLE.test(s) && !BARE_LABEL.test(s) && !headingType(s)
+      && !/\b(?:citizen|citizenship|clearance|visa|available|availability|immediately|relocat\w*|authori[sz]ed|permit|resident|pronouns?|he|she|they|him|her|them|twitter|blog|resume|cv|references?|mr|mrs|ms|dr|phd|mba|md|jr|sr)\b/i.test(s)
+      && (words.length === 1
+        ? !/^(?:bi|tri|multi)lingual$|^(?:fluent|native|freelanc\w*|contract(?:or|ing)?|consulting|self-employed|onsite|on-site|nationwide|worldwide|global|international|anywhere|flexible|negotiable|veteran|student|graduate|undergraduate|alumn\w*|kaggle|behance|dribbble|medium|substack|youtube|instagram|facebook|mastodon|bluesky|threads|leetcode|hackerrank|codepen|gitlab|bitbucket|stackoverflow|orcid|researchgate|skype|telegram|whatsapp|discord|signal|wechat|linktree|x)$/i.test(s)
+        : TOWN_OF_WORDS.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s/u.test(s) || /\s(?:Area|Region)$/u.test(s));
   },
 };
 
@@ -1735,7 +1758,9 @@ export function resumeFromText(input) {
 
   /** Header lines: contacts to their fields, the rest to the summary (sentences) or aside. */
   const takeContacts = (ls, { spill, alone = false }) => {
-    for (const l of ls) {
+    // A place a later line gives in full ("New York, NY") is the location, not a bare town above it.
+    const placeAt = ls.map((l) => headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p]).some((p) => contactOf(unbulleted(p))?.key === 'location'));
+    for (const [k, l] of ls.entries()) {
       const leftover = [];
       let found = false;
       for (const listed of headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p])) {
@@ -1760,7 +1785,7 @@ export function resumeFromText(input) {
       // on its line, or LinkedIn's "… Area" alone on a line of the header: the location. Before, it went
       // to "Additional Information", the location left empty, even from the app's own exports
       // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing.
-      const towns = personal.location ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)));
+      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)));
       if (towns.length === 1 && (found || (alone && leftover.length === 1 && /\s(?:Area|Region)$/.test(towns[0])))) {
         personal.location = unbulleted(towns[0]);
         leftover.splice(leftover.indexOf(towns[0]), 1);
