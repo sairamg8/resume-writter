@@ -49,7 +49,10 @@ const weak = (phrases, replacement, alternatives, after = '') => ({
 // ATS score reads this list too (atsChecker.js), so every phrase it counts has a replacement here.
 export const WEAK_PHRASE_REPLACEMENTS = [
   weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
-  weak(['worked on', 'worked with'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  weak(['worked on'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  // "Worked with" takes people as its object: "Engineered product managers to define the roadmap" was
+  // what Auto-Fix wrote (R5-HUNT10-AUTOFIX-WORKED-WITH-ENGINEERED).
+  weak(['worked with'], 'Collaborated with', ['Partnered with', 'Coordinated with', 'Liaised with']),
   weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
   // "Helped to cut costs" has a verb after it, as "tried to" has: "Facilitated cut costs" was no sentence.
   weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to']),
@@ -118,6 +121,9 @@ export const ACTION_VERBS = new Set([
   'operated', 'owned', 'piloted', 'ran', 'rebuilt', 'released', 'rescued', 'retained', 'revitalized',
   'rewrote', 'rolled', 'set', 'shaped', 'shipped', 'sold', 'solved', 'spun', 'stood', 'taught', 'took',
   'trimmed', 'tutored', 'won',
+  // A verb the tips offer ("Supported delivery of", "Supported efforts to"): a chip went in front of it
+  // (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE).
+  'supported',
 
   // The optimizer's chips and Auto-Fix's replacements, each by its first word
   ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
@@ -141,11 +147,70 @@ export function leadsWithActionVerb(text) {
   const firstWord = trimmed.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   // "Took part in" is "participated in", no strong verb: it read as one once "took" was listed, and the
   // chip left "Spearheaded part in the hackathon" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
-  return firstWord !== '' && VERB_KEYS.has(verbKey(firstWord)) && !TOOK_PART.test(trimmed.replace(/^[^a-zA-Z]+/, ''));
+  if (firstWord === '') return false;
+  const rest = trimmed.replace(/^[^a-zA-Z]+/, '');
+  return (VERB_KEYS.has(verbKey(firstWord)) || isPresentActionVerb(firstWord, rest.slice(firstWord.length)))
+    && !TOOK_PART.test(rest);
 }
 
-/** "Took part", which opens no action: see leadsWithActionVerb. */
-const TOOK_PART = /^took\s+part(?![\p{L}\d])/iu;
+// ── A current job's present tense: "Manage a team of 8", "Develop REST APIs", "Lead quarterly planning" ──
+// The verb list holds past tense only, so those read "Verb Missing", scored "Limited Action Verbs" and
+// took a chip's verb in front — "Spearheaded Manage a team of 8…"
+// (R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). A word counts when a listed verb is its past tense.
+
+/** Present forms whose past tense is not the word plus "ed"/"d". */
+const PRESENT_IRREGULAR = {
+  lead: 'led', build: 'built', rebuild: 'rebuilt', run: 'ran', drive: 'drove', grow: 'grew', oversee: 'oversaw',
+  write: 'wrote', rewrite: 'rewrote', teach: 'taught', sell: 'sold', win: 'won', speak: 'spoke', take: 'took',
+  spin: 'spun', stand: 'stood', troubleshoot: 'troubleshot',
+};
+
+/**
+ * Present forms that as often open a noun phrase, a title or an adjective's: "Design system for…", "Test
+ * automation…", "Engineer on the payments team", "Double major in…", "Head TA for…". They are not
+ * counted, so a chip goes in front of them and no word is lost.
+ */
+const PRESENT_NOUNS = new Set([
+  'design', 'test', 'model', 'code', 'budget', 'plan', 'research', 'review', 'survey', 'track', 'host',
+  'audit', 'program', 'prototype', 'pilot', 'interview', 'monitor', 'benchmark', 'forecast', 'document',
+  'draft', 'release', 'award', 'contract', 'author', 'brief', 'moderate', 'complete', 'craft', 'trim',
+  'secure', 'direct', 'head', 'partner', 'engineer', 'architect', 'pioneer', 'broker', 'compute', 'close',
+  'upgrade', 'double', 'triple',
+]);
+
+/** A word after a present form that makes it a noun: "Mentor to 5 interns", "Lead for the payments team". */
+const NOUN_AFTER = /^\s+(?:to|for|of|at|in|on|from|by|as)(?![\p{L}\d])/iu;
+/**
+ * The present tense of a verb and its preposition among the chip's whole phrases (PHRASAL_VERBS):
+ * "Contribute to open-source projects" and "Collaborate on the SDK" read "Verb Missing" while
+ * "Contributed to…" was a verb, and a chip left "Spearheaded Contribute to…" (review of
+ * R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). Neither word is ever a noun there.
+ */
+const PRESENT_VERB_PHRASE = /^(?:contribute\s+to|collaborate\s+on)(?![\p{L}\d])/iu;
+const TITLES = 'engineer|developer|designer|architect|analyst|scientist|researcher|consultant|instructor|organi[sz]er|maintainer|contributor|author|writer|editor|manager|coordinator|mentor|member|volunteer|role|position';
+/** A title after "Lead": "Lead engineer for payments" is a role, not "Led engineer…". */
+const TITLE_AFTER_LEAD = new RegExp(`^\\s+(?:${TITLES}|ta|teaching)s?(?![\\p{L}\\d])`, 'iu');
+/**
+ * One title after any other present form makes the two words a role: "Support engineer for the payments
+ * team", "Build engineer on the CI team" — the chip left "Spearheaded engineer for the payments team"
+ * (review of R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). A plural is the verb's object ("Manage
+ * engineers across 3 teams", "Support analysts in 4 regions").
+ */
+const TITLE_AFTER = new RegExp(`^\\s+(?:${TITLES}|lead|specialist|technician|representative|agent|assistant|associate|intern)(?![\\p{L}\\d'’-])`, 'iu');
+
+/** Whether `word`, followed by `after`, is the present tense of a listed action verb. */
+function isPresentActionVerb(word, after) {
+  const w = word.toLowerCase();
+  if (w.length < 3 || PRESENT_NOUNS.has(w)) return false;
+  // Followed by a word, not by punctuation or nothing ("Chair, ACM chapter", "Mentor to 5 interns").
+  if (!/^\s+[^\s,;:.()\-–—|/@]/u.test(after) || (NOUN_AFTER.test(after) && !PRESENT_VERB_PHRASE.test(w + after))) return false;
+  if (w === 'lead' ? TITLE_AFTER_LEAD.test(after) : TITLE_AFTER.test(after)) return false;
+  const pasts = [PRESENT_IRREGULAR[w], `${w}ed`, `${w}d`, `${w}${w.at(-1)}ed`, w.replace(/y$/, 'ied')];
+  return pasts.some((p) => p && p !== w && VERB_KEYS.has(verbKey(p)));
+}
+
+/** "Took part" and "Take part", which open no action: see leadsWithActionVerb. */
+const TOOK_PART = /^(?:took|take)\s+part(?![\p{L}\d])/iu;
 
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
@@ -302,7 +367,7 @@ export function insertActionVerb(text, verb) {
     // The verb's particle goes with it ("Set up", "Rolled back", "Took on"), or the chip left
     // "Spearheaded back a bad release" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
     const after = rest.slice(first[0].length);
-    const particle = after.match(verbKey(first[0]) === 'took' ? TOOK_PARTICLE : VERB_PARTICLE);
+    const particle = after.match(['took', 'take'].includes(verbKey(first[0])) ? TOOK_PARTICLE : VERB_PARTICLE);
     return lead + verb + after.slice(particle ? particle[0].length : 0);
   }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
@@ -326,9 +391,10 @@ const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
  * number is the month ("May 2023: shipped…"), not the helper verb. A statement opening with another
  * negative — "No", "Nobody", "None", "Nothing", "Neither", "Nor", "Zero" — took it too: "Spearheaded no
  * customer data was lost…" (review of R4-SW-WT-03); "No-code …" and "Zero-downtime …" are
- * a noun's first word, and still take a verb.
+ * a noun's first word, and still take a verb. "Member of" and "Active member of" say no action either:
+ * "Spearheaded the ACM chapter" made a member its leader (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE).
  */
-const AUXILIARY_LEAD = /^(?:(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
+const AUXILIARY_LEAD = /^(?:(?:active\s+)?member\s+of(?![\p{L}\d])|(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
 
 /**
  * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
@@ -370,12 +436,19 @@ const TOOK_PARTICLE = /^\s+(?:on|over(?!\s*[\d$€£¥~+]))(?![\p{L}\d'’-])/iu
 /**
  * The verb phrases of more than one word among Auto-Fix's replacements and their alternatives, and
  * two that are no action verb and a particle: "Took part in" (leadsWithActionVerb) and "Set out to".
+ * Only a verb and its preposition ("Contributed to", "Collaborated on", "Led efforts to") go whole: a
+ * phrase with a noun or an object in it ("Maintained compliance with", "Supported delivery of", "Active
+ * member of", "Collaborated with") lost those words to the chip — "Streamlined HIPAA", "Spearheaded the
+ * ACM chapter" (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE). Its verb is replaced like any other.
  */
-const PHRASAL_VERBS = ['Took part in', 'Set out to'];
+// "Contribute to" and "Collaborate on" are the present tense of two of them, and go whole the same way:
+// "Spearheaded open-source projects", not "Spearheaded to open-source projects".
+const PHRASAL_VERBS = ['Took part in', 'Take part in', 'Set out to', 'Contribute to', 'Collaborate on'];
+const PHRASE_TAIL = new Set(['on', 'in', 'to', 'efforts', 'out', 'part']);
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
   .concat(PHRASAL_VERBS)
-  .filter((p) => p.includes(' '))
+  .filter((p) => p.includes(' ') && p.split(' ').slice(1).every((w) => PHRASE_TAIL.has(w.toLowerCase())))
   .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   .join('|')})\\b`, 'iu');
 
