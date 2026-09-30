@@ -333,8 +333,10 @@ export function extractResumeCorpus(resume, { addresses = true } = {}) {
       parts.push(...PRINTED_FIELDS.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
       // A certificate prints its link's label where it has one, a project its link. A label whose URL
       // was cleared prints nowhere and the editor hides its box, so it is not counted
-      // (R5-HUNT9-CERT-LINK-LABEL-WITHOUT-URL-COUNTED).
-      if (fieldText(item.url).trim()) parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
+      // (R5-HUNT9-CERT-LINK-LABEL-WITHOUT-URL-COUNTED). The test is the renderers' own (`item.url &&`):
+      // a URL of only spaces still shows the label's box and the PDF and Word still print the label, so
+      // it still counts (R5-HUNT9-REVIEW-CERT-BLANK-URL-LABEL).
+      if (fieldText(item.url)) parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
       parts.push(printedText(fieldText(item.description)));
       if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }

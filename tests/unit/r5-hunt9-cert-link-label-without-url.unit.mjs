@@ -25,7 +25,9 @@ const resumeWith = (cert) => ({
 const JD = 'Kubernetes Kubernetes Kubernetes. Ledger.';
 
 test('a Link label whose URL was cleared is not in the corpus or the job match', () => {
-  for (const url of ['', '   ', undefined]) {
+  // A URL of only spaces is not here: the editor still shows the label's box and the PDF and Word still
+  // print the label for it (`item.url &&`), so it counts (r5-hunt9-review-cert-blank-url-label).
+  for (const url of ['', undefined]) {
     const r = resumeWith({ url, urlLabel: 'Kubernetes Administrator' });
     assert.ok(!/kubernetes/i.test(extractResumeCorpus(r)), extractResumeCorpus(r));
     const m = matchResumeWithJob(r, JD);
