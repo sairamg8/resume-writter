@@ -31,7 +31,7 @@ Maps user-facing features → primary code locations.
 | Export menu | `ExportDropdown.jsx` + `hooks/useEditorExports.js` |
 | Share a public link (signed in, Firebase only) | `ShareLinkModal.jsx`, `utils/publicLink.js`; the page `#/r/:shareId` is `pages/PublicResume.jsx` |
 | Design panel | `DesignPanel.jsx` + Colors/Typography/Headings/Dates/Shared |
-| ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` (`extractJobKeywords` reads a pasted posting's keywords, leaving out figures, salaries, web and e-mail addresses and hashtags; `atsHeadingLabel` quotes a section's heading in the report and fix notices, a cleared one by its standard heading marked "(no heading)") |
+| ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` (`extractJobKeywords` reads a pasted posting's keywords, leaving out figures, salaries, web and e-mail addresses and hashtags; `atsHeadingLabel` quotes a section's heading in the report (the headings and side-by-side entries warnings) and fix notices, a cleared one by its standard heading marked "(no heading)") |
 | Writing helpers | `BulletOptimizerModal.jsx` (`utils/bulletOptimizer.js`), `CoverLetterGeneratorModal.jsx` (`utils/coverLetterGenerator.js`) — rules, no AI service. A power-verb chip replaces a leading action verb (one of `ACTION_VERBS`, the list the ATS score reads too, e.g. "Launched", "Shipped", "Ran") or weak phrase, and goes in front of any other opening. The STAR Optimizer button in `RichTextEditor.jsx` opens on the bullet or line the caret is in and Apply replaces it; opened from an empty bullet or line, Apply fills that one; with no caret in the field, the result is a new bullet at the end |
 
 ## Design system
