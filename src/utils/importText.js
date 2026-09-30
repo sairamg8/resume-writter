@@ -13,6 +13,7 @@ import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { getStarterSettings } from './starterSettings.js';
 import { DATA_VERSION } from './dataVersion.js';
 import { ATS_STANDARD_SECTIONS } from './atsChecker.js';
+import { contactHref } from './contacts.js';
 
 // ── Headings ─────────────────────────────────────────────────────────────────
 
@@ -110,7 +111,11 @@ function linkParts(label, href) {
   if (!/^[a-z]+:/i.test(to)) return linkParts(text, `https://${to}`);
   if (!text) return [to];
   if (bareAddress(text) === bareAddress(to)) return [text];
-  if (/^tel:/i.test(to) && text.replace(/\D/g, '') === to.replace(/\D/g, '')) return [text];
+  // A phone is its text when the link dials the digits it shows, or is the link the app's exports write
+  // for it: "+1 555 010 0000 / +1 555 010 0001" → tel:+15550100000, "+44 (0) 20 7946 0958" →
+  // tel:+442079460958. Before, those came back as the link's bare digits — the typed text, its second
+  // number and its format lost (R5-HUNT12-REVIEW-IMPORT-PHONE-OWN-TEL-LINK).
+  if (/^tel:/i.test(to) && (text.replace(/\D/g, '') === to.replace(/\D/g, '') || contactHref('phone', { phone: text }) === to)) return [text];
   return [text, to];
 }
 
