@@ -8,23 +8,49 @@
       "title": "Re-importing a timeless jobs file whose to-dos or interviews have numeric (or repeated) ids adds another copy of each such job on every import",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["bbf2d96932634e78b5bb0c9776d5549d962e2efe"],
-      "tests": ["tests/unit/r5-hunt11-job-import-subitem-ids.unit.mjs"],
+      "commits": [
+        "bbf2d96932634e78b5bb0c9776d5549d962e2efe"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-job-import-subitem-ids.unit.mjs"
+      ],
       "summary": "Now: importing the same file again skips the job when its to-dos or interviews have numeric or repeated ids. mergeImport's comparison (idsFrom in src/utils/jobMerge.js) takes the saved job's id for every entry whose id completeJob replaced (e.id !== the file's id), not only for entries that had no id. A changed to-do still makes the job a copy.",
-      "ci": [36656229288]
+      "ci": [
+        36656229288
+      ]
     },
     {
       "id": "R5-HUNT11-IMPORT-NULL-TODOS-DUPLICATE",
       "title": "Re-importing a timeless jobs file whose entries have \"todos\": null adds another copy of each such job on every import",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["5c7ab4af9de53e5b1b6aa3ef96192a5f1da53cc7"],
-      "tests": ["tests/unit/r5-hunt11-job-import-null-todos.unit.mjs"],
+      "commits": [
+        "5c7ab4af9de53e5b1b6aa3ef96192a5f1da53cc7"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-job-import-null-todos.unit.mjs"
+      ],
       "summary": "Now: importing the same file with todos: null again skips the job. asOver keeps the file's todos as they are when they are not a list, which is how the job was saved, instead of turning them into []. Jobs already saved with todos: null by earlier imports match as well, with no data migration needed.",
-      "ci": [36656229288]
+      "ci": [
+        36656229288
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT11-IMPORT-NULL-TODOS-DUPLICATE (5c7ab4af) regression: asOver now keeps a file's todos: null, so a saved job whose to-dos were emptied (a to-do added then deleted leaves todos: []) no longer matched the file's null, and each re-import of the timeless file added the job again; before 5c7ab4af that case was skipped. Same for a file with todos: [] over a job saved with todos: null. Fixed: no to-dos on both sides (null, missing or []) compares equal (noTodos in src/utils/jobMerge.js)."
+    ],
+    "commits": [
+      "0403359c086bb0e6a18f61cfbf92d5246c581a6a"
+    ],
+    "ci": [
+      36656229288,
+      36669500161
+    ],
+    "notes": "Both fixes address the root cause: completeJob replaces numeric, empty or repeated sub-item ids (withOwnIds), and idsFrom now borrows the saved id wherever the completed id differs from the file's, aligned by index with readJob's output (readJob only filters, completeJob maps 1:1), so a changed to-do or a new/extra one still makes a copy and a genuinely new job (new id) is still added. Run 36656229288 proves both original tests fail first (4 and 2 failures) and pass. The null-todos fix left the null-vs-[] gap above; fixed with two added tests in r5-hunt11-job-import-null-todos.unit.mjs, fail-first proven in run 36669500161 (2 failures without, pass with), and all 10 job import/normalize/knowledge-docs files pass 63/63 plus lint. Sync merge and undo do not use mergeImport and are unaffected; timed (updatedAt) imports are unaffected. Fix commit 0403359 is on claude/wf-r5-hunt11-jobs only and still needs merging into r4-green/master."
+  },
   "baselineFailures": [],
   "notes": "CI run 36656229288 (dispatch on 5c7ab4a): both fail-first jobs passed (subitem-ids failed 4 tests without its fix, null-todos failed 2), and the named job-import, normalize-job and knowledge-docs files passed 66/66, plus lint. docs/knowledge/07-job-tracker.md is updated."
 }
