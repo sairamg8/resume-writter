@@ -1228,6 +1228,15 @@ function entriesOf(type, lines, aside) {
       // untitled entry of its own, with the entry's place and text, the titled one left undated
       // (R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING-SPLITS-ENTRY). Not a sentence of its text.
       const dateLine = (n) => Boolean(n.date && (n.date.first || pieces(n.text).length > 1));
+      // An undated heading's second field on the line under it, over its date line ("### Amazon", then
+      // "**Senior Engineer**", then "*Jan 2020 – Present*"; "### University of Washington", "B.S. Computer
+      // Science", "2012 – 2016"): the role or the degree, the entry's own. Before, it ended the header,
+      // and the date line took it into an untitled entry of its own, the company left alone in the
+      // titled one (R5-HUNT11-MD-ENTRY-HEADING-ROLE-LINE-SPLITS-ENTRY).
+      const second = (n) => Boolean(n && !n.bullet && !n.date && !n.hint && n.text.length <= 100 && !/[.!?:;,]$/.test(n.text)
+        && !isMetaLine(n.text) && pieces(n.text).length <= 2 && !sentence(n.text));
+      const m = info[i + 1];
+      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) header.push(info[i++]);
       while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
