@@ -48,13 +48,27 @@ function withText(obj, keys, blank = '') {
   return next ?? obj;
 }
 
+/**
+ * `obj` with its `hiddenFields` a list of field keys (R5-HUNT10-HIDDEN-FIELDS-NOT-LIST-CRASHES-EDITOR).
+ * Personal Info and an entry's editor build a Set from it and the PDF, the contacts and the exports
+ * call `.includes` on it, so a native .json holding an object, a number or true there crashed the
+ * editor on every open and left no preview or PDF. A list keeps its text members; anything else
+ * that is not null hides nothing ([]). The same object when it is a list of text already, or none.
+ */
+function withHiddenList(obj) {
+  if (!isRecord(obj) || obj.hiddenFields == null) return obj;
+  const v = obj.hiddenFields;
+  if (Array.isArray(v) && v.every((key) => typeof key === 'string')) return obj;
+  return { ...obj, hiddenFields: Array.isArray(v) ? v.filter((key) => typeof key === 'string') : [] };
+}
+
 /** `sections` with each section's title and each entry's fields as text; the same array when all are. */
 function withSectionsText(sections) {
   if (!Array.isArray(sections)) return sections;
   const next = sections.map((s) => {
     const section = withText(s, SECTION_TEXT);
     if (!isRecord(section) || !Array.isArray(section.items)) return section;
-    const items = section.items.map((item) => withText(item, ENTRY_TEXT));
+    const items = section.items.map((item) => withHiddenList(withText(item, ENTRY_TEXT)));
     return items.some((item, i) => item !== section.items[i]) ? { ...section, items } : section;
   });
   return next.some((s, i) => s !== sections[i]) ? next : sections;
@@ -74,14 +88,15 @@ function recordName(r) {
 }
 
 /**
- * `r` with every field it keeps as text holding text (the lists above), its own name included. A list of skills is
+ * `r` with every field it keeps as text holding text (the lists above), its own name included, and
+ * personal info's and each entry's `hiddenFields` a list of keys (withHiddenList). A list of skills is
  * stored as the line every export already printed for it, so the documents print as they did.
  * Nothing else is touched. The same object when every field holds text already.
  */
 export function withTextFields(r) {
   const next = {
     name: recordName(r),
-    personal: withText(r.personal, PERSONAL_TEXT),
+    personal: withHiddenList(withText(r.personal, PERSONAL_TEXT)),
     sections: withSectionsText(r.sections),
     coverLetter: withText(withText(r.coverLetter, LETTER_TEXT), SIGNATURE_TEXT, null),
   };
