@@ -1334,9 +1334,16 @@ function entriesOf(type, lines, aside) {
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
         // became the next role's company.
+        // Not the next job's company over its dates, or over its role over them ("Globex, Inc." or "Smith,
+        // Jones" reads as a place): it became this job's location, the next job left with none (R5-HUNT11
+        // review). A group's next role right under the place is the group's (LinkedIn's "Mountain View,
+        // California" over "Software Engineer" over its dates).
         const n = info[i];
+        const dated = (k) => Boolean(info[k] && !info[k].gap && info[k].date);
+        const nextTitle = n && !header[0].group && (dated(i + 1)
+          || (info[i + 1] && !info[i + 1].gap && !info[i + 1].bullet && !info[i + 1].date && dated(i + 2)));
         if (JOB.has(type) && header[0] !== L && n && !n.bullet && !n.gap && !n.date && !n.hint && pieces(n.text).length === 1
-          && PLACE.test(n.text) && !ROLE.test(n.text) && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
+          && PLACE.test(n.text) && !ROLE.test(n.text) && !nextTitle && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
