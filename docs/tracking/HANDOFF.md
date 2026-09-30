@@ -1,5 +1,18 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 04:40 UTC — LIVE STATE (coordinator session_01CAwUZJx2CYW1r6VSh7tBT6; lock on claude/coordinator-lock):**
+- **Deployed:** master `33c7c1da` (owner, 04:15) = rounds 7-10 (60 fixes, gated) + round 11 before review. Master push gate: run 36668036603.
+- **r4-green `bff46228`** = master + round-11 review fixes: dash (saved design picked from an imported .json), sync (first-sync
+  read order), editor (review clean). Full gate on bff46228 dispatched ~04:40. Next deploy: pin `claude/deploy-r11-<sha>` at a green
+  head and open a PR (a PR from r4-green can carry untested code).
+- **Jobs review done:** fixed a live regression (re-importing a file with todos: null over a job with emptied to-dos added a copy): 0403359c, merged into r4-green `848da9ff`; full gate on 848da9ff dispatched ~04:45 (supersedes bff46228 for the next deploy). Master's push gate 36668036603 was CANCELLED mid-run; a full gate on master was dispatched ~04:37.
+- **Running:** workflow wf_93d8eea6-b09
+  (round 11 import fixer, tools fixer and review, export done).
+- **Dry tally:** boards has 2 dry rounds (10, 11) and is DONE. pdf is dry in round 11. editor was dry in round 10 but had a
+  finding in round 11. Round 12 is next for every area except boards, after round 11's import/tools/jobs land.
+- **Rules:** tests run only on CI. Every fix needs a fail-first test and a second agent's review. Commits are authored
+  sairamgudiputi with no trailers. Accessibility is deferred. Don't touch private/.
+
 **2026-09-30 04:25 UTC — DEPLOYED BY THE OWNER: master = `33c7c1da`.** PR #8 (rounds 7-10, gated 11ba2ea1) was merged at 04:15,
 and the owner then pushed `claude/deploy-all-0930` to master: it also merges the round-11 branches dash, editor, export, jobs,
 sync and tools **before their second-agent reviews** (a usage limit, reset 04:00, killed review:sync, review:jobs, review:editor,

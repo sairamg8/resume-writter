@@ -102,7 +102,16 @@ export function ownDesign(settings, id) {
  * design copied it onto the résumé unchecked: fontSizeBase "12" printed the name at 128 pt ("12" + 8,
  * R5-HUNT11-SAVED-DESIGN-SETTINGS-UNCHECKED). The same object when nothing needs a change.
  */
-const checkedLook = (settings) => withFontChoices(withNormalizedColors(withDesignNumbers({ settings }))).settings;
+const checkedLook = (settings) => withFontChoices(withNormalizedColors(withDesignNumbers({ settings: onlyLook(settings) }))).settings;
+
+/**
+ * A saved design's settings kept to what a design is (designLook): the same object when they are. Picking
+ * a design stored it through designLook first (withLook), but Reset and a switch away read it as stored:
+ * a design from an imported .json holding "pageSize": "LETTER" put an A4 résumé on US Letter at Reset
+ * and took a Letter résumé's paper away on a switch, and an object "headingStyle" went onto the résumé
+ * (R5-HUNT11-REV-1).
+ */
+const onlyLook = (settings) => (Object.entries(settings).every(isLook) ? settings : designLook(settings));
 
 /**
  * The design a résumé on `template` with `settings` is on: `settings.templatePreset` where it names a
@@ -145,8 +154,13 @@ const NOT_A_LOOK = ['customContactIcons', 'pageSize', 'templatePreset', 'myDesig
 
 /** The look `settings` print: what a design saved from them brings (ownDesign). */
 export function designLook(settings) {
-  return Object.fromEntries(Object.entries(settings || {}).filter(([k, v]) => !NOT_A_LOOK.includes(k)
-    && (v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)))));
+  return Object.fromEntries(Object.entries(settings || {}).filter(isLook));
+}
+
+/** A setting ([key, value]) that is part of a look (designLook). */
+function isLook([k, v]) {
+  return !NOT_A_LOOK.includes(k)
+    && (v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)));
 }
 
 /** `settings` holding the design `id` the user saved (`design`: { label, engine, settings }). */
