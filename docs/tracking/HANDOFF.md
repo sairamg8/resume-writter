@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 02:10 UTC — ROUND 10 DONE (all 9 areas, 12 fixes): `11ba2ea1`.** import 3 (Title-Case sub-label pair swallowed jobs —
+a gap in round 9's fix; Markdown blank line after '###' split every entry; unbracketed award years), export 2 (JSON Resume wrote
+unprinted entries), tools 3. boards, editor dry. Seen-list 174. Full gate on `11ba2ea1` dispatched; when green, pin
+`claude/deploy-r10-11ba2ea` and open the deploy PR replacing #7. Running: round 11 — wf_8ef0f8a5-e12 (six areas) and the
+import/export/tools workflow launched 02:10.
+
 **2026-09-30 01:50 UTC — ROUND 10 six areas merged: `79dc42a2`** (boards and editor DRY; dash 1 — a non-list hiddenFields in an
 imported .json crashed the editor/PDF; pdf 1 — Skills title orphaned by the category keep; sync 1; jobs 1 — repeat job import
 duplicated; each with review fixes). Seen-list 166. Full gate on `79dc42a2` dispatched. Running: wf_4af2d4d7-c83 (round 10 import/
