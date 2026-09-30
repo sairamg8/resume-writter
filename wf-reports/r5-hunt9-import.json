@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt9-import",
+  "branch": "claude/wf-r5-hunt9-import",
+  "base": "475a5ade858c239de32f880b20b412c2d2f232fb",
+  "rows": [
+    {
+      "id": "R5-HUNT9-SUBHEADING-BECOMES-ENTRY",
+      "title": "Text/PDF/Word import: a sub-heading inside a job or school after a blank line becomes a blank entry of its own",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["88f1f12771da4e560cf81f80fec96550a64472e4"],
+      "tests": ["tests/unit/r5-hunt9-subheading-becomes-entry.unit.mjs"],
+      "summary": "Now: a label over a part of the entry above ('Key Responsibilities', 'Highlights', 'Selected Clients', 'Technologies Used', 'Relevant Coursework', 'Activities', 'Promoted to ...'; SUBHEADING in importText.js) is no undated entry: it and its list stay in the job's or school's description. An undated project or freelance job after a dated one is still an entry of its own.",
+      "ci": [36648146171, 36648293384]
+    },
+    {
+      "id": "R5-HUNT9-BODY-LINE-BRACKET-YEARS-NEW-ENTRY",
+      "title": "Text/PDF/Word import: a job's or school's line ending with several years in brackets is split off as a new blank entry",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["61b96e06fdabe4e1fc46fde6b9d07212db1148dc"],
+      "tests": ["tests/unit/r5-hunt9-body-line-bracket-years.unit.mjs"],
+      "summary": "Now: several years in brackets (bracketDates) date a line only in Certifications and Awards; under a job or a school, 'Named top seller (2019 and 2021)' and 'Dean's List (Fall 2018, Spring 2019)' stay in the entry's description, with no bogus entry and no half-bracket degree or field of study.",
+      "ci": [36648146171, 36648293384]
+    },
+    {
+      "id": "R5-HUNT9-TITLECASE-SUBHEADING-STARTS-SECTION",
+      "title": "Text/PDF/Word import (no heading styles): a Title-Case sub-heading inside a job that is also a section name starts a new section and swallows every later job",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["b7402b109e3209d0c441ba1ac44d9b7741945db3"],
+      "tests": ["tests/unit/r5-hunt9-titlecase-subheading-starts-section.unit.mjs"],
+      "summary": "Now: in an unmarked file, a Title-Case 'Key Achievements'/'Achievements'/'Recognitions' (with a job's date range after it) or a skills title such as 'Tech Stack'/'Tools' (with any dated line after it), inside a section of dated entries and before the next heading, stays that entry's part (partInEntry in importText.js); the later jobs or projects keep their section. A Title-Case Key Achievements or Skills section of its own (followed by a heading, or holding single-year awards) is still a section.",
+      "ci": [36648146171, 36648293384]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base origin/claude/r4-green 475a5ade (src identical to 1f7ed0e8). Run 36648146171: failfirst for all three commits (each test fails with its src diff reversed, passes restored) plus the import area's tests, 31-contact-fields, 71-startup-chunks and knowledge-docs (303/303). Run 36648293384: all tests/unit/*.unit.mjs plus tests/pdf/*import*.test.mjs (1559/1559). No Design keys added. docs/knowledge/06-templates-export.md updated for findings 1 and 3. Full gate (Playwright, Cypress, build) not run here."
+}
