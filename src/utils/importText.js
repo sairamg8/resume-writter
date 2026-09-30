@@ -1612,7 +1612,10 @@ export function resumeFromText(input) {
       // skills section no "Languages" over a list of them (skillsOf's category); not an entry's own line
       // right under its dated one, nor a role over it ("Volunteer" under "Red Cross ⇥ 2019 – 2020").
       const underDate = i > 0 && pieces(lines[i - 1].text).some((p) => readDateRange(p) || trailingDate(p));
+      // Nor a hobby in an interests list a line each ("Hiking", "Volunteering", "Photography"): it
+      // started a Volunteering section, the hobbies under it its entries (R5-HUNT11 review).
       const titled = titleHeading(text, true) && known !== within && !(within === 'skills' && known === 'languages')
+        && !(within === 'interests' && known === 'volunteering')
         && !(ROLE.test(text) && (underDate || overDate(i)));
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0 || titled)
         && !partInEntry(l, text, i)) type = known;
