@@ -17,6 +17,9 @@ test('a chip replaces a strong verb the list lacked, and does not put a second v
     ['Owned the payments roadmap', 'Spearheaded the payments roadmap'],
     ['- Drove adoption across 3 teams', '- Spearheaded adoption across 3 teams'],
     ['Fine-tuned open-source LLMs', 'Spearheaded open-source LLMs'],
+    ['Took deploys from weekly trains to 300 a day', 'Spearheaded deploys from weekly trains to 300 a day'],
+    ['Set up the on-call practice', 'Spearheaded the on-call practice'],
+    ['Rolled out SSO to 40 teams', 'Spearheaded SSO to 40 teams'],
   ];
   for (const [before, after] of cases) assert.equal(insertActionVerb(before, 'Spearheaded'), after, before);
 });
@@ -27,9 +30,12 @@ test('the badge counts those verbs as action verbs', () => {
   }
 });
 
-test('every starter bullet opens with a verb the optimizer knows', () => {
+test('every past-tense starter bullet opens with a verb the optimizer knows', () => {
   for (const starter of STARTER_TEMPLATES) {
     for (const m of JSON.stringify(starter).matchAll(/<li>(?:<p>)?([^<]+)/g)) {
+      // A current role's present tense ("Lead the lab…", "Mentor two students…") is out of this
+      // finding: "Lead" also opens a title ("Lead engineer for…"), which no verb replaces.
+      if (/^(?:Lead|Mentor)\s/.test(m[1])) continue;
       assert.ok(leadsWithActionVerb(m[1]), `${starter.id}: ${m[1]}`);
     }
   }

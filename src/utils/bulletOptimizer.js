@@ -116,7 +116,8 @@ export const ACTION_VERBS = new Set([
   'crafted', 'defined', 'demonstrated', 'drove', 'extended', 'fine-tuned', 'fixed', 'initiated',
   'instrumented', 'introduced', 'landed', 'launched', 'lectured', 'lowered', 'obtained', 'onboarded',
   'operated', 'owned', 'piloted', 'ran', 'rebuilt', 'released', 'rescued', 'retained', 'revitalized',
-  'rewrote', 'rolled', 'shaped', 'shipped', 'sold', 'solved', 'taught', 'trimmed', 'tutored', 'won',
+  'rewrote', 'rolled', 'set', 'shaped', 'shipped', 'sold', 'solved', 'spun', 'stood', 'taught', 'took',
+  'trimmed', 'tutored', 'won',
 
   // The optimizer's chips and Auto-Fix's replacements, each by its first word
   ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
@@ -340,9 +341,15 @@ const FUNCTION_WORDS = new Set([
   'been', 'being', 'be', 'successfully',
 ]);
 
-/** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
+/**
+ * The verb phrases of more than one word among Auto-Fix's replacements and their alternatives, and
+ * the common two-word verbs ("Set up", "Rolled out"): the chip left "Spearheaded up the on-call…"
+ * (R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
+ */
+const PHRASAL_VERBS = ['Set up', 'Rolled out', 'Took over', 'Stood up', 'Spun up', 'Built out', 'Scaled up'];
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
+  .concat(PHRASAL_VERBS)
   .filter((p) => p.includes(' '))
   .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   .join('|')})\\b`, 'iu');
