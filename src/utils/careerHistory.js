@@ -6,14 +6,39 @@
 import { parseMonthYear } from './dates.js';
 
 /**
+ * `item` as the PDF prints it (ExperienceSection): a company or role its eye hides is blank, and so
+ * is a date its eye hides or every date where the section's Show dates is off — a hidden end, a
+ * current job's "Present" too (endDateOf). Hidden dates and companies were listed and counted in the
+ * totals (R5-HUNT12). The same object when it hides none of them.
+ */
+function asPrinted(item, showDates) {
+  const hides = (key) => Array.isArray(item.hiddenFields) && item.hiddenFields.includes(key);
+  const noStart = !showDates || hides('startDate');
+  const noEnd = !showDates || hides('endDate');
+  if (!hides('company') && !hides('role') && !noStart && !noEnd) return item;
+  return {
+    ...item,
+    company: hides('company') ? '' : item.company,
+    role: hides('role') ? '' : item.role,
+    startDate: noStart ? '' : item.startDate,
+    endDate: noEnd ? '' : item.endDate,
+    current: noEnd ? false : item.current,
+  };
+}
+
+/**
  * Every experience entry the résumé prints, in order: the visible items of every visible
- * experience section — the rule the ATS checker, the cover letter and the PDF follow.
+ * experience section — the rule the ATS checker, the cover letter and the PDF follow — each with
+ * only the company, role and dates the PDF prints (asPrinted).
  */
 export function careerItems(resume) {
   const sections = Array.isArray(resume?.sections) ? resume.sections : [];
   return sections
     .filter((s) => s && s.type === 'experience' && s.visible !== false)
-    .flatMap((s) => (Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false) : []));
+    .flatMap((s) => {
+      const showDates = s.settings?.showDates !== false;
+      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)) : [];
+    });
 }
 
 /** A stored date as a count of months (a year alone: its January), or null when it is not a month and year. */
