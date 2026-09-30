@@ -508,6 +508,20 @@ export function richTextToPlain(html) {
 }
 
 /**
+ * A bare e-mail address: one "@" with something before it, no "/", and a "." inside what follows it
+ * (not its first or last character). The same test as /^[^@/]+@[^@/]+\.[^@/]+$/, which took time
+ * squared in the length of a long value with many dots and a "/" or "@" after them (each dot was tried
+ * as the one, and each try read to the end): 20 000 dots and a slash, 195 ms, on every render of a
+ * Website typed or pasted so (R5-HUNT11-WEBSITE-FREEZE-LEAD).
+ */
+function isBareEmail(v) {
+  const at = v.indexOf('@');
+  if (at < 1 || v.includes('/') || v.indexOf('@', at + 1) !== -1) return false;
+  const dot = v.indexOf('.', at + 2); // not the domain's first character
+  return dot !== -1 && dot < v.length - 1; // nor its last
+}
+
+/**
  * A link target safe to put in a PDF, a .docx or an <a href>: http(s), mailto and tel only.
  * Bare "github.com/me" gets https://, a bare e-mail address gets mailto:. Anything else → null.
  */
@@ -516,7 +530,7 @@ export function safeHref(value) {
   if (!v || /\s/.test(v)) return null;
   if (/^(https?:\/\/|mailto:|tel:)/i.test(v)) return /^[a-z]+:\/\/?$/i.test(v) ? null : v;
   if (/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^[^:/]+:\d+(\/|$)/.test(v)) return null; // javascript:, data:, …
-  if (/^[^@/]+@[^@/]+\.[^@/]+$/.test(v)) return `mailto:${v}`;
+  if (isBareEmail(v)) return `mailto:${v}`;
   if (/^(\/\/)?[\w-]+(\.[\w-]+)+([:/?#].*)?$/i.test(v)) return `https://${v.replace(/^\/\//, '')}`;
   return null;
 }

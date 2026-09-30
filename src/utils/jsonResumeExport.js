@@ -4,7 +4,7 @@
 import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
-import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems } from './contacts.js';
+import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems, displayUrl } from './contacts.js';
 import { entryPrints } from './entryPrints.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
@@ -40,17 +40,23 @@ function shown(item) {
  * Link URL override when set and one the PDF follows (contactHref), else the value as typed. The file
  * wrote the typed value ('jdoe', 'My site'), a dead link in every other JSON Resume tool, while the
  * PDF, Word, Markdown and ATS text link to the override (R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE).
+ * A bare scheme with no host ("https://", "www.") is no address: a Display label prints over it unlinked
+ * in the PDF (contactHref is null), so the file's url is '' — not "https://", a link to nothing beside
+ * the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL). The value as typed rides as `${key}Text`.
  */
 function linkUrl(p, key) {
   const override = String(p[`${key}Url`] || '').trim();
-  return override && contactHref(key, p) ? override : p[key];
+  const href = contactHref(key, p);
+  if (override && href) return override;
+  return !href && !displayUrl(p[key]) ? '' : p[key];
 }
 
 /**
  * The display label and link URL of the website, LinkedIn and GitHub, the ones set on a shown
  * field, under the app's names beside the schema's (R2-006): the contact line prints the label and
  * links to the URL, and a round trip printed the bare address instead. The value as typed rides as
- * `${key}Text` when the schema's url holds the Link URL instead (linkUrl), for the import to put back.
+ * `${key}Text` when the schema's url holds the Link URL instead, or none (linkUrl), for the import to
+ * put back.
  */
 function linkFields(p, shows) {
   const out = {};
@@ -78,8 +84,10 @@ export function cpwtResumeToJsonResume(resume) {
   const NET_LI = ['Linked', 'In'].join('');
   const NET_GH = ['Git', 'Hub'].join('');
   const profiles = [];
-  if (shows('linkedin')) profiles.push({ network: NET_LI, url: linkUrl(p, 'linkedin') });
-  if (shows('github')) profiles.push({ network: NET_GH, url: linkUrl(p, 'github') });
+  // A profile with no address (a bare "https://" under a Display label) is no profile: the label and the
+  // typed value ride in `basics` (linkFields), and the import reads them back.
+  if (shows('linkedin') && linkUrl(p, 'linkedin')) profiles.push({ network: NET_LI, url: linkUrl(p, 'linkedin') });
+  if (shows('github') && linkUrl(p, 'github')) profiles.push({ network: NET_GH, url: linkUrl(p, 'github') });
   const summary = flattened(field('summary'));
 
   const lists = Object.fromEntries(Object.values(SECTION_KEYS).map(({ key }) => [key, []]));

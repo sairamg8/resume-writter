@@ -123,7 +123,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   Match (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE)
   A contact goes in only when the résumé prints it (`contactItems`): a website, LinkedIn or GitHub typed
   as just "https://" or "www.", or an e-mail or phone of only spaces, writes no `basics.url`, profile or
-  field (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT)
+  field (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT). One with a Display label still goes in, but a bare
+  "https://" or "www." under it (the PDF prints the label unlinked) writes `basics.url` '' and no profile,
+  and the value as typed rides as `websiteText` / `linkedinText` / `githubText` for the import to put
+  back, so the label prints again after a round trip (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL)
 
 ## JSON backup export/import
 

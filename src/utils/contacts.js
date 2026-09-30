@@ -65,7 +65,16 @@ export function contactItems(personal, hidden = personal?.hiddenFields || []) {
     .filter(({ value }) => value);
 }
 
-/** A URL as a résumé prints it: "https://www.linkedin.com/in/me/" → "linkedin.com/in/me". */
+/**
+ * A URL as a résumé prints it: "https://www.linkedin.com/in/me/" → "linkedin.com/in/me". The trailing
+ * slashes are cut with a loop, not /\/+$/: that regex starts a run at every slash and fails at the
+ * end of each, so a value with a long run of slashes before another character (a paste) took time
+ * squared in its length — 20 000 of them, 175 ms, and contactItems asks for this on every render, once
+ * per link field (R5-HUNT11-WEBSITE-FREEZE-LEAD).
+ */
 export function displayUrl(url) {
-  return String(url || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+  const shown = String(url || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  let end = shown.length;
+  while (end > 0 && shown.charCodeAt(end - 1) === 47) end -= 1; // '/'
+  return end === shown.length ? shown : shown.slice(0, end);
 }

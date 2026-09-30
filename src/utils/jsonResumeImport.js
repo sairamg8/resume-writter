@@ -135,15 +135,18 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     else if ((/\S\.\S/.test(url) || user) && !(url && (url === linkedin || url === github))) others.push({ network: storedText(p.network).trim(), address: /\S\.\S/.test(url) ? url : `@${user}` });
   }
   let website = storedText(b.url) || storedText(b.website); // `website`, `picture`: the pre-1.0 schema's names
-  const webAt = website ? -1 : others.findIndex((o) => /website|portfolio|homepage|personal|blog/i.test(o.network) && !o.address.startsWith('@'));
+  // Not when the file's own website is one the export left empty (`websiteText`, below): that is the field's value.
+  const webAt = website || storedText(b.websiteText).trim() ? -1 : others.findIndex((o) => /website|portfolio|homepage|personal|blog/i.test(o.network) && !o.address.startsWith('@'));
   if (webAt >= 0) website = others.splice(webAt, 1)[0].address;
   // Not the website again, nor one address twice ("Portfolio" and "Website" to one page).
   const listed = new Set([website]);
   const profiles = others.filter((o) => !listed.has(o.address) && listed.add(o.address)).map((o) => ({ id: newId('cust'), title: o.network || 'Profile', subtitle: o.address, date: '', location: '', description: '' }));
 
   // The value as typed of a website, LinkedIn or GitHub whose schema url the export filled with its
-  // Link URL (`${key}Text`, R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE): the field gets it back.
-  const typed = (key, found) => (found && storedText(b[`${key}Text`]).trim() ? storedText(b[`${key}Text`]) : found);
+  // Link URL (`${key}Text`, R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE), or left empty because the value
+  // is a bare "https://" a Display label prints over (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL):
+  // the field gets it back, so the label keeps printing.
+  const typed = (key, found) => (storedText(b[`${key}Text`]).trim() ? storedText(b[`${key}Text`]) : found);
 
   const personal = {
     name: storedText(b.name),
