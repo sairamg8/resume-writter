@@ -1,0 +1,30 @@
+{
+  "cluster": "r5-hunt9-tools",
+  "branch": "claude/wf-r5-hunt9-tools",
+  "base": "475a5ade858c239de32f880b20b412c2d2f232fb",
+  "rows": [
+    {
+      "id": "R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB",
+      "title": "STAR Optimizer's power-verb chip puts a second verb in front of a statement that already starts with a strong past-tense verb missing from the list ('Spearheaded Launched…', 'Spearheaded Shipped…')",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["798d6ba3a7807912e7d36065140eebdcec98e930", "f1544b37568e65ba37aa4f398d77c6254a670bfd"],
+      "tests": ["tests/unit/r5-hunt9-verb-chip-unlisted-verb.unit.mjs"],
+      "summary": "Now: ACTION_VERBS (the one list the optimizer badge, the chip and the ATS score read) holds the common strong verbs it lacked (launched, shipped, ran, introduced, owned, drove, fine-tuned, took, set, won…), and the chip replaces two-word verbs whole ('Set up', 'Rolled out', 'Took over'…). A chip on 'Launched automated bill…' or 'Shipped every release on time' gives 'Spearheaded automated bill…' / 'Spearheaded every release on time', and the badge and ATS Check count these bullets as opening with an action verb. Every past-tense starter bullet now opens with a known verb. Weak verbs (handled, changed, ensured) stay weak.",
+      "ci": [36648867204, 36648873268]
+    },
+    {
+      "id": "R5-HUNT9-ATS-GRIDS-WARNING-CLEARED-TITLE-TYPE-ID",
+      "title": "ATS Check's 'Entries printed side by side' warning names a custom section whose title was cleared by its internal type id '\"custom\"', while its own fix notice calls it '\"Untitled\"'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["d42b91eb14fad4aa34088ea29a0cc2c31e49f84e"],
+      "tests": ["tests/unit/r5-hunt9-ats-grids-cleared-title.unit.mjs"],
+      "summary": "Now: the section_grids warning names each section with atsHeadingLabel, as its Grids 1 fix notice does: a cleared custom section reads '\"Untitled\"', a cleared standard one '\"Professional Experience\" (no heading)', a titled one its title.",
+      "ci": [36648378125, 36648867204, 36648873268]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Run 36648372531/36648378125 failed only on the first version of the starter-bullet test (present-tense 'Lead'/'Mentor' and 'Took'/'Set up' in academic-cv and compact-leader starters); 'Took' and 'Set up' were fixed in f1544b37, and present tense is left out on purpose: 'Lead' also opens a title ('Lead engineer for…'), so it is not added as a verb. Possible follow-up: a chip on a current role's present-tense bullet ('Lead the lab…', 'Mentor two students…') still gives 'Spearheaded Lead the lab…'. Final runs 36648867204 (failfirst on 798d6ba3, f1544b37, d42b91eb: each fails without its fix and passes with it) and 36648873268 (the optimizer and ATS unit and pdf tests, guards 31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs, plus Cypress 28-writing-helpers) are green."
+}
