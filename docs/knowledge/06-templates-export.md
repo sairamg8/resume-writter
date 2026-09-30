@@ -104,7 +104,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
 ## JSON backup export/import
 
 Full resume object (with a new id on import: `importResume`). Every import goes through
-`normalizeResume()`, so a file from an older build is migrated like stored data.
+`normalizeResume()`, so a file from an older build is migrated like stored data, and every field the
+app reads as text holds text (`textFields.js`), the record's own `name` included: a name that is an
+object or missing becomes 'Untitled Resume' ('Cover Letter' for a letter), a number its digits.
 
 ## Import from a PDF, Word, Markdown or text (R2-148)
 
