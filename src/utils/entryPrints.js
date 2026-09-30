@@ -36,6 +36,10 @@ export function entryPrints(type, item) {
   const urlShown = Boolean(item.url) && !hidden.has('url');
   const prints = (k, v) => {
     if (type === 'certifications' && k === 'urlLabel') return urlShown && valuePrints(k, v);
+    // "Present" is the End Date's text: its eye off, a current role prints no end (endDateOf), so a
+    // current job with every eye off printed its heading over nothing, and went into the JSON Resume
+    // file as an empty job (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS).
+    if (k === 'current') return v === true && !hidden.has('endDate');
     if (type === 'interests' && k === 'interests') return String(v ?? '').split(',').some((s) => s.trim());
     return valuePrints(k, v);
   };
