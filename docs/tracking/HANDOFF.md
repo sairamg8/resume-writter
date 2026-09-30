@@ -1,5 +1,8 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 01:45 UTC — DEPLOY: PR #8** (`claude/deploy-r10-11ba2ea`, rounds 7-10 = 60 fixes, full gate 36654399622 on `11ba2ea1`
+GREEN) replaces #7 (marked superseded). Owner: merge #8 (or `git push origin 11ba2ea1:refs/heads/master`), then close #4-#7.
+
 **2026-09-30 02:10 UTC — ROUND 10 DONE (all 9 areas, 12 fixes): `11ba2ea1`.** import 3 (Title-Case sub-label pair swallowed jobs —
 a gap in round 9's fix; Markdown blank line after '###' split every entry; unbracketed award years), export 2 (JSON Resume wrote
 unprinted entries), tools 3. boards, editor dry. Seen-list 174. Full gate on `11ba2ea1` dispatched; when green, pin
