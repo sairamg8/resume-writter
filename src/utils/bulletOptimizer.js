@@ -121,6 +121,9 @@ export const ACTION_VERBS = new Set([
   'operated', 'owned', 'piloted', 'ran', 'rebuilt', 'released', 'rescued', 'retained', 'revitalized',
   'rewrote', 'rolled', 'set', 'shaped', 'shipped', 'sold', 'solved', 'spun', 'stood', 'taught', 'took',
   'trimmed', 'tutored', 'won',
+  // A verb the tips offer ("Supported delivery of", "Supported efforts to"): a chip went in front of it
+  // (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE).
+  'supported',
 
   // The optimizer's chips and Auto-Fix's replacements, each by its first word
   ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
@@ -329,9 +332,10 @@ const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
  * number is the month ("May 2023: shipped…"), not the helper verb. A statement opening with another
  * negative — "No", "Nobody", "None", "Nothing", "Neither", "Nor", "Zero" — took it too: "Spearheaded no
  * customer data was lost…" (review of R4-SW-WT-03); "No-code …" and "Zero-downtime …" are
- * a noun's first word, and still take a verb.
+ * a noun's first word, and still take a verb. "Member of" and "Active member of" say no action either:
+ * "Spearheaded the ACM chapter" made a member its leader (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE).
  */
-const AUXILIARY_LEAD = /^(?:(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
+const AUXILIARY_LEAD = /^(?:(?:active\s+)?member\s+of(?![\p{L}\d])|(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
 
 /**
  * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
@@ -373,12 +377,17 @@ const TOOK_PARTICLE = /^\s+(?:on|over(?!\s*[\d$€£¥~+]))(?![\p{L}\d'’-])/iu
 /**
  * The verb phrases of more than one word among Auto-Fix's replacements and their alternatives, and
  * two that are no action verb and a particle: "Took part in" (leadsWithActionVerb) and "Set out to".
+ * Only a verb and its preposition ("Contributed to", "Collaborated on", "Led efforts to") go whole: a
+ * phrase with a noun or an object in it ("Maintained compliance with", "Supported delivery of", "Active
+ * member of", "Collaborated with") lost those words to the chip — "Streamlined HIPAA", "Spearheaded the
+ * ACM chapter" (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE). Its verb is replaced like any other.
  */
 const PHRASAL_VERBS = ['Took part in', 'Set out to'];
+const PHRASE_TAIL = new Set(['on', 'in', 'to', 'efforts', 'out', 'part']);
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
   .concat(PHRASAL_VERBS)
-  .filter((p) => p.includes(' '))
+  .filter((p) => p.includes(' ') && p.split(' ').slice(1).every((w) => PHRASE_TAIL.has(w.toLowerCase())))
   .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   .join('|')})\\b`, 'iu');
 
