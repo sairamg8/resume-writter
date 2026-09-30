@@ -61,6 +61,8 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
       setVerbBlocked(verb);
       return;
     }
+    // A verb that went in answers the tip ("Partnered" on "Worked with…").
+    setVerbBlocked(null);
     editText(prev => insertActionVerb(prev, verb));
   }
 
