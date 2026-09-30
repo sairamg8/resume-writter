@@ -180,16 +180,31 @@ const PRESENT_NOUNS = new Set([
 
 /** A word after a present form that makes it a noun: "Mentor to 5 interns", "Lead for the payments team". */
 const NOUN_AFTER = /^\s+(?:to|for|of|at|in|on|from|by|as)(?![\p{L}\d])/iu;
+/**
+ * The present tense of a verb and its preposition among the chip's whole phrases (PHRASAL_VERBS):
+ * "Contribute to open-source projects" and "Collaborate on the SDK" read "Verb Missing" while
+ * "Contributed to…" was a verb, and a chip left "Spearheaded Contribute to…" (review of
+ * R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). Neither word is ever a noun there.
+ */
+const PRESENT_VERB_PHRASE = /^(?:contribute\s+to|collaborate\s+on)(?![\p{L}\d])/iu;
+const TITLES = 'engineer|developer|designer|architect|analyst|scientist|researcher|consultant|instructor|organi[sz]er|maintainer|contributor|author|writer|editor|manager|coordinator|mentor|member|volunteer|role|position';
 /** A title after "Lead": "Lead engineer for payments" is a role, not "Led engineer…". */
-const TITLE_AFTER_LEAD = /^\s+(?:engineer|developer|designer|architect|analyst|scientist|researcher|consultant|instructor|organi[sz]er|maintainer|contributor|author|writer|editor|manager|coordinator|mentor|member|volunteer|role|position|ta|teaching)s?(?![\p{L}\d])/iu;
+const TITLE_AFTER_LEAD = new RegExp(`^\\s+(?:${TITLES}|ta|teaching)s?(?![\\p{L}\\d])`, 'iu');
+/**
+ * One title after any other present form makes the two words a role: "Support engineer for the payments
+ * team", "Build engineer on the CI team" — the chip left "Spearheaded engineer for the payments team"
+ * (review of R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS). A plural is the verb's object ("Manage
+ * engineers across 3 teams", "Support analysts in 4 regions").
+ */
+const TITLE_AFTER = new RegExp(`^\\s+(?:${TITLES}|lead|specialist|technician|representative|agent|assistant|associate|intern)(?![\\p{L}\\d'’-])`, 'iu');
 
 /** Whether `word`, followed by `after`, is the present tense of a listed action verb. */
 function isPresentActionVerb(word, after) {
   const w = word.toLowerCase();
   if (w.length < 3 || PRESENT_NOUNS.has(w)) return false;
   // Followed by a word, not by punctuation or nothing ("Chair, ACM chapter", "Mentor to 5 interns").
-  if (!/^\s+[^\s,;:.()\-–—|/@]/u.test(after) || NOUN_AFTER.test(after)) return false;
-  if (w === 'lead' && TITLE_AFTER_LEAD.test(after)) return false;
+  if (!/^\s+[^\s,;:.()\-–—|/@]/u.test(after) || (NOUN_AFTER.test(after) && !PRESENT_VERB_PHRASE.test(w + after))) return false;
+  if (w === 'lead' ? TITLE_AFTER_LEAD.test(after) : TITLE_AFTER.test(after)) return false;
   const pasts = [PRESENT_IRREGULAR[w], `${w}ed`, `${w}d`, `${w}${w.at(-1)}ed`, w.replace(/y$/, 'ied')];
   return pasts.some((p) => p && p !== w && VERB_KEYS.has(verbKey(p)));
 }
@@ -426,7 +441,9 @@ const TOOK_PARTICLE = /^\s+(?:on|over(?!\s*[\d$€£¥~+]))(?![\p{L}\d'’-])/iu
  * member of", "Collaborated with") lost those words to the chip — "Streamlined HIPAA", "Spearheaded the
  * ACM chapter" (R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE). Its verb is replaced like any other.
  */
-const PHRASAL_VERBS = ['Took part in', 'Take part in', 'Set out to'];
+// "Contribute to" and "Collaborate on" are the present tense of two of them, and go whole the same way:
+// "Spearheaded open-source projects", not "Spearheaded to open-source projects".
+const PHRASAL_VERBS = ['Took part in', 'Take part in', 'Set out to', 'Contribute to', 'Collaborate on'];
 const PHRASE_TAIL = new Set(['on', 'in', 'to', 'efforts', 'out', 'part']);
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
