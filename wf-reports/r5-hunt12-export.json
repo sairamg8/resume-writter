@@ -8,33 +8,66 @@
       "title": "A Link URL override of just 'https://' or 'www.' unlinks a valid website/LinkedIn/GitHub in the PDF, Word and Markdown, and 'https://www.' links to a dead address",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["ed9eb4d5796b5bf8be6b7c93040600e881cfa1d5", "d7d0a99d19a0f6b960172a643157776b7fac7907"],
-      "tests": ["tests/unit/r5-hunt12-link-url-override-bare-scheme.unit.mjs"],
+      "commits": [
+        "ed9eb4d5796b5bf8be6b7c93040600e881cfa1d5",
+        "d7d0a99d19a0f6b960172a643157776b7fac7907"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-link-url-override-bare-scheme.unit.mjs"
+      ],
       "summary": "Now: a Link URL override that names no address ('https://', 'www.', 'https://www.', 'http://www') counts as unset (new contacts.js linkOverride, used by contactHref, the ATS text, the letter text and JSON Resume), so the valid value typed in the field is still linked in the PDF, Word and Markdown and printed in the text exports; safeHref returns null for an http(s) address with no host ('https://www.', 'https:///', 'http://www'), so a labelled Website of 'https://www.' prints its label unlinked instead of linking to a dead address. The test landed in the follow-up commit d7d0a99; the failfirst check ran it against ed9eb4d (fail 3 without, pass with).",
-      "ci": [36672279678]
+      "ci": [
+        36672279678
+      ]
     },
     {
       "id": "R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL",
       "title": "ATS text prints a bare 'https://' (or 'www.') for a website/LinkedIn/GitHub shown under a Display label; the label every other export prints is lost",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["4305c9c09c4b2c64341ab7aa820ab70541019449"],
-      "tests": ["tests/unit/r5-hunt12-ats-text-bare-scheme-label.unit.mjs"],
+      "commits": [
+        "4305c9c09c4b2c64341ab7aa820ab70541019449"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-ats-text-bare-scheme-label.unit.mjs"
+      ],
       "summary": "Now: the ATS text contact line prints the Display label ('jane@x.com | Portfolio') for a website, LinkedIn or GitHub typed as just a scheme or 'www.', as the PDF, Word, Markdown and letter do; a real typed address or a Link URL still prints in full.",
-      "ci": [36672279678]
+      "ci": [
+        36672279678
+      ]
     },
     {
       "id": "R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL",
       "title": "Markdown prints a certificate's raw URL instead of its Link label when the URL is not linkable; the PDF and Word print the label",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["0500dc14c0d950fa738ba408645f6cab471a1661"],
-      "tests": ["tests/unit/r5-hunt12-md-cert-label-unlinkable-url.unit.mjs"],
+      "commits": [
+        "0500dc14c0d950fa738ba408645f6cab471a1661"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-md-cert-label-unlinkable-url.unit.mjs"
+      ],
       "summary": "Now: a certificate whose URL cannot be linked ('Credly 12345', 'ABC-123') prints its Link label (else the URL) as plain text in the Markdown, matching the PDF and Word.",
-      "ci": [36672279678]
+      "ci": [
+        36672279678
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL (low): the ATS-text fix (4305c9c) decided a typed value names no address by an empty displayUrl, a looser test than the one linkOverride and safeHref use in this same cluster (ed9eb4d counts 'http://www' as no address). A website/LinkedIn/GitHub typed 'https://www' under a Display label printed the label, unlinked, in the PDF, Word, Markdown and letter text, but the ATS text printed 'https://www' and JSON Resume wrote basics.url / a profile url of 'https://www', a link to nothing beside the label (the R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL class). Fixed in 973d358: one exported namesAddress() in contacts.js is the test linkOverride, the ATS text and JSON Resume linkUrl share; the typed value still rides as websiteText, so a round trip keeps it."
+    ],
+    "commits": [
+      "973d3583e037c2b1d3dbc46a5dcbd228423a1515"
+    ],
+    "ci": [
+      36673321030,
+      36673323224
+    ],
+    "notes": "Reviewed ed9eb4d, 4305c9c, 0500dc1 and the test commit d7d0a99 against origin/claude/r4-green. Root causes are right: contactHref took any non-empty override and safeHref rejected a bare scheme with no fall-back to the value; safeHref accepted hostless http(s) addresses; Markdown link() dropped the certificate's label on the unlinkable path (its only caller is certifications; now matches the PDF's urlLabel || url and Word). Fail-first run 36672279678 checked: ed9eb4d fails 3 without / passes with (reverted via its parent's files, a genuine revert since later commits touch atsPlainText), 4305c9c and 0500dc1 fail then pass. Other callers checked: every contact link goes through contactHref/contactItems (PDF headers, Word, Markdown, letter text, JSON Resume); nothing reads ${key}Url directly besides linkOverride and the JSON Resume / public-link field copiers, which keep the raw override so a round trip is lossless. The safeHref host check also reaches rich-text links (checked at render in PDF, Word, Markdown), the editor's Insert link prompt (now refuses 'https://www.' with its existing alert) and job URLs: all consistent, no stored data rewritten. Left as designed: a website typed 'www' or 'https://www' with no label still prints 'www' as a contact (the r5-hunt11 typing test pins that each typing step prints its displayUrl). Review fix proved on CI: failfirst run 36673321030 (fail 2 without, pass with; lint green); full node suite run 36673323224 (6 shards; Playwright/Cypress none). No accessibility issues noted."
+  },
   "baselineFailures": [],
   "notes": "Base is origin/claude/r4-green head dd02d2ef (only HANDOFF.md differs from b414cd6a). CI run 36672279678: all three failfirst checks fail without the fix and pass with it; 89 touched-area node test files (contacts, safeHref, ATS text, Markdown, JSON Resume, letter text, knowledge-docs, 31-contact-fields) pass; lint green. Run 36672222539 was cancelled (it named a test file that does not exist). No accessibility issues noted."
 }
