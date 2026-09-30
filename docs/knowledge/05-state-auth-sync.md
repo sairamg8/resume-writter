@@ -235,7 +235,11 @@ record) is listed as deleted at that first sync, so it stays deleted even in an 
 other item, while a demo filled in on another browser before its first sign-in still wins over that
 deletion (R5-HUNT4); and a saved list the store could not
 read in full makes the record forget the versions (`forgetSynced`), so the items left out are
-merged back from the cloud instead of being deleted from it.
+merged back from the cloud instead of being deleted from it; and the record claims a version only
+for an item storage holds (the store's `saved()`, `claimed` in the engine) — storage full, a list
+save refused while the few bytes of the record fitted made the record name items never stored, and
+the next reload's first sync took them for deleted here and deleted them from the account; now they
+come back from the cloud (R5-HUNT10).
 
 ### Public links (R2-148)
 

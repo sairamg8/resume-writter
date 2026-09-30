@@ -11,8 +11,8 @@ import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
 import { DEMO_JOB_ID, isUntouchedDemoJob } from '@/utils/jobEdits';
 import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
-import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
-import { boardsNow, leaveRecovery as leaveBoardsRecovery, replaceBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
+import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, savedJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
+import { boardsNow, leaveRecovery as leaveBoardsRecovery, replaceBoards, savedBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
 
 const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove };
 
@@ -30,7 +30,7 @@ const fromCloud = (read, complete) => (d) => {
 export const jobSync = {
   name: 'jobs',
   store: {
-    items: jobsNow, replace: replaceJobs, subscribe: subscribeJobs,
+    items: jobsNow, saved: savedJobs, replace: replaceJobs, subscribe: subscribeJobs,
     fromCloud: fromCloud(readJob, completeJob),
     label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
     seed: isUntouchedDemoJob, seedIds: [DEMO_JOB_ID],
@@ -42,7 +42,7 @@ export const jobSync = {
 export const boardSync = {
   name: 'boards',
   store: {
-    items: boardsNow, replace: replaceBoards, subscribe: subscribeBoards,
+    items: boardsNow, saved: savedBoards, replace: replaceBoards, subscribe: subscribeBoards,
     fromCloud: fromCloud(readBoard, completeBoard),
     label: (b) => b.title || 'Untitled project',
     seed: isUntouchedDemoBoard, seedIds: [DEMO_BOARD_ID],
