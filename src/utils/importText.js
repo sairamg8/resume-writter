@@ -1260,7 +1260,12 @@ function entriesOf(type, lines, aside) {
       const second = (n) => Boolean(n && !n.bullet && !n.date && !n.hint && n.text.length <= 100 && !/[.!?:;,]$/.test(n.text)
         && !isMetaLine(n.text) && pieces(n.text).length <= 2 && !sentence(n.text));
       const m = info[i + 1];
-      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) header.push(info[i++]);
+      // A place alone there ("### Amazon", "Seattle, WA", "*Jan 2020 – Present*") is the entry's location,
+      // not its role or degree: the role read "Seattle, WA" (R5-HUNT11 review).
+      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) {
+        const n = info[i++];
+        header.push(pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text) ? { ...n, hint: 'end' } : n);
+      }
       while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
