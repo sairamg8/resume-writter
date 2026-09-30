@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt10-tools",
+  "branch": "claude/wf-r5-hunt10-tools",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-AUTOFIX-WORKED-WITH-ENGINEERED",
+      "title": "Auto-Fix turns 'Worked with <people>' into 'Engineered <people>'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["f99bbe38b3db6afe07e30b9eecef599b23604c82"],
+      "tests": ["tests/unit/r5-hunt10-autofix-worked-with.unit.mjs"],
+      "summary": "Now: 'worked with' is its own weak-phrase entry. Auto-Fix writes 'Collaborated with product managers to define the roadmap', and the tip offers 'Collaborated with' or 'Partnered with'. 'Worked on' still becomes 'Engineered'. The ATS weak-phrase list is unchanged because it reads the same entries.",
+      "ci": [36653304179]
+    },
+    {
+      "id": "R5-HUNT10-PRESENT-TENSE-VERBS-NOT-ACTION-VERBS",
+      "title": "Present-tense bullets for a current job ('Manage', 'Develop', 'Lead', 'Build') count as having no action verb",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["3d2c7543c466e3cf15d280f262a1f26253d6cc5c"],
+      "tests": ["tests/unit/r5-hunt10-present-tense-verbs.unit.mjs"],
+      "summary": "Now: leadsWithActionVerb also counts a word whose past tense is a listed verb (word+ed/d, doubled consonant, y to ied, plus a small irregular table: lead/led, build/built, run/ran, grow/grew, oversee/oversaw and others). The ATS score, the optimizer badge and the chip all read it. 'Manage a team of 8...' shows a verb, three present-tense bullets score 'Strong Action Verbs (100%)', and a chip gives 'Spearheaded a team of 8...'. Every starter bullet, the academic starter's 'Lead the lab...' and 'Mentor two doctoral students...' included, now opens with a known verb. These are not counted, so a chip goes in front of them and no word is lost: a word that often opens a noun or title (design, test, engineer, head, double and others); a present form followed by a preposition or punctuation ('Mentor to 5 interns', 'Chair, ACM'); and 'Lead <title>' ('Lead engineer for...'). 'Take part in' is treated like 'Took part in'.",
+      "ci": [36653304179]
+    },
+    {
+      "id": "R5-HUNT10-VERB-CHIP-DROPS-NOUN-OF-PHRASE",
+      "title": "A power-verb chip on 'Maintained compliance with...', 'Active member of...' or 'Supported delivery of...' deletes the noun as well",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["55bf7e1a75b2344d4ec88d5e59f30716bdc81235"],
+      "tests": ["tests/unit/r5-hunt10-verb-chip-keeps-noun.unit.mjs"],
+      "summary": "Now: the chip replaces a whole phrase only when it is a verb plus its preposition or particle ('Contributed to', 'Collaborated on', 'Led efforts to', 'Took part in'). Otherwise it replaces just the verb: 'Maintained compliance with HIPAA' becomes 'Streamlined compliance with HIPAA', and 'Supported delivery of...' becomes 'Architected delivery of...' ('supported' is added to ACTION_VERBS because the tips offer it). 'Member of...' and 'Active member of...' say no action, so the chip leaves them unchanged and the modal asks for a rewrite, as it does for a leading helper verb.",
+      "ci": [36653304179]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base moved to 2a3f9dc (a docs-only handoff commit on top of 0373b9e9). CI run 36653304179 passed: failfirst for all 3 commits (each test fails with its src diff reversed and passes with it), 100/100 tests across the touched files (bullet-optimizer*, r4-sw-wt-0*, r4-lo-1*, r5-hunt9-*verb*, r5-opt-sw-wt-03*, ats-checker*, knowledge-docs, r5-hunt10-*), and lint. Full-gate guards (31-contact-fields, 91-design-resets, 71-startup-chunks) were not run; this touches only src/utils/bulletOptimizer.js. docs/knowledge/04-features.md is updated. Possible follow-ups, not fixed: (1) a chip on a verb followed by 'with' keeps the 'with' ('Collaborated with PMs' becomes 'Spearheaded with PMs'); this was already true before this change for any listed verb. (2) 'Develop and maintain APIs' becomes 'Spearheaded and maintain APIs', the same as the existing past-tense 'Developed and maintained' case. (3) Present forms followed by 'on' ('Collaborate on...', 'Take on...') are not counted, a conservative choice to protect nouns such as 'Lead on the X project'."
+}
