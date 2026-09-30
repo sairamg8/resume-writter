@@ -49,6 +49,9 @@ Includes name, title, contact fields, optional photo, `hiddenFields[]`.
 Every template and export prints the contacts `contactItems` (`src/utils/contacts.js`) returns: a
 website, LinkedIn or GitHub prints its Display label, else its address as a bare domain, and one whose
 printed value is empty (typed as just `https://` or `www.`) is no contact at all.  
+Its "Link URL" is the link only when it is one the PDF follows (`linkOverride`): a box holding just
+`https://`, `www.` or a `javascript:` address counts as empty, so the value links as if no override
+were set, in every export.  
 A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`, `|` or "or" once seven
 digits are in — with an extension (`ext. 890`, `x890`, `#890`) as `;ext=890`; the text prints as typed.  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB

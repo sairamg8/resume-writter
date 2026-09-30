@@ -52,8 +52,9 @@ function telHref(value) {
 
 /**
  * Where a contact line should link to, or null. E-mail → mailto:, phone → tel: (telHref), website /
- * LinkedIn / GitHub → the "Link URL" override when set, else the value itself (https:// added
- * to a bare domain). Location is never a link.
+ * LinkedIn / GitHub → the "Link URL" override when it gives a safe link, else the value itself
+ * (https:// added to a bare domain). A Link URL of only "https://" or "www." took the value's link
+ * away (R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK). Location is never a link.
  */
 export function contactHref(key, personal) {
   const value = String(personal?.[key] || '').trim();
@@ -61,7 +62,18 @@ export function contactHref(key, personal) {
   if (key === 'email') return safeHref(/^mailto:/i.test(value) ? value : `mailto:${value}`);
   if (key === 'phone') return telHref(value);
   if (key === 'location') return null;
-  return safeHref(String(personal?.[`${key}Url`] || '').trim() || value);
+  return safeHref(linkOverride(key, personal) || value);
+}
+
+/**
+ * A website / LinkedIn / GitHub's "Link URL" override, trimmed, when it is a link the PDF follows
+ * (safeHref), else ''. One that is not ("https://" or "www." alone, a javascript: address) is no
+ * override: the value links and prints as if the box were empty, in every export
+ * (R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK).
+ */
+export function linkOverride(key, personal) {
+  const url = LINK_FIELDS.has(key) ? String(personal?.[`${key}Url`] || '').trim() : '';
+  return url && safeHref(url) ? url : '';
 }
 
 /**

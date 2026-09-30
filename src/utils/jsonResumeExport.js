@@ -4,7 +4,7 @@
 import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
-import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems, displayUrl } from './contacts.js';
+import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems, displayUrl, linkOverride } from './contacts.js';
 import { entryPrints } from './entryPrints.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
@@ -42,10 +42,12 @@ function shown(item) {
  * PDF, Word, Markdown and ATS text link to the override (R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE).
  * A bare scheme with no host ("https://", "www.") is no address: a Display label prints over it unlinked
  * in the PDF (contactHref is null), so the file's url is '' — not "https://", a link to nothing beside
- * the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL). The value as typed rides as `${key}Text`.
+ * the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL). A Link URL the PDF does not follow
+ * ("https://" alone) is no override: the PDF links the value (R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK).
+ * The value as typed rides as `${key}Text`.
  */
 function linkUrl(p, key) {
-  const override = String(p[`${key}Url`] || '').trim();
+  const override = linkOverride(key, p);
   const href = contactHref(key, p);
   if (override && href) return override;
   return !href && !displayUrl(p[key]) ? '' : p[key];
