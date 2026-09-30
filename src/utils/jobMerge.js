@@ -30,7 +30,9 @@ function asOver(theirs, kept, mine) {
   const out = { ...theirs };
   if (!isTime(kept.createdAt)) out.createdAt = mine.createdAt;
   if (!isTime(kept.updatedAt)) out.updatedAt = mine.updatedAt;
-  out.todos = idsFrom(theirs.todos || [], kept.todos, mine.todos);
+  // A file's todos: null is saved as it came; made [] here, it never matched the saved job, and each
+  // import of the file added it again (R5-HUNT11-IMPORT-NULL-TODOS-DUPLICATE).
+  if (Array.isArray(theirs.todos)) out.todos = idsFrom(theirs.todos, kept.todos, mine.todos);
   // An interview with no id gets a new one too (completeJob), so a job with one never matched the
   // copy an earlier import saved, and each import of the file added it again (R5-HUNT10 review).
   if (Array.isArray(theirs.interviews)) out.interviews = idsFrom(theirs.interviews, kept.interviews, mine.interviews);
