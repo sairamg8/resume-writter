@@ -284,8 +284,12 @@ export function createCollectionSync({
       // other tab took the shorter list and deleted it from the account); one it had just deleted
       // looked changed elsewhere, and came back — as the résumés' engine guards with its `known`
       // (R5-HUNT11-SYNC-COLLECTION-FIRST-SYNC-READS-RECORD-AFTER-CLOUD).
+      // So is the order it last saw the cloud hold: another tab's move sent meanwhile wrote its new
+      // order to the record, the cloud's old order just read no longer matched it and led, and the
+      // move was undone here and then on every device (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD).
       const early = meta.read();
       const seen = early.uid === uid ? early.versions : {};
+      const seenOrder = early.uid === uid ? early.order : null;
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
@@ -307,7 +311,7 @@ export function createCollectionSync({
       // The order the cloud held when this browser last synced, so a move made here since (offline,
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
-      const moved = mine ? { baseOrder: record.order } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
+      const moved = mine ? { baseOrder: seenOrder } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
       const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [] });
 
       sets = sendable(uid, plan.sets);
