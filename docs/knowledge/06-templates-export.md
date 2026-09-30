@@ -112,8 +112,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   default "Professional"); its section keeps its place in `meta.sections` with no entries
   (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES). A project has no Role box and no renderer prints
   one, so the import puts a file's project `roles` in the description as a last "Role: …" paragraph;
-  a `role` a project holds from an earlier import is not written back, prints no heading
-  (`entryPrints`) and counts in no Job Match (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE)
+  a `role` a project holds from an earlier import is moved there as the résumé loads
+  (`normalizeResume` → `withProjectRoles`, whatever its data version; R5-HUNT11-REVIEW-LEGACY-PROJECT-ROLE),
+  and one left anyhow is not written back, prints no heading (`entryPrints`) and counts in no Job
+  Match (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE)
   A contact goes in only when the résumé prints it (`contactItems`): a website, LinkedIn or GitHub typed
   as just "https://" or "www.", or an e-mail or phone of only spaces, writes no `basics.url`, profile or
   field (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT)

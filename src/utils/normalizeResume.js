@@ -335,11 +335,39 @@ function withBulletsInDescription(r) {
 }
 
 /**
+ * A project's `role` in its description. An earlier build's JSON Resume import stored a project's
+ * `roles` as `role`, which no editor box shows and no export prints, and since
+ * R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE nothing counts or writes it either: a résumé imported
+ * before lost it for good. It goes at the end of the description as a "Role: …" paragraph, where the
+ * import now puts a file's roles, and `role` is dropped. Whatever its data version (a file can carry
+ * any); the same object when no project has one to move.
+ */
+function withProjectRoles(r) {
+  if (!Array.isArray(r.sections)) return r;
+  const held = (item) => item && typeof item === 'object' && typeof item.role === 'string' && item.role.trim() !== '';
+  const leftover = (item) => item && typeof item === 'object' && 'role' in item;
+  let changed = false;
+  const sections = r.sections.map((s) => {
+    if (s?.type !== 'projects' || !Array.isArray(s.items) || !s.items.some(leftover)) return s;
+    changed = true;
+    return { ...s, items: s.items.map((item) => {
+      if (!leftover(item)) return item;
+      const { role, ...rest } = item;
+      if (!held(item)) return rest;
+      const description = typeof rest.description === 'string' ? rest.description : '';
+      return { ...rest, description: `${description}<p>Role: ${escapeHtml(role.trim())}</p>` };
+    }) };
+  });
+  return changed ? { ...r, sections } : r;
+}
+
+/**
  * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
  * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
  * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
  * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields), a
- * project's link as its `url` (withProjectUrls), its skill groups as skills (withSkillNames) and an
+ * project's link as its `url` (withProjectUrls), a project's legacy `role` in its description
+ * (withProjectRoles), its skill groups as skills (withSkillNames) and an
  * entry's legacy bullets in its description (withBulletsInDescription),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
  * which it carries DATA_VERSION.
@@ -360,7 +388,7 @@ function withBulletsInDescription(r) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withSectionShapes(withKnownTemplate(resume));
-  const r = withBulletsInDescription(withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))));
+  const r = withBulletsInDescription(withSkillNames(withProjectRoles(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);
   if (ahead != null) return r.dataVersion === DATA_VERSION && r.dataVersionAhead === ahead ? r : stamped(r, ahead);
