@@ -101,7 +101,11 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   its default "Professional") prints in none of the four exports, and its section alone prints no
   heading (`entryPrints`, R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE)
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
-- **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema)
+- **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema); only
+  what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that
+  prints nothing (`entryPrints`: a blank entry, a job with every eye off, a language row with only its
+  default "Professional") and a section none of whose entries print
+  (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES)
 
 ## JSON backup export/import
 

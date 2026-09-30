@@ -5,6 +5,7 @@ import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS, contactHref } from './contacts.js';
+import { entryPrints } from './entryPrints.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
 import { DEFAULT_DATE_FORMAT, dateFormatOf } from './dates.js';
@@ -16,9 +17,13 @@ const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
  * What the résumé prints, and only that, goes in the file (R2-007): a hidden section, a hidden
  * entry and each field hidden with its eye stay out, as every other export leaves them out. The
  * file held all of them, and the import brought each one back visible — a hidden phone, job or
- * section printed again. The Backup JSON is the copy that keeps them.
+ * section printed again. The Backup JSON is the copy that keeps them. An entry that prints nothing
+ * (entryPrints: a new section's blank entry, a job with every eye off, a language row holding only
+ * its default "Professional") stays out too, and a section none of whose entries print, as the PDF,
+ * Word, Markdown and ATS text leave them out: other tools printed a lone "Professional" and an empty
+ * job (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES).
  */
-const shownItems = (list) => entries(list).filter((item) => item.visible !== false).map(shown);
+const shownItems = (type, list) => entries(list).filter((item) => entryPrints(type, item)).map(shown);
 
 /** An entry with each field its eye hides blank — a hidden end date is no "Present" either, as the PDF prints none. */
 function shown(item) {
@@ -87,7 +92,8 @@ export function cpwtResumeToJsonResume(resume) {
   const entered = {};
   const asEntered = dateFormatOf(resume.settings) === DEFAULT_DATE_FORMAT;
   for (const s of entries(resume.sections).filter((section) => section.visible !== false)) {
-    const items = shownItems(s.items);
+    const items = shownItems(s.type, s.items);
+    if (!items.length) continue;
     for (const item of asEntered ? items : []) {
       // Not a current entry's kept End Date: the file writes none (R4-DUX-26).
       for (const key of ['startDate', ...(item.current ? [] : ['endDate']), 'date', 'expiry']) {
