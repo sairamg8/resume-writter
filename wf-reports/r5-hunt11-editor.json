@@ -13,12 +13,25 @@
         "4c38ea03e0dd859ef966a6b8e942d5f9e52a6bd9",
         "09abe9d5a67967a6945fe1c4299274d5f862f56c"
       ],
-      "tests": ["tests/pdf/r5hunt11-rename-other-resume.test.mjs"],
+      "tests": [
+        "tests/pdf/r5hunt11-rename-other-resume.test.mjs"
+      ],
       "summary": "Now: the rename box belongs to the résumé it was opened on (useRename records its id at start). When another résumé takes the still-mounted editor (an import landing, Back/Forward), the box closes as that render runs and its draft is dropped; Enter or blur renames nobody, and opening the box again starts from the new résumé's name and renames that one. docs/knowledge/02-architecture.md notes it.",
-      "ci": [36656426698]
+      "ci": [
+        36656426698
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36656426698
+    ],
+    "notes": "Reviewed f558521c, 4c38ea03, 09abe9d5 against b616be3e (the branch is already merged into origin/claude/r4-green via c7b81813). Root cause fixed at the hook: useRename records the id the box was opened on; a different résumé under an open box resets editing during render (React's reset-on-prop pattern, no loop since editing goes false), editing is reported only for the owning résumé, and commit() refuses a draft opened on another id, so neither Enter nor the blur of the unmounting box renames the new résumé. Other caller: ResumeCard, keyed by r.id on the Dashboard, so its id never changes under a mounted box: unaffected. Résumé ids are never reassigned by the store or sync, so a same-résumé sync update never closes the box; a résumé briefly missing (id null) closes it, which is correct. Undo and exports untouched (the hook only gates onRename). Fail-first verified in run 36656426698: the failfirst job reversed f558521c's src diff at head 09abe9d5 and the test file failed 3/3, then passed with it; the same run's tests job passed the named files including 89-rename-fresh-name and 99-import-ui; lint green. The two test-only commits keep the assertions strict (plain values, box found by its label). Nearby per-résumé state checked: ShareLinkModal already tracks resume.id across the mounted Editor. No defect found, no commits added."
+  },
   "baselineFailures": [],
   "notes": "The base given was 79dc42a2; origin/claude/r4-green was at b616be3e when the branch was cut, so that is the base. Fail-first proven on f558521c (the fix commit) in run 36656426698: the test fails with the src change reversed and passes with it; the same run's tests job passed r5hunt11-rename-other-resume, 89-rename-fresh-name, 99-import-ui and knowledge-docs. The two later commits change only the test: the first asserts on plain values (an AssertionError carrying a fake-DOM node ran the reporter out of memory, run 36655756369), the second finds the box by its aria-label, because the Export menu's file <input> is also in the header (run 36656227913)."
 }
