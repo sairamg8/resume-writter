@@ -53,7 +53,8 @@ Its "Link URL" is the link only when it is one the PDF follows (`linkOverride`):
 `https://`, `www.` or a `javascript:` address counts as empty, so the value links as if no override
 were set, in every export.  
 A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`, `|` or "or" once seven
-digits are in — with an extension (`ext. 890`, `x890`, `#890`) as `;ext=890`; the text prints as typed.  
+digits are in — with an extension (`ext. 890`, `x890`, `#890`, also bracketed or after a comma: `(ext 12)`,
+`, ext. 890`) as `;ext=890`; the text prints as typed.  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
 `updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).

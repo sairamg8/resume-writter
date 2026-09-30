@@ -32,6 +32,9 @@ const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key
 
 const digitCount = (s) => s.replace(/\D/g, '').length;
 
+/** What follows a phone's separator when it is the number's extension: " ext. 890", " x12", " (ext 12)". */
+const EXT_AFTER = /^\s*[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*\d+/i;
+
 /**
  * A Phone field's tel: link, or null (under three digits: "On request"). It dials the first number
  * only — the field cut at '/', ',', ';', '|' or "or" once what comes before holds seven digits, so
@@ -42,8 +45,13 @@ const digitCount = (s) => s.replace(/\D/g, '').length;
 function telHref(value) {
   const parts = value.split(/[/,;|]|\bor\b/i);
   let number = parts[0];
-  for (let i = 1; i < parts.length && digitCount(number) < 7; i += 1) number += parts[i];
-  const ext = number.match(/(\d[\s.)\]-]*)(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
+  let i = 1;
+  for (; i < parts.length && digitCount(number) < 7; i += 1) number += parts[i];
+  // An extension set off by a comma ("(555) 123-4567, ext. 890") is this number's, not a second
+  // number; one in brackets ("(ext. 12)") is read as one too. Before, the first lost its extension
+  // and the second had its digits glued onto the number (R5-HUNT12-REVIEW-TEL-EXT-BRACKET-COMMA).
+  if (i < parts.length && EXT_AFTER.test(parts[i])) number += ` ${parts[i]}`;
+  const ext = number.match(/(\d[\s.)\]-]*)[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
   const main = ext ? number.slice(0, ext.index + ext[1].length) : number;
   const digits = main.replace(/\D/g, '');
   if (digits.length < 3) return null;
