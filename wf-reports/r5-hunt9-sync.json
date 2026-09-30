@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt9-sync",
+  "branch": "claude/wf-r5-hunt9-sync",
+  "base": "22fb602e3abb77edfff8874b2152362ed6efa980",
+  "rows": [
+    {
+      "id": "R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED",
+      "title": "If storage is too full for a job or project list's first sync record, the list quietly stops syncing while the icon says 'synced'. Deleted jobs come back, and at sign-out the account's list stays in the browser, where the next account to sign in uploads it",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "e1f592578a635ac0a1a14be7542f8c9c0165c9dc"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-sync-first-record-full.unit.mjs"
+      ],
+      "summary": "Now: when storage refuses the record naming the account (and the stored record is not already that account's), firstSync throws noRoom ('resource-exhausted') before taking the account's items into the list. The list stays as it was, the status is 'error' (it will retry), and the retry that gets through finishes the sync. Deletions are then sent, and at sign-out the list leaves the browser, so no account's jobs are left for the next account to upload. A record already owned by the account, but refused because it would grow, keeps its ownership and behaves as before (R5-HUNT7's tests still pass).",
+      "ci": [
+        36645045773
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "e1f59257 fixes the reported root cause: the first sync ignored a refused sync record, so every later guard took the list for no account's. Its fail-first run 36645045773 is green: 2 tests fail with the diff reversed and pass with it. But the record was still written with a plain setItem, while the list saves through setItemWithRoom, which drops the page pictures' cache and then the backups to make room. The picture cache is written until nothing more fits, so a storage filled only by that cache refused the record at every retry. With e1f59257 the first sync then waited for good (status 'error', retried with backoff), and the account's jobs or projects never reached this browser, where before they at least showed. Fixed in 40a465d7: localMeta.write falls back to setItemWithRoom on a quota error against the browser's localStorage, so the cache (then the backups) makes room for the record as it does for the list. A record that still does not fit is refused as before, with the backups it removed put back, so e1f59257's wait-and-retry path still holds. Test tests/unit/r5-hunt9-sync-record-makes-room.unit.mjs: 2 of its 3 tests fail without the change and all pass with it (run 36648344747)."
+    ],
+    "commits": [
+      "40a465d70c81367c7f3beed4b4c5d2e42e18fdf2"
+    ],
+    "ci": [
+      36645045773,
+      36648344747
+    ],
+    "notes": "Reviewed e1f59257 against origin/claude/r4-green (base 22fb602e). Checked: the throw comes after io.commit, so on a failed record write the cloud already has this browser's items and deletions. The retry re-plans from the unchanged list and record, so it only sends the same thing again and nothing is lost or duplicated. leave() already ran for another account's list, and its record (uid null) is kept. A record already owned by the account keeps the R5-HUNT7 behaviour. The demo seed guard is unchanged. The only other meta.write callers are noteVersions and leave(), and both benefit from room being made. Run 36648344747: the failfirst for 40a465d7 passed; 197/197 tests passed in the sync and storage area (all *sync* unit files, r5-hunt6/7/8/9 sync tests, storage-backup, storage-recovery-durability, recovery-leaves-with-account, job-store-resync, knowledge-docs, 95-sync-privacy-notices, 100-r4-lo-23, 102-r4-dux-02, 71-startup-chunks, 93-picker-pictures, sign-out tests); lint passed. Noted, not fixed (existing behaviour, edge case): in a browser that blocks site storage entirely, localMeta can never write. The first sync now waits with 'error' instead of showing the account's list read-only under a false 'synced'. A memory-only record for that case would be a separate change."
+  },
+  "baselineFailures": [],
+  "notes": "The run with ID 36645045773 did three things: the failfirst check (2 tests fail with the diff reversed, and pass with the fix), a tests run of the 17 collection-sync unit files plus knowledge-docs, sign-out-leave and the 5 sync harness tests, and lint. All passed. The base is origin/claude/r4-green as fetched (22fb602e); it had moved on from ca009d49, the head the task named. No earlier fixer branch existed. docs/knowledge/05-state-auth-sync.md was updated."
+}
