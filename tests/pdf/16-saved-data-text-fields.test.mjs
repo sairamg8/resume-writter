@@ -174,7 +174,9 @@ describe('what reads the loaded résumé reads text', () => {
     const atsText = generateAtsPlainText(r);
     assert.ok(atsText.includes('2024: React, SQL, 3') && atsText.includes('A, B'), atsText);
     const markdown = generateMarkdownResume(r);
-    assert.deepEqual(cpwtResumeToJsonResume(r).skills.map((s) => s.keywords), [['React', 'SQL', '3'], ['12345'], ['Go'], []]);
+    // The fourth group (category and skills both blank after normalizing) prints nothing
+    // (skillGroupPrints), so the file leaves it out as the PDF does (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES).
+    assert.deepEqual(cpwtResumeToJsonResume(r).skills.map((s) => s.keywords), [['React', 'SQL', '3'], ['12345'], ['Go']]);
     const pdf = allText(await read(await render(r)));
     assert.ok(pdf.includes('React, SQL, 3'), pdf);
     const { texts } = await renderDocx(r);
