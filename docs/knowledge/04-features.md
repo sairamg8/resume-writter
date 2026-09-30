@@ -31,7 +31,7 @@ Maps user-facing features → primary code locations.
 | Export menu | `ExportDropdown.jsx` + `hooks/useEditorExports.js` |
 | Share a public link (signed in, Firebase only) | `ShareLinkModal.jsx`, `utils/publicLink.js`; the page `#/r/:shareId` is `pages/PublicResume.jsx` |
 | Design panel | `DesignPanel.jsx` + Colors/Typography/Headings/Dates/Shared |
-| ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` (`extractJobKeywords` reads a pasted posting's keywords, leaving out figures, salaries, web and e-mail addresses and hashtags; `atsHeadingLabel` quotes a section's heading in the report and fix notices, a cleared one by its standard heading marked "(no heading)") |
+| ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` (`extractJobKeywords` reads a pasted posting's keywords, leaving out figures, salaries, web and e-mail addresses and hashtags; `atsHeadingLabel` quotes a section's heading in the report and fix notices, a cleared one by its standard heading marked "(no heading)"; `extractResumeCorpus` holds what the résumé prints for the job match and keyword check — a certificate's Link label only while its URL is set, R5-HUNT9) |
 | Writing helpers | `BulletOptimizerModal.jsx` (`utils/bulletOptimizer.js`), `CoverLetterGeneratorModal.jsx` (`utils/coverLetterGenerator.js`) — rules, no AI service. The STAR Optimizer button in `RichTextEditor.jsx` opens on the bullet or line the caret is in and Apply replaces it; opened from an empty bullet or line, Apply fills that one; with no caret in the field, the result is a new bullet at the end |
 
 ## Design system
@@ -41,7 +41,7 @@ Maps user-facing features → primary code locations.
 | Template picker | Design panel + `setTemplate`; the list is `constants/templateTable.js` |
 | Accent / text / sidebar colors | `DesignPanelColors.jsx` |
 | Fonts + Google fonts | `utils/fonts.js` |
-| Spacing / margins | Design panel keys → `settings` |
+| Spacing / margins | Design panel keys → `settings`; their rows are `NumberRow` (`DesignPanelShared.jsx`): − / + land on the next step below / above, so from a preset's 1.65 Line Height they give 1.6 / 1.7, and a typed Line Height keeps two decimals (1.35 stays 1.35) (R5-HUNT9) |
 | Per-section overrides | `updateSectionSettings`, Section customizer |
 
 ## Cover letter

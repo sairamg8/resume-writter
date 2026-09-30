@@ -53,6 +53,10 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
   // 1.4000000000000001, which was stored and showed in the focused box (R5-HUNT6-LINE-HEIGHT-FLOAT).
   const decimals = (String(step).split('.')[1] || '').length;
   const snap = (n) => Number((Math.round(n / step) * step).toFixed(decimals));
+  // − / + land on the next step below / above, as the header-spacing box does: from a preset's 1.65,
+  // + gives 1.7 and − gives 1.6 (rounding 1.65 ± 0.1 jumped to 1.8 / 1.5, R5-HUNT9-LINE-HEIGHT-STEP-SKIPS).
+  const down = Number(((Math.ceil(current / step - 1e-9) - 1) * step).toFixed(decimals));
+  const up = Number(((Math.floor(current / step + 1e-9) + 1) * step).toFixed(decimals));
   const typed = useTypedNumber({
     shown: Number.isInteger(current / step) && step >= 1 ? current + unit : (step < 1 ? fraction : current.toFixed(0)) + unit,
     // A value saved with float error before the fix above (1.4000000000000001) shows as 1.4 in the
@@ -61,7 +65,9 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
     commit: (str) => {
       // A decimal comma reads as a point: '1,6' is 1.6, not 1 (R5-HUNT7-LINE-HEIGHT-COMMA).
       const n = parseFloat(str.replace(',', '.'));
-      if (!isNaN(n)) onChange(Math.min(max, Math.max(min, snap(n))));
+      // A fractional step keeps a typed value to the box's two decimals (1.35 stays 1.35, not 1.4),
+      // rounding off only float error; a whole step still stores whole numbers.
+      if (!isNaN(n)) onChange(Math.min(max, Math.max(min, step < 1 ? Number(n.toFixed(decimals + 1)) : snap(n))));
     },
   });
 
@@ -69,14 +75,14 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
     <div className="flex items-center justify-between">
       <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onChange(Math.max(min, snap(current - step)))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+        <button onClick={() => onChange(Math.max(min, down))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
         <input
           type="text"
           aria-labelledby={labelId}
           {...typed.inputProps}
           className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
-        <button onClick={() => onChange(Math.min(max, snap(current + step)))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+        <button onClick={() => onChange(Math.min(max, up))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
       </div>
     </div>
   );
