@@ -1016,7 +1016,13 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
  */
 function entriesOf(type, lines, aside) {
   lines = roleEntries(type, lines);
-  if (type === 'certifications' || type === 'awards') lines = lines.map((l) => (l.fields ? l : { ...l, text: bracketYears(l.text) }));
+  // Only an entry's own line: a line of a list of them (below), or one not in a list. The text under
+  // an entry ("• Placed first of 200 teams, 2019, 2020") stays as typed (R5-HUNT10 review).
+  if (type === 'certifications' || type === 'awards') {
+    const listed = lines.length > 0 && BULLET.test(lines[0].text);
+    const itemOf = (l) => (listed ? BULLET.test(l.text) && !((l.depth || 0) > (lines[0].depth || 0)) : !BULLET.test(l.text));
+    lines = lines.map((l) => (l.fields || !itemOf(l) ? l : { ...l, text: bracketYears(l.text) }));
+  }
   // A certificate or an award a list item each (R4-IMP-01): a section that opens with a list item is a
   // list of them, each with its date at its end ("• AWS Certified Solutions Architect – 2022"). A line
   // under an item is its own: its date or named fields, else its text. Before, the first item was the
