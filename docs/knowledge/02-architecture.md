@@ -34,7 +34,10 @@
 - Resume editor syncs URL `:id` to `store.activeId` — whenever the two differ, not only when the
   address changes; an id not in the store → navigate home (`useOpenResume`). `importResume` adds a
   résumé without opening it: the caller's navigation to `/resume/:id` opens it, so an import that
-  finishes after another résumé was opened leaves that one open (R5-HUNT1).
+  finishes after another résumé was opened leaves that one open (R5-HUNT1). The one `<Editor>`
+  stays mounted from one résumé to the next, so its per-résumé state checks the id: the header's
+  rename box (`useRename`) closes, its draft dropped, when another résumé takes the page (an import
+  landing, Back/Forward), never renaming that one (R5-HUNT11).
 - The editor's tab is in the address: `#/resume/:id?tab=design|coverletter|ats` (`useEditorTab`); no
   `?tab=` is the Résumé tab.
 
