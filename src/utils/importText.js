@@ -442,6 +442,12 @@ const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
 /**
+ * A phone with its extension after it: "+1 (555) 123-4567 ext. 890", "(555) 123-4567, x12", "… (ext 12)"
+ * — the number before it. Before, the letters failed PHONE, so the export's own phone with an extension
+ * imported as no phone at all (R5-HUNT12-REVIEW-IMPORT-PHONE-EXTENSION).
+ */
+const PHONE_EXT = /^(.*?\d[\s.)\]-]*),?\s*[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*\d{1,6}[)\]]?$/i;
+/**
  * "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. With its postcode
  * too ("Chicago, IL 60601", "Toronto, ON M5V 2T6"), and then its street before it ("123 Main St,
  * Chicago, IL 60601"): before, the digits failed the test, and the place printed as "Additional Information".
@@ -501,7 +507,8 @@ function contactOf(segment) {
     if (/(^|\.|\/)github\.com\//i.test(s)) return { key: 'github', value: s };
     return { key: 'website', value: s };
   }
-  if (PHONE.test(s) && digits(s) >= 7 && digits(s) <= 15) return { key: 'phone', value: s.replace(/^tel:/i, '') };
+  const number = (PHONE_EXT.exec(s) || [s, s])[1].trim();
+  if (PHONE.test(number) && digits(number) >= 7 && digits(number) <= 15) return { key: 'phone', value: s.replace(/^tel:/i, '') };
   if (PLACE.test(s) || (labelled && /^(location|address|based in)/i.test(labelled[0]))) return { key: 'location', value: s };
   return null;
 }
