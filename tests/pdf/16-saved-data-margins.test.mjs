@@ -133,7 +133,9 @@ describe('a Left / Right margin past the editor\'s 40 mm (VF2-3.2-NB1)', () => {
     assert.equal(r, none, 'no margins stored: the same object, printing the defaults');
     assert.ok(!('marginH' in r.settings) && r.settings.marginV === null);
     const junk = normalizeResume({ ...asFile(resume()), settings: 'junk' });
-    assert.equal(junk.settings, 'junk', 'settings that are not an object are left as they are');
+    // R5-HUNT12-SETTINGS-NOT-OBJECT-CRASHES-NEW-AND-WORD: settings kept as text made /new, Word and the
+    // Header spacing reset throw; they are stored as {} (the defaults the PDF printed), whatever the version.
+    assert.deepEqual(junk.settings, {}, 'settings that are not an object read as none: {}');
     for (const stored of ['abc', '', true, {}]) {
       // Not a number: dropped, so the default prints (VF2-3.2-NB1-NB1, 16-saved-data-spacing).
       const dropped = normalizeResume(asFile(resume({ settings: { marginH: stored } })));

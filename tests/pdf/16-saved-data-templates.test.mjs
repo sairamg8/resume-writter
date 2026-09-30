@@ -67,6 +67,6 @@ describe('template ids as imported files and older builds wrote them (M15, R5-5)
     const junk = normalizeResume({ ...saved(resume(), 'dark'), settings: 'junk' });
     // R5-HUNT12-SETTINGS-NOT-OBJECT-CRASHES-NEW-AND-WORD: settings kept as text made /new, Word and the
     // Header spacing reset throw; they are stored as {} (the defaults the PDF printed), whatever the version.
-    assert.deepEqual([junk.template, junk.settings], ['classic', {}], 'settings that are not an object read as none: {}');
+    assert.deepEqual([junk.template, junk.settings], ['classic', { itemGap: 8 }], 'settings that are not an object read as none, then migrate as none does: Between Items 8 px (v8)');
   });
 });
