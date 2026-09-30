@@ -114,6 +114,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   one, so the import puts a file's project `roles` in the description as a last "Role: …" paragraph;
   a `role` a project holds from an earlier import is not written back, prints no heading
   (`entryPrints`) and counts in no Job Match (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE)
+  A contact goes in only when the résumé prints it (`contactItems`): a website, LinkedIn or GitHub typed
+  as just "https://" or "www.", or an e-mail or phone of only spaces, writes no `basics.url`, profile or
+  field (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT)
 
 ## JSON backup export/import
 
