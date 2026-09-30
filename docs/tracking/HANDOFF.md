@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 04:25 UTC — DEPLOYED by the owner's order (no CI wait): master = `33c7c1da`** = r4-green `21e3ada2` + round 11
+(dash, editor, export, jobs, sync, tools) + old master. One merge conflict in `src/utils/normalizeResume.js` (withFontChoices from
+r4-green + withProjectRoles from hunt11-export): both kept. Cloudflare Workers Build, build and lint green; the full gate on
+`33c7c1da` was still running at deploy — read it and fix anything red first. Not merged: `claude/wf-r5-hunt10-pdf-probe` (review
+probe test only). PRs #3-#8 are superseded. Next hunt rounds base on master `33c7c1da`.
+
 **2026-09-30 01:45 UTC — DEPLOY: PR #8** (`claude/deploy-r10-11ba2ea`, rounds 7-10 = 60 fixes, full gate 36654399622 on `11ba2ea1`
 GREEN) replaces #7 (marked superseded). Owner: merge #8 (or `git push origin 11ba2ea1:refs/heads/master`), then close #4-#7.
 
