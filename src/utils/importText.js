@@ -1153,9 +1153,12 @@ function entriesOf(type, lines, aside) {
     const [field = ''] = datedFields(L.text);
     // A school with its place: the school's name alone ("…, MA" is no degree), over any dated line that
     // names no school ("Study Abroad Program ⇥ Jan 2024 – May 2024" names no degree either).
-    if (schoolPlaced(b)) return !SCHOOL.test(field) ? 'school' : null;
+    // A "High School Diploma" names a degree, no school: "Boston Latin School ⇥ Boston, MA" over it was
+    // no title, the diploma left with no school and the school in the entry above's text (R5-HUNT11 review).
+    const school = SCHOOL.test(field.replace(/\bhigh\s+school\b/gi, ''));
+    if (schoolPlaced(b)) return !school ? 'school' : null;
     if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
-    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
+    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !school) return 'school';
     return null;
   };
   const names = (b, L) => Boolean(way(b, L));
