@@ -82,13 +82,18 @@ export function publicSnapshot(resume) {
     .filter((s) => s && s.visible !== false)
     .map((s) => ({
       ...s,
+      // As the PDF (printedEntries): an entry that prints nothing — a blank one just added, or one with
+      // every field hidden with its eye — takes no place on the page since R5-HUNT7-BLANK-ENTRY, so it
+      // is not copied either. Kept, the share panel counted it under "What is public" ("Experience: 3
+      // entries" over 2) and said the résumé had changed since publishing when only one was added
+      // (R5-HUNT12-SHARE-BLANK-ENTRY-CHANGED-SINCE).
       items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
-        .map((item) => asSectionPrints(withoutHidden(item), s)),
+        .map((item) => asSectionPrints(withoutHidden(item), s))
+        .filter((item) => entryPrints(s.type, item)),
     }))
     // As the PDF (sectionPrints): a section with no shown entry, or whose shown entries are all blank,
-    // prints nothing, not even its title (R4-SYNC-06, R5-HUNT6). A blank entry beside one that prints
-    // stays: the page leaves its gap.
-    .filter((s) => s.items.some((item) => entryPrints(s.type, item)));
+    // prints nothing, not even its title (R4-SYNC-06, R5-HUNT6).
+    .filter((s) => s.items.length);
   const copy = {
     template: resume?.template || 'classic',
     settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),

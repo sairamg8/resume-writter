@@ -89,8 +89,10 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
     setView({ state: 'ready', share: null });
   }, 'Unpublishing');
   const url = share ? publicUrl(share.shareId) : '';
-  // What is public now, or what publishing would make public.
-  const shown = publicSummary(share ? share.copy : publicSnapshot(resume));
+  // What is public now, or what publishing would make public. A copy published before blank entries
+  // were left out still holds them: read through publicSnapshot, it counts what its page prints
+  // (R5-HUNT12-SHARE-BLANK-ENTRY-CHANGED-SINCE).
+  const shown = publicSummary(publicSnapshot(share ? share.copy : resume));
   const current = share ? publishedIsCurrent(share.copy, resume) : true;
 
   return (
