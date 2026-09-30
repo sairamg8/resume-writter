@@ -26,3 +26,20 @@ test('R5-HUNT11: after an edit, the file\'s version with todos: null is kept onc
   assert.equal(third.added, 0);
   assert.equal(third.jobs.length, 2, 'no third Beta card');
 });
+
+// Review: a to-do added then deleted leaves the saved job with todos: [], and the file's null then
+// never matched it, so the import added the job again (it was skipped before the fix above).
+test('R5-HUNT11 review: todos: null in the file matches a saved job whose to-dos were emptied', () => {
+  const first = mergeImport([], file, 1000);
+  const emptied = first.jobs.map((j) => ({ ...j, todos: [] }));
+  const again = mergeImport(emptied, file, 2000);
+  assert.deepEqual([again.added, again.updated, again.skipped], [0, 0, 1]);
+  assert.equal(again.jobs.length, 1, 'no second Beta card');
+});
+
+test('R5-HUNT11 review: a file with todos: [] matches a job saved with todos: null', () => {
+  const first = mergeImport([], file, 1000);
+  const again = mergeImport(first.jobs, [{ ...file[0], todos: [] }], 2000);
+  assert.equal(again.added, 0);
+  assert.equal(again.jobs.length, 1);
+});
