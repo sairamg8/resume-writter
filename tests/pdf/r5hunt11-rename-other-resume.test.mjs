@@ -16,7 +16,8 @@ before(setup);
 after(teardown);
 
 const cv = (id, name) => ({ id, name, updatedAt: 1, settings: {}, sections: [], personal: {} });
-const input = (view) => [...elements(view.container)].find((el) => el.tagName === 'INPUT');
+// The rename box, by its label: the Export menu keeps a file <input> of its own in the header.
+const input = (view) => [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.getAttribute('aria-label') === 'Résumé name');
 const byTitle = (view, title) => [...elements(view.container)].find((el) => el.getAttribute('title') === title);
 const call = (view, el, name, event = {}) => {
   const handler = reactProps(el)?.[name];
