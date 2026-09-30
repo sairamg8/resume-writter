@@ -109,6 +109,15 @@ export const ACTION_VERBS = new Set([
   'moderated', 'persuaded', 'presented', 'promoted', 'publicized', 'published',
   'represented', 'spoke', 'translated', 'wrote',
 
+  // Common strong verbs the list lacked: a statement opening with one read "Verb Missing", and a
+  // power-verb chip went in front of it — "Spearheaded Launched…", "Spearheaded Shipped…", from the
+  // starters' own bullets and the modal's own rewrite tip (R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
+  'adopted', 'attained', 'awarded', 'completed', 'containerized', 'contributed', 'converted',
+  'crafted', 'defined', 'demonstrated', 'drove', 'extended', 'fine-tuned', 'fixed', 'initiated',
+  'instrumented', 'introduced', 'landed', 'launched', 'lectured', 'lowered', 'obtained', 'onboarded',
+  'operated', 'owned', 'piloted', 'ran', 'rebuilt', 'released', 'rescued', 'retained', 'revitalized',
+  'rewrote', 'rolled', 'shaped', 'shipped', 'sold', 'solved', 'taught', 'trimmed', 'tutored', 'won',
+
   // The optimizer's chips and Auto-Fix's replacements, each by its first word
   ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
   ...WEAK_PHRASE_REPLACEMENTS.map(({ replacement }) => replacement.split(' ')[0].toLowerCase()),
