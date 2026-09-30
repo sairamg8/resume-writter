@@ -110,7 +110,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   counts what the renderers draw (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS). A current role's
   "Present" counts only while its End Date's eye is on: a current job with every eye off prints
   nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS)
-- **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
+- **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`); its contact line prints
+  each value as typed (or its Link URL), not the Display label, so the full address stays followable —
+  but a website, LinkedIn or GitHub typed as just "https://" or "www." under a label prints the label,
+  as every other export does (R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL)
 - **ATS Check** — its score items (roles, dates, degrees, skills, grids) and "What a parser reads" (`printedJobs`) read only the entries that print (`entryPrints`): a blank entry just added is no role missing its title or dates, and splits no grouped roles (R5-HUNT11-ATS-SCORES-BLANK-ENTRIES)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema); only
   what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that
