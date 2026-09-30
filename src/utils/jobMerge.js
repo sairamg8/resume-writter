@@ -44,7 +44,8 @@ function asOver(theirs, kept, mine) {
  *   a newer copy (updatedAt) of one → replaces it, in its place
  *   an older copy, or as new        → skipped: a backup never overwrites a later edit
  *   the untouched demo job is here  → the file's copy replaces it (isUntouchedDemoJob)
- *   different, and no time to tell  → added as a copy with a new id: nothing is dropped
+ *   different, and no time to tell  → added as a copy with a new id: nothing is dropped; a copy
+ *                                     an earlier import added, unchanged, is skipped (R5-HUNT10)
  * An entry naming neither a company nor a role (another tracker's 'companyName'/'jobTitle', an
  * empty object) is left out and makes the import `lossy`: each became a blank 'Untitled Company'
  * card, which the job form and the Overview both refuse (R5-HUNT7). `lossy` is true when an entry,
@@ -80,6 +81,13 @@ export function mergeImport(current, incoming, now = Date.now()) {
         if (!isTime(mine.updatedAt) || kept.updatedAt > mine.updatedAt) { jobs[i] = theirs; updated += 1; } else skipped += 1;
         continue;
       }
+    }
+    // The copy an earlier import added has a new id, so the id finds only the edited original; the
+    // same file imported again added one more copy each time (R5-HUNT10). A copy already here is
+    // the same job: skip it.
+    if (i !== undefined && jobs.some((j) => j.id !== kept.id && stable(j) === stable({ ...asOver(theirs, kept, j), id: j.id }))) {
+      skipped += 1;
+      continue;
     }
     const job = i === undefined ? theirs : { ...theirs, id: newId('job') };
     at.set(job.id, jobs.length);
