@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt11-dash",
+  "branch": "claude/wf-r5-hunt11-dash",
+  "base": "79dc42a22b8ec5d753e8e02394f9fbb6986381cd",
+  "rows": [
+    {
+      "id": "R5-HUNT11-NAME-FONT-OBJECT-CRASHES-DESIGN",
+      "title": "A native .json whose settings.nameFont or settings.headingFont is an object crashes the editor when Design -> Typography opens",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["dcadf60f562828c200c6161768b378c189b3ff5b"],
+      "tests": ["tests/pdf/r5hunt11-font-choice-not-text.test.mjs"],
+      "summary": "Now: normalizeResume (new withFontChoices, src/constants/designFonts.js) drops a Name Font or Heading Font that is not text as a résumé comes in (import, load, sync). Typography then shows 'Same as text' with no crash, and the PDF prints in Font Family's font, not '[object Object]'. Documented in docs/knowledge/03-data-model.md.",
+      "ci": [36656804755]
+    },
+    {
+      "id": "R5-HUNT11-CUSTOM-FONT-NOT-TEXT-BREAKS-WORD",
+      "title": "A stored settings.customFont that is not text makes Word export of the résumé and its cover letter always fail",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["3f99ef853338509087b341e5a2a4ba90525d988d"],
+      "tests": ["tests/pdf/r5hunt11-word-custom-font-not-text.test.mjs"],
+      "summary": "Now: wordFonts.js reads customFont the way the PDF does (String(customFont || '').trim()). Word export of the résumé and of the cover letter works, and Typography's Word stand-in note shows again. A falsy or blank value falls back to the picker font.",
+      "ci": [36656804755]
+    },
+    {
+      "id": "R5-HUNT11-SAVED-DESIGN-SETTINGS-UNCHECKED",
+      "title": "Picking a saved design from an imported .json writes its raw settings onto the résumé, so fontSizeBase \"12\" prints the name at 128 pt",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["e0083cf7c3c3c4782ae43de3141e862f3e84cee9"],
+      "tests": ["tests/pdf/r5hunt11-saved-design-settings.test.mjs"],
+      "summary": "Now: ownDesign gives every reader (picker, /new card, card pictures, applyDesign) the saved design's settings after the same checks a résumé's own settings get: Design numbers are stored as numbers within their range, colours as '#rrggbb', and Name Font and Heading Font as text. \"12\" is picked as 12, so the name prints at 20 pt. A value that cannot be read is dropped, and the résumé keeps its own. A design the app saved itself is returned unchanged, as the same object. headerSpacing.js imports became relative so the node harness can load templatePresets. Documented in docs/knowledge/06-templates-export.md.",
+      "ci": [36656804755]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "All three fixes were already on the branch from an earlier fixer. It was cut off before writing this report. I checked each diff against its finding. CI run 36656804755 on e0083cf7 is green: fail-first passed for each of the 3 fix commits (the test fails with the fix undone and passes with it restored), lint passed, and the tests job passed 232/232 over the touched area (tests/pdf/r5hunt11-*, 93-*, 91-design-*, 31-contact-fields, 31-template-switch-colors, 71-startup-chunks, 38-word-fonts-and-sizes, 62-word-heading-styles, 18-cloud-sync-design-deletions, 100/102/104 design tests, r4dsn-saved-design-engine, r5hunt10-*, unit knowledge-docs, json-resume*, colors, dead-code, page-margins). The three commits are already merged into origin/claude/r4-green (276949e5, then 07ea24df). Master's push gate on 33c7c1da (run 36668036603) ended 'cancelled', not green, so someone needs to re-run it. Not a finding: an object customFont is still read as the name '[object Object]' (String()). It no longer crashes, and it falls back like any unknown font. Housekeeping: this shared worktree held an uncommitted change to src/utils/collectionSyncEngine.js left on local branch claude/wf-r5-hunt11-sync. I kept it as a local-only WIP commit on that branch, not pushed."
+}
