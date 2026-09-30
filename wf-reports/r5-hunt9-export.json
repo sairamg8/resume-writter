@@ -8,13 +8,44 @@
       "title": "A newly added Languages section or language row prints a lone 'Professional' under the Languages heading in the preview, PDF and Word; Markdown and ATS text leave the section out, and the ATS Check counts it as printed.",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["829cc00cb71f9354554b78db2c0b4bb4ae6009b9", "bb2bc62342aff9c5daafd9b176824a9667e7ad54"],
-      "tests": ["tests/pdf/r5hunt9-language-proficiency-alone.test.mjs"],
+      "commits": [
+        "829cc00cb71f9354554b78db2c0b4bb4ae6009b9",
+        "bb2bc62342aff9c5daafd9b176824a9667e7ad54"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt9-language-proficiency-alone.test.mjs"
+      ],
       "summary": "Now: a language row prints only when it has a language (entryPrints). A proficiency on its own, such as a new row's default 'Professional', prints nothing. So a Languages section that was just added prints no heading, and an extra 'Add Language' row adds no cell in the PDF/preview (every template, sidebar included) or in Word. The four exports and the ATS Check now agree.",
-      "ci": [36647829013]
+      "ci": [
+        36647829013
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      {
+        "id": "R5-HUNT9-REVIEW-ATS-CORPUS-LANGUAGELESS-PROFICIENCY",
+        "title": "After 829cc00 a language row with no language prints in no export, but the ATS job match's corpus (extractResumeCorpus) still read its proficiency, so a posting's 'Conversational' or 'Professional' was listed as matched from a level printed nowhere.",
+        "severity": "low",
+        "outcome": "fixed",
+        "commits": [
+          "2f9f06f1acf2c1642f7db19f154ac16c86ef17df"
+        ],
+        "tests": [
+          "tests/unit/r5-hunt9-review-ats-corpus-languageless.unit.mjs"
+        ]
+      }
+    ],
+    "commits": [
+      "2f9f06f1acf2c1642f7db19f154ac16c86ef17df"
+    ],
+    "ci": [
+      36648778833
+    ],
+    "notes": "829cc00 fixes the root cause in the one shared rule (entryPrints), which every PDF renderer (printedEntries/sectionPrints, so the preview and all templates incl. the sidebar column), Word (shown), the ATS Check's section/heading items and the public-link snapshot read; Markdown and ATS text already dropped such rows, so the four exports agree. Its failfirst in run 36647829013 is green (fails without, passes with); bb2bc62 only retitles the test's filler section and weakens no assertion. Checked: languages have no per-field eyes, so the hidden-language branch is inert; the editor's delete-confirm (R4-ED-06) does not use entryPrints; no existing node test or Cypress/Playwright spec relies on a lone proficiency printing; r4-green has no src change since the base and merges clean. One gap found and fixed: the job-match corpus read every shown entry, so it now skips entries that do not print (entryPrints); for every other type such an entry holds no printed text, so only the language case changes. Run 36648778833: failfirst on 2f9f06f (2 tests fail without, pass with), 184 ATS/area tests incl. the r5hunt9 PDF test pass, lint green. Not changed (already noted by the fixer): an Experience entry holding only a field its section hides still prints a heading over an empty entry."
+  },
   "baselineFailures": [],
   "notes": "The earlier fixer's commit 829cc00 held the correct fix, but its test also matched the filler Experience heading 'Professional Experience' (run 36647389289 failed on executive, linen and Word). bb2bc62 retitles that filler section to 'Work History'. It weakens no assertion. Run 36647829013: failfirst proves the test fails without the fix and passes with it, and 25 area and guard test files pass (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs among them), plus lint. Not changed, outside this row: the finding's secondary note (an Experience entry holding only a field its section hides, e.g. a start date while Show dates is off, still prints a heading over an empty entry in PDF and Word)."
 }
