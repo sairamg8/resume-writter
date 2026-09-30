@@ -407,8 +407,11 @@ export function insertActionVerb(text, verb) {
  * "alongside" for "with", and "Teamed up with" are the same: the chip wrote "Spearheaded Worked closely
  * with PMs" (R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS). "up" is part of the match, so a verb
  * that takes "with" replaces it too ("Partnered with sales"); the adverb stays ("Partnered closely with PMs").
+ * A noun ending in -ly is no adverb: "Aligned supply with demand forecasts" has "supply" as its object, and
+ * a chip replaces its verb as any ("Spearheaded supply with…"); taken for an adverb, it was left with a tip
+ * that only a verb taking "with" could go there (review of R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS).
  */
-const WITH_LEAD = /^(?:(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?:\s+up(?=\s+with(?![\p{L}\d])))?)(?=(?:\s+(?:[\p{L}-]+ly|together))?\s+(?:with|alongside)(?![\p{L}\d]))/iu;
+const WITH_LEAD = /^(?:(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?:\s+up(?=\s+with(?![\p{L}\d])))?)(?=(?:\s+(?:(?!(?:supply|assembly|family|anomaly|reply|rally|ally|july|italy|monopoly|oligopoly|fly|ply|butterfly)(?![\p{L}\d-]))[\p{L}-]+ly|together))?\s+(?:with|alongside)(?![\p{L}\d]))/iu;
 
 /** The power verbs that take "with" as those do: "Partnered with PMs", not "Spearheaded with PMs". */
 const WITH_VERBS = new Set(['collaborated', 'partnered', 'coordinated', 'liaised', 'aligned', 'negotiated', 'integrated', 'worked', 'teamed']);
