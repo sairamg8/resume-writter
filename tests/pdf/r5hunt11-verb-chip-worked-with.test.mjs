@@ -1,5 +1,5 @@
-// R5-HUNT11-VERB-CHIP-ON-WORKED-WITH, in the real modal: the Spearheaded chip on "Worked with product
-// managers to define the roadmap" wrote "Spearheaded product managers…". Now the statement is left as it
+// R5-HUNT11-VERB-CHIP-ON-WORKED-WITH, in the real modal: the Architected chip on "Worked with product
+// managers to define the roadmap" wrote "Architected product managers…". Now the statement is left as it
 // is and a tip names the verbs that take "with"; the Partnered chip then writes "Partnered with product
 // managers…" and the tip goes. The modal is mounted over tests/pdf/fake-dom.mjs. Fictional data only.
 import { before, after, describe, it } from 'node:test';
@@ -26,7 +26,7 @@ describe('a power verb on "Worked with…" (R5-HUNT11-VERB-CHIP-ON-WORKED-WITH)'
       const area = () => all().find((el) => el.tagName === 'TEXTAREA');
       const button = (text) => all().find((el) => el.tagName === 'BUTTON' && label(el) === text);
       const tip = () => all().find((el) => el.tagName === 'P' && /Rewrite it as something you did/.test(el.textContent));
-      view.act(() => reactProps(button('Spearheaded')).onClick());
+      view.act(() => reactProps(button('Architected')).onClick());
       assert.equal(reactProps(area()).value, start, 'the statement is left as it was');
       assert.ok(tip(), 'a tip asks for a rewrite');
       assert.match(label(tip()), /takes “with”/);
