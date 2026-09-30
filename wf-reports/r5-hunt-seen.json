@@ -36,6 +36,10 @@
   "9": {
    "confirmed": 14,
    "note": "all 9 areas; import 3 were regressions from round 8's import fixes"
+  },
+  "10": {
+   "confirmed": 4,
+   "note": "boards and editor dry (1 finding each refuted); import/export/tools running"
   }
  },
  "seen": [
@@ -200,6 +204,10 @@
   "Text/PDF/Word import (no heading styles): a Title-Case sub-heading inside a job that is also a section name starts a new section and swallows every later job",
   "A newly added Languages section or language row prints a lone 'Professional' under the Languages heading in the preview, PDF and Word; Markdown and ATS text leave the section out, and the ATS Check counts it as printed.",
   "STAR Optimizer's power-verb chip puts a second verb in front of a statement that already starts with a strong past-tense verb missing from the list ('Spearheaded Launched…', 'Spearheaded Shipped…')",
-  "ATS Check's 'Entries printed side by side' warning names a custom section whose title was cleared by its internal type id '\"custom\"', while its own fix notice calls it '\"Untitled\"'"
+  "ATS Check's 'Entries printed side by side' warning names a custom section whose title was cleared by its internal type id '\"custom\"', while its own fix notice calls it '\"Untitled\"'",
+  "A native .json whose personal (or an entry's) hiddenFields is not a list crashes the editor on every open, and its preview and PDF never build",
+  "PDF: a Skills title in Bars, Stacked or Tags style could be left alone at the foot of a page, because the first group's category (kept with its skills since R5-HUNT8) moved to the next page and the title never kept room for it (main column and the Sidebar's dark column)",
+  "When storage has room for a job or project list's small sync record but not for the list itself, the next reload deletes those jobs or projects from the account's cloud and from every device",
+  "Re-importing a jobs file whose entries have ids but no numeric updatedAt adds one more duplicate of every job touched since, on every import"
  ]
 }
