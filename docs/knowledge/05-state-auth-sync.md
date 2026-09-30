@@ -224,7 +224,9 @@ before. Storage too full to take the record with what was kept aside: the list g
 room, and when the record is still refused the list stays, still that account's, and another
 account's first sync waits (retried) rather than taking it in (R5-HUNT7). A first sync whose record (naming the account the list now belongs to) storage refuses is not done
 either: the list is left as it was and the sync says it will try again, instead of showing "synced"
-while no change was sent and the account's list stayed behind at sign-out (R5-HUNT9). Two guards against losing the account's items: a first visit's demo
+while no change was sent and the account's list stayed behind at sign-out (R5-HUNT9). The record makes room as the list does (`setItemWithRoom`: the page
+pictures' cache goes first, then the backups), so a storage filled only by that cache no longer keeps
+the first sync waiting for good (R5-HUNT9 review). Two guards against losing the account's items: a first visit's demo
 job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
 never wins over the account's copy of it, though dated newer, and never joins an account that
 already has items or deletions of its own; and the demo deleted on a browser before its first

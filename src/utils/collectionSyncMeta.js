@@ -4,6 +4,7 @@
 // `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
 // held-back notice (items the cloud will not take) and each list's sync status live here too, as
 // tiny stores the board and job pages read (SyncHeldNotice, the workspace's sync icon).
+import { isQuotaError, setItemWithRoom } from './storageBackup.js';
 
 /** Where each list's record lives. */
 export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
@@ -38,12 +39,23 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
       }
     },
     write(meta) {
+      const raw = JSON.stringify(meta);
       try {
-        storage()?.setItem(key, JSON.stringify(meta));
+        storage()?.setItem(key, raw);
         return true;
-      } catch {
-        // Full or blocked: see above.
-        return false;
+      } catch (e) {
+        // Full: the page pictures' cache and the backups make room, as they do for the list itself
+        // (setItemWithRoom). A plain setItem left the record refused while only that cache filled
+        // storage, and a first sync whose record is refused waits — retried, and never getting
+        // through, the account's list never reached this browser (R5-HUNT9 review). Blocked, or
+        // still no room: see above.
+        if (!isQuotaError(e) || storage() !== globalThis.localStorage) return false;
+        try {
+          setItemWithRoom(key, raw);
+          return true;
+        } catch {
+          return false;
+        }
       }
     },
   };
