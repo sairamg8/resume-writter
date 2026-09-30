@@ -124,7 +124,7 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
   a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
-  `##` headings, `###` entries, a deeper heading under an entry a grouped role; a link as "label
+  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10), a deeper heading under an entry a grouped role; a link as "label
   (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
@@ -133,8 +133,11 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom — but in a file with no
   heading marks, a Title-Case "Key Achievements", "Tech Stack" or "Tools" inside a job or project with
   another dated entry after its own lines (past a blank line or a list; no "Label: value" line) is that
-  entry's part, no section (R5-HUNT9); several years in brackets ("(2019, 2021)") date a line only in
-  Certifications and Awards, or (not in Education) first in its section or over a list; entries found by
+  entry's part, no section (R5-HUNT9) — a second such label on the way ("Key Achievements", then "Tech
+  Stack") too, the search going past it to a job's range, but not past one with a range-dated line of its
+  own, a section (R5-HUNT10); several years in brackets ("(2019, 2021)") date a line only in
+  Certifications and Awards (there, several after a tab or a comma, "Dean's List ⇥ 2014, 2015", are put
+  in brackets, no issuer — an entry's own line, not the text under it; R5-HUNT10), or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above

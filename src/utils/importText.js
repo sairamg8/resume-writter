@@ -413,6 +413,24 @@ function bracketDates(text) {
   return dates.length > 1 && dates.every((d) => readDateRange(d));
 }
 
+/**
+ * A certificate's or an award's line with several dates after it, not in brackets — "Dean’s List ⇥
+ * 2014, 2015, 2016", "Dean’s List, 2014 and 2015" — with them in brackets, as bracketDates reads them:
+ * "Dean’s List (2014, 2015, 2016)". Before, trailingDate took the last year for its date and the
+ * others for its issuer (R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER). Else the text as it is.
+ */
+function bracketYears(text) {
+  for (const sep of text.matchAll(/\t|\s[-–—|]\s|,\s/g)) {
+    const before = text.slice(0, sep.index).trim();
+    const after = text.slice(sep.index + sep[0].length).trim();
+    // Not inside brackets: "Dean’s List (2017, 2018, 2019)" is bracketed already.
+    if (/[()]/.test(after) || (before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) continue;
+    const dates = after.split(/\s*[,;&]\s*|\s+and\s+/);
+    if (before && dates.length > 1 && dates.every((d) => readDateRange(d))) return `${before} (${after})`;
+  }
+  return text;
+}
+
 // ── Contacts ─────────────────────────────────────────────────────────────────
 
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
@@ -998,6 +1016,13 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
  */
 function entriesOf(type, lines, aside) {
   lines = roleEntries(type, lines);
+  // Only an entry's own line: a line of a list of them (below), or one not in a list. The text under
+  // an entry ("• Placed first of 200 teams, 2019, 2020") stays as typed (R5-HUNT10 review).
+  if (type === 'certifications' || type === 'awards') {
+    const listed = lines.length > 0 && BULLET.test(lines[0].text);
+    const itemOf = (l) => (listed ? BULLET.test(l.text) && !((l.depth || 0) > (lines[0].depth || 0)) : !BULLET.test(l.text));
+    lines = lines.map((l) => (l.fields || !itemOf(l) ? l : { ...l, text: bracketYears(l.text) }));
+  }
   // A certificate or an award a list item each (R4-IMP-01): a section that opens with a list item is a
   // list of them, each with its date at its end ("• AWS Certified Solutions Architect – 2022"). A line
   // under an item is its own: its date or named fields, else its text. Before, the first item was the
@@ -1198,7 +1223,12 @@ function entriesOf(type, lines, aside) {
       // Its date and named fields under it — a line of their own marked an entry too (a Word heading one
       // level deeper: Heading 3 "Mar 2021 – Present" under Heading 2 "Senior Engineer | Acme Corp").
       const under = (n) => (n.hint !== 'entry' ? Boolean(n.date) : Boolean(n.date?.first)) || isMetaLine(n.text);
-      while (i < info.length && !info[i].bullet && !info[i].gap && header.length < 3 && under(info[i])) header.push(info[i++]);
+      // Past a blank line too, a line of its dates ("### Senior Engineer — Acme Corp", a blank line, "Jan
+      // 2020 – Present": Markdown with a blank line around each heading). Before, the date line began an
+      // untitled entry of its own, with the entry's place and text, the titled one left undated
+      // (R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING-SPLITS-ENTRY). Not a sentence of its text.
+      const dateLine = (n) => Boolean(n.date && (n.date.first || pieces(n.text).length > 1));
+      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
     }
@@ -1454,21 +1484,38 @@ export function resumeFromText(input) {
     if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
     return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
   };
+  const isAchievement = (text) => /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+  // Such a label itself: Title Case, not over a rule, of an achievement or skills title.
+  const subLabel = (n) => {
+    const t = n.text.replace(/\s*:$/, '').trim();
+    return !n.ruled && !isCaps(t) && headingLike(n) && (isAchievement(t) || headingType(t) === 'skills');
+  };
   const partInEntry = (l, text, i) => {
     if (!entriesIn(within) || l.ruled || isCaps(text) || headingAt.has(i - 1)) return false;
-    const achievement = /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+    const achievement = isAchievement(text);
     if (!achievement && headingType(text) !== 'skills') return false;
     // Only a line past the label's own block (after a blank line or a list) that is no "Label: value"
     // line: a next entry's. A dated line of the section's own ("Technical Skills" over "Languages:
     // Python" and "Certified: AWS Solutions Architect, 2021") kept it no section, the skills a bogus job.
+    // Another such label on the way ("Key Achievements", then "Tech Stack") is the same entry's part and
+    // does not end the search: it stopped there, and the next job, behind it, went into an Awards
+    // section (R5-HUNT10-TITLECASE-SUBHEADING-PAIR-SWALLOWS-JOBS). Past it only a job's range counts: a
+    // "Skills" section's own, then a "Key Achievements" one of awards dated by a year, is two sections.
+    // Such a label's own block (the lines right under it) is its own, as the first label's is: a range
+    // there ("Achievements" over "President, CS Club ⇥ 2014 – 2016") makes it a section of its own
+    // entries, so this one too. Before, it read as a next job, and a "Skills" section over it went into
+    // the last job's text, or became a job called "Technical Skills" (R5-HUNT10 review).
     let past = false;
-    for (let j = i + 1; j < lines.length && !headingLike(lines[j]) && !lines[j].ruled; j += 1) {
+    let own = false;
+    let range = achievement;
+    for (let j = i + 1; j < lines.length && (!headingLike(lines[j]) || subLabel(lines[j])) && !lines[j].ruled; j += 1) {
       const n = lines[j];
-      if (n.gap) past = true;
-      if (BULLET.test(n.text)) { past = true; continue; }
-      if (!past || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
+      if (subLabel(n)) { range = true; past = false; own = true; continue; }
+      if (n.gap) { past = true; own = false; }
+      if (BULLET.test(n.text)) { past = true; own = false; continue; }
+      if ((!past && !own) || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
       const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
-      if (dates.some((d) => !achievement || (d.start && (d.end || d.current)))) return true;
+      if (dates.some((d) => !range || (d.start && (d.end || d.current)))) return !own;
     }
     return false;
   };

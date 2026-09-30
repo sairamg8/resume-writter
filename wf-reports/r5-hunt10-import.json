@@ -1,0 +1,82 @@
+{
+  "cluster": "r5-hunt10-import",
+  "branch": "claude/wf-r5-hunt10-import",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-TITLECASE-SUBHEADING-PAIR-SWALLOWS-JOBS",
+      "title": "Text/PDF/Word import (no heading styles): two Title-Case sub-labels in a row in a job made the first an Awards section that swallowed every later job",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "8bfdce309d09f28ea7637839def2eac9e77794f2"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt10-titlecase-subheading-pair.unit.mjs"
+      ],
+      "summary": "Now: partInEntry's search for the next dated job goes past another Title-Case achievement/skills label (\"Tech Stack\", \"Tools\", \"Technologies\") of the same job, so both labels stay the job's text and the next job stays in Experience; past such a label only a job's date range counts, so a Title-Case Skills section followed by a Key Achievements section of year-dated awards is still two sections. A 'Projects' label inside a job is not covered (it cannot be told from a Projects section of ranged projects).",
+      "ci": [
+        36651617210,
+        36652001150
+      ]
+    },
+    {
+      "id": "R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING-SPLITS-ENTRY",
+      "title": "Markdown import: a blank line between a '### ' entry heading and its date line split every entry in two",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "01cd8b731f44dca8a7005b17d25b929c5073b412"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt10-md-blank-line-after-entry-heading.unit.mjs"
+      ],
+      "summary": "Now: an entry heading keeps its date line past a blank line (a line that starts with its date, or a date line of several fields such as 'Austin, TX | Jan 2020 – Present'), so each job and school is one entry with its title, dates and text; a paragraph after the blank line is still the entry's text.",
+      "ci": [
+        36651617210,
+        36652001150
+      ]
+    },
+    {
+      "id": "R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER",
+      "title": "Text/PDF/Word import: an award dated by several years not in brackets got the earlier years as its Issuer",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "94e03a3362f4cd80eee697fcbb2e1c76370bd3aa",
+        "55143ea6bef121e36798312729c7d5463e345572"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt10-award-unbracketed-years.unit.mjs",
+        "tests/unit/r5-hunt8-award-multi-year-paren.unit.mjs"
+      ],
+      "summary": "Now: in Awards and Certifications, several dates after a tab, a dash or a comma ('Dean's List ⇥ 2014, 2015, 2016', 'Dean's List, 2014 and 2015') are put in brackets with the title, as the bracketed form already reads ('Dean's List (2014, 2015, 2016)'): no issuer made of years, no year dropped, and the line is its own entry even first in the section. Years already in brackets stay as typed (the second commit, caught by the existing R5-HUNT8 test in run 36651617210).",
+      "ci": [
+        36651617210,
+        36652001150
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT10-TITLECASE-SUBHEADING-PAIR-SWALLOWS-JOBS (8bfdce30): the search past a second Title-Case label set past=true at the label, so that label's own lines counted as the next entry's. A Title-Case Skills section followed by an Achievements/Key Achievements/Recognitions section whose first award is dated by a range ('President, CS Club \\t 2014 - 2016') regressed against r4-green: the skills went into the last job's description, or ('Technical Skills' over 'Languages: ...') became a bogus job named 'Technical Skills'. Fixed in d34a8023: a later label's own block is its own, as the first label's is; a range there ends the search (the label heads its own section). The job's two-label cases (both orders) still pass.",
+      "R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER (94e03a33): bracketYears ran on every line of an Awards/Certifications section, so an entry's description text was rewritten ('- Placed first of 200 teams, 2019, 2020' became '(2019, 2020)'; a line under a list item likewise). Fixed in c1330a10: only an entry's own line is bracketed (a top-level item of a list of them, or a non-bullet line).",
+      "Checked, no change needed: R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING (01cd8b73) only touches the hint==='entry' header loop (Markdown '###', Word headings); a line past the blank line is taken only if it starts with its date or is a several-field date line, and an entry heading with a date-first line is still refused by under(); a paragraph after the blank line stays text. '### Acme Corp' + blank + '*Senior Engineer* | Jan 2020 - Present' and a Projects/Certifications '###' entry with 'Amazon | 2021' are now one entry each (were split on r4-green).",
+      "Checked: 55143ea6 (years already in brackets skipped) is right; 'Dean's List - UC Berkeley - 2014, 2015' gives issuer 'UC Berkeley (2014, 2015)', exactly as the already-bracketed form reads on r4-green (consistent, no year lost)."
+    ],
+    "commits": [
+      "d34a80237300a8d90e0cbaf47826f08ead12349f",
+      "c1330a1015fd5c2ee7541fb1f566973ac52bd80a"
+    ],
+    "ci": [
+      36651617210,
+      36652001150,
+      36652645681
+    ],
+    "notes": "Fixer's fail-first runs verified in the logs (each test failed with its commit's diff reversed, then passed). Run 36652645681 on c1330a10: fail-first green for both review commits (tests/unit/r5-hunt10-review-sublabel-own-dated-block.unit.mjs: fail 1 without d34a8023; tests/unit/r5-hunt10-review-award-description-years.unit.mjs: fail 2 without c1330a10) and the touched-area run (every import unit, r5-hunt*, pdf import round-trips, knowledge-docs) 598/598, lint green. The full gate was not run. Knowledge doc 06 updated with both refinements. Pre-existing, not from this branch, not fixed here (for the next hunt): in a text import, an all-caps degree line under a school ('UC Berkeley \\t 2012 - 2016' over 'B.S. CS', likewise on r4-green) is read as a heading: the degree goes into a custom 'Additional Information' section and the school's name becomes the degree with no institution. Probing was done with small node scripts calling resumeFromText; no test was run on this machine."
+  },
+  "baselineFailures": [],
+  "notes": "Base: origin/claude/r4-green had moved to 2a3f9dcc (task named 0373b9e9; importText.js unchanged between them). No earlier fixer branch existed. Run 36651617210: fail-first proven for all three first commits; the touched-area test run had one failure (r5-hunt8-award-multi-year-paren), fixed by 55143ea6, whose fail-first and the full touched-area run (every import unit and pdf round-trip test plus knowledge-docs) are green in run 36652001150. The full gate was not run. One new unit file was also run once on this machine by mistake (node --test); all results above come from CI."
+}
