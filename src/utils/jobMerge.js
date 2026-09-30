@@ -37,10 +37,15 @@ function asOver(theirs, kept, mine) {
   return out;
 }
 
-/** `list` (to-dos or interviews) with the id `mine` gave each one the file gave none. */
+/**
+ * `list` (to-dos or interviews) with the id `mine` gave each one whose id completeJob made up: the
+ * file gave none, one that is not text (another tracker's 1, 2, 3) or one an earlier entry used.
+ * Asking only whether the file gave an id kept the made-up one, and each import of a file with
+ * numeric ids added the job again (R5-HUNT11-IMPORT-SUBITEM-IDS-DUPLICATE).
+ */
 function idsFrom(list, given, mine) {
   const had = Array.isArray(given) ? given : [];
-  return list.map((e, n) => (had[n]?.id || !mine?.[n] ? e : { ...e, id: mine[n].id }));
+  return list.map((e, n) => (e.id === had[n]?.id || !mine?.[n] ? e : { ...e, id: mine[n].id }));
 }
 
 /**
