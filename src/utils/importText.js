@@ -1346,7 +1346,10 @@ function entriesOf(type, lines, aside) {
           onRole(role);
         } else if (type === 'experience' && lengthGroup && cur?.header[0]?.group === lengthGroup && run(body.slice(-1)) && one(body.at(-1))
           // The next role, over its dates: not a next employer's job, its company over its role ("Microsoft" over "Senior Engineer").
-          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text))) {
+          // A role's text over it is no employer: "Leading the storage team" has words in lower case a
+          // name has none of (R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY: it was the next role's company).
+          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text)
+            && !body.at(-2).text.split(/\s+/).some((w) => /^\p{Ll}+$/u.test(w) && !SMALL.has(w)))) {
           onRole(body.pop());
         } else {
           lengthGroup = null;
