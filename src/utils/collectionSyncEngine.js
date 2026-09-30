@@ -278,6 +278,14 @@ export function createCollectionSync({
     const { uid } = user;
     let sets = [];
     try {
+      // The versions this browser knew BEFORE the read: every tab shares the record, and another
+      // tab's flush landing while this one reads writes it ahead of the copy read here. An item that
+      // tab had just added then looked known here and removed from the cloud, and was dropped (the
+      // other tab took the shorter list and deleted it from the account); one it had just deleted
+      // looked changed elsewhere, and came back — as the résumés' engine guards with its `known`
+      // (R5-HUNT11-SYNC-COLLECTION-FIRST-SYNC-READS-RECORD-AFTER-CLOUD).
+      const early = meta.read();
+      const seen = early.uid === uid ? early.versions : {};
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
@@ -291,10 +299,10 @@ export function createCollectionSync({
       const local = [...own, ...stash.items.filter((x) => !own.some((o) => o.id === x.id))];
       // An id the cloud cannot name is in no copy of it: its version (a nested document an older
       // build wrote) would have the job dropped here as removed from the cloud.
-      const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? record.versions : {}) })
+      const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? seen : {}) })
         .filter(([id]) => cloudCanName(id)));
       const ownIds = new Set(own.map((x) => x.id));
-      const localDeletes = [...stash.deletes, ...(mine ? Object.keys(record.versions).filter((id) => !ownIds.has(id)) : [])]
+      const localDeletes = [...stash.deletes, ...(mine ? Object.keys(seen).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
       // The order the cloud held when this browser last synced, so a move made here since (offline,
       // signed out, a failed sync) is told from one made on another device: this account's own

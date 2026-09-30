@@ -217,7 +217,11 @@ list — the account it last synced with, the versions and the order its cloud h
 aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
 before the order was kept reads with none). The order merges on that base: a move made before a
 first sync (offline, signed out, a failed sync) leads when the cloud's order is still the base's,
-and the cloud's order leads otherwise (R2-140). Signing out (or another account signing in) takes
+and the cloud's order leads otherwise (R2-140). The first sync takes the record's versions before
+it reads the cloud, as the résumés' takes `known` (R5-HUNT6): every tab shares the record, and
+another tab's flush landing during the read no longer has a job or project that tab just added
+dropped (and then deleted from the account), or one it just deleted brought back
+(R5-HUNT11-SYNC-COLLECTION-FIRST-SYNC-READS-RECORD-AFTER-CLOUD). Signing out (or another account signing in) takes
 the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
 aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
 before. Storage too full to take the record with what was kept aside: the list goes first to make
