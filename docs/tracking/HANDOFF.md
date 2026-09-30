@@ -1,5 +1,12 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 04:25 UTC — DEPLOYED BY THE OWNER: master = `33c7c1da`.** PR #8 (rounds 7-10, gated 11ba2ea1) was merged at 04:15,
+and the owner then pushed `claude/deploy-all-0930` to master: it also merges the round-11 branches dash, editor, export, jobs,
+sync and tools **before their second-agent reviews** (a usage limit, reset 04:00, killed review:sync, review:jobs, review:editor,
+fix:dash, fix:import and fix:tools mid-run). Master's own push gate is run 36668036603. If it's red, fix it first: the live site
+has the failure. r4-green was fast-forwarded to master. Resumed: wf_8ef0f8a5-e12 and wf_93d8eea6-b09, which finish the round-11
+fixes and reviews. A review fix now lands on r4-green, and needs a new deploy PR.
+
 **2026-09-30 01:45 UTC — DEPLOY: PR #8** (`claude/deploy-r10-11ba2ea`, rounds 7-10 = 60 fixes, full gate 36654399622 on `11ba2ea1`
 GREEN) replaces #7 (marked superseded). Owner: merge #8 (or `git push origin 11ba2ea1:refs/heads/master`), then close #4-#7.
 
