@@ -1,0 +1,93 @@
+{
+  "cluster": "r5-hunt12-tools",
+  "branch": "claude/wf-r5-hunt12-tools",
+  "base": "8e646a61482550ab273ab43234daf732c83d4507",
+  "rows": [
+    {
+      "id": "R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME",
+      "title": "Auto-Fix wrote broken grammar after a non -ly adverb or a role verb ('Was later led…', 'Became led payroll', 'Was put oversaw QA')",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "7b1173ad41fd71ba34c5fc457518c583019d3cea"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-autofix-helper-gap.unit.mjs"
+      ],
+      "summary": "Now: 'Was later tasked with rebuilding the API' -> 'Later led rebuilding the API', 'Became responsible for payroll' -> 'Led payroll', 'Was put in charge of QA' -> 'Oversaw QA', 'Held responsible for audits' -> 'Led audits'; a negated one ('Was not put in charge of QA') is left as it is, and the power-verb chip replaces the whole opening ('Spearheaded payroll', not 'Spearheaded Became responsible for payroll').",
+      "ci": [
+        36673129396
+      ]
+    },
+    {
+      "id": "R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS",
+      "title": "A power-verb chip on 'Worked closely with…', 'Worked alongside…' or 'Teamed up with…' wrote two verbs in a row",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "e20916c26bafe74822fdc16d6e120228de15f0be"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-verb-chip-worked-closely-with.unit.mjs"
+      ],
+      "summary": "Now: these openings go as 'Worked with…' does: a chip verb that takes 'with' replaces the verb and keeps the adverb ('Partnered closely with PMs…', 'Partnered with sales'); any other leaves the bullet and shows the rewrite tip.",
+      "ci": [
+        36673129396
+      ]
+    },
+    {
+      "id": "R5-HUNT12-VERB-CHIP-ALIGNED-NEGOTIATED-WITH",
+      "title": "A power-verb chip on 'Aligned with…', 'Negotiated with…' or 'Integrated with…' wrote 'Spearheaded with…'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "0cf108f4c9b77fac0f5686fbb522f17a09f92b61"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt12-verb-chip-aligned-with.unit.mjs"
+      ],
+      "summary": "Now: these verbs + 'with' take only a chip verb that takes 'with' ('Partnered with stakeholders…'); 'Spearheaded' leaves the bullet and shows the rewrite tip, as for 'Coordinated with…'. Without 'with' they are replaced as before.",
+      "ci": [
+        36673129396
+      ]
+    },
+    {
+      "id": "R5-HUNT12-SHARE-BLANK-ENTRY-CHANGED-SINCE",
+      "title": "Share panel counted a blank entry as public and called adding one a change since publishing",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "ed43d7522ad802620e15ce903ca2f38b5a790f08",
+        "d2ded013a19212af35fb64f269787b028d7d021a"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt12-share-blank-entry.test.mjs",
+        "tests/pdf/r5hunt6-review-public-blank-section.test.mjs"
+      ],
+      "summary": "Now: the public copy leaves out entries that print nothing (blank, or every field hidden), as the PDF has since R5-HUNT7-BLANK-ENTRY, so 'What is public' counts only printed entries and adding a blank entry is no change; a copy published earlier with a blank entry reads as current and is counted through publicSnapshot. The R5-HUNT6 guard test that expected the blank entry kept was stale (the PDF draws none since R5-HUNT7) and now expects it dropped while the section stays.",
+      "ci": [
+        36673129396,
+        36673565070
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME was incomplete: an adverb after the role verb still broke the grammar. Auto-Fix wrote 'Became solely responsible for payroll' -> 'Became solely led payroll' and 'Was made fully responsible for the budget' -> 'Was made fully led the budget', and the chip wrote 'Spearheaded Became solely responsible for payroll'. The chip also wrote 'Spearheaded Got involved in hiring' and 'Spearheaded Became involved in hiring', though Auto-Fix already rewrote those. Fixed in 53790179: the adverb is kept in front of the new verb ('Solely led payroll'; chip: 'Solely spearheaded payroll'), the chip replaces 'Became/Got involved in' ('Spearheaded hiring'), and a negated one ('Was not made solely responsible for billing') is still left as it is.",
+      "R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS introduced a regression: any word ending in -ly before 'with' counted as an adverb, so a statement whose object is a noun ending in -ly ('Aligned supply with demand forecasts', 'Coordinated assembly with 3 plants') was treated as 'Worked closely with'. A chip such as Spearheaded then left it unchanged, with a wrong tip saying only a verb that takes 'with' could go there. Before the fix it wrote 'Spearheaded supply with...'. Fixed in a909ff36: nouns ending in -ly (supply, assembly, family, anomaly, reply, rally, ally, July, Italy, monopoly, ...) are not taken for adverbs."
+    ],
+    "commits": [
+      "537901797159b13093de23996354fabbdf82f769",
+      "a909ff3687009c24dee05659d86df7afa1618742"
+    ],
+    "ci": [
+      36674975577,
+      36674995216
+    ],
+    "notes": "Checked all four rows against origin/claude/r4-green (8e646a61). The failfirst runs are green: 36673129396 for 7b1173ad, 0cf108f4 and e20916c2, and 36673565070 for ed43d752 with the corrected test from d2ded013. The earlier tests-job failure in 36673129396 was only the share test's id bug, fixed in d2ded013. The share fix (ed43d752) is correct at the root. The public copy now drops entries that print nothing, as the PDF's printedEntries does. publishedIsCurrent passes both sides through publicSnapshot, so a copy published earlier with a blank entry reads as current. The panel counts an older copy through publicSnapshot, and the stale R5-HUNT6 guard test was rightly updated. One small difference remains: the copy tests entryPrints after the section's Show dates / Show location blanking, while the PDF tests the raw entry. An entry whose only content is a date under Show dates off therefore still leaves an empty gap in the PDF but none on the public page. The copy has had this rule for sections since R5-HUNT6, and it counts no entry and no change wrongly, so it is not reported. Run 36674975577: failfirst proved 53790179 (3 tests fail without, pass with) and a909ff36 (fail without, pass with), and the named tests all passed: the bullet optimizer unit tests (bullet-optimizer*, r4-*, r5-hunt9/10/11/12 chip and Auto-Fix), knowledge-docs, 104-r5-opt-sw-wt-04, and the share tests r5hunt12-share-blank-entry and r5hunt6-review-public-blank-section. Run 36674995216 is green on the optimizer's pdf tests: r4cl-optimizer-chips, r5hunt11-verb-chip-worked-with, 77-ats-panel, 102-r4-dux-09, 103-r4-dvis-23, 104-r5-opt-01, 104-r5-opt-dux-22, plus r4-lo-11/14/15, r5-hunt7-ats-jd-unit-figures, ats-checker and touch-reveal. Seen and not fixed (another row's scope, not a defect in these fixes): 'Worked extensively on the SDK' or 'Worked hand in hand with PMs' plus a chip still reads 'Spearheaded Worked extensively on...', because a leading 'Worked' with anything other than 'with' after it takes the chip in front. No accessibility issues noted."
+  },
+  "baselineFailures": [],
+  "notes": "Run 36673129396: failfirst proved 7b1173ad, 0cf108f4, e20916c2 (fail without, pass with); the share test failed with its fix too because sample() built new section ids on each call (a test bug, fixed in d2ded013). Run 36673565070 on d2ded013: failfirst ed43d752 with the corrected test (fails without, passes with) and the share/public-link, knowledge-docs, 31-contact-fields and 71-startup-chunks tests all green. The bullet optimizer's existing tests (bullet-optimizer*, r4-*, r5-hunt9/10/11 chip and Auto-Fix tests) all passed in run 36673129396. No accessibility issues noted."
+}

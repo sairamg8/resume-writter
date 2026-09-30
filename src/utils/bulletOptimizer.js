@@ -376,6 +376,18 @@ export function insertActionVerb(text, verb) {
     const particle = after.match(['took', 'take'].includes(verbKey(first[0])) ? TOOK_PARTICLE : VERB_PARTICLE);
     return lead + verb + after.slice(particle ? particle[0].length : 0);
   }
+  // A verb that puts someone in the role goes with a phrase that is no verb, as in Auto-Fix: "Became
+  // responsible for payroll" read "Spearheaded Became responsible for payroll"
+  // (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME). An adverb after it stays, in front of the chip's verb,
+  // as Auto-Fix keeps it: "Became solely responsible for payroll" read "Spearheaded Became solely
+  // responsible for payroll", and "Got involved in hiring" "Spearheaded Got involved in hiring"; now
+  // "Solely spearheaded payroll" and "Spearheaded hiring" (review of R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+  const role = rest.match(PUT_IN_ROLE_OPENING);
+  if (role) {
+    const adverb = role[1];
+    const opening = adverb ? `${adverb[0].toUpperCase()}${adverb.slice(1).toLowerCase()} ${verb[0].toLowerCase()}${verb.slice(1)}` : verb;
+    return lead + opening + rest.slice(role[0].length);
+  }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
     // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
@@ -389,9 +401,17 @@ export function insertActionVerb(text, verb) {
 
 /**
  * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
- * "Collaborated with", "Partner with", "Coordinate with", "Liaised with", "Teamed with".
+ * "Collaborated with", "Partner with", "Coordinate with", "Liaised with", "Teamed with", and the other
+ * verbs of WITH_VERBS: "Aligned with stakeholders" read "Spearheaded with stakeholders" under a chip
+ * (R5-HUNT12-VERB-CHIP-ALIGNED-NEGOTIATED-WITH). An adverb before "with" ("Worked closely with PMs"),
+ * "alongside" for "with", and "Teamed up with" are the same: the chip wrote "Spearheaded Worked closely
+ * with PMs" (R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS). "up" is part of the match, so a verb
+ * that takes "with" replaces it too ("Partnered with sales"); the adverb stays ("Partnered closely with PMs").
+ * A noun ending in -ly is no adverb: "Aligned supply with demand forecasts" has "supply" as its object, and
+ * a chip replaces its verb as any ("Spearheaded supply with…"); taken for an adverb, it was left with a tip
+ * that only a verb taking "with" could go there (review of R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS).
  */
-const WITH_LEAD = /^(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed)(?=\s+with(?![\p{L}\d]))/iu;
+const WITH_LEAD = /^(?:(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?:\s+up(?=\s+with(?![\p{L}\d])))?)(?=(?:\s+(?:(?!(?:supply|assembly|family|anomaly|reply|rally|ally|july|italy|monopoly|oligopoly|fly|ply|butterfly)(?![\p{L}\d-]))[\p{L}-]+ly|together))?\s+(?:with|alongside)(?![\p{L}\d]))/iu;
 
 /** The power verbs that take "with" as those do: "Partnered with PMs", not "Spearheaded with PMs". */
 const WITH_VERBS = new Set(['collaborated', 'partnered', 'coordinated', 'liaised', 'aligned', 'negotiated', 'integrated', 'worked', 'teamed']);
@@ -506,11 +526,26 @@ const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]
  * An adverb between them stays, in front of the verb: "Was solely responsible for the budget" read
  * "Was solely led the budget", and now reads "Solely led the budget" (review of
  * R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB). Group 1: the adverb; group 2: the phrase.
+ * An adverb that does not end in -ly ("later", "then", "often") is one too, and so is a verb that puts
+ * someone in the role before the phrase — "became", "got", "held", "put", "placed", "made" — with or
+ * without a helper verb: "Was later tasked with rebuilding the API" read "Was later led rebuilding the
+ * API", "Became responsible for payroll" "Became led payroll", "Was put in charge of QA" "Was put
+ * oversaw QA"; now "Later led rebuilding the API", "Led payroll", "Oversaw QA"
+ * (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
  */
-const ADVERB = '\\p{L}+ly|also';
-const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?:was|were|is|are|am|been) (?:(${ADVERB}) )?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
-function dropHelperVerb(found, adverb, phrase, offset, whole) {
+const ADVERB = '\\p{L}+ly|also|later|then|soon|often|always|once|still|now|again|eventually';
+const HELPER = 'was|were|is|are|am|been';
+const PUT_IN_ROLE = 'became|become|becomes|got|held|put|placed|made';
+// An adverb may follow the verb that puts someone in the role too: "Became solely responsible for payroll"
+// read "Became solely led payroll", "Was made fully responsible for the budget" "Was made fully led the
+// budget"; now "Solely led payroll", "Fully led the budget" (review of R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+// Group 1: the adverb after the helper verb; group 2: the one after the role verb; group 3: the phrase.
+const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?=(?:${HELPER}|${PUT_IN_ROLE}) )(?:(?:${HELPER}) (?:(${ADVERB}) )?)?(?:(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?)?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
+function dropHelperVerb(found, helperAdverb, roleAdverb, phrase, offset, whole) {
+  // "Was not put in charge of QA" says no more than "Was not in charge of QA": left as it is (NOT_A_VERB).
+  if (NEGATED_BEFORE.test(whole.slice(0, offset))) return found;
   const involved = /^involved/i.test(phrase);
+  const adverb = [helperAdverb, roleAdverb].filter(Boolean).join(' ');
   // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
   if (!adverb) return involved ? 'was ' : '';
   if (involved) return found;
@@ -519,11 +554,19 @@ function dropHelperVerb(found, adverb, phrase, offset, whole) {
 }
 
 /**
+ * A statement opening with a verb that puts someone in the role, a helper verb before it or not, an
+ * adverb after it or not, and a phrase that is no verb: "Became responsible for", "Was put in charge
+ * of", "Became solely responsible for", "Got involved in". The power-verb chip replaces all of it but
+ * the adverb. Group 1: the adverb.
+ */
+const PUT_IN_ROLE_OPENING = new RegExp(`^(?:(?:${HELPER}) )?(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?(?:responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d])`, 'iu');
+
+/**
  * A negation before a phrase that is no verb: "Was not responsible for billing" read "Was not led
  * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
  * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
  */
-const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?$`, 'iu');
+const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?$`, 'iu');
 const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
