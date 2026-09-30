@@ -131,7 +131,8 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   another dated entry after its own lines (past a blank line or a list; no "Label: value" line) is that
   entry's part, no section (R5-HUNT9) — a second such label on the way ("Key Achievements", then "Tech
   Stack") too, the search going past it to a job's range (R5-HUNT10); several years in brackets ("(2019, 2021)") date a line only in
-  Certifications and Awards, or (not in Education) first in its section or over a list; entries found by
+  Certifications and Awards (there, several after a tab or a comma, "Dean's List ⇥ 2014, 2015", are put
+  in brackets, no issuer; R5-HUNT10), or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above

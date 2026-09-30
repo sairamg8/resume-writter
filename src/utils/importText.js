@@ -413,6 +413,22 @@ function bracketDates(text) {
   return dates.length > 1 && dates.every((d) => readDateRange(d));
 }
 
+/**
+ * A certificate's or an award's line with several dates after it, not in brackets — "Dean’s List ⇥
+ * 2014, 2015, 2016", "Dean’s List, 2014 and 2015" — with them in brackets, as bracketDates reads them:
+ * "Dean’s List (2014, 2015, 2016)". Before, trailingDate took the last year for its date and the
+ * others for its issuer (R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER). Else the text as it is.
+ */
+function bracketYears(text) {
+  for (const sep of text.matchAll(/\t|\s[-–—|]\s|,\s/g)) {
+    const before = text.slice(0, sep.index).trim();
+    const after = text.slice(sep.index + sep[0].length).trim();
+    const dates = after.split(/\s*[,;&]\s*|\s+and\s+/);
+    if (before && dates.length > 1 && dates.every((d) => readDateRange(d))) return `${before} (${after})`;
+  }
+  return text;
+}
+
 // ── Contacts ─────────────────────────────────────────────────────────────────
 
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
@@ -998,6 +1014,7 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
  */
 function entriesOf(type, lines, aside) {
   lines = roleEntries(type, lines);
+  if (type === 'certifications' || type === 'awards') lines = lines.map((l) => (l.fields ? l : { ...l, text: bracketYears(l.text) }));
   // A certificate or an award a list item each (R4-IMP-01): a section that opens with a list item is a
   // list of them, each with its date at its end ("• AWS Certified Solutions Architect – 2022"). A line
   // under an item is its own: its date or named fields, else its text. Before, the first item was the
