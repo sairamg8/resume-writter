@@ -503,9 +503,28 @@ const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]
  * an adjective or a noun, not a verb: "responsible for", "tasked with", "in charge of", "involved in".
  * "Was handled by…" keeps its "was": "handled" is a verb, and "was managed by" is still a sentence.
  * "Involved in" is listed only with "was" ("was involved in"), so any helper verb before it reads "was".
+ * An adverb between them stays, in front of the verb: "Was solely responsible for the budget" read
+ * "Was solely led the budget", and now reads "Solely led the budget" (review of
+ * R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB). Group 1: the adverb; group 2: the phrase.
  */
-const HELPER_BEFORE_WEAK_PHRASE = /(?<![\p{L}\d'’])(?:was|were|is|are|am|been) (?=(responsible for|tasked with|in charge of|involved in)(?![\p{L}\d]))/giu;
-const dropHelperVerb = (_, phrase) => (/^involved/i.test(phrase) ? 'was ' : '');
+const ADVERB = '\\p{L}+ly|also';
+const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?:was|were|is|are|am|been) (?:(${ADVERB}) )?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
+function dropHelperVerb(found, adverb, phrase, offset, whole) {
+  const involved = /^involved/i.test(phrase);
+  // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
+  if (!adverb) return involved ? 'was ' : '';
+  if (involved) return found;
+  const starts = SENTENCE_START.test(whole.slice(0, offset));
+  return `${starts ? adverb[0].toUpperCase() + adverb.slice(1) : adverb} `;
+}
+
+/**
+ * A negation before a phrase that is no verb: "Was not responsible for billing" read "Was not led
+ * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
+ * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
+ */
+const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?$`, 'iu');
+const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
  * Replaces weak phrases in text with their strongest alternatives — capitalised where a sentence
@@ -521,6 +540,7 @@ export function autoFixWeakPhrases(text = '') {
     // Each pattern has one group, so the offset and the whole text are the last two arguments.
     result = result.replace(wp.match, (...args) => {
       const [offset, whole] = args.slice(-2);
+      if (NOT_A_VERB.test(args[1]) && NEGATED_BEFORE.test(whole.slice(0, offset))) return args[0];
       return SENTENCE_START.test(whole.slice(0, offset))
         ? wp.replacement
         : wp.replacement[0].toLowerCase() + wp.replacement.slice(1);
