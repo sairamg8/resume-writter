@@ -5,6 +5,7 @@
 // takes a promise: the store makes it smaller once it has it (smallerPhotos.js).
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
 import { withDesignNumbers } from '@/constants/designNumbers';
+import { withFontChoices } from '@/constants/designFonts';
 import { normalizeHexColor } from '@/utils/colors';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
@@ -338,7 +339,8 @@ function withBulletsInDescription(r) {
  * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
  * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
  * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
- * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields), a
+ * stored as '#rrggbb' (withNormalizedColors), Name Font and Heading Font as text (withFontChoices),
+ * text wherever it keeps text (withTextFields), a
  * project's link as its `url` (withProjectUrls), its skill groups as skills (withSkillNames) and an
  * entry's legacy bullets in its description (withBulletsInDescription),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
@@ -360,7 +362,7 @@ function withBulletsInDescription(r) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withSectionShapes(withKnownTemplate(resume));
-  const r = withBulletsInDescription(withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))));
+  const r = withBulletsInDescription(withSkillNames(withProjectUrls(withTextFields(withFontChoices(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);
   if (ahead != null) return r.dataVersion === DATA_VERSION && r.dataVersionAhead === ahead ? r : stamped(r, ahead);
