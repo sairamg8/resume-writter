@@ -359,6 +359,12 @@ export function insertActionVerb(text, verb) {
   // "Led efforts to" keeps its "efforts to", which has a verb after it: "Led efforts to cut costs"
   // read "Spearheaded cut costs" (review of R4-SW-WT-03).
   // "Set out to cut churn" has one too: "Spearheaded efforts to cut churn".
+  // "Worked with product managers…" and "Collaborated with PMs…" take people after "with": a chip verb
+  // that takes "with" too replaces the verb and keeps it ("Partnered with product managers…"); any
+  // other would make the people its object ("Spearheaded product managers…") or read "Spearheaded
+  // with PMs", so the statement is left for a rewrite (R5-HUNT11-VERB-CHIP-ON-WORKED-WITH).
+  const withVerb = rest.match(WITH_LEAD);
+  if (withVerb) return takesWith(verb) ? lead + verb + rest.slice(withVerb[0].length) : s;
   const phrase = rest.match(LEADING_VERB_PHRASE);
   if (phrase) return lead + verb + (/ (?:efforts|out) to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
   if (leadsWithActionVerb(rest)) {
@@ -381,6 +387,16 @@ export function insertActionVerb(text, verb) {
   return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
 
+/**
+ * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
+ * "Collaborated with", "Partner with", "Coordinate with", "Liaised with", "Teamed with".
+ */
+const WITH_LEAD = /^(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed)(?=\s+with(?![\p{L}\d]))/iu;
+
+/** The power verbs that take "with" as those do: "Partnered with PMs", not "Spearheaded with PMs". */
+const WITH_VERBS = new Set(['collaborated', 'partnered', 'coordinated', 'liaised', 'aligned', 'negotiated', 'integrated', 'worked', 'teamed']);
+const takesWith = (verb) => WITH_VERBS.has(String(verb).toLowerCase());
+
 /** Bullet marks, quotes and spaces before a statement's first word. */
 const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
 
@@ -397,13 +413,21 @@ const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
 const AUXILIARY_LEAD = /^(?:(?:active\s+)?member\s+of(?![\p{L}\d])|(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
 
 /**
- * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
- * ("Did not miss a release deadline"): the optimizer then asks for a rewrite instead (R4-SW-WT-04).
+ * Whether a power-verb chip (`verb`, "Led" when none is named) leaves `text` as it is because it opens
+ * with a helper verb or a negation ("Did not miss a release deadline"), or with a verb and "with" that
+ * `verb` does not take: the optimizer then asks for a rewrite instead (R4-SW-WT-04).
  * "Did" as a main verb ("Did the audit") is a weak phrase the chip replaces, and is not one of these.
  */
-export function opensWithAuxiliary(text) {
+export function opensWithAuxiliary(text, verb = 'Led') {
   const rest = String(text ?? '').replace(LEAD_MARKS, '');
+  // "Worked with…" takes a verb that takes "with" ("Partnered"), and no other (R5-HUNT11-VERB-CHIP-ON-WORKED-WITH).
+  if (WITH_LEAD.test(rest)) return !takesWith(verb);
   return AUXILIARY_LEAD.test(rest) && insertActionVerb(text, 'Led') === String(text ?? '');
+}
+
+/** Whether `text` opens with a verb and "with" ("Worked with PMs"): only a verb that takes "with" goes there. */
+export function opensWithVerbWith(text) {
+  return WITH_LEAD.test(String(text ?? '').replace(LEAD_MARKS, ''));
 }
 
 /**
@@ -475,12 +499,24 @@ const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|a
 const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
 
 /**
+ * A helper verb ("was", "were", "is", "are", "am", "been") and its space before a weak phrase that is
+ * an adjective or a noun, not a verb: "responsible for", "tasked with", "in charge of", "involved in".
+ * "Was handled by…" keeps its "was": "handled" is a verb, and "was managed by" is still a sentence.
+ * "Involved in" is listed only with "was" ("was involved in"), so any helper verb before it reads "was".
+ */
+const HELPER_BEFORE_WEAK_PHRASE = /(?<![\p{L}\d'’])(?:was|were|is|are|am|been) (?=(responsible for|tasked with|in charge of|involved in)(?![\p{L}\d]))/giu;
+const dropHelperVerb = (_, phrase) => (/^involved/i.test(phrase) ? 'was ' : '');
+
+/**
  * Replaces weak phrases in text with their strongest alternatives — capitalised where a sentence
  * starts, in lowercase inside one: "Engineered 4 APIs; handled QA" becomes "…; managed QA", not
  * "…; Managed QA" (R2-078).
  */
 export function autoFixWeakPhrases(text = '') {
-  let result = text;
+  // A helper verb before a phrase that is no verb of its own goes with it: "Was tasked with rebuilding…"
+  // read "Was led rebuilding…", and "Were responsible for payroll" "Were led payroll"; only "was
+  // responsible for" was listed with its helper verb (R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
+  let result = String(text ?? '').replace(HELPER_BEFORE_WEAK_PHRASE, dropHelperVerb);
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     // Each pattern has one group, so the offset and the whole text are the last two arguments.
     result = result.replace(wp.match, (...args) => {

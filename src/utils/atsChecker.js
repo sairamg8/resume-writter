@@ -246,11 +246,17 @@ function sectionOff(s, template) {
   ];
 }
 
-/** A section's shown entries, as they print on `template` (printedItem, sectionOff). */
+/**
+ * A section's entries that print (entryPrints, the PDF's and Word's printedEntries), as they print on
+ * `template` (printedItem, sectionOff). A blank entry (Add entry, left empty) prints nothing, yet it
+ * read "Some roles missing Job Title or Company" and "Missing employment dates on some roles", 5 points
+ * off, and an empty job in "What a parser reads" that split a company's roles
+ * (R5-HUNT11-ATS-SCORES-BLANK-ENTRIES).
+ */
 function shownItems(s, template) {
   const off = sectionOff(s, template);
   return (Array.isArray(s?.items) ? s.items : [])
-    .filter((item) => item && typeof item === 'object' && item.visible !== false)
+    .filter((item) => item && typeof item === 'object' && entryPrints(s.type, item))
     .map((item) => printedItem(item, off));
 }
 
