@@ -1,0 +1,50 @@
+{
+  "cluster": "r5-hunt12-import",
+  "branch": "claude/wf-r5-hunt12-import",
+  "base": "dd02d2ef6427b9b04f0ce8d5f7401807d425f59d",
+  "rows": [
+    {
+      "id": "R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY",
+      "title": "Text/PDF/Word/Markdown import: a job stacked as Company, Role, City and Dates gets the city as its company, and the real company goes into the job above's description",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": ["297b10cda510d721ddf516bf5dfc038385e4ac57"],
+      "tests": ["tests/unit/r5-hunt12-stacked-place-line.unit.mjs"],
+      "summary": "Now: a job printed as its company, role and place a line each over its dates (in any order) keeps its company and role, the place becomes its location, and nothing moves into the job above's description. In Markdown, '### Company' (or '### School') over the role (or degree) line and the place line is one entry with that location.",
+      "ci": [36672401523]
+    },
+    {
+      "id": "R5-HUNT12-HEADER-ONE-WORD-CITY-LOST",
+      "title": "Import: a header location of one word ('London', 'Singapore', 'San Francisco Bay Area') prints as an 'Additional Information' section and is lost on export and re-import",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["588a05dd752b61a42be79b48fa6350942480f121"],
+      "tests": ["tests/unit/r5-hunt12-header-one-word-city.unit.mjs"],
+      "summary": "Now: a capitalised town with no region next to an email, phone or link on the contact line (or LinkedIn's '... Area' alone under the headline) is read as the location, so the app's own Markdown and ATS-text exports import it back. Work-status words ('US Citizen') still go to Additional Information.",
+      "ci": [36672401523]
+    },
+    {
+      "id": "R5-HUNT12-LINKEDIN-DEGREE-ABBR-FIELD",
+      "title": "PDF/text import of LinkedIn's 'Bachelor of Science - BS, Computer Science' leaves Field of Study empty and puts 'BS, Computer Science' in the description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["f21a4b16048a50bfa13eeb1a7033c945ad881348"],
+      "tests": ["tests/unit/r5-hunt12-linkedin-degree-abbr.unit.mjs"],
+      "summary": "Now: the degree is 'Bachelor of Science', Field of Study is 'Computer Science', and the description stays empty. A short form on its own ('Master of Science - MS') leaves no stray paragraph either.",
+      "ci": [36672401523]
+    },
+    {
+      "id": "R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY",
+      "title": "PDF/text import of LinkedIn's grouped roles: a role's one-line description with no closing period becomes the next role's company",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["10f506a9fb35b308065d6796022d4a7ddde08499"],
+      "tests": ["tests/unit/r5-hunt12-linkedin-grouped-role-desc.unit.mjs"],
+      "summary": "Now: a short description with lower-case words ('Leading the storage team') stays that role's description, and the next role keeps the employer as its company. A next employer over its role ('Microsoft') still starts a new job.",
+      "ci": [36672401523]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI run 36672401523: all four failfirst jobs passed (each test fails with its fix undone and passes with it). The tests job ran tests/unit/*.unit.mjs plus the import round-trip, section-shape and link tests in tests/pdf: 1690 of 1690 passed. Lint is green. Base is dd02d2ef, a docs-only commit on top of b414cd6a."
+}
