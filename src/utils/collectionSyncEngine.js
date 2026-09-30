@@ -333,9 +333,7 @@ export function createCollectionSync({
       // "synced", and at sign-out the account's list stayed for the next account to take in. Not
       // done then: the list is left as it was, and the first sync is tried again
       // (R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED).
-      // Its versions only for what storage holds now (claimed); once the merged list is saved, the
-      // rest — refused, the record never claims items storage lacks.
-      const written = { uid, versions: claimed(cloudVersions), order: plan.order, stashed };
+      const written = { uid, versions: cloudVersions, order: plan.order, stashed };
       if (!meta.write(written) && meta.read().uid !== uid) {
         throw noRoom('this account\'s list could not be recorded');
       }
@@ -344,8 +342,10 @@ export function createCollectionSync({
       s.readAt = now();
       s.attempts = 0;
       store.replace(next);
+      // The merged list refused by storage (full): the record claims only what storage holds
+      // (claimed) — a smaller write, which fits where the one before did.
       const onDisk = claimed(cloudVersions);
-      if (Object.keys(onDisk).length > Object.keys(written.versions).length) meta.write({ ...written, versions: onDisk });
+      if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk });
       changed(next);
       if (!s.timer) settled();
     } catch (e) {
