@@ -110,7 +110,8 @@ Full resume object (with a new id on import: `importResume`). Every import goes 
 app reads as text holds text (`textFields.js`), the record's own `name` included: a name that is an
 object or missing becomes 'Untitled Resume' ('Cover Letter' for a letter), a number its digits. Personal
 info's and each entry's `hiddenFields` is a list of keys: one that is an object, a number or `true` hides
-nothing (`[]`), and a list keeps only its text members.
+nothing (`[]`), a list keeps only its text members, and text names the keys it hides ("email" or
+"email, phone": the PDF always hid a field so named).
 
 ## Import from a PDF, Word, Markdown or text (R2-148)
 

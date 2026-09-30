@@ -52,14 +52,19 @@ function withText(obj, keys, blank = '') {
  * `obj` with its `hiddenFields` a list of field keys (R5-HUNT10-HIDDEN-FIELDS-NOT-LIST-CRASHES-EDITOR).
  * Personal Info and an entry's editor build a Set from it and the PDF, the contacts and the exports
  * call `.includes` on it, so a native .json holding an object, a number or true there crashed the
- * editor on every open and left no preview or PDF. A list keeps its text members; anything else
- * that is not null hides nothing ([]). The same object when it is a list of text already, or none.
+ * editor on every open and left no preview or PDF. A list keeps its text members. Text names the
+ * keys it holds ("email", or "email, phone"): the PDF hid a field so named (`'email'.includes`), so
+ * it stays hidden, and now in the exports and the public link too (R5-HUNT10-REVIEW-HIDDEN-TEXT).
+ * Anything else that is not null hides nothing ([]). The same object when it is a list of text
+ * already, or none.
  */
 function withHiddenList(obj) {
   if (!isRecord(obj) || obj.hiddenFields == null) return obj;
   const v = obj.hiddenFields;
   if (Array.isArray(v) && v.every((key) => typeof key === 'string')) return obj;
-  return { ...obj, hiddenFields: Array.isArray(v) ? v.filter((key) => typeof key === 'string') : [] };
+  const keys = Array.isArray(v) ? v.filter((key) => typeof key === 'string')
+    : typeof v === 'string' ? v.split(/[\s,]+/).filter(Boolean) : [];
+  return { ...obj, hiddenFields: keys };
 }
 
 /** `sections` with each section's title and each entry's fields as text; the same array when all are. */

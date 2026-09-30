@@ -4,7 +4,8 @@
 // list. Personal Info (open by default) did `new Set({})` and threw ("object is not iterable"), so the
 // editor showed "Something went wrong" on every open and every synced device; an entry's editor did the
 // same, and the PDF (`hidden.includes`) never built. Now normalizeResume stores a list of keys: an
-// object, a number or `true` hides nothing ([]), and a list keeps its text members. Fictional data only.
+// object, a number or `true` hides nothing ([]), and a list keeps its text members (text names the keys
+// it hides: r5hunt10-review-hidden-text.test.mjs). Fictional data only.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -38,7 +39,8 @@ async function entryPanel(item) {
 }
 
 describe('hiddenFields that is not a list', () => {
-  for (const bad of [{}, 1, true, 'email']) {
+  // Text is not here: it names the keys it hides (r5hunt10-review-hidden-text.test.mjs).
+  for (const bad of [{}, 1, true]) {
     it(`personal and an entry holding ${JSON.stringify(bad)}: a list, and the editor and the PDF render`, async () => {
       const r = await imported(resume({
         personal: { name: 'Ann Vale', email: 'ann@example.com', hiddenFields: bad },
