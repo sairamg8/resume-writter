@@ -124,10 +124,16 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
-  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
+  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom — but in a file with no
+  heading marks, a Title-Case "Key Achievements", "Tech Stack" or "Tools" inside a job or project with
+  another dated entry after its own lines (past a blank line or a list; no "Label: value" line) is that
+  entry's part, no section (R5-HUNT9); several years in brackets ("(2019, 2021)") date a line only in
+  Certifications and Awards, or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
-  with a title line an entry of its own (R5-HUNT8); every line it cannot place in a custom "Additional
+  with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
+  ("Key Responsibilities", "Highlights", "Relevant Coursework", "Activities": `SUBHEADING`, R5-HUNT9),
+  which stays that entry's text; every line it cannot place in a custom "Additional
   Information".
 - The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`). An
   import from the editor's own Export menu ("Import as a new résumé", JSON or document) also says it

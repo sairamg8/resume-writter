@@ -405,6 +405,7 @@ function trailingDate(text) {
  * Several dates in brackets at a text's end — "Dean’s List (2018, 2019)", "(Fall 2018, Spring 2019)" —
  * which trailingDate leaves in the title: no one date of the entry, but its line an entry's, dated as
  * the line of a certificate or an award with one date is. Else, not dated, it went into the entry above.
+ * Only there (entriesOf): under a job or a school, such a line is its entry's text.
  */
 function bracketDates(text) {
   const m = /\(([^()]+)\)\s*$/.exec(text);
@@ -640,6 +641,13 @@ function richText(lines) {
   close();
   return html;
 }
+
+/**
+ * A label a job or a school prints over a part of it — "Key Responsibilities", "Highlights", "Selected
+ * Clients", "Technologies Used", "Relevant Coursework", "Activities", "Promoted to Senior Engineer" — a
+ * sub-heading inside its entry, no entry of its own (entriesOf's undatedEntry).
+ */
+const SUBHEADING = /^(?:(?:key|main|major|core|notable|selected|relevant|select|other|additional|related)\s+)?(?:responsibilities|duties|highlights|achievements|accomplishments|contributions|results|impact|clients|customers|projects|technologies(?:\s+used)?|tools(?:\s+used)?|tech(?:nology)?\s+stack|skills(?:\s+used)?|course\s*work|courses|modules|subjects|activities|societies|honou?rs|awards)$|^promoted\s+to\b/i;
 
 /** Title Case for a line typed in capitals ("PROFESSIONAL EXPERIENCE", "AVERY QUINN"); others as they are. */
 const SMALL = new Set(['and', 'of', 'the', 'in', 'for', 'at', 'on', 'to', 'a', 'an', 'or', '&']);
@@ -1007,12 +1015,20 @@ function entriesOf(type, lines, aside) {
     }
     return list.map((e) => entryOf(type, e.header, e.body, aside));
   }
+  // Several years in brackets date only a certificate's or an award's line: a line under a job or a
+  // school with them ("Named top seller (2019 and 2021)", "Dean’s List (Fall 2018, Spring 2019)") is its
+  // text. Before, it started a blank entry of its own (R5-HUNT9-BODY-LINE-BRACKET-YEARS-NEW-ENTRY).
+  // A job's or a project's own title with them, first in its section or over its list ("Chat App (2021,
+  // 2022)" over "• Realtime chat"), still starts its entry: it went into the next entry's text.
+  const heads = (index) => index === 0 || Boolean(lines[index + 1] && !lines[index + 1].gap && BULLET.test(lines[index + 1].text));
+  const bracketed = (p, index) => (type === 'certifications' || type === 'awards'
+    || (type !== 'education' && heads(index))) && bracketDates(p);
   const info = lines.map((l, index) => {
     const bullet = BULLET.test(l.text);
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketDates(p));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketed(p, index));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));
@@ -1157,6 +1173,11 @@ function entriesOf(type, lines, aside) {
     // above has no text to hold (a certificate).
     if (cur && !cur.body.length && type !== 'certifications' && !block.every((b) => isMetaLine(b.text))
       && !(KIND && KIND.test(L.text)) && !(type === 'education' && SCHOOL.test(L.text))) return false;
+    // A label over a part of the entry above, with text of its own or not ("Key Responsibilities",
+    // "Highlights", "Relevant Coursework", "Activities", "Promoted to Senior Engineer"): that entry's
+    // text, not an entry. Before, it became a blank entry of its own, its list taken from its entry
+    // (R5-HUNT9-SUBHEADING-BECOMES-ENTRY).
+    if (cur && SUBHEADING.test(L.text)) return false;
     return true;
   };
 
@@ -1421,6 +1442,36 @@ export function resumeFromText(input) {
     return Boolean(n && !n.gap && !BULLET.test(n.text) && pieces(n.text).some((p) => readDateRange(p) || trailingDate(p)));
   };
   const capsEntry = (l, i) => entriesIn(within) && !l.gap && overDate(i) && (headingAt.has(i - 1) || capsOver);
+  // In a file with no marks, a title in Title Case (no capitals, no rule) that a job or a project uses
+  // for a part of it ("Key Achievements", "Tech Stack", "Tools"), inside a section of dated entries,
+  // with another dated entry after it before the next heading: that entry's part, as ownPart is in a
+  // marked file. Before, it started a section, and every later job or project went into it as awards
+  // or skills (R5-HUNT9-TITLECASE-SUBHEADING-STARTS-SECTION). An achievement is dated by one year, so
+  // only a job's range ("2018 – 2020") after "Key Achievements" keeps it a part: a Title-Case awards
+  // section of dated awards is still one.
+  const headingLike = (n) => {
+    const t = n.text.replace(/\s*:$/, '').trim();
+    if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
+    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
+  };
+  const partInEntry = (l, text, i) => {
+    if (!entriesIn(within) || l.ruled || isCaps(text) || headingAt.has(i - 1)) return false;
+    const achievement = /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+    if (!achievement && headingType(text) !== 'skills') return false;
+    // Only a line past the label's own block (after a blank line or a list) that is no "Label: value"
+    // line: a next entry's. A dated line of the section's own ("Technical Skills" over "Languages:
+    // Python" and "Certified: AWS Solutions Architect, 2021") kept it no section, the skills a bogus job.
+    let past = false;
+    for (let j = i + 1; j < lines.length && !headingLike(lines[j]) && !lines[j].ruled; j += 1) {
+      const n = lines[j];
+      if (n.gap) past = true;
+      if (BULLET.test(n.text)) { past = true; continue; }
+      if (!past || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
+      const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
+      if (dates.some((d) => !achievement || (d.start && (d.end || d.current)))) return true;
+    }
+    return false;
+  };
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
     if (l.hint === 'heading') inEntry = false;
@@ -1433,7 +1484,8 @@ export function resumeFromText(input) {
       else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
-      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
+      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)
+        && !partInEntry(l, text, i)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
