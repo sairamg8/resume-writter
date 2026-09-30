@@ -1,0 +1,30 @@
+{
+  "cluster": "r5-hunt12-editor",
+  "branch": "claude/wf-r5-hunt12-editor",
+  "base": "dd02d2ef6427b9b04f0ce8d5f7401807d425f59d",
+  "rows": [
+    {
+      "id": "R5-HUNT12-PHONE-TEL-LINK-MERGES-EXTENSION",
+      "title": "A phone typed with an extension or a second number gets a clickable tel: link that dials a wrong, merged number",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["a52ea499df1466b7042a0f0d986cc3ad4e1e0415"],
+      "tests": ["tests/unit/r5-hunt12-phone-tel-link.unit.mjs"],
+      "summary": "Now: contactHref's phone link (telHref in src/utils/contacts.js) dials the first number only, cut at '/', ',', ';', '|' or 'or' once seven digits are in (so '030/1234567' stays one number), with an extension (ext., extension, x, #) as RFC 3966 ';ext='. '+1 (555) 123-4567 ext. 890' links to tel:+15551234567;ext=890 and '+91 98765 43210 / +91 91234 56789' to tel:+919876543210, in the PDF, Word and Markdown. The printed text is unchanged. docs/knowledge/03-data-model.md notes it.",
+      "ci": [36672718662]
+    },
+    {
+      "id": "R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK",
+      "title": "A website/LinkedIn/GitHub 'Link URL' box holding only 'https://' (or 'www.') removes the contact's link, although the typed value is a good link",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["f8e4142f03c5e6cba368ef84fa4319bc5caaa145"],
+      "tests": ["tests/unit/r5-hunt12-link-url-placeholder.unit.mjs"],
+      "summary": "Now: a new linkOverride helper (src/utils/contacts.js) gives the Link URL only when safeHref accepts it. Otherwise ('https://', 'www.', a javascript: address) the box counts as empty, and contactHref links the typed value. The ATS text, cover-letter text and JSON Resume export use the same helper, so every format agrees. docs/knowledge/03-data-model.md notes it.",
+      "ci": [36672718662]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI run 36672718662 (failfirst for both fix commits plus the named tests: tests/unit/*.unit.mjs and the contact, export and guard pdf tests) was still in progress when this report was written. Its result has not been read yet. Base is origin/claude/r4-green at dd02d2ef (the task named b414cd6a, but the branch had moved on)."
+}
