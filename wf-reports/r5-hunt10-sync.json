@@ -24,7 +24,21 @@
       ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "claimed() in collectionSyncEngine kept a version only for ids in store.saved(), so it also dropped the version of a job or project the user had just deleted here (gone from the list and from storage) whose deletion was queued but not yet sent: noteVersions from an earlier flush still in flight, or the first sync's record rewrite after a deletion made while its batch was on its way, removed it. A reload within the flush pause, or a failed flush handed to the next first sync, then found the item in the cloud with no version here and brought it back from the cloud instead of deleting it from the account (a deletion undone). Fixed in d11bf04: only items shown here (items()) that storage refused (not in saved()) lose their version; the deletion keeps its version until it is sent. Test tests/unit/r5-hunt10-sync-record-keeps-deletions.unit.mjs (a deletion during an earlier flush, and one during the first sync's batch, each followed by a reload before it is sent)."
+    ],
+    "commits": [
+      "d11bf04f1350b292a3748fab754d870348637901"
+    ],
+    "ci": [
+      36653513079,
+      36653528065
+    ],
+    "notes": "The original fix is otherwise sound: the root cause (the sync record, stored under its own key, claiming items the refused list save never stored) is addressed in both the flush's noteVersions and the first sync (single full write kept, shrunk only when the merged list was refused, so r5-hunt7-sync-leave-meta-full still passes). Run 36652516922 (the cluster's) was green incl. failfirst for c7d0d78. Run 36653513079: failfirst d11bf04 (the new test fails 2/2 without the change, passes with it), failfirst c7d0d78 re-proved on the reviewed code, 115 sync/job-store/board-store/knowledge-docs unit tests, lint. Run 36653528065: 71-startup-chunks, 95-sync-privacy-notices, 102-r4-dux-02-clear-all-undo, r5hunt6 sign-out tests and the other collection-sync unit tests, green. Remaining edge, not a regression and not fixed: the job store's init sets `stored` to the list it loaded even when its first persist fails (a fresh browser's demo jobs, or ids given on read repair that never reached storage), so saved() can name items storage lacks in that narrow case; demo items are seeds and repaired ids only churn, no data is lost. No accessibility issues noted."
+  },
   "baselineFailures": [],
   "notes": "Run 36651531939 failed on a duplicate const name (fixed in 00e26fd). Run 36652149650 showed the first design (write the record with only already-stored ids, then grow it) broke r5-hunt7-sync-leave-meta-full, whose storage refuses any record growth; 66c64a3 keeps the original single full write and only shrinks the record when the list save was refused. Run 36652516922 is green: failfirst for c7d0d78 (the new test fails without the fix and passes with it), every sync and store unit test, knowledge-docs, 71-startup-chunks and lint. The fix spans three commits because pushes are never forced."
 }
