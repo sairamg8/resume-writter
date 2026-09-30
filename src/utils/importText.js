@@ -674,6 +674,8 @@ function tamed(text) {
   return text.toLowerCase().split(/(\s+)/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase()).replace(/([-'’.])(\p{L})/gu, (_, a, c) => a + c.toUpperCase()))).join('');
 }
 const isCaps = (text) => /\p{Lu}/u.test(text) && !/\p{Ll}/u.test(text);
+/** Title Case: each word from a capital, but the small ones ("Tools and Technologies", "Education & Training"). */
+const titleCase = (text) => /\p{Ll}/u.test(text) && text.split(/\s+/).every((w, k) => !/\p{L}/u.test(w) || /^[^\p{L}]*\p{Lu}/u.test(w) || (k > 0 && SMALL.has(w.toLowerCase())));
 
 /** A blank entry of `type`, the editor's own, with `fields` over it. */
 function itemOf(type, fields) {
@@ -1518,7 +1520,18 @@ export function resumeFromText(input) {
   const headingLike = (n) => {
     const t = n.text.replace(/\s*:$/, '').trim();
     if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
-    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
+    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t)) || titleHeading(t);
+  };
+  // A known title in Title Case with no blank line before it ("Education", "Skills", "Experience"): a
+  // Word résumé with no Heading styles sets its sections apart by a paragraph's space before, no empty
+  // paragraph, and a compact text file by nothing. It is a heading too — not the header's (summary,
+  // contact) nor a label a job or a school prints over a part of it (SUBHEADING: "Projects", "Awards",
+  // "Technologies"; a "Skills" one is such a part only with another dated entry after it, partInEntry).
+  // Before, it stayed in the section above, and every later section with it: the schools became jobs
+  // and the skills a job's text (R5-HUNT11-TITLECASE-HEADING-NO-BLANK-LINE).
+  const titleHeading = (t, skills = false) => {
+    const known = headingType(t);
+    return Boolean(known && titleCase(t) && known !== 'summary' && known !== 'contact' && (!SUBHEADING.test(t) || (skills && known === 'skills')));
   };
   const isAchievement = (text) => /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   // Such a label itself: Title Case, not over a rule, of an achievement or skills title.
@@ -1567,7 +1580,13 @@ export function resumeFromText(input) {
       else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
-      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)
+      // In Title Case with no gap (titleHeading): of another type than the section it is in, and in a
+      // skills section no "Languages" over a list of them (skillsOf's category); not an entry's own line
+      // right under its dated one, nor a role over it ("Volunteer" under "Red Cross ⇥ 2019 – 2020").
+      const underDate = i > 0 && pieces(lines[i - 1].text).some((p) => readDateRange(p) || trailingDate(p));
+      const titled = titleHeading(text, true) && known !== within && !(within === 'skills' && known === 'languages')
+        && !(ROLE.test(text) && (underDate || overDate(i)));
+      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0 || titled)
         && !partInEntry(l, text, i)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
