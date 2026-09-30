@@ -65,6 +65,8 @@ describe('template ids as imported files and older builds wrote them (M15, R5-5)
     const current = resume({ template: 'sidebar', settings: DARK_SEED });
     assert.equal(normalizeResume(current), current, 'this build\'s data: the same object');
     const junk = normalizeResume({ ...saved(resume(), 'dark'), settings: 'junk' });
-    assert.deepEqual([junk.template, junk.settings], ['classic', 'junk'], 'settings that are not an object are left as they are');
+    // R5-HUNT12-SETTINGS-NOT-OBJECT-CRASHES-NEW-AND-WORD: settings kept as text made /new, Word and the
+    // Header spacing reset throw; they are stored as {} (the defaults the PDF printed), whatever the version.
+    assert.deepEqual([junk.template, junk.settings], ['classic', {}], 'settings that are not an object read as none: {}');
   });
 });
