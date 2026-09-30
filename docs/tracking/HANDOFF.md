@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 00:25 UTC — ROUND 9 six areas merged: `5c6c1e38`** (8 fixes: dash 1 — a non-text résumé name crashed the editor and
+Dashboard; pdf 1 — picked icons fetched as images; boards 1 — float noise in point sums; sync 1 — first-sync record dropped when storage
+is full; editor 2; jobs 2). Seen-list 156. **Full gate on `5c6c1e38` dispatched ~00:25.** Running: wf_3bfd91c4-700 (round 9
+import/export/tools, base 1f7ed0e8; note editor round 9 also touched atsChecker.js) and wf_98d5855d-049 (round 10 dash, pdf, boards,
+sync, editor, jobs, base 5c6c1e38). PR #6 (1f7ed0e) is still the one for the owner to merge.
+
 **2026-09-30 00:05 UTC — DEPLOY: PR #6** (`claude/deploy-r8-1f7ed0e`, rounds 7 + 8 = 34 fixes, full gate 36646361492 on `1f7ed0e8`
 GREEN) supersedes #4 and #5. Owner: merge #6 (or `git push origin 1f7ed0e8:refs/heads/master`), then close #4/#5. Round 9 running.
 
