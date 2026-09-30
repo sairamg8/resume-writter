@@ -1,0 +1,66 @@
+{
+  "cluster": "r5-hunt9-tools",
+  "branch": "claude/wf-r5-hunt9-tools",
+  "base": "475a5ade858c239de32f880b20b412c2d2f232fb",
+  "rows": [
+    {
+      "id": "R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB",
+      "title": "STAR Optimizer's power-verb chip puts a second verb in front of a statement that already starts with a strong past-tense verb missing from the list ('Spearheaded Launched…', 'Spearheaded Shipped…')",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "798d6ba3a7807912e7d36065140eebdcec98e930",
+        "f1544b37568e65ba37aa4f398d77c6254a670bfd",
+        "729c9c66356c704e6f93132fdc0430f006647a0b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-verb-chip-unlisted-verb.unit.mjs",
+        "tests/unit/r5-hunt9-review-verb-chip-particles.unit.mjs"
+      ],
+      "summary": "Now: ACTION_VERBS (the one list the optimizer badge, the chip and the ATS score read) holds the common strong verbs it lacked (launched, shipped, ran, introduced, owned, drove, fine-tuned, took, set, won…), and the chip replaces two-word verbs whole ('Set up', 'Rolled out', 'Took over'…). A chip on 'Launched automated bill…' or 'Shipped every release on time' gives 'Spearheaded automated bill…' / 'Spearheaded every release on time', and the badge and ATS Check count these bullets as opening with an action verb. Every past-tense starter bullet now opens with a known verb. Weak verbs (handled, changed, ensured) stay weak.",
+      "ci": [
+        36648867204,
+        36648873268,
+        36649725548,
+        36649728185
+      ]
+    },
+    {
+      "id": "R5-HUNT9-ATS-GRIDS-WARNING-CLEARED-TITLE-TYPE-ID",
+      "title": "ATS Check's 'Entries printed side by side' warning names a custom section whose title was cleared by its internal type id '\"custom\"', while its own fix notice calls it '\"Untitled\"'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "d42b91eb14fad4aa34088ea29a0cc2c31e49f84e"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-ats-grids-cleared-title.unit.mjs"
+      ],
+      "summary": "Now: the section_grids warning names each section with atsHeadingLabel, as its Grids 1 fix notice does: a cleared custom section reads '\"Untitled\"', a cleared standard one '\"Professional Experience\" (no heading)', a titled one its title.",
+      "ci": [
+        36648378125,
+        36648867204,
+        36648873268
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB (798d6ba3/f1544b37): listing 'took' made 'Took part in the 2023 hackathon' (i.e. 'participated in') count as opening with a strong verb in the badge and the ATS action-verb score, where before it read 'Verb Missing', and a chip gave 'Spearheaded part in the 2023 hackathon'. Now 'Took part' is no action verb and the chip replaces 'Took part in' whole.",
+      "The 'Took over' phrase added in f1544b37 dropped 'over' before a number: 'Took over 200 support calls a day' became 'Spearheaded 200 support calls a day', a smaller claim. 'over' before a number ($, digits, ~, +) now stays ('Spearheaded over 200 support calls a day'); 'Took over the billing platform' still gives 'Spearheaded the billing platform'.",
+      "The fixed list of seven two-word verbs left the particle of the other newly listed verbs behind: 'Spearheaded on the role of Scrum Master' (Took on), 'Spearheaded back a bad release' (Rolled back), 'Spearheaded off a new team' (Spun off), 'Spearheaded down costs' (Drove down), 'Spearheaded out to cut churn' (Set out to). The list is replaced by one rule: after a leading action verb, 'up' (not 'up to'), 'out' (not 'out of'), 'back', 'down' and 'off' go with it, and 'on'/'over' after 'Took'; 'Set out to X' gives 'Spearheaded efforts to X', as 'Tried to' does. Prepositions stay: 'Led up to 12 engineers', 'Led over 40 engineers', 'Launched on time', 'Shipped off-the-shelf tools' are kept."
+    ],
+    "commits": [
+      "729c9c66356c704e6f93132fdc0430f006647a0b"
+    ],
+    "ci": [
+      36649725548,
+      36649728185
+    ],
+    "notes": "R5-HUNT9-ATS-GRIDS-WARNING-CLEARED-TITLE-TYPE-ID (d42b91eb) is clean: atsHeadingLabel takes one argument, so map's index is harmless; nothing parses the warning text; the Grids 1 fix and its notice are unchanged. The fixer's failfirst run 36648867204 is green for all three commits (the log shows each test file fails with its diff reversed and passes with it). The review fix 729c9c66: failfirst run 36649725548 green (tests/unit/r5-hunt9-review-verb-chip-particles.unit.mjs fails with the change reversed, passes with it); area run 36649728185 green: 214/214 node tests (r5-hunt9-*, bullet-optimizer*, ats-checker, r4-lo-*, r4-sw-wt-*, r5-opt-*, pdf 104/77/56/76 ATS and verb-chip tests, knowledge-docs) plus Cypress 28-writing-helpers and lint. Left as the fixer noted: a present-tense opener ('Lead the lab...', 'Mentor two students...') still takes the chip in front; the verb list can never hold every verb, so an unlisted past-tense verb ('Kicked off...') still takes the chip in front, as before this round. No accessibility issue seen."
+  },
+  "baselineFailures": [],
+  "notes": "Run 36648372531/36648378125 failed only on the first version of the starter-bullet test (present-tense 'Lead'/'Mentor' and 'Took'/'Set up' in academic-cv and compact-leader starters); 'Took' and 'Set up' were fixed in f1544b37, and present tense is left out on purpose: 'Lead' also opens a title ('Lead engineer for…'), so it is not added as a verb. Possible follow-up: a chip on a current role's present-tense bullet ('Lead the lab…', 'Mentor two students…') still gives 'Spearheaded Lead the lab…'. Final runs 36648867204 (failfirst on 798d6ba3, f1544b37, d42b91eb: each fails without its fix and passes with it) and 36648873268 (the optimizer and ATS unit and pdf tests, guards 31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs, plus Cypress 28-writing-helpers) are green."
+}

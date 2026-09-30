@@ -109,6 +109,16 @@ export const ACTION_VERBS = new Set([
   'moderated', 'persuaded', 'presented', 'promoted', 'publicized', 'published',
   'represented', 'spoke', 'translated', 'wrote',
 
+  // Common strong verbs the list lacked: a statement opening with one read "Verb Missing", and a
+  // power-verb chip went in front of it — "Spearheaded Launched…", "Spearheaded Shipped…", from the
+  // starters' own bullets and the modal's own rewrite tip (R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
+  'adopted', 'attained', 'awarded', 'completed', 'containerized', 'contributed', 'converted',
+  'crafted', 'defined', 'demonstrated', 'drove', 'extended', 'fine-tuned', 'fixed', 'initiated',
+  'instrumented', 'introduced', 'landed', 'launched', 'lectured', 'lowered', 'obtained', 'onboarded',
+  'operated', 'owned', 'piloted', 'ran', 'rebuilt', 'released', 'rescued', 'retained', 'revitalized',
+  'rewrote', 'rolled', 'set', 'shaped', 'shipped', 'sold', 'solved', 'spun', 'stood', 'taught', 'took',
+  'trimmed', 'tutored', 'won',
+
   // The optimizer's chips and Auto-Fix's replacements, each by its first word
   ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
   ...WEAK_PHRASE_REPLACEMENTS.map(({ replacement }) => replacement.split(' ')[0].toLowerCase()),
@@ -127,9 +137,15 @@ const VERB_KEYS = new Set([...ACTION_VERBS].map(verbKey));
  * ('Led,', '•Engineered', '"Co-authored,"').
  */
 export function leadsWithActionVerb(text) {
-  const firstWord = String(text || '').trim().split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
-  return firstWord !== '' && VERB_KEYS.has(verbKey(firstWord));
+  const trimmed = String(text || '').trim();
+  const firstWord = trimmed.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
+  // "Took part in" is "participated in", no strong verb: it read as one once "took" was listed, and the
+  // chip left "Spearheaded part in the hackathon" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
+  return firstWord !== '' && VERB_KEYS.has(verbKey(firstWord)) && !TOOK_PART.test(trimmed.replace(/^[^a-zA-Z]+/, ''));
 }
+
+/** "Took part", which opens no action: see leadsWithActionVerb. */
+const TOOK_PART = /^took\s+part(?![\p{L}\d])/iu;
 
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
@@ -277,9 +293,18 @@ export function insertActionVerb(text, verb) {
   // chip left "Spearheaded to the hackathon".
   // "Led efforts to" keeps its "efforts to", which has a verb after it: "Led efforts to cut costs"
   // read "Spearheaded cut costs" (review of R4-SW-WT-03).
+  // "Set out to cut churn" has one too: "Spearheaded efforts to cut churn".
   const phrase = rest.match(LEADING_VERB_PHRASE);
-  if (phrase) return lead + verb + (/ efforts to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
-  if (leadsWithActionVerb(rest)) return lead + rest.replace(/^\p{L}[\p{L}'’-]*/u, verb);
+  if (phrase) return lead + verb + (/ (?:efforts|out) to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
+  if (leadsWithActionVerb(rest)) {
+    const first = rest.match(/^\p{L}[\p{L}'’-]*/u);
+    if (!first) return lead + rest;
+    // The verb's particle goes with it ("Set up", "Rolled back", "Took on"), or the chip left
+    // "Spearheaded back a bad release" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
+    const after = rest.slice(first[0].length);
+    const particle = after.match(verbKey(first[0]) === 'took' ? TOOK_PARTICLE : VERB_PARTICLE);
+    return lead + verb + after.slice(particle ? particle[0].length : 0);
+  }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
     // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
@@ -331,9 +356,25 @@ const FUNCTION_WORDS = new Set([
   'been', 'being', 'be', 'successfully',
 ]);
 
-/** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
+/**
+ * A particle after a leading action verb, which is part of the verb: "Set up", "Rolled out", "Rolled
+ * back", "Spun off", "Drove down" — the chip left "Spearheaded up the on-call…"
+ * (R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB). "up to" and "out of" are a preposition's
+ * ("Led up to 12 engineers" → "Spearheaded up to 12 engineers"). After "Took", "on" and "over" are one
+ * too ("Took on the role", "Took over the platform"), but "over" before a number is "more than": "Took
+ * over 200 calls a day" read "Spearheaded 200 calls a day", a smaller claim.
+ */
+const VERB_PARTICLE = /^\s+(?:up(?!\s+to(?![\p{L}\d]))|out(?!\s+of(?![\p{L}\d]))|back|down|off)(?![\p{L}\d'’-])/iu;
+const TOOK_PARTICLE = /^\s+(?:on|over(?!\s*[\d$€£¥~+]))(?![\p{L}\d'’-])/iu;
+
+/**
+ * The verb phrases of more than one word among Auto-Fix's replacements and their alternatives, and
+ * two that are no action verb and a particle: "Took part in" (leadsWithActionVerb) and "Set out to".
+ */
+const PHRASAL_VERBS = ['Took part in', 'Set out to'];
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
   .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
+  .concat(PHRASAL_VERBS)
   .filter((p) => p.includes(' '))
   .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   .join('|')})\\b`, 'iu');

@@ -1299,7 +1299,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // these (entriesInOneColumn). The template item above stays the template's own verdict, the one the
   // Design panel's badge shows (TUI-5).
   if (sideBySide.length) {
-    const names = sideBySide.map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical || s.type}"`).join(', ');
+    // Named as its fix notice names it (atsHeadingLabel): a cleared custom section read "custom", its
+    // type id (R5-HUNT9-ATS-GRIDS-WARNING-CLEARED-TITLE-TYPE-ID).
+    const names = sideBySide.map(atsHeadingLabel).join(', ');
     results.categories.layout.items.push({
       id: 'section_grids', status: 'warn', text: `Entries printed side by side: ${names}`,
       detail: 'Section Options → Grids prints these entries two or more to a row. Poppler\'s pdftotext, in its layout mode, reads the page line by line, across the row, so the entries\' lines interleave. Grids 1 prints them one under another.',
