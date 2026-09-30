@@ -49,6 +49,8 @@ Includes name, title, contact fields, optional photo, `hiddenFields[]`.
 Every template and export prints the contacts `contactItems` (`src/utils/contacts.js`) returns: a
 website, LinkedIn or GitHub prints its Display label, else its address as a bare domain, and one whose
 printed value is empty (typed as just `https://` or `www.`) is no contact at all.  
+A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`, `|` or "or" once seven
+digits are in — with an extension (`ext. 890`, `x890`, `#890`) as `;ext=890`; the text prints as typed.  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
 `updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).

@@ -30,8 +30,28 @@ export const CONTACT_GRID = { cell: 0.46, gapPx: 24 };
 
 const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
 
+const digitCount = (s) => s.replace(/\D/g, '').length;
+
 /**
- * Where a contact line should link to, or null. E-mail → mailto:, phone → tel:, website /
+ * A Phone field's tel: link, or null (under three digits: "On request"). It dials the first number
+ * only — the field cut at '/', ',', ';', '|' or "or" once what comes before holds seven digits, so
+ * "030/1234567" stays one number — and an extension ("ext. 890", "x890", "#890") rides as RFC 3966's
+ * ";ext=". Every digit of the field was the dial string: "+1 (555) 123-4567 ext. 890" dialled
+ * +15551234567890 and "+91 … / +91 …" linked to "+91…+91…" (R5-HUNT12-PHONE-TEL-LINK-MERGES-EXTENSION).
+ */
+function telHref(value) {
+  const parts = value.split(/[/,;|]|\bor\b/i);
+  let number = parts[0];
+  for (let i = 1; i < parts.length && digitCount(number) < 7; i += 1) number += parts[i];
+  const ext = number.match(/(\d[\s.)\]-]*)(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
+  const main = ext ? number.slice(0, ext.index + ext[1].length) : number;
+  const digits = main.replace(/\D/g, '');
+  if (digits.length < 3) return null;
+  return `tel:${/^\D*\+/.test(main) ? '+' : ''}${digits}${ext ? `;ext=${ext[2]}` : ''}`;
+}
+
+/**
+ * Where a contact line should link to, or null. E-mail → mailto:, phone → tel: (telHref), website /
  * LinkedIn / GitHub → the "Link URL" override when set, else the value itself (https:// added
  * to a bare domain). Location is never a link.
  */
@@ -39,10 +59,7 @@ export function contactHref(key, personal) {
   const value = String(personal?.[key] || '').trim();
   if (!value) return null;
   if (key === 'email') return safeHref(/^mailto:/i.test(value) ? value : `mailto:${value}`);
-  if (key === 'phone') {
-    const dial = value.replace(/[^\d+]/g, '');
-    return dial.replace(/\D/g, '').length >= 3 ? `tel:${dial}` : null;
-  }
+  if (key === 'phone') return telHref(value);
   if (key === 'location') return null;
   return safeHref(String(personal?.[`${key}Url`] || '').trim() || value);
 }
