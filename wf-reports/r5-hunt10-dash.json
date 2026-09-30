@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt10-dash",
+  "branch": "claude/wf-r5-hunt10-dash",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-HIDDEN-FIELDS-NOT-LIST-CRASHES-EDITOR",
+      "title": "A native .json whose personal (or an entry's) hiddenFields is not a list crashes the editor on every open, and its preview and PDF never build",
+      "severity": "High",
+      "outcome": "fixed",
+      "commits": [
+        "d82cf13b0a2d3ef2186830ac90ebbc4b089ce46b"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt10-hidden-fields-list.test.mjs"
+      ],
+      "summary": "Now: normalizeResume (withTextFields -> withHiddenList in src/utils/textFields.js) stores personal.hiddenFields and each entry's hiddenFields as a list of keys: an object, a number, true or a string hides nothing ([]), and a list keeps its text members. The imported résumé opens in the editor (Personal Info and the entry editors render), and the preview and PDF build on every template, with the listed fields still hidden. A list of text or none is left as the same object.",
+      "ci": [
+        36651086133
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT10-REVIEW-HIDDEN-TEXT: d82cf13b stored [] for a hiddenFields held as text, but before it the PDF hid the field so named ('email'.includes('email') is true; new Set('email') did not crash the editor). A native .json or a saved résumé with hiddenFields \"email\" (or an entry's \"role\") printed, once normalized, the very email and role its file said to hide, in the PDF, the Markdown and the public link. Fixed in c87a14d4: text is read as the keys it names (split on commas and white space), so they stay hidden, now in the exports and the public link too; the first test's loop no longer lists text as hiding nothing (stale expectation, evidence above), and the knowledge doc says so."
+    ],
+    "commits": [
+      "c87a14d4b62f6dbc20be6cb995e432ea8d799a43"
+    ],
+    "ci": [
+      36652015166,
+      36652163492
+    ],
+    "notes": "Root cause of d82cf13b is right: every way in (load, import, cloud sync merge, remote pull, demo restore, public page, export) runs normalizeResume, so a list is guaranteed at every reader; its failfirst (run 36651086133) is green. Non-list forms {} / 1 / true still crashed Personal Info (new Set) and the PDF (.includes) before it. The cover letter's own hiddenFields is left alone correctly: letterHiddenFields and the one-time migration guard with Array.isArray, and null there means follow the résumé. No updatedAt change (normalize is not an edit), so no sync write storm. Run 36652015166: failfirst of c87a14d4 failed 3 of 3 without it and passed with it; the area tests (both r5hunt10 files, 16-saved-data-text-fields, 16-saved-data-import, r5hunt9-resume-name-text, 31-contact-fields, 19-demo-seed-normalize, 103-r4-dph-29-personal-info, 99-public-link(-fields), 71-preview-hidden-builds, markdown-export, json-resume-hidden, ats-hidden-fields: 71 tests) and lint are green. No a11y notes. Run 36652163492: knowledge-docs, markdown-export-contacts, r5hunt2-generator-hidden-fields, json-resume and 18-cloud-sync-public-links are green on c87a14d4."
+  },
+  "baselineFailures": [],
+  "notes": "Base is origin/claude/r4-green at 2a3f9dc (the task named 5c6c1e38; the branch head had moved). CI run 36651086133: failfirst proved 5 of 6 tests fail without the fix and all pass with it; the tests job (new test plus 16-saved-data-text-fields, r5hunt9-resume-name-text, 31-contact-fields, 91-design-resets, 19-demo-seed-normalize, 103-r4-dph-29-personal-info, knowledge-docs, 71-startup-chunks) and lint are green. The cover letter's own hiddenFields was left alone: null/absent there means 'follow the résumé', and its only reader (letterHiddenFields) already guards with Array.isArray."
+}
