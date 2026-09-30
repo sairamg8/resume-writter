@@ -377,7 +377,10 @@ export function insertActionVerb(text, verb) {
     return lead + verb + after.slice(particle ? particle[0].length : 0);
   }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    const weak = new RegExp(`^${wp.match.source}`, 'iu');
+    // A verb that puts someone in the role goes with a phrase that is no verb, as in Auto-Fix: "Became
+    // responsible for payroll" read "Spearheaded Became responsible for payroll"
+    // (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+    const weak = new RegExp(`^${PUT_IN_ROLE_LEAD}${wp.match.source}`, 'iu');
     // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
     // Auto-Fix does ("Spearheaded efforts to cut costs", not "Spearheaded cut costs").
     if (weak.test(rest)) return lead + rest.replace(weak, (_, found) => (/\sto$/i.test(found) ? `${verb} efforts to` : verb));
@@ -386,6 +389,9 @@ export function insertActionVerb(text, verb) {
   const [word] = rest.match(/^\p{L}*/u);
   return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
+
+/** "Became ", "Got ", "Was put " before a phrase that is no verb ("responsible for", "in charge of"). */
+const PUT_IN_ROLE_LEAD = `(?:(?:(?:was|were|is|are|am|been) )?(?:became|become|becomes|got|held|put|placed|made) (?=(?:responsible for|tasked with|in charge of)(?![\\p{L}\\d])))?`;
 
 /**
  * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
@@ -506,10 +512,20 @@ const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]
  * An adverb between them stays, in front of the verb: "Was solely responsible for the budget" read
  * "Was solely led the budget", and now reads "Solely led the budget" (review of
  * R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB). Group 1: the adverb; group 2: the phrase.
+ * An adverb that does not end in -ly ("later", "then", "often") is one too, and so is a verb that puts
+ * someone in the role before the phrase — "became", "got", "held", "put", "placed", "made" — with or
+ * without a helper verb: "Was later tasked with rebuilding the API" read "Was later led rebuilding the
+ * API", "Became responsible for payroll" "Became led payroll", "Was put in charge of QA" "Was put
+ * oversaw QA"; now "Later led rebuilding the API", "Led payroll", "Oversaw QA"
+ * (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
  */
-const ADVERB = '\\p{L}+ly|also';
-const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?:was|were|is|are|am|been) (?:(${ADVERB}) )?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
+const ADVERB = '\\p{L}+ly|also|later|then|soon|often|always|once|still|now|again|eventually';
+const HELPER = 'was|were|is|are|am|been';
+const PUT_IN_ROLE = 'became|become|becomes|got|held|put|placed|made';
+const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?:(?:${HELPER}) (?:(${ADVERB}) )?(?:(?:${PUT_IN_ROLE}) )?|(?:${PUT_IN_ROLE}) )(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
 function dropHelperVerb(found, adverb, phrase, offset, whole) {
+  // "Was not put in charge of QA" says no more than "Was not in charge of QA": left as it is (NOT_A_VERB).
+  if (NEGATED_BEFORE.test(whole.slice(0, offset))) return found;
   const involved = /^involved/i.test(phrase);
   // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
   if (!adverb) return involved ? 'was ' : '';
@@ -523,7 +539,7 @@ function dropHelperVerb(found, adverb, phrase, offset, whole) {
  * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
  * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
  */
-const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?$`, 'iu');
+const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+)?$`, 'iu');
 const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
