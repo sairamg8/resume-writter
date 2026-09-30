@@ -5,7 +5,8 @@
 - **r4-green `bff46228`** = master + round-11 review fixes: dash (saved design picked from an imported .json), sync (first-sync
   read order), editor (review clean). Full gate on bff46228 dispatched ~04:40. Next deploy: pin `claude/deploy-r11-<sha>` at a green
   head and open a PR (a PR from r4-green can carry untested code).
-- **Running:** a reviewer agent on claude/wf-r5-hunt11-jobs (its 2 fixes are live without review); workflow wf_93d8eea6-b09
+- **Jobs review done:** fixed a live regression (re-importing a file with todos: null over a job with emptied to-dos added a copy): 0403359c, merged into r4-green `848da9ff`; full gate on 848da9ff dispatched ~04:45 (supersedes bff46228 for the next deploy). Master's push gate 36668036603 was CANCELLED mid-run; a full gate on master was dispatched ~04:37.
+- **Running:** workflow wf_93d8eea6-b09
   (round 11 import fixer, tools fixer and review, export done).
 - **Dry tally:** boards has 2 dry rounds (10, 11) and is DONE. pdf is dry in round 11. editor was dry in round 10 but had a
   finding in round 11. Round 12 is next for every area except boards, after round 11's import/tools/jobs land.
