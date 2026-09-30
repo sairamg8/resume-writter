@@ -395,9 +395,11 @@ const PUT_IN_ROLE_LEAD = `(?:(?:(?:was|were|is|are|am|been) )?(?:became|become|b
 
 /**
  * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
- * "Collaborated with", "Partner with", "Coordinate with", "Liaised with", "Teamed with".
+ * "Collaborated with", "Partner with", "Coordinate with", "Liaised with", "Teamed with", and the other
+ * verbs of WITH_VERBS: "Aligned with stakeholders" read "Spearheaded with stakeholders" under a chip
+ * (R5-HUNT12-VERB-CHIP-ALIGNED-NEGOTIATED-WITH).
  */
-const WITH_LEAD = /^(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed)(?=\s+with(?![\p{L}\d]))/iu;
+const WITH_LEAD = /^(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?=\s+with(?![\p{L}\d]))/iu;
 
 /** The power verbs that take "with" as those do: "Partnered with PMs", not "Spearheaded with PMs". */
 const WITH_VERBS = new Set(['collaborated', 'partnered', 'coordinated', 'liaised', 'aligned', 'negotiated', 'integrated', 'worked', 'teamed']);
