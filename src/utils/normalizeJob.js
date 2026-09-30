@@ -23,9 +23,9 @@ const pad2 = (n) => String(n).padStart(2, '0');
 /**
  * A job's day as the pages read it, 'YYYY-MM-DD', from how another tool may write it: a timestamp
  * ('2026-10-15T00:00:00.000Z' → its day as written, '2026-10-15', not shifted by the time zone)
- * or "15 Jan 2026" (dates.parseDayDate); a day with spaces around it without them. A day already
- * so, blank, or unreadable ('next week', '10/15/2026' — either order) comes back as it is
- * (R5-HUNT5-JOB-IMPORT-NON-ISO-DATES-INVISIBLE).
+ * or "15 Jan 2026" (dates.parseDayDate), "Jan 15, 2026", "January 15 2026", "2026/1/15"; a day
+ * with spaces around it without them. A day already so, blank, or unreadable ('next week',
+ * '10/15/2026' — either order) comes back as it is (R5-HUNT5-JOB-IMPORT-NON-ISO-DATES-INVISIBLE).
  */
 export function jobDay(v) {
   if (typeof v !== 'string') return v;
@@ -34,7 +34,15 @@ export function jobDay(v) {
   // ' 2026-10-15 ' as '2026-10-15': jobQuery (isFollowUpDue, sorts) and the Summary read only the bare day.
   if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
   const stamp = /^(\d{4}-\d{2}-\d{2})[T ]\d{2}:\d{2}/.exec(t);
-  const day = parseDayDate(stamp ? stamp[1] : t);
+  // 'Oct 15, 2026' / 'October 15 2026' (month first) and '2026/10/15' / '2026-1-5' are not
+  // ambiguous either, and are how US and East-Asian trackers write a day
+  // (R5-HUNT9-JOB-IMPORT-MONTH-FIRST-DATES): read as the day-first and ISO forms parseDayDate knows.
+  const monthFirst = /^([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/i.exec(t);
+  const ymd = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(t);
+  const text = stamp ? stamp[1]
+    : monthFirst ? `${monthFirst[2]} ${monthFirst[1]} ${monthFirst[3]}`
+      : ymd ? `${ymd[1]}-${pad2(ymd[2])}-${pad2(ymd[3])}` : t;
+  const day = parseDayDate(text);
   return day ? `${day.y}-${pad2(day.m)}-${pad2(day.d)}` : v;
 }
 

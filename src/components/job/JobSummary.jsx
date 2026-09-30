@@ -2,8 +2,7 @@ import { BellRing, Briefcase, CalendarClock, MessageSquareReply, Trophy } from '
 import { JOB_STATUSES } from '@/constants/jobs';
 import { Avatar, DatePill } from '@/components/ui';
 import { Donut } from '@/components/tracker/Charts';
-import { funnelCounts, isFollowUpDue, isOpen, jobStats } from '@/utils/jobQuery';
-import { todayLocalISO } from '@/utils/dates';
+import { funnelCounts, isDeadlineUpcoming, isFollowUpDue, jobStats } from '@/utils/jobQuery';
 import { StatusBadge } from './StatusBadge';
 
 function Stat({ icon: Icon, tone, value, label, hint }) {
@@ -60,8 +59,7 @@ export function JobSummary({ jobs, onOpen }) {
   const s = jobStats(jobs);
   const funnel = funnelCounts(jobs);
   const top = Math.max(1, funnel[0]?.count ?? 0);
-  const today = todayLocalISO();
-  const soon = jobs.filter((j) => isOpen(j) && j.deadline && j.deadline >= today).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6);
+  const soon = jobs.filter((j) => isDeadlineUpcoming(j)).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6);
   // The most overdue first, as the deadlines are by date: in board order the six shown were
   // whichever sat first, and the rest were hidden without a word (R5-HUNT1).
   const due = jobs.filter((j) => isFollowUpDue(j)).sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));

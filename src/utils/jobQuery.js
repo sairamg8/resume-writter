@@ -26,6 +26,15 @@ export function isFollowUpDue(job, now = new Date()) {
 }
 
 /**
+ * True when `job` is open and its `deadline` ('YYYY-MM-DD') is today or later. A deadline that is
+ * not such a day cannot be compared, and is not upcoming: as text, 'Jan 5, 2026' sorted after
+ * '2026-09-29', so a passed one was listed (R5-HUNT9-JOB-IMPORT-MONTH-FIRST-DATES).
+ */
+export function isDeadlineUpcoming(job, now = new Date()) {
+  return isOpen(job) && ISO_DAY.test(job.deadline || '') && job.deadline >= todayLocalISO(now);
+}
+
+/**
  * The jobs `filters` keeps, in their order: `q` — every word of it in one of the search fields
  * (any case, accents aside); `statuses` — an array or Set of status ids, empty for all;
  * `followUpDue` — only jobs whose follow-up is due on `now`. The same array when nothing filters.

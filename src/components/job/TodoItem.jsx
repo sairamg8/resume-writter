@@ -6,13 +6,17 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(todo.text);
   const ref = useRef(null);
+  // The text the box opened with: a draft still equal to it is no edit, so clicking away from an
+  // untouched box does not put it back over another tab's or a sync's newer rename
+  // (R5-HUNT9-TASK-EDIT-STALE-WRITEBACK; as job/Field.jsx, R5-JOB-07).
+  const opened = useRef(todo.text);
 
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
   function commit() {
     setEditing(false);
     const t = draft.trim();
-    if (t && t !== todo.text) onRename(t);
+    if (t && t !== opened.current.trim() && t !== todo.text) onRename(t);
     else setDraft(todo.text);
   }
 
@@ -43,7 +47,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
         />
       ) : (
         <span
-          onDoubleClick={() => { setDraft(todo.text); setEditing(true); }}
+          onDoubleClick={() => { opened.current = todo.text; setDraft(todo.text); setEditing(true); }}
           // A URL or a long word wraps inside the row: unbroken, it widened the text past a phone's
           // screen and took the delete X with it, out of reach (R4-DPH-03; as job/Field.jsx, J-12).
           className={`min-w-0 flex-1 break-words text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-ink-subtlest' : 'text-ink'}`}
