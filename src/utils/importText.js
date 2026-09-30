@@ -1454,21 +1454,33 @@ export function resumeFromText(input) {
     if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
     return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
   };
+  const isAchievement = (text) => /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+  // Such a label itself: Title Case, not over a rule, of an achievement or skills title.
+  const subLabel = (n) => {
+    const t = n.text.replace(/\s*:$/, '').trim();
+    return !n.ruled && !isCaps(t) && headingLike(n) && (isAchievement(t) || headingType(t) === 'skills');
+  };
   const partInEntry = (l, text, i) => {
     if (!entriesIn(within) || l.ruled || isCaps(text) || headingAt.has(i - 1)) return false;
-    const achievement = /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+    const achievement = isAchievement(text);
     if (!achievement && headingType(text) !== 'skills') return false;
     // Only a line past the label's own block (after a blank line or a list) that is no "Label: value"
     // line: a next entry's. A dated line of the section's own ("Technical Skills" over "Languages:
     // Python" and "Certified: AWS Solutions Architect, 2021") kept it no section, the skills a bogus job.
+    // Another such label on the way ("Key Achievements", then "Tech Stack") is the same entry's part and
+    // does not end the search: it stopped there, and the next job, behind it, went into an Awards
+    // section (R5-HUNT10-TITLECASE-SUBHEADING-PAIR-SWALLOWS-JOBS). Past it only a job's range counts: a
+    // "Skills" section's own, then a "Key Achievements" one of awards dated by a year, is two sections.
     let past = false;
-    for (let j = i + 1; j < lines.length && !headingLike(lines[j]) && !lines[j].ruled; j += 1) {
+    let range = achievement;
+    for (let j = i + 1; j < lines.length && (!headingLike(lines[j]) || subLabel(lines[j])) && !lines[j].ruled; j += 1) {
       const n = lines[j];
+      if (subLabel(n)) { range = true; past = true; continue; }
       if (n.gap) past = true;
       if (BULLET.test(n.text)) { past = true; continue; }
       if (!past || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
       const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
-      if (dates.some((d) => !achievement || (d.start && (d.end || d.current)))) return true;
+      if (dates.some((d) => !range || (d.start && (d.end || d.current)))) return true;
     }
     return false;
   };
