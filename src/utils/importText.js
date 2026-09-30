@@ -937,6 +937,15 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
           else fields.institution = part;
         }
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
+        // LinkedIn's "Bachelor of Science - BS, Computer Science": the degree's short form after its name,
+        // then its field. Before, the field of study was empty, and "BS, Computer Science" became the
+        // description (R5-HUNT12-LINKEDIN-DEGREE-ABBR-FIELD). The short form alone ("… - MBA") is the degree's too.
+        else if (fields.degree && DEGREE_NAME.test(fields.degree) && /^[\p{Lu}][\p{L}.]{0,7}(?:,\s*(.+))?$/u.test(part)
+          && DEGREE.test(part.split(',')[0]) && !/\s/.test(part.split(',')[0])) {
+          const rest = part.split(',').slice(1).join(',').trim();
+          if (rest && !fields.fieldOfStudy) fields.fieldOfStudy = rest;
+          else if (rest) left.push(rest);
+        }
         else left.push(part);
       }
       // A place on a line of its own (a side column's stacked fields): the location.

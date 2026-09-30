@@ -172,7 +172,7 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   roles, R4-LO-01; LinkedIn's employer over its total length alone, "5 years 2 months", then each role
   over its dates, R5-HUNT11 — a job's company, role and place a line each over its dates, in any order, that job's with the place its location, R5-HUNT12 — a job's place alone under its date line its location, not a next job's company over its role or dates ("Globex, Inc."); in Education a school over its degree's dated line, alone or with its place at the
   right tab, "Harvard University ⇥ Cambridge, MA", is that entry's school and location (over a "High School Diploma" too), the line under
-  the dated line no second header line but its text or the next school's, R5-HUNT11), and in a dated section an undated block (first, or after a blank line) that opens
+  the dated line no second header line but its text or the next school's, R5-HUNT11; LinkedIn's "Bachelor of Science - BS, Computer Science" the degree and its field of study, the short form dropped, R5-HUNT12), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
   ("Key Responsibilities", "Highlights", "Relevant Coursework", "Activities": `SUBHEADING`, R5-HUNT9),
   which stays that entry's text; every line it cannot place in a custom "Additional
