@@ -1438,6 +1438,30 @@ export function resumeFromText(input) {
     return Boolean(n && !n.gap && !BULLET.test(n.text) && pieces(n.text).some((p) => readDateRange(p) || trailingDate(p)));
   };
   const capsEntry = (l, i) => entriesIn(within) && !l.gap && overDate(i) && (headingAt.has(i - 1) || capsOver);
+  // In a file with no marks, a title in Title Case (no capitals, no rule) that a job or a project uses
+  // for a part of it ("Key Achievements", "Tech Stack", "Tools"), inside a section of dated entries,
+  // with another dated entry after it before the next heading: that entry's part, as ownPart is in a
+  // marked file. Before, it started a section, and every later job or project went into it as awards
+  // or skills (R5-HUNT9-TITLECASE-SUBHEADING-STARTS-SECTION). An achievement is dated by one year, so
+  // only a job's range ("2018 – 2020") after "Key Achievements" keeps it a part: a Title-Case awards
+  // section of dated awards is still one.
+  const headingLike = (n) => {
+    const t = n.text.replace(/\s*:$/, '').trim();
+    if (n.ruled || BULLET.test(n.text) || t.length > 48) return false;
+    return Boolean(headingType(t) && (isCaps(t) || n.gap || n.text.endsWith(':'))) || (isCaps(t) && n.gap && !/\d/.test(t));
+  };
+  const partInEntry = (l, text, i) => {
+    if (!entriesIn(within) || l.ruled || isCaps(text) || headingAt.has(i - 1)) return false;
+    const achievement = /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
+    if (!achievement && headingType(text) !== 'skills') return false;
+    for (let j = i + 1; j < lines.length && !headingLike(lines[j]) && !lines[j].ruled; j += 1) {
+      const n = lines[j];
+      if (BULLET.test(n.text)) continue;
+      const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
+      if (dates.some((d) => !achievement || (d.start && (d.end || d.current)))) return true;
+    }
+    return false;
+  };
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
     if (l.hint === 'heading') inEntry = false;
@@ -1450,7 +1474,8 @@ export function resumeFromText(input) {
       else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
-      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
+      if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)
+        && !partInEntry(l, text, i)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;

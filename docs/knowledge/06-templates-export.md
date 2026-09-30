@@ -122,7 +122,9 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
-  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
+  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom — but in a file with no
+  heading marks, a Title-Case "Key Achievements", "Tech Stack" or "Tools" inside a job or project with
+  another dated entry after it is that entry's part, no section (R5-HUNT9); entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
