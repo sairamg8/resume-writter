@@ -189,16 +189,48 @@ export function columnCounts(board, issues = board.issues) {
   return out;
 }
 
+/** The decimal places `n` is written with: 0.25 → 2, 3 → 0, 1e-7 → 7. */
+function decimalsOf(n) {
+  const [mantissa, exp = '0'] = String(n).split('e');
+  return Math.max(0, (mantissa.split('.')[1] ?? '').length - Number(exp));
+}
+
+/**
+ * A sum of story points as it is shown: an estimate is any number ≥ 0, so 0.1 + 0.2 added as
+ * floats is 0.30000000000000004 (R5-HUNT9-POINT-SUMS-FLOAT-NOISE). The sum is rounded to the most
+ * decimals any of its estimates has — the exact decimal total, 0.3 — so 0.125 stays 0.125 and 0.004
+ * is not shown as 0, as a fixed 2 places read them (R5-HUNT9-REV-POINTS-ROUNDED-2DP).
+ */
+export function sumPoints(estimates) {
+  let sum = 0;
+  let places = 0;
+  for (const e of estimates) {
+    if (e === null || e === undefined) continue;
+    sum += e;
+    places = Math.max(places, decimalsOf(e));
+  }
+  return Number(sum.toFixed(Math.min(places, 100)));
+}
+
 /** `{ issues, open, done, points, donePoints }` over `issues` (story points from estimates). */
 export function issueStats(board, issues) {
   const stats = { issues: issues.length, open: 0, done: 0, points: 0, donePoints: 0 };
+  const donePoints = [];
   for (const i of issues) {
     const done = isIssueDone(board, i);
     stats[done ? 'done' : 'open'] += 1;
-    stats.points += i.estimate ?? 0;
-    if (done) stats.donePoints += i.estimate ?? 0;
+    if (done) donePoints.push(i.estimate);
   }
+  stats.points = sumPoints(issues.map((i) => i.estimate));
+  stats.donePoints = sumPoints(donePoints);
   return stats;
+}
+
+/** A backlog section's points by status category, the tracker's three bubbles: `{ todo, inprogress, done }`. */
+export function pointsByCategory(board, issues) {
+  const lists = { todo: [], inprogress: [], done: [] };
+  for (const i of issues) lists[statusColumn(board, i)?.category ?? 'todo'].push(i.estimate);
+  return { todo: sumPoints(lists.todo), inprogress: sumPoints(lists.inprogress), done: sumPoints(lists.done) };
 }
 
 /**
