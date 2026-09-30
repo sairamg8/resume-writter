@@ -32,6 +32,10 @@
   "8": {
    "confirmed": 13,
    "note": "all 9 areas; dash and jobs dry; Website-freeze lead: no cause found"
+  },
+  "9": {
+   "confirmed": 8,
+   "note": "dash, pdf, boards, sync, editor, jobs; import/export/tools running"
   }
  },
  "seen": [
@@ -182,6 +186,14 @@
   "Word export joins the two words around a line-tab (U+000B) or form feed (U+000C) into one word, where Markdown and ATS text keep them apart",
   "Job scanner reads a posting's web addresses, e-mail domains and hashtags as missing keywords, and '+' writes them into Skills",
   "STAR Optimizer opened from an empty bullet (or empty line) puts its result at the end of the description and leaves the empty bullet printing a bare bullet",
-  "ATS Check's fix notices name a section whose title was cleared by its internal type id, and the headings warning lists it as an empty quote"
+  "ATS Check's fix notices name a section whose title was cleared by its internal type id, and the headings warning lists it as an empty quote",
+  "If a native .json résumé's own \"name\" is not a string, the editor and Dashboard crash on every visit and every synced device, or Rename stops working",
+  "A contact icon picked from the header icon picker ('icon:<id>' / 'pack:<id>') was fetched as an image URL on every PDF build, leaving a retry pending so the dashboard card picture was never kept",
+  "Backlog point bubbles and the Epic panel show point totals with floating-point noise ('0.30000000000000004')",
+  "If storage is too full for a job or project list's first sync record, the list quietly stops syncing while the icon says 'synced'. Deleted jobs come back, and at sign-out the account's list stays in the browser, where the next account to sign in uploads it",
+  "Design → Spacing → Line Height: − / + from a two-decimal value (Spacious 1.65, 1-Page Fit 1.35 / 1.25) jumped 0.15 and skipped a step, and a typed 1.35 / 1.65 was stored as 1.4 / 1.6",
+  "Job match and the ATS keyword check counted a certificate's Link label after its Link URL was cleared, although nothing prints it and the editor hides its box",
+  "If a task is renamed in another tab or on another device while its text box is open, clicking away without typing puts the old text back over the newer one",
+  "An imported job's day written month-first ('Oct 15, 2026') or as 'YYYY/MM/DD' / '2026-1-5' is left as text, and the Summary lists even a passed one under 'Upcoming deadlines'"
  ]
 }
