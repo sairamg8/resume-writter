@@ -8,23 +8,50 @@
       "title": "Design → Spacing → Line Height: − / + from a two-decimal value (Spacious 1.65, 1-Page Fit 1.35 / 1.25) jumped 0.15 and skipped a step, and a typed 1.35 / 1.65 was stored as 1.4 / 1.6",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["86d0fd310ad0654ead3b7fb0bb06d06b721ac741"],
-      "tests": ["tests/pdf/r5hunt9-line-height-half-step.test.mjs"],
+      "commits": [
+        "86d0fd310ad0654ead3b7fb0bb06d06b721ac741"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt9-line-height-half-step.test.mjs"
+      ],
       "summary": "Now: NumberRow's − / + land on the next step below / above (ceil/floor with an epsilon, as GapStepper does): from 1.65 they give 1.6 / 1.7, from 1.35 1.3 / 1.4, from 1.25 1.2 / 1.3. A typed value on a fractional-step row keeps two decimals (1.35 stays 1.35, 1.65 stays 1.65), rounding off only float error; whole-step rows (margins, gaps) still store whole numbers.",
-      "ci": [36646946365, 36646987386]
+      "ci": [
+        36646946365,
+        36646987386
+      ]
     },
     {
       "id": "R5-HUNT9-CERT-LINK-LABEL-WITHOUT-URL-COUNTED",
       "title": "Job match and the ATS keyword check counted a certificate's Link label after its Link URL was cleared, although nothing prints it and the editor hides its box",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["f593c60ece33d82f1b7db0e9c1a23375c510c868"],
-      "tests": ["tests/unit/r5-hunt9-cert-link-label-without-url.unit.mjs"],
+      "commits": [
+        "f593c60ece33d82f1b7db0e9c1a23375c510c868"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-cert-link-label-without-url.unit.mjs"
+      ],
       "summary": "Now: extractResumeCorpus takes a certificate's Link label (or the address) only while its Link URL is set, as every renderer and export prints it; a stale hidden label no longer counts as a matched keyword.",
-      "ci": [36646946365, 36646987386]
+      "ci": [
+        36646946365,
+        36646987386
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT9-REVIEW-CERT-BLANK-URL-LABEL: f593c60e left a certificate's Link label out of the corpus when its Link URL was blank after trimming (`fieldText(item.url).trim()`), and its test enshrined that for '   '. The editor shows the label box and the PDF (PdfSectionsTwo, PdfSidebarColumn) and Word (wordExportBuilders) print the label whenever the URL is any non-empty text (`item.url && ...`), so a URL of a stray space still printed 'Kubernetes Administrator' while the job match called Kubernetes missing. Fixed in 3bab9e72: the corpus tests the URL as the renderers do; the '   ' case in the original test was a stale expectation from the same branch and became the new test's positive case."
+    ],
+    "commits": [
+      "3bab9e72e54c79c3ad7e7fecf4381b4e6181fdfc"
+    ],
+    "ci": [
+      36648641588
+    ],
+    "notes": "86d0fd31 (Line Height steps) reviewed clean: root cause fixed in NumberRow; the only fractional-step caller is Line Height; whole-step rows (margins, gaps) now also step from a template's fractional value (13.33) to the neighbouring whole number instead of skipping one, as intended; typed values keep two decimals and are still clamped to LINE_HEIGHT 1-3; no caller, sync, undo or export path depends on snapped values. Both original failfirst checks were green in 36646946365 (each test failed without, passed with). Run 36648641588: failfirst for 3bab9e72 (fail 1 without, pass with), 234/234 area tests (ats-*, r5-hunt*-ats-*, r5-hunt9-*, import-markdown-links, json-resume-sections, markdown-export-sections, pdf 10/13/70, line-height half-step) and lint green. Noted (pre-existing, outside this cluster): Markdown export and the ATS plain text print no label for a whitespace-only URL, unlike the PDF and Word."
+  },
   "baselineFailures": [],
   "notes": "Base moved from ca009d49 to 185192d7 (origin/claude/r4-green at start). No earlier partial branch existed. One dispatch ran both fail-first checks plus the touched area's tests (line-height 106/108, ats-*, r5-hunt1-ats-*, knowledge-docs, 91-design-resets)."
 }
