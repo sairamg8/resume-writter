@@ -344,8 +344,8 @@ export function createCollectionSync({
       s.readAt = now();
       s.attempts = 0;
       store.replace(next);
-      const versions = claimed(cloudVersions);
-      if (Object.keys(versions).length > Object.keys(written.versions).length) meta.write({ ...written, versions });
+      const onDisk = claimed(cloudVersions);
+      if (Object.keys(onDisk).length > Object.keys(written.versions).length) meta.write({ ...written, versions: onDisk });
       changed(next);
       if (!s.timer) settled();
     } catch (e) {
