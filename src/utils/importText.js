@@ -1265,11 +1265,23 @@ function entriesOf(type, lines, aside) {
       const m = info[i + 1];
       // A place alone there ("### Amazon", "Seattle, WA", "*Jan 2020 – Present*") is the entry's location,
       // not its role or degree: the role read "Seattle, WA" (R5-HUNT11 review).
+      const placeLine = (n) => pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text);
+      const plain = (n) => n && !n.bullet && !n.gap && n.hint !== 'entry';
+      let cap = 3;
       if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) {
         const n = info[i++];
-        header.push(pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text) ? { ...n, hint: 'end' } : n);
+        header.push(placeLine(n) ? { ...n, hint: 'end' } : n);
+      } else if (!L.date && second(info[i]) && plain(m) && second(m) && placeLine(info[i]) !== placeLine(m)
+        && plain(info[i + 2]) && dateLine(info[i + 2])) {
+        // Its role and its place a line each ("### Google", "Software Engineer", "Mountain View, CA",
+        // "2017 – 2021"; a school's degree over its place): both the entry's, the place its location.
+        // Before, the place ended the header, and the date line took the role into an untitled entry
+        // of its own (R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY).
+        for (const n of [info[i], m]) header.push(placeLine(n) ? { ...n, hint: 'end' } : n);
+        i += 2;
+        cap = 4;
       }
-      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
+      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < cap && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
     }
@@ -1321,6 +1333,21 @@ function entriesOf(type, lines, aside) {
             if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
             header.unshift(body.pop());
             next = prev;
+          }
+          // A job printed as its company, its role and its place a line each over its dates ("Google",
+          // "Software Engineer", "Mountain View, CA", "2017 – 2021", in any order): the place is its
+          // location, and the line over the two is its title's other field. Before, three lines were
+          // the most, so the place became the company, and the company went into the job above's text
+          // (R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY).
+          const lone = (n) => n && !n.hint && pieces(n.text).length === 1 && fieldsOf(n.text).length === 1 && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && !isMetaLine(n.text);
+          const placeLine = (n) => lone(n) && PLACE.test(n.text) && !ROLE.test(n.text) && !CORPORATE.test(n.text);
+          const titles = header.slice(0, -1);
+          const at = titles.findIndex(placeLine);
+          const prev = body[body.length - 1];
+          if (JOB.has(type) && titles.length === 2 && at >= 0 && lone(titles[1 - at]) && prev && lone(prev) && !placeLine(prev)
+            && !prev.bullet && !prev.date && prev.index === header[0].index - 1 && !header[0].gap && !sentence(prev.text)) {
+            header[at] = { ...header[at], hint: 'end' };
+            header.unshift(body.pop());
           }
         }
         // None over it, and the date alone on its line: the date prints above its entry's title (the
