@@ -1622,8 +1622,13 @@ export function resumeFromText(input) {
       // is in capitals. Before, it became a blank entry of the section above (a fake degree), and that
       // section's entries took its jobs (R5-HUNT11-TITLECASE-UNKNOWN-HEADING-BECOMES-ENTRY). No role
       // ("Head of Customer Experience"), nor a label inside an entry (SUBHEADING: "Selected Projects").
+      // Nor an entry's own title right over its lines: a firm or a project named so ("Microsoft
+      // Research" over "Research Intern ⇥ Jun 2019", "Internal Revenue Service" over "Analyst",
+      // "Customer Churn Research" over its list) became a section of its own, its section's other
+      // entries left behind (R5-HUNT11 review). Only "…Experience" is a section's name whatever is under
+      // it; another such title is one with a blank line under it (or nothing).
       else if (seen && l.gap && titleCase(text) && SECTION_WORD.test(text) && !ROLE.test(text) && !SUBHEADING.test(text)
-        && !/\d/.test(text) && text.split(/\s+/).length <= 5) type = 'custom';
+        && !/\d/.test(text) && text.split(/\s+/).length <= 5 && (/experiences?$/i.test(text) || !lines[i + 1] || lines[i + 1].gap)) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
     }
