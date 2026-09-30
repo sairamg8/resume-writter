@@ -475,12 +475,24 @@ const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|a
 const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
 
 /**
+ * A helper verb ("was", "were", "is", "are", "am", "been") and its space before a weak phrase that is
+ * an adjective or a noun, not a verb: "responsible for", "tasked with", "in charge of", "involved in".
+ * "Was handled by…" keeps its "was": "handled" is a verb, and "was managed by" is still a sentence.
+ * "Involved in" is listed only with "was" ("was involved in"), so any helper verb before it reads "was".
+ */
+const HELPER_BEFORE_WEAK_PHRASE = /(?<![\p{L}\d'’])(?:was|were|is|are|am|been) (?=(responsible for|tasked with|in charge of|involved in)(?![\p{L}\d]))/giu;
+const dropHelperVerb = (_, phrase) => (/^involved/i.test(phrase) ? 'was ' : '');
+
+/**
  * Replaces weak phrases in text with their strongest alternatives — capitalised where a sentence
  * starts, in lowercase inside one: "Engineered 4 APIs; handled QA" becomes "…; managed QA", not
  * "…; Managed QA" (R2-078).
  */
 export function autoFixWeakPhrases(text = '') {
-  let result = text;
+  // A helper verb before a phrase that is no verb of its own goes with it: "Was tasked with rebuilding…"
+  // read "Was led rebuilding…", and "Were responsible for payroll" "Were led payroll"; only "was
+  // responsible for" was listed with its helper verb (R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
+  let result = String(text ?? '').replace(HELPER_BEFORE_WEAK_PHRASE, dropHelperVerb);
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     // Each pattern has one group, so the offset and the whole text are the last two arguments.
     result = result.replace(wp.match, (...args) => {
