@@ -15,10 +15,12 @@ before(async () => {
 });
 after(teardown);
 
-const sample = () => resume({
+let base;
+/** The same résumé each time (its ids included): a copy of one built once. */
+const sample = () => structuredClone(base ??= resume({
   personal: { name: 'Jordan Ellery', title: 'Product Designer' },
   sections: [experience([{ company: 'Fabrikam Studio', role: 'Lead Designer' }, { company: 'Northwind Labs', role: 'Designer' }])],
-});
+}));
 /** The blank entry Add entry puts in an Experience section. */
 const blankJob = (id) => ({ ...section('experience', [{}]).items[0], id });
 
