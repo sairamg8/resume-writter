@@ -1,0 +1,30 @@
+{
+  "cluster": "r5-hunt10-sync",
+  "branch": "claude/wf-r5-hunt10-sync",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-SYNC-RECORD-SAVED-LIST-REFUSED-DELETES-CLOUD",
+      "title": "When storage has room for a job or project list's small sync record but not for the list itself, the next reload deletes those jobs or projects from the account's cloud and from every device",
+      "severity": "high (data loss across devices)",
+      "outcome": "fixed",
+      "commits": [
+        "c7d0d7837a6294b3d2624bc7e74e0ae831fdca49",
+        "00e26fd77b3315361d8e0677c092f131e007a2c9",
+        "66c64a39608ebaa51831ee57a907f901f32338c4"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt10-sync-record-list-refused.unit.mjs"
+      ],
+      "summary": "Now: the job and project sync record claims a version only for an item the list's storage actually holds (the stores' new saved(): savedJobs / savedBoards; collectionSyncEngine's claimed(), used by the flush's noteVersions and, after the first sync's store.replace, as a smaller rewrite of the record when the merged list was refused). A job or project storage refused to save has no version in the record, so the reload's first sync treats it as never seen here and brings it back from the cloud instead of deleting it from the account. The test covers the fresh-browser case, a job added while storage is full, and a project made while storage is full. docs/knowledge/05-state-auth-sync.md updated.",
+      "ci": [
+        "36651531939",
+        "36652149650",
+        "36652516922"
+      ]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Run 36651531939 failed on a duplicate const name (fixed in 00e26fd). Run 36652149650 showed the first design (write the record with only already-stored ids, then grow it) broke r5-hunt7-sync-leave-meta-full, whose storage refuses any record growth; 66c64a3 keeps the original single full write and only shrinks the record when the list save was refused. Run 36652516922 is green: failfirst for c7d0d78 (the new test fails without the fix and passes with it), every sync and store unit test, knowledge-docs, 71-startup-chunks and lint. The fix spans three commits because pushes are never forced."
+}
