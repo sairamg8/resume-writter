@@ -1495,16 +1495,21 @@ export function resumeFromText(input) {
     // does not end the search: it stopped there, and the next job, behind it, went into an Awards
     // section (R5-HUNT10-TITLECASE-SUBHEADING-PAIR-SWALLOWS-JOBS). Past it only a job's range counts: a
     // "Skills" section's own, then a "Key Achievements" one of awards dated by a year, is two sections.
+    // Such a label's own block (the lines right under it) is its own, as the first label's is: a range
+    // there ("Achievements" over "President, CS Club ⇥ 2014 – 2016") makes it a section of its own
+    // entries, so this one too. Before, it read as a next job, and a "Skills" section over it went into
+    // the last job's text, or became a job called "Technical Skills" (R5-HUNT10 review).
     let past = false;
+    let own = false;
     let range = achievement;
     for (let j = i + 1; j < lines.length && (!headingLike(lines[j]) || subLabel(lines[j])) && !lines[j].ruled; j += 1) {
       const n = lines[j];
-      if (subLabel(n)) { range = true; past = true; continue; }
-      if (n.gap) past = true;
-      if (BULLET.test(n.text)) { past = true; continue; }
-      if (!past || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
+      if (subLabel(n)) { range = true; past = false; own = true; continue; }
+      if (n.gap) { past = true; own = false; }
+      if (BULLET.test(n.text)) { past = true; own = false; continue; }
+      if ((!past && !own) || /^[^:\t]{1,40}:\s/.test(n.text)) continue;
       const dates = pieces(n.text).map((p) => readDateRange(p) || trailingDate(p)?.date).filter(Boolean);
-      if (dates.some((d) => !range || (d.start && (d.end || d.current)))) return true;
+      if (dates.some((d) => !range || (d.start && (d.end || d.current)))) return !own;
     }
     return false;
   };
