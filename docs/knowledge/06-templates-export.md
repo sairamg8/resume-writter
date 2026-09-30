@@ -154,7 +154,9 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases; in a file with no heading marks one in
   Title Case with no blank line before it too, of another type than the section it is in — not a
   summary's or a contact's, a `SUBHEADING` label, a "Languages" category in Skills nor a role over or under
-  its dated line, R5-HUNT11), others custom — but in a file with no
+  its dated line, R5-HUNT11), others custom (in a file with no marks one in capitals or over a rule, or
+  one in Title Case after a blank line that ends as a section's title does, "Research Experience",
+  `SECTION_WORD`, no role and no `SUBHEADING`, R5-HUNT11) — but in a file with no
   heading marks, a Title-Case "Key Achievements", "Tech Stack" or "Tools" inside a job or project with
   another dated entry after its own lines (past a blank line or a list; no "Label: value" line) is that
   entry's part, no section (R5-HUNT9) — a second such label on the way ("Key Achievements", then "Tech

@@ -674,6 +674,8 @@ function tamed(text) {
   return text.toLowerCase().split(/(\s+)/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase()).replace(/([-'’.])(\p{L})/gu, (_, a, c) => a + c.toUpperCase()))).join('');
 }
 const isCaps = (text) => /\p{Lu}/u.test(text) && !/\p{Ll}/u.test(text);
+/** The word a section's title ends in, where the import does not know the title: "Research Experience". */
+const SECTION_WORD = /\b(?:experiences?|research|teaching|leadership|involvement|service|publications|presentations|talks|conferences|grants|fellowships|patents|affiliations|memberships|appointments|outreach|employment|projects|activities)$/i;
 /** Title Case: each word from a capital, but the small ones ("Tools and Technologies", "Education & Training"). */
 const titleCase = (text) => /\p{Ll}/u.test(text) && text.split(/\s+/).every((w, k) => !/\p{L}/u.test(w) || /^[^\p{L}]*\p{Lu}/u.test(w) || (k > 0 && SMALL.has(w.toLowerCase())));
 
@@ -1589,6 +1591,13 @@ export function resumeFromText(input) {
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0 || titled)
         && !partInEntry(l, text, i)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
+      // An unknown title in Title Case after a blank line, named as a section is ("Research Experience",
+      // "Teaching Experience", "Leadership Experience", "Community Involvement"): a custom section, as it
+      // is in capitals. Before, it became a blank entry of the section above (a fake degree), and that
+      // section's entries took its jobs (R5-HUNT11-TITLECASE-UNKNOWN-HEADING-BECOMES-ENTRY). No role
+      // ("Head of Customer Experience"), nor a label inside an entry (SUBHEADING: "Selected Projects").
+      else if (seen && l.gap && titleCase(text) && SECTION_WORD.test(text) && !ROLE.test(text) && !SUBHEADING.test(text)
+        && !/\d/.test(text) && text.split(/\s+/).length <= 5) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
     }
