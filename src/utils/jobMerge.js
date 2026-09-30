@@ -30,9 +30,17 @@ function asOver(theirs, kept, mine) {
   const out = { ...theirs };
   if (!isTime(kept.createdAt)) out.createdAt = mine.createdAt;
   if (!isTime(kept.updatedAt)) out.updatedAt = mine.updatedAt;
-  const given = Array.isArray(kept.todos) ? kept.todos : [];
-  out.todos = (theirs.todos || []).map((t, n) => (given[n]?.id || !mine.todos?.[n] ? t : { ...t, id: mine.todos[n].id }));
+  out.todos = idsFrom(theirs.todos || [], kept.todos, mine.todos);
+  // An interview with no id gets a new one too (completeJob), so a job with one never matched the
+  // copy an earlier import saved, and each import of the file added it again (R5-HUNT10 review).
+  if (Array.isArray(theirs.interviews)) out.interviews = idsFrom(theirs.interviews, kept.interviews, mine.interviews);
   return out;
+}
+
+/** `list` (to-dos or interviews) with the id `mine` gave each one the file gave none. */
+function idsFrom(list, given, mine) {
+  const had = Array.isArray(given) ? given : [];
+  return list.map((e, n) => (had[n]?.id || !mine?.[n] ? e : { ...e, id: mine[n].id }));
 }
 
 /**
