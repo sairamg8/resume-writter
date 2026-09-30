@@ -8,6 +8,7 @@
 // still prints none, and the editor says so (usePrintableImage).
 import { KINDS, drawableImage, readImageFile } from './imageUpload.js';
 import { photoOption } from '../constants/photoOptions.js';
+import { isContactIconImage } from './contactIconImage.js';
 
 /** Copies made (null: none could be), by saved data URL, oldest first. */
 const made = new Map();
@@ -341,7 +342,12 @@ export async function withPrintablePhotos(resume) {
     if (entries.length > 0) {
       const converted = await Promise.all(
         entries.map(async ([field, src]) => {
-          if (!src) return [field, src];
+          // A pick from Select Header Icon ('icon:<id>', 'pack:<id>') is a vector shape PdfContactIcon
+          // draws, not an image: fetching it failed on every build and left a retry pending, so the
+          // dashboard never kept that résumé's card picture (R5-HUNT9-PICKED-ICON-FETCHED-AS-IMAGE).
+          // Asked of the value trimmed, as PdfContactIcon and the editor ask it (getCustomContactIcon),
+          // so an image saved with spaces around it is still copied and printed (R5-HUNT9-REVIEW-PADDED-ICON).
+          if (!isContactIconImage(typeof src === 'string' ? src.trim() : src)) return [field, src];
           const copy = await printableImage(src, { kind: 'icon' });
           return [field, copy || src];
         })

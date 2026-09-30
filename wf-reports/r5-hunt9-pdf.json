@@ -1,0 +1,43 @@
+{
+  "cluster": "r5-hunt9-pdf",
+  "branch": "claude/wf-r5-hunt9-pdf",
+  "base": "22fb602e3abb77edfff8874b2152362ed6efa980",
+  "rows": [
+    {
+      "id": "R5-HUNT9-PICKED-ICON-FETCHED-AS-IMAGE",
+      "title": "A contact icon picked from the header icon picker ('icon:<id>' / 'pack:<id>') was fetched as an image URL on every PDF build, leaving a retry pending so the dashboard card picture was never kept",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "9c128d5a179c00a0b3c49b03d26f53409988361c",
+        "65548059fc5bab6de058a39e5e77c48b21bf507b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-picked-icon-fetched.unit.mjs"
+      ],
+      "summary": "Now: withPrintablePhotos makes a printable copy only of contact icons that are images (isContactIconImage: a data:image/ or http(s) URL); a picker choice is left as it is, nothing is fetched, no retry is set, so pageImage no longer marks the résumé incomplete and the dashboard keeps its card picture. isContactIconImage moved to the small src/utils/contactIconImage.js (re-exported from contactIconPaths.js) so the start-up path does not carry the icon shape registry (71-startup-chunks stays under 1.1 MB).",
+      "ci": [
+        36644506931,
+        36644704045
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT9-REVIEW-PADDED-ICON: the picked-icon check in withPrintablePhotos asked isContactIconImage of the raw saved value, while PdfContactIcon and the editor read it trimmed (getCustomContactIcon). An image icon saved with spaces around it (' https://…' or ' data:image/webp…', as an imported file may hold it) was an image to the editor and to PdfContactIcon, but no printable copy was made any more, so the PDF printed the pack's icon (a regression from 9c128d5a: before it the value was fetched and printed). Fixed by asking the check of the trimmed value; the value passed to printableImage stays as saved, so the retry key still matches pageImage's printedIncomplete lookup."
+    ],
+    "commits": [
+      "632a2880b22f94bf2f4822e318f2e3bf76556e6a"
+    ],
+    "ci": [
+      36644506931,
+      36644704045,
+      36645388495
+    ],
+    "notes": "Reviewed 9c128d5a and 65548059 against origin/claude/r4-green (22fb602e). Root cause is right: a picker choice ('icon:<id>'/'pack:<id>') was fed to printableImage, fetch threw, TRY_AGAIN left a retry set, so pageImage marked every build incomplete (and imageRetryPending kept PdfPreview rebuilding on 'online'). The guard matches PdfContactIcon's own isContactIconImage test, so nothing that printed before stops printing, except values PdfContactIcon never drew as images anyway (relative paths, blob: URLs), which the editor also never showed as images. Run 36644506931 failfirst job: the original test failed without 9c128d5a (# fail 1) and passed with it; 65548059 is a module move guarded by 71-startup-chunks (failed in 36644506931 named tests, green in 36644704045). Run 36645388495: failfirst for 632a2880 ok (fails without, passes with); 157/157 named tests green incl. both hunt9 tests, contact-icon-paths, knowledge-docs, r4pdf-photo-retry, 09/39 contact icons, 31-contact-fields, 71-startup-chunks, 80-photo-url, 101 preview-photo-online, r5hunt6 card-picture-degraded, 16 saved-data-photos, 102 icon-upload-not-image, 87 word-photo; lint green. Noted, not fixed (pre-existing, editor only): CustomIconControl in PersonalInfoEditor.jsx asks isContactIconImage of the untrimmed s.customContactIcons[key] while ContactIcon trims, so for a padded image value its 'cannot print' hint is never shown. Second-agent re-review (independent pass on head 5ff2e446, code identical to 632a2880): no further defect. Checked: failfirst jobs 109664252254 (9c128d5a) and 109667068856 (632a2880) both report '# fail 1' without the fix and pass with it; the guard (trimmed isContactIconImage) matches PdfContactIcon and ContactIcon exactly, so every value that draws as an image in either is still copied, and picker values / non-string entries come back unchanged (non-strings were already returned as saved before); printableImage still gets the value as saved, so pageImage.printedIncomplete's retry lookup keys match; withPrintablePhotos's other callers (pdfBuild build/warm, pdfExportReactPDF, wordExportPhoto.withWordPhoto) do not use icon copies of picker values; no test in tests/ or cypress/ relies on a relative-path or picker icon being fetched (09-contact-icons already pins picker choices as vectors). Accepted behaviour change: an icon saved as a relative path or an upper-case scheme ('HTTPS://') is no longer fetched for the PDF, so the PDF now prints the pack icon for it, as the editor already showed; such values cannot be made by the app (uploads are lowercase data URLs). Noted, not fixed (pre-existing, not a regression): the editor's usePrintableImage asks the trimmed value while withPrintablePhotos copies the untrimmed one, so a padded URL icon is fetched once under each key."
+  },
+  "baselineFailures": [],
+  "notes": "Base named in the task was ca009d49; origin/claude/r4-green head was 22fb602e when the branch was cut. Run 36644506931: failfirst for 9c128d5a passed (test fails without the fix, passes with it); its named-tests job failed only on 71-startup-chunks (start-up path 1106 kB > 1100 kB) because printableImage.js imported contactIconPaths.js; fixed in 65548059 by moving isContactIconImage to its own module. Run 36644704045 (named tests incl. 71-startup-chunks, 31-contact-fields, knowledge-docs, contact-icon and photo tests) is green. No docs/knowledge text describes this path, so no doc change was needed."
+}
