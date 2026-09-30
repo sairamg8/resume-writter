@@ -1,0 +1,40 @@
+{
+  "cluster": "r5-hunt12-export",
+  "branch": "claude/wf-r5-hunt12-export",
+  "base": "dd02d2ef",
+  "rows": [
+    {
+      "id": "R5-HUNT12-LINK-URL-OVERRIDE-BARE-SCHEME",
+      "title": "A Link URL override of just 'https://' or 'www.' unlinks a valid website/LinkedIn/GitHub in the PDF, Word and Markdown, and 'https://www.' links to a dead address",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["ed9eb4d5796b5bf8be6b7c93040600e881cfa1d5", "d7d0a99d19a0f6b960172a643157776b7fac7907"],
+      "tests": ["tests/unit/r5-hunt12-link-url-override-bare-scheme.unit.mjs"],
+      "summary": "Now: a Link URL override that names no address ('https://', 'www.', 'https://www.', 'http://www') counts as unset (new contacts.js linkOverride, used by contactHref, the ATS text, the letter text and JSON Resume), so the valid value typed in the field is still linked in the PDF, Word and Markdown and printed in the text exports; safeHref returns null for an http(s) address with no host ('https://www.', 'https:///', 'http://www'), so a labelled Website of 'https://www.' prints its label unlinked instead of linking to a dead address. The test landed in the follow-up commit d7d0a99; the failfirst check ran it against ed9eb4d (fail 3 without, pass with).",
+      "ci": [36672279678]
+    },
+    {
+      "id": "R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL",
+      "title": "ATS text prints a bare 'https://' (or 'www.') for a website/LinkedIn/GitHub shown under a Display label; the label every other export prints is lost",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["4305c9c09c4b2c64341ab7aa820ab70541019449"],
+      "tests": ["tests/unit/r5-hunt12-ats-text-bare-scheme-label.unit.mjs"],
+      "summary": "Now: the ATS text contact line prints the Display label ('jane@x.com | Portfolio') for a website, LinkedIn or GitHub typed as just a scheme or 'www.', as the PDF, Word, Markdown and letter do; a real typed address or a Link URL still prints in full.",
+      "ci": [36672279678]
+    },
+    {
+      "id": "R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL",
+      "title": "Markdown prints a certificate's raw URL instead of its Link label when the URL is not linkable; the PDF and Word print the label",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["0500dc14c0d950fa738ba408645f6cab471a1661"],
+      "tests": ["tests/unit/r5-hunt12-md-cert-label-unlinkable-url.unit.mjs"],
+      "summary": "Now: a certificate whose URL cannot be linked ('Credly 12345', 'ABC-123') prints its Link label (else the URL) as plain text in the Markdown, matching the PDF and Word.",
+      "ci": [36672279678]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base is origin/claude/r4-green head dd02d2ef (only HANDOFF.md differs from b414cd6a). CI run 36672279678: all three failfirst checks fail without the fix and pass with it; 89 touched-area node test files (contacts, safeHref, ATS text, Markdown, JSON Resume, letter text, knowledge-docs, 31-contact-fields) pass; lint green. Run 36672222539 was cancelled (it named a test file that does not exist). No accessibility issues noted."
+}
