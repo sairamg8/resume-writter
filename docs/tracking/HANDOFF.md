@@ -1,5 +1,9 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 01:05 UTC — DEPLOY: PR #7** (`claude/deploy-r9-0373b9e`, rounds 7-9 = 48 fixes, full gate 36650099739 on `0373b9e9`
+GREEN) replaces #4/#5/#6 (#6 has round-8 import regressions). Owner: merge #7 (or `git push origin 0373b9e9:refs/heads/master`),
+then close #4, #5, #6. Round 10 running (wf_98d5855d-049, wf_4af2d4d7-c83).
+
 **2026-09-30 00:45 UTC — ROUND 9 DONE (all 9 areas, 14 fixes): `0373b9e9`.** Import's 3 were REGRESSIONS from round 8's import
 fixes (a sub-heading under a job becomes a blank entry; a line ending in bracketed years splits off; a Title-Case sub-heading starts a
 section). **PR #6 (1f7ed0e) carries them: marked [Hold], don't merge.** Full gate on `0373b9e9` dispatched ~00:45; when green, pin
