@@ -1,5 +1,8 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 00:05 UTC — DEPLOY: PR #6** (`claude/deploy-r8-1f7ed0e`, rounds 7 + 8 = 34 fixes, full gate 36646361492 on `1f7ed0e8`
+GREEN) supersedes #4 and #5. Owner: merge #6 (or `git push origin 1f7ed0e8:refs/heads/master`), then close #4/#5. Round 9 running.
+
 **2026-09-29 23:45 UTC — ROUND 8 DONE (all 9 areas, 13 fixes) and merged: `1f7ed0e8`.** import 4 (+review fixes: undated entry,
 bracket dates), export 1 (Word line tab glued words), tools 3 (+review fixes). dash and jobs dry. Seen-list 148. **Full gate on
 `1f7ed0e8` dispatched ~23:45 UTC**; when green, pin `claude/deploy-r8-1f7ed0e` and open a deploy PR that supersedes #5. Running:
