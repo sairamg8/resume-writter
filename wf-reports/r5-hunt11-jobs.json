@@ -1,0 +1,30 @@
+{
+  "cluster": "r5-hunt11-jobs",
+  "branch": "claude/wf-r5-hunt11-jobs",
+  "base": "b616be3e954dbcfb3d8f30b6b1851f991e659c7a",
+  "rows": [
+    {
+      "id": "R5-HUNT11-IMPORT-SUBITEM-IDS-DUPLICATE",
+      "title": "Re-importing a timeless jobs file whose to-dos or interviews have numeric (or repeated) ids adds another copy of each such job on every import",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["bbf2d96932634e78b5bb0c9776d5549d962e2efe"],
+      "tests": ["tests/unit/r5-hunt11-job-import-subitem-ids.unit.mjs"],
+      "summary": "Now: importing the same file again skips the job when its to-dos or interviews have numeric or repeated ids. mergeImport's comparison (idsFrom in src/utils/jobMerge.js) takes the saved job's id for every entry whose id completeJob replaced (e.id !== the file's id), not only for entries that had no id. A changed to-do still makes the job a copy.",
+      "ci": [36656229288]
+    },
+    {
+      "id": "R5-HUNT11-IMPORT-NULL-TODOS-DUPLICATE",
+      "title": "Re-importing a timeless jobs file whose entries have \"todos\": null adds another copy of each such job on every import",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["5c7ab4af9de53e5b1b6aa3ef96192a5f1da53cc7"],
+      "tests": ["tests/unit/r5-hunt11-job-import-null-todos.unit.mjs"],
+      "summary": "Now: importing the same file with todos: null again skips the job. asOver keeps the file's todos as they are when they are not a list, which is how the job was saved, instead of turning them into []. Jobs already saved with todos: null by earlier imports match as well, with no data migration needed.",
+      "ci": [36656229288]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI run 36656229288 (dispatch on 5c7ab4a): both fail-first jobs passed (subitem-ids failed 4 tests without its fix, null-todos failed 2), and the named job-import, normalize-job and knowledge-docs files passed 66/66, plus lint. docs/knowledge/07-job-tracker.md is updated."
+}
