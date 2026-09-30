@@ -40,6 +40,10 @@
   "10": {
    "confirmed": 12,
    "note": "all 9 areas; boards and editor dry"
+  },
+  "11": {
+   "confirmed": 17,
+   "note": "pdf, boards dry (boards done: dry in 10 and 11); owner deployed round 11 before review at 33c7c1da; review fixes on r4-green"
   }
  },
  "seen": [
@@ -216,6 +220,23 @@
   "A section prints a lone heading (and an empty entry) in the PDF/preview when its only entry holds nothing but a certificate's leftover Link label or interests that are only commas; Markdown and ATS text leave it out",
   "Auto-Fix turns 'Worked with <people>' into 'Engineered <people>'",
   "Present-tense bullets for a current job ('Manage', 'Develop', 'Lead', 'Build') count as having no action verb",
-  "A power-verb chip on 'Maintained compliance with...', 'Active member of...' or 'Supported delivery of...' deletes the noun as well"
+  "A power-verb chip on 'Maintained compliance with...', 'Active member of...' or 'Supported delivery of...' deletes the noun as well",
+  "A native .json whose settings.nameFont or settings.headingFont is an object crashes the editor when Design -> Typography opens",
+  "A stored settings.customFont that is not text makes Word export of the résumé and its cover letter always fail",
+  "Picking a saved design from an imported .json writes its raw settings onto the résumé, so fontSizeBase \"12\" prints the name at 128 pt",
+  "With two tabs open, a job or project just created in one tab can be deleted from both tabs and from the account's cloud, if the other tab starts a first sync at that moment (and a job just deleted can come back)",
+  "If an import finishes while the editor's rename box is open, the name you typed for your résumé is given to the imported résumé instead",
+  "Re-importing a timeless jobs file whose to-dos or interviews have numeric (or repeated) ids adds another copy of each such job on every import",
+  "Re-importing a timeless jobs file whose entries have \"todos\": null adds another copy of each such job on every import",
+  "Markdown (and Word with heading styles) import: a '### Company' heading with the role on the next line and the dates under that is split into two entries",
+  "Text/PDF/Word import: 'School ⇥ City, ST' over 'Degree ⇥ Date' leaves Institution empty and gives the degree the next school",
+  "Word/text import (no heading styles): a Title-Case section title with no blank line before it is not read as a heading, so every later section is folded into the one above",
+  "Text/PDF/Word import: an unknown Title-Case section title ('Research Experience', 'Teaching Experience') becomes a blank entry of the section above",
+  "PDF/text import of LinkedIn's 'Save to PDF': a company with several roles gives its roles the company '5 years 2 months' (or the previous role's city)",
+  "JSON Resume import stores a project's `roles` as `role`, which no editor field and no output shows, but the job match still counts it",
+  "JSON Resume export writes a website, LinkedIn or GitHub typed as just 'https://' or 'www.' as basics.url or a profile url, which every other export leaves out",
+  "A project role an earlier JSON Resume import stored as `role` was lost for good once the import fix stopped counting and exporting it",
+  "Auto-Fix after 'Was' / 'Is' / 'Were' writes broken grammar: 'Was tasked with rebuilding…' becomes 'Was led rebuilding…', 'Was in charge of onboarding' becomes 'Was oversaw onboarding'",
+  "ATS Check marks down an unprinted blank Experience or Education entry: 'Some roles missing Job Title or Company' and 'Missing employment dates on some roles', minus 5 points"
  ]
 }

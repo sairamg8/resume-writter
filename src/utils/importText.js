@@ -1153,9 +1153,12 @@ function entriesOf(type, lines, aside) {
     const [field = ''] = datedFields(L.text);
     // A school with its place: the school's name alone ("…, MA" is no degree), over any dated line that
     // names no school ("Study Abroad Program ⇥ Jan 2024 – May 2024" names no degree either).
-    if (schoolPlaced(b)) return !SCHOOL.test(field) ? 'school' : null;
+    // A "High School Diploma" names a degree, no school: "Boston Latin School ⇥ Boston, MA" over it was
+    // no title, the diploma left with no school and the school in the entry above's text (R5-HUNT11 review).
+    const school = SCHOOL.test(field.replace(/\bhigh\s+school\b/gi, ''));
+    if (schoolPlaced(b)) return !school ? 'school' : null;
     if (KIND && KIND.test(b.text) && !KIND.test(field)) return 'kind';
-    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !SCHOOL.test(field)) return 'school';
+    if (type === 'education' && SCHOOL.test(b.text) && !DEGREE.test(b.text) && DEGREE.test(field) && !school) return 'school';
     return null;
   };
   const names = (b, L) => Boolean(way(b, L));
@@ -1260,7 +1263,12 @@ function entriesOf(type, lines, aside) {
       const second = (n) => Boolean(n && !n.bullet && !n.date && !n.hint && n.text.length <= 100 && !/[.!?:;,]$/.test(n.text)
         && !isMetaLine(n.text) && pieces(n.text).length <= 2 && !sentence(n.text));
       const m = info[i + 1];
-      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) header.push(info[i++]);
+      // A place alone there ("### Amazon", "Seattle, WA", "*Jan 2020 – Present*") is the entry's location,
+      // not its role or degree: the role read "Seattle, WA" (R5-HUNT11 review).
+      if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) {
+        const n = info[i++];
+        header.push(pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text) ? { ...n, hint: 'end' } : n);
+      }
       while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
@@ -1329,9 +1337,16 @@ function entriesOf(type, lines, aside) {
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
         // became the next role's company.
+        // Not the next job's company over its dates, or over its role over them ("Globex, Inc." or "Smith,
+        // Jones" reads as a place): it became this job's location, the next job left with none (R5-HUNT11
+        // review). A group's next role right under the place is the group's (LinkedIn's "Mountain View,
+        // California" over "Software Engineer" over its dates).
         const n = info[i];
+        const dated = (k) => Boolean(info[k] && !info[k].gap && info[k].date);
+        const nextTitle = n && !header[0].group && (dated(i + 1)
+          || (info[i + 1] && !info[i + 1].gap && !info[i + 1].bullet && !info[i + 1].date && dated(i + 2)));
         if (JOB.has(type) && header[0] !== L && n && !n.bullet && !n.gap && !n.date && !n.hint && pieces(n.text).length === 1
-          && PLACE.test(n.text) && !ROLE.test(n.text) && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
+          && PLACE.test(n.text) && !ROLE.test(n.text) && !nextTitle && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
@@ -1612,7 +1627,10 @@ export function resumeFromText(input) {
       // skills section no "Languages" over a list of them (skillsOf's category); not an entry's own line
       // right under its dated one, nor a role over it ("Volunteer" under "Red Cross ⇥ 2019 – 2020").
       const underDate = i > 0 && pieces(lines[i - 1].text).some((p) => readDateRange(p) || trailingDate(p));
+      // Nor a hobby in an interests list a line each ("Hiking", "Volunteering", "Photography"): it
+      // started a Volunteering section, the hobbies under it its entries (R5-HUNT11 review).
       const titled = titleHeading(text, true) && known !== within && !(within === 'skills' && known === 'languages')
+        && !(within === 'interests' && known === 'volunteering')
         && !(ROLE.test(text) && (underDate || overDate(i)));
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0 || titled)
         && !partInEntry(l, text, i)) type = known;
@@ -1622,8 +1640,13 @@ export function resumeFromText(input) {
       // is in capitals. Before, it became a blank entry of the section above (a fake degree), and that
       // section's entries took its jobs (R5-HUNT11-TITLECASE-UNKNOWN-HEADING-BECOMES-ENTRY). No role
       // ("Head of Customer Experience"), nor a label inside an entry (SUBHEADING: "Selected Projects").
+      // Nor an entry's own title right over its lines: a firm or a project named so ("Microsoft
+      // Research" over "Research Intern ⇥ Jun 2019", "Internal Revenue Service" over "Analyst",
+      // "Customer Churn Research" over its list) became a section of its own, its section's other
+      // entries left behind (R5-HUNT11 review). Only "…Experience" is a section's name whatever is under
+      // it; another such title is one with a blank line under it (or nothing).
       else if (seen && l.gap && titleCase(text) && SECTION_WORD.test(text) && !ROLE.test(text) && !SUBHEADING.test(text)
-        && !/\d/.test(text) && text.split(/\s+/).length <= 5) type = 'custom';
+        && !/\d/.test(text) && text.split(/\s+/).length <= 5 && (/experiences?$/i.test(text) || !lines[i + 1] || lines[i + 1].gap)) type = 'custom';
       else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
       if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
     }
