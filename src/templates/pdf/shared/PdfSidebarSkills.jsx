@@ -1,7 +1,8 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { SPACER, hexAlpha } from './PdfSections';
-import { SideSectionTitle, sideBreaks } from './PdfSidebarColumn';
+import { SideSectionTitle, sideBreaks, sideColumnRoom } from './PdfSidebarColumn';
+import { wrappedLines } from './pdfMeasure';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
@@ -14,6 +15,28 @@ import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/u
  * minPresenceAhead needs (R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN).
  */
 const categoryKeep = { wrap: false, minPresenceAhead: 30 };
+
+/**
+ * What the column's title keeps under it for a first group of Bars, Tags or Stacked (SideSectionTitle's
+ * `presence`, pt): the group's category, 1.2 of 8.5 pt a line in the lines it fills and its 2 pt margin,
+ * the part of its keep its skills fill — Bars' bars (a label over a 3 pt bar, 4 pt apart), Stacked's
+ * "• " lines, Tags' chips at the whole keep (their rows are not measured) — and a line to spare; never less than
+ * the title's own three lines.
+ * With the title's own three lines, a category that moved to the next page with its skills left the
+ * title alone at the foot of the page (R5-HUNT10-SKILLS-TITLE-ORPHANED-BY-CATEGORY-KEEP). Undefined (the
+ * title's three lines) for a first group with no category, which keeps nothing.
+ */
+function categoryPresence(settings, style, group, catFont) {
+  if (!group?.category) return undefined;
+  const room = sideColumnRoom(settings);
+  const font = (f) => ({ fontFamily: settings?._pdfFontFamily, ...f });
+  const lines = (text, f) => Math.max(1, wrappedLines(text, font(f), room));
+  const valLine = 8.5 * 1.2;
+  const under = style === 'bars' ? group.list.reduce((pt, sk, i) => pt + (i ? 4 : 0) + lines(sk, { fontSize: 8.5 }) * valLine + 1 + 3, 0)
+    : style === 'stacked' ? group.list.reduce((pt, sk) => pt + lines(`• ${sk}`, { fontSize: 8.5 }) * 8.5 * 1.4 + 1, 0)
+    : group.list.length ? categoryKeep.minPresenceAhead : 0;
+  return Math.ceil(Math.max(3 * 9 * 1.2, lines(group.category, catFont) * 8.5 * 1.2 + 2 + Math.min(categoryKeep.minPresenceAhead, under) + 9 * 1.2));
+}
 
 /** A group as printed (skillGroup), its category in the column's capitals (skillCategory). */
 function shownGroup(item) {
@@ -44,7 +67,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'bars') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={categoryPresence(settings, style, groups[0], trackedCat)} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -76,7 +99,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'tags') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={categoryPresence(settings, style, groups[0], trackedCat)} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -107,7 +130,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'stacked') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={categoryPresence(settings, style, groups[0], { fontSize: 8.5, fontWeight: 'bold' })} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
