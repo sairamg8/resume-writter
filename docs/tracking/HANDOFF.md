@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 06:05 UTC — ROUND 12 import/export/tools merged: r4-green `c283b4b1`** (11 fixes + review fixes: import 4 — stacked
+company/role/place/dates, one-word header city, LinkedIn degree abbreviation and grouped role; export 3 — bare-scheme links and labels;
+tools 4 — auto-fix and verb chips, share-link 'changed since' counting a blank entry). Seen-list 202. Full gate on c283b4b1 dispatched.
+PR #9 (b414cd6) is still open for the owner; a newer deploy PR follows a green c283b4b1. Running: wf_3d096ca1-696 (round 12 dash,
+pdf, sync, editor, jobs) and wf_4f72ce87-720 (round 13 import, export, tools). boards DONE.
+
 **2026-09-30 05:20 UTC — master `e1267bc9` (live, the owner's deploy) is GREEN (run 36670757485). DEPLOY: PR #9**
 (`claude/deploy-r11-b414cd6`, full gate 36671003710 on `b414cd6a` GREEN) = master + the 5 round-11 import review fixes (live
 regressions from the unreviewed import changes). Owner: merge #9 (or `git push origin b414cd6a:refs/heads/master`). Round 12 running.
