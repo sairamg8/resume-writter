@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 ~05:00 UTC — DEPLOYED by the owner's order (no CI wait): master = `fa9c6ba4`** = everything: r4-green (round 11 review fixes:
+dash, sync, jobs), every claude/wf-r5-hunt11-* branch (incl. import, unreviewed), plus the 7 leftovers (JSON Resume bare-scheme label fixed;
+Website typing quadratic paths in contacts.js/richText.js fixed, freeze itself still unreproduced; AUD-09/19/23/25/26 were already fixed,
+stale notes closed). r4-green = master. Not merged: claude/wf-r5-hunt10-pdf-probe (probe test), claude/coordinator-lock. The full gate on
+`fa9c6ba4` is unread: read it and fix anything red first (new tests still need their fail-first proof).
+
 **2026-09-30 04:40 UTC — LIVE STATE (coordinator session_01CAwUZJx2CYW1r6VSh7tBT6; lock on claude/coordinator-lock):**
 - **Deployed:** master `33c7c1da` (owner, 04:15) = rounds 7-10 (60 fixes, gated) + round 11 before review. Master push gate: run 36668036603.
 - **r4-green `bff46228`** = master + round-11 review fixes: dash (saved design picked from an imported .json), sync (first-sync
