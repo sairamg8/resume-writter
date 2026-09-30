@@ -2,7 +2,7 @@
 // nothing — a new Languages row with no language (as a lone fluency "Professional"), a new section's
 // blank job, a job with every field's eye off — and counted them in meta.sections. The PDF, Word,
 // Markdown and ATS text leave them out (entryPrints); other JSON Resume tools printed a lone
-// "Professional" and an empty job. Now only entries that print, in sections that print, are written.
+// "Professional" and an empty job. Now only entries that print are written.
 //
 // Run: node --test tests/unit/r5-hunt10-jsonresume-unprinted-entries.unit.mjs
 import { test } from 'node:test';
@@ -24,7 +24,7 @@ test('a Languages row with no language is not written as a lone "Professional"',
     ] },
   ]));
   assert.deepEqual(file.languages, []);
-  assert.ok(!file.meta.sections.some((s) => s.type === 'languages'), JSON.stringify(file.meta.sections));
+  assert.deepEqual(file.meta.sections.find((s) => s.type === 'languages').entries, 0);
 });
 
 test('a blank job and a job with every eye off are not written; a printed job still is', () => {
@@ -41,12 +41,12 @@ test('a blank job and a job with every eye off are not written; a printed job st
   assert.equal(exp.entries, 1);
 });
 
-test('a new Experience section holding only its blank entry is left out of the file', () => {
+test('a new Experience section holding only its blank entry writes no job, and keeps its place with none', () => {
   const file = cpwtResumeToJsonResume(resumeWith([
     { id: 'ex', type: 'experience', title: 'Experience', visible: true, settings: {}, items: [
       { id: 'e0', company: '', role: '', location: '', startDate: '', endDate: '', current: false, description: '' },
     ] },
   ]));
   assert.deepEqual(file.work, []);
-  assert.deepEqual(file.meta.sections, []);
+  assert.deepEqual(file.meta.sections.map((s) => [s.type, s.entries]), [['experience', 0]]);
 });
