@@ -278,18 +278,13 @@ export function createCollectionSync({
     const { uid } = user;
     let sets = [];
     try {
-      // The versions this browser knew BEFORE the read: every tab shares the record, and another
+      // The record as this browser had it BEFORE the read: every tab shares the record, and another
       // tab's flush landing while this one reads writes it ahead of the copy read here. An item that
       // tab had just added then looked known here and removed from the cloud, and was dropped (the
       // other tab took the shorter list and deleted it from the account); one it had just deleted
       // looked changed elsewhere, and came back — as the résumés' engine guards with its `known`
       // (R5-HUNT11-SYNC-COLLECTION-FIRST-SYNC-READS-RECORD-AFTER-CLOUD).
-      // So is the order it last saw the cloud hold: another tab's move sent meanwhile wrote its new
-      // order to the record, the cloud's old order just read no longer matched it and led, and the
-      // move was undone here and then on every device (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD).
       const early = meta.read();
-      const seen = early.uid === uid ? early.versions : {};
-      const seenOrder = early.uid === uid ? early.order : null;
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
@@ -298,20 +293,29 @@ export function createCollectionSync({
       if (m.uid && m.uid !== uid && !leave(m.uid)) throw noRoom();
       const record = meta.read();
       const own = store.items();
-      const mine = record.uid === uid;
-      const stash = stashOf(record, uid);
+      // What this browser knew of the account: the record from before the read, all of it — its
+      // versions, its order, and what was kept aside at the last sign-out. Two tabs signing in at
+      // once, the other tab's first sync landing during this one's read took the kept-aside list
+      // out of the record and named the account: read after, a job deleted before that sign-out
+      // was no longer one deleted here, and came back from the cloud copy read before it went; a
+      // move the other tab sent looked like the base order, and the cloud's older order undid it.
+      // The record read now when it no longer names the account (another tab signed out
+      // meanwhile): it holds what that sign-out kept aside.
+      const knew = record.uid === uid ? early : record;
+      const mine = knew.uid === uid;
+      const stash = stashOf(knew, uid);
       const local = [...own, ...stash.items.filter((x) => !own.some((o) => o.id === x.id))];
       // An id the cloud cannot name is in no copy of it: its version (a nested document an older
       // build wrote) would have the job dropped here as removed from the cloud.
-      const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? seen : {}) })
+      const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? knew.versions : {}) })
         .filter(([id]) => cloudCanName(id)));
       const ownIds = new Set(own.map((x) => x.id));
-      const localDeletes = [...stash.deletes, ...(mine ? Object.keys(seen).filter((id) => !ownIds.has(id)) : [])]
+      const localDeletes = [...stash.deletes, ...(mine ? Object.keys(knew.versions).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
       // The order the cloud held when this browser last synced, so a move made here since (offline,
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
-      const moved = mine ? { baseOrder: seenOrder } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
+      const moved = mine ? { baseOrder: knew.order } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
       const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [] });
 
       sets = sendable(uid, plan.sets);
