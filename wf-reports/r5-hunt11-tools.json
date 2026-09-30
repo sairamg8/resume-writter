@@ -1,0 +1,30 @@
+{
+  "cluster": "r5-hunt11-tools",
+  "branch": "claude/wf-r5-hunt11-tools",
+  "base": "11ba2ea16b2b8f1251a981eadd027fddfed83aee",
+  "rows": [
+    {
+      "id": "R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB",
+      "title": "Auto-Fix after 'Was' / 'Is' / 'Were' writes broken grammar: 'Was tasked with rebuilding…' becomes 'Was led rebuilding…', 'Was in charge of onboarding' becomes 'Was oversaw onboarding'",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["88507d0c49fd6ac68140a8762eaccbd1e372a005"],
+      "tests": ["tests/unit/r5-hunt11-autofix-helper-verb.unit.mjs"],
+      "summary": "Now: autoFixWeakPhrases drops a helper verb (was/were/is/are/am/been) in front of 'responsible for', 'tasked with', 'in charge of' and 'involved in' before replacing the phrase: 'Was tasked with rebuilding the billing API' becomes 'Led rebuilding the billing API', 'Was in charge of onboarding' becomes 'Oversaw onboarding', 'Were responsible for payroll' becomes 'Led payroll'. A passive such as 'was handled by' keeps its 'was'.",
+      "ci": [36655800914, 36656499065]
+    },
+    {
+      "id": "R5-HUNT11-ATS-SCORES-BLANK-ENTRIES",
+      "title": "ATS Check marks down an unprinted blank Experience or Education entry: 'Some roles missing Job Title or Company' and 'Missing employment dates on some roles', minus 5 points",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["a9755f8c1f2ca46a644e0a01475954bd147bfe36"],
+      "tests": ["tests/unit/r5-hunt11-ats-blank-entries.unit.mjs"],
+      "summary": "Now: shownItems in atsChecker.js keeps only entries that print (entryPrints), so a blank Add-entry row in Experience or Education no longer triggers the role/company, employment-date or degree warnings or costs points, no longer shows as an empty job in 'What a parser reads', and no longer splits a company's grouped roles.",
+      "ci": [36655800914, 36656499065]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Both fixes were committed by an earlier fixer on this branch (cut off by a usage limit) and are already merged into origin/claude/r4-green (33c7c1da). Fail-first proven green in run 36656499065 (and 36655800914), with the named-tests run green in 36656499065 at head f407267d. The branch also carries R5-HUNT11-VERB-CHIP-ON-WORKED-WITH (0f34a4d9, e2e813a1, f407267d), proven in run 36656499065 but not among this fixer's findings. Docs updated in docs/knowledge/04-features.md and 06-templates-export.md within the fix commits."
+}
