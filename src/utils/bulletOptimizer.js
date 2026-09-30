@@ -376,11 +376,20 @@ export function insertActionVerb(text, verb) {
     const particle = after.match(['took', 'take'].includes(verbKey(first[0])) ? TOOK_PARTICLE : VERB_PARTICLE);
     return lead + verb + after.slice(particle ? particle[0].length : 0);
   }
+  // A verb that puts someone in the role goes with a phrase that is no verb, as in Auto-Fix: "Became
+  // responsible for payroll" read "Spearheaded Became responsible for payroll"
+  // (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME). An adverb after it stays, in front of the chip's verb,
+  // as Auto-Fix keeps it: "Became solely responsible for payroll" read "Spearheaded Became solely
+  // responsible for payroll", and "Got involved in hiring" "Spearheaded Got involved in hiring"; now
+  // "Solely spearheaded payroll" and "Spearheaded hiring" (review of R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+  const role = rest.match(PUT_IN_ROLE_OPENING);
+  if (role) {
+    const adverb = role[1];
+    const opening = adverb ? `${adverb[0].toUpperCase()}${adverb.slice(1).toLowerCase()} ${verb[0].toLowerCase()}${verb.slice(1)}` : verb;
+    return lead + opening + rest.slice(role[0].length);
+  }
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    // A verb that puts someone in the role goes with a phrase that is no verb, as in Auto-Fix: "Became
-    // responsible for payroll" read "Spearheaded Became responsible for payroll"
-    // (R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
-    const weak = new RegExp(`^${PUT_IN_ROLE_LEAD}${wp.match.source}`, 'iu');
+    const weak = new RegExp(`^${wp.match.source}`, 'iu');
     // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
     // Auto-Fix does ("Spearheaded efforts to cut costs", not "Spearheaded cut costs").
     if (weak.test(rest)) return lead + rest.replace(weak, (_, found) => (/\sto$/i.test(found) ? `${verb} efforts to` : verb));
@@ -389,9 +398,6 @@ export function insertActionVerb(text, verb) {
   const [word] = rest.match(/^\p{L}*/u);
   return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
-
-/** "Became ", "Got ", "Was put " before a phrase that is no verb ("responsible for", "in charge of"). */
-const PUT_IN_ROLE_LEAD = `(?:(?:(?:was|were|is|are|am|been) )?(?:became|become|becomes|got|held|put|placed|made) (?=(?:responsible for|tasked with|in charge of)(?![\\p{L}\\d])))?`;
 
 /**
  * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
@@ -527,11 +533,16 @@ const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]
 const ADVERB = '\\p{L}+ly|also|later|then|soon|often|always|once|still|now|again|eventually';
 const HELPER = 'was|were|is|are|am|been';
 const PUT_IN_ROLE = 'became|become|becomes|got|held|put|placed|made';
-const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?:(?:${HELPER}) (?:(${ADVERB}) )?(?:(?:${PUT_IN_ROLE}) )?|(?:${PUT_IN_ROLE}) )(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
-function dropHelperVerb(found, adverb, phrase, offset, whole) {
+// An adverb may follow the verb that puts someone in the role too: "Became solely responsible for payroll"
+// read "Became solely led payroll", "Was made fully responsible for the budget" "Was made fully led the
+// budget"; now "Solely led payroll", "Fully led the budget" (review of R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+// Group 1: the adverb after the helper verb; group 2: the one after the role verb; group 3: the phrase.
+const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?=(?:${HELPER}|${PUT_IN_ROLE}) )(?:(?:${HELPER}) (?:(${ADVERB}) )?)?(?:(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?)?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
+function dropHelperVerb(found, helperAdverb, roleAdverb, phrase, offset, whole) {
   // "Was not put in charge of QA" says no more than "Was not in charge of QA": left as it is (NOT_A_VERB).
   if (NEGATED_BEFORE.test(whole.slice(0, offset))) return found;
   const involved = /^involved/i.test(phrase);
+  const adverb = [helperAdverb, roleAdverb].filter(Boolean).join(' ');
   // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
   if (!adverb) return involved ? 'was ' : '';
   if (involved) return found;
@@ -540,11 +551,19 @@ function dropHelperVerb(found, adverb, phrase, offset, whole) {
 }
 
 /**
+ * A statement opening with a verb that puts someone in the role, a helper verb before it or not, an
+ * adverb after it or not, and a phrase that is no verb: "Became responsible for", "Was put in charge
+ * of", "Became solely responsible for", "Got involved in". The power-verb chip replaces all of it but
+ * the adverb. Group 1: the adverb.
+ */
+const PUT_IN_ROLE_OPENING = new RegExp(`^(?:(?:${HELPER}) )?(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?(?:responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d])`, 'iu');
+
+/**
  * A negation before a phrase that is no verb: "Was not responsible for billing" read "Was not led
  * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
  * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
  */
-const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+)?$`, 'iu');
+const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?$`, 'iu');
 const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
