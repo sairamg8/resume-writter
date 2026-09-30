@@ -1383,10 +1383,18 @@ function entriesOf(type, lines, aside) {
           const titles = header.slice(0, -1);
           const at = titles.findIndex(placeLine);
           const prev = body[body.length - 1];
-          if (JOB.has(type) && titles.length === 2 && at >= 0 && lone(titles[1 - at]) && prev && lone(prev) && !placeLine(prev)
-            && !prev.bullet && !prev.date && prev.index === header[0].index - 1 && !header[0].gap && !sentence(prev.text)) {
-            header[at] = { ...header[at], hint: 'end' };
-            header.unshift(body.pop());
+          if (JOB.has(type) && titles.length === 2 && at >= 0 && lone(titles[1 - at])) {
+            // The line over them a name, not the job above's text: "Mentored junior engineers" or
+            // "Kubernetes migration" stays there (R5-HUNT12 review: it became this job's role or company).
+            if (prev && lone(prev) && !placeLine(prev) && !prev.bullet && !prev.date && prev.index === header[0].index - 1
+              && !header[0].gap && !sentence(prev.text) && nameLike(prev.text)) {
+              header[at] = { ...header[at], hint: 'end' };
+              header.unshift(body.pop());
+            } else if ((REGION_END.test(titles[at].text) || /^(?:remote|hybrid)$/i.test(titles[at].text)) && !placeAfterComma(titles[at].text)) {
+              // None over them: the place ("Mountain View, CA", "Remote") is still the job's location, not
+              // its company. Not "Google, Mountain View, CA": the company with its place, which entryOf parts.
+              header[at] = { ...header[at], hint: 'end' };
+            }
           }
         }
         // None over it, and the date alone on its line: the date prints above its entry's title (the
