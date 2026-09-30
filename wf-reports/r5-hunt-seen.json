@@ -34,8 +34,8 @@
    "note": "all 9 areas; dash and jobs dry; Website-freeze lead: no cause found"
   },
   "9": {
-   "confirmed": 8,
-   "note": "dash, pdf, boards, sync, editor, jobs; import/export/tools running"
+   "confirmed": 14,
+   "note": "all 9 areas; import 3 were regressions from round 8's import fixes"
   }
  },
  "seen": [
@@ -194,6 +194,12 @@
   "Design → Spacing → Line Height: − / + from a two-decimal value (Spacious 1.65, 1-Page Fit 1.35 / 1.25) jumped 0.15 and skipped a step, and a typed 1.35 / 1.65 was stored as 1.4 / 1.6",
   "Job match and the ATS keyword check counted a certificate's Link label after its Link URL was cleared, although nothing prints it and the editor hides its box",
   "If a task is renamed in another tab or on another device while its text box is open, clicking away without typing puts the old text back over the newer one",
-  "An imported job's day written month-first ('Oct 15, 2026') or as 'YYYY/MM/DD' / '2026-1-5' is left as text, and the Summary lists even a passed one under 'Upcoming deadlines'"
+  "An imported job's day written month-first ('Oct 15, 2026') or as 'YYYY/MM/DD' / '2026-1-5' is left as text, and the Summary lists even a passed one under 'Upcoming deadlines'",
+  "Text/PDF/Word import: a sub-heading inside a job or school after a blank line becomes a blank entry of its own",
+  "Text/PDF/Word import: a job's or school's line ending with several years in brackets is split off as a new blank entry",
+  "Text/PDF/Word import (no heading styles): a Title-Case sub-heading inside a job that is also a section name starts a new section and swallows every later job",
+  "A newly added Languages section or language row prints a lone 'Professional' under the Languages heading in the preview, PDF and Word; Markdown and ATS text leave the section out, and the ATS Check counts it as printed.",
+  "STAR Optimizer's power-verb chip puts a second verb in front of a statement that already starts with a strong past-tense verb missing from the list ('Spearheaded Launched…', 'Spearheaded Shipped…')",
+  "ATS Check's 'Entries printed side by side' warning names a custom section whose title was cleared by its internal type id '\"custom\"', while its own fix notice calls it '\"Untitled\"'"
  ]
 }
