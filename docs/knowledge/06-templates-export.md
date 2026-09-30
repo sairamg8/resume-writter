@@ -34,8 +34,9 @@ its card; a plain template clears it and its look leaves where the user kept it 
 returns to the design (`defaultSettings(template, settings)`). JSON Resume writes it as `meta.design`,
 Backup keeps it with the settings. Section settings are never touched. Every design runs the ATS field
 battery (`tests/pdf/42-ats-fields.test.mjs`); its badge is `atsRating(engine, settings)`.
-A design the user saved lives in `settings.myDesigns` and is read through `ownDesign`, which checks its
-settings as normalizeResume checks a résumé's (numbers in range, colours as '#rrggbb', Name Font and
+A design the user saved lives in `settings.myDesigns` and is read through `ownDesign`, which keeps its
+settings to a look (`designLook`: plain values, none of NOT_A_LOOK such as the paper) and checks them as
+normalizeResume checks a résumé's (numbers in range, colours as '#rrggbb', Name Font and
 Heading Font as text), so a saved design from an imported .json cannot put unchecked values on the
 résumé it is picked for.
 
