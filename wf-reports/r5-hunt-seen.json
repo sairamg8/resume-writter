@@ -44,6 +44,10 @@
   "11": {
    "confirmed": 17,
    "note": "pdf, boards dry (boards done: dry in 10 and 11); owner deployed round 11 before review at 33c7c1da; review fixes on r4-green"
+  },
+  "12": {
+   "confirmed": 11,
+   "note": "import/export/tools merged; dash, pdf, sync, editor, jobs running"
   }
  },
  "seen": [
@@ -237,6 +241,17 @@
   "JSON Resume export writes a website, LinkedIn or GitHub typed as just 'https://' or 'www.' as basics.url or a profile url, which every other export leaves out",
   "A project role an earlier JSON Resume import stored as `role` was lost for good once the import fix stopped counting and exporting it",
   "Auto-Fix after 'Was' / 'Is' / 'Were' writes broken grammar: 'Was tasked with rebuilding…' becomes 'Was led rebuilding…', 'Was in charge of onboarding' becomes 'Was oversaw onboarding'",
-  "ATS Check marks down an unprinted blank Experience or Education entry: 'Some roles missing Job Title or Company' and 'Missing employment dates on some roles', minus 5 points"
+  "ATS Check marks down an unprinted blank Experience or Education entry: 'Some roles missing Job Title or Company' and 'Missing employment dates on some roles', minus 5 points",
+  "Text/PDF/Word/Markdown import: a job stacked as Company, Role, City and Dates gets the city as its company, and the real company goes into the job above's description",
+  "Import: a header location of one word ('London', 'Singapore', 'San Francisco Bay Area') prints as an 'Additional Information' section and is lost on export and re-import",
+  "PDF/text import of LinkedIn's 'Bachelor of Science - BS, Computer Science' leaves Field of Study empty and puts 'BS, Computer Science' in the description",
+  "PDF/text import of LinkedIn's grouped roles: a role's one-line description with no closing period becomes the next role's company",
+  "A Link URL override of just 'https://' or 'www.' unlinks a valid website/LinkedIn/GitHub in the PDF, Word and Markdown, and 'https://www.' links to a dead address",
+  "ATS text prints a bare 'https://' (or 'www.') for a website/LinkedIn/GitHub shown under a Display label; the label every other export prints is lost",
+  "Markdown prints a certificate's raw URL instead of its Link label when the URL is not linkable; the PDF and Word print the label",
+  "Auto-Fix wrote broken grammar after a non -ly adverb or a role verb ('Was later led…', 'Became led payroll', 'Was put oversaw QA')",
+  "A power-verb chip on 'Worked closely with…', 'Worked alongside…' or 'Teamed up with…' wrote two verbs in a row",
+  "A power-verb chip on 'Aligned with…', 'Negotiated with…' or 'Integrated with…' wrote 'Spearheaded with…'",
+  "Share panel counted a blank entry as public and called adding one a change since publishing"
  ]
 }
