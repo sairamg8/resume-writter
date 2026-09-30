@@ -1198,7 +1198,12 @@ function entriesOf(type, lines, aside) {
       // Its date and named fields under it — a line of their own marked an entry too (a Word heading one
       // level deeper: Heading 3 "Mar 2021 – Present" under Heading 2 "Senior Engineer | Acme Corp").
       const under = (n) => (n.hint !== 'entry' ? Boolean(n.date) : Boolean(n.date?.first)) || isMetaLine(n.text);
-      while (i < info.length && !info[i].bullet && !info[i].gap && header.length < 3 && under(info[i])) header.push(info[i++]);
+      // Past a blank line too, a line of its dates ("### Senior Engineer — Acme Corp", a blank line, "Jan
+      // 2020 – Present": Markdown with a blank line around each heading). Before, the date line began an
+      // untitled entry of its own, with the entry's place and text, the titled one left undated
+      // (R5-HUNT10-MD-BLANK-LINE-AFTER-ENTRY-HEADING-SPLITS-ENTRY). Not a sentence of its text.
+      const dateLine = (n) => Boolean(n.date && (n.date.first || pieces(n.text).length > 1));
+      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
     }

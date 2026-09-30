@@ -120,7 +120,7 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
   a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
-  `##` headings, `###` entries, a deeper heading under an entry a grouped role; a link as "label
+  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10), a deeper heading under an entry a grouped role; a link as "label
   (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
