@@ -1018,13 +1018,17 @@ function entriesOf(type, lines, aside) {
   // Several years in brackets date only a certificate's or an award's line: a line under a job or a
   // school with them ("Named top seller (2019 and 2021)", "Dean’s List (Fall 2018, Spring 2019)") is its
   // text. Before, it started a blank entry of its own (R5-HUNT9-BODY-LINE-BRACKET-YEARS-NEW-ENTRY).
-  const bracketed = type === 'certifications' || type === 'awards' ? bracketDates : () => false;
+  // A job's or a project's own title with them, first in its section or over its list ("Chat App (2021,
+  // 2022)" over "• Realtime chat"), still starts its entry: it went into the next entry's text.
+  const heads = (index) => index === 0 || Boolean(lines[index + 1] && !lines[index + 1].gap && BULLET.test(lines[index + 1].text));
+  const bracketed = (p, index) => (type === 'certifications' || type === 'awards'
+    || (type !== 'education' && heads(index))) && bracketDates(p);
   const info = lines.map((l, index) => {
     const bullet = BULLET.test(l.text);
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketed(p));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketed(p, index));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));
