@@ -138,7 +138,8 @@ export const SECTION_KEYS = {
         ...(descriptionHtml ? { descriptionHtml } : {}),
         keywords: listOf(item.technologies), // the schema's name for what the app calls Technologies
         url: item.url || item.link || '', // `link`: what earlier builds' import stored
-        roles: item.role ? [item.role] : [],
+        // No `roles`: a project's stored `role` (an earlier import's) prints nowhere, so it is not
+        // written; the import puts a file's roles in the description (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE).
         startDate: isoDate(item.startDate),
         endDate: item.current ? '' : isoDate(item.endDate),
         ...ongoing(item),
@@ -148,12 +149,14 @@ export const SECTION_KEYS = {
       id: newId('proj'),
       name: text(p.name),
       url: text(p.url), // the field the editor, PDF, Word and Markdown read (it was stored as `link`)
-      role: listText(p.roles),
       technologies: listText(p.keywords),
       startDate: month(p.startDate),
       endDate: month(p.endDate),
       ...ongoing(p),
-      description: descriptionFrom(p.description, p.highlights, p.descriptionHtml),
+      // The roles as the description's last paragraph, as a degree's courses: a project has no Role
+      // box and no export prints one, so a stored `role` was lost to the user while the Job Match
+      // still counted it (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE).
+      description: descriptionFrom(p.description, p.highlights, p.descriptionHtml, listText(p.roles).trim() ? `Role: ${listText(p.roles).trim()}` : ''),
     })),
   },
   certifications: {

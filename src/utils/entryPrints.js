@@ -40,6 +40,9 @@ export function entryPrints(type, item) {
     // current job with every eye off printed its heading over nothing, and went into the JSON Resume
     // file as an empty job (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS).
     if (k === 'current') return v === true && !hidden.has('endDate');
+    // A project's `role` (an earlier JSON Resume import's) has no editor box and no renderer draws it
+    // (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE).
+    if (type === 'projects' && k === 'role') return false;
     if (type === 'interests' && k === 'interests') return String(v ?? '').split(',').some((s) => s.trim());
     return valuePrints(k, v);
   };

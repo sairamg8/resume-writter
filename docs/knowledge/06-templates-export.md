@@ -110,7 +110,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that
   prints nothing (`entryPrints`: a blank entry, a job with every eye off, a language row with only its
   default "Professional"); its section keeps its place in `meta.sections` with no entries
-  (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES)
+  (R5-HUNT10-JSON-RESUME-WRITES-UNPRINTED-ENTRIES). A project has no Role box and no renderer prints
+  one, so the import puts a file's project `roles` in the description as a last "Role: …" paragraph;
+  a `role` a project holds from an earlier import is not written back, prints no heading
+  (`entryPrints`) and counts in no Job Match (R5-HUNT11-JSON-RESUME-PROJECT-ROLE-INVISIBLE)
 
 ## JSON backup export/import
 
