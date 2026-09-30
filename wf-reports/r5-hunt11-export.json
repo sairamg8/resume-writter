@@ -8,23 +8,65 @@
       "title": "JSON Resume import stores a project's `roles` as `role`, which no editor field and no output shows, but the job match still counts it",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["32a396e52e8b4ff2337cd5c24a69e0b2af6b19d1"],
-      "tests": ["tests/unit/r5-hunt11-json-resume-project-role.unit.mjs"],
+      "commits": [
+        "32a396e52e8b4ff2337cd5c24a69e0b2af6b19d1"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-json-resume-project-role.unit.mjs"
+      ],
       "summary": "Now: importing a JSON Resume file puts a project's roles into its description as a last 'Role: …' paragraph, which the editor shows and every export prints. A role a project already holds from an earlier import no longer counts in the Job Match (extractResumeCorpus), no longer makes an otherwise empty project print its heading (entryPrints), and is no longer written back into the JSON Resume file.",
-      "ci": [36655407387]
+      "ci": [
+        36655407387
+      ]
     },
     {
       "id": "R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT",
       "title": "JSON Resume export writes a website, LinkedIn or GitHub typed as just 'https://' or 'www.' as basics.url or a profile url, which every other export leaves out",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["a5736d87c7ab27cd9a335d627c0d4c5d1cb97d24"],
-      "tests": ["tests/unit/r5-hunt11-json-resume-empty-scheme-contact.unit.mjs"],
+      "commits": [
+        "a5736d87c7ab27cd9a335d627c0d4c5d1cb97d24"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-json-resume-empty-scheme-contact.unit.mjs"
+      ],
       "summary": "Now: the JSON Resume export writes a contact only when the résumé prints it (contactItems, the rule the PDF, Word, Markdown, ATS text and cover letter use). A website, LinkedIn or GitHub that is just 'https://' or 'www.' writes no basics.url, profile or link fields, and an e-mail, phone or location of only spaces is written as ''.",
-      "ci": [36655407387]
+      "ci": [
+        36655407387
+      ]
+    },
+    {
+      "id": "R5-HUNT11-REVIEW-LEGACY-PROJECT-ROLE",
+      "title": "A project role an earlier JSON Resume import stored as `role` was lost for good once the import fix stopped counting and exporting it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "2f38cf9a94dafc332989cb66a77f95a85ae607cb"
+      ],
+      "tests": [
+        "tests/pdf/109-r5-hunt11-review-legacy-project-role.test.mjs"
+      ],
+      "summary": "Now: normalizeResume (withProjectRoles) moves a project's stored `role` to the end of its description as a 'Role: …' paragraph, whatever its data version, where the editor shows it and every export prints it.",
+      "ci": [
+        36656090604
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT11-REVIEW-LEGACY-PROJECT-ROLE (fixed): 32a396e5 fixed the import, but a project `role` stored by an earlier build's JSON Resume import was only made to count nowhere and was dropped from the JSON Resume export, the one place it still came out, so a résumé imported before lost its project roles for good. normalizeResume now moves a stored project `role` to the end of the description as the same 'Role: …' paragraph the import writes (HTML-escaped, a blank role adds nothing), drops the field, whatever the data version (like withProjectUrls); idempotent and the same object when there is nothing to move; a job's and a volunteer post's role are untouched.",
+      "Noted, not changed: a website/LinkedIn/GitHub of just 'https://' that carries a Display label prints the label unlinked and still writes basics.url 'https://' with the label beside it; kept, since the label prints and the round trip needs the pair (behaviour unchanged by a5736d87)."
+    ],
+    "commits": [
+      "2f38cf9a94dafc332989cb66a77f95a85ae607cb"
+    ],
+    "ci": [
+      36656090604
+    ],
+    "notes": "Both original fixes checked against origin/claude/r4-green: 32a396e5 (import writes roles into the description; extractResumeCorpus, entryPrints and the export ignore a project's role; no renderer, editor box, Markdown/ATS/Word path or cover letter reads a project's role) and a5736d87 (the export's contact filter is contactItems, the rule every other export uses; non-contact keys unchanged). CI 36655407387 fail-first logs show each test failing with its fix reversed and passing with it. My fix: CI 36656090604 green: fail-first of tests/pdf/109-r5-hunt11-review-legacy-project-role.test.mjs (# fail 2 without, pass with) and 313 named tests (json-resume*, jsonresume*, r5-hunt11-*, entryprints, ats, old-samples, knowledge-docs, normalize helpers, pdf 16/18/86/91/99/109), lint green. Full gate not run."
+  },
   "baselineFailures": [],
   "notes": "Branched from origin/claude/r4-green at b616be3e (moved on from the 11ba2ea1 named in the task; the code involved is unchanged). CI run 36655407387: both fail-first checks passed (each test fails with its fix reversed and passes with it), and the named-files run passed (the json-resume, jsonresume, ats, entryprints, contact and blank unit tests, knowledge-docs, and tests/pdf/31-contact-fields). Lint passed. The full gate was not run."
 }
