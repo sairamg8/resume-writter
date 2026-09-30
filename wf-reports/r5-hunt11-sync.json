@@ -8,13 +8,32 @@
       "title": "With two tabs open, a job or project just created in one tab can be deleted from both tabs and from the account's cloud, if the other tab starts a first sync at that moment (and a job just deleted can come back)",
       "severity": "high (data loss across devices)",
       "outcome": "fixed",
-      "commits": ["5df9fc524692ec871d9d0cf036bde8e1aa58a06f"],
-      "tests": ["tests/unit/r5-hunt11-sync-first-sync-record-before-read.unit.mjs"],
+      "commits": [
+        "5df9fc524692ec871d9d0cf036bde8e1aa58a06f"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt11-sync-first-sync-record-before-read.unit.mjs"
+      ],
       "summary": "Now: collectionSyncEngine's firstSync reads this browser's sync record (meta.read()) BEFORE io.read, and builds the versions and local deletions for this account from that snapshot (`seen`), the same guard as the resume engine's `known` (R5-HUNT6). If another tab's flush writes the shared record while the cloud read is in flight, a job or project that tab just added is no longer taken as removed from the cloud and dropped (it is sent as an addition, a no-op overwrite). A job it just deleted is no longer taken as changed elsewhere and brought back (it stays deleted). If the record named no account or another account before the read, the snapshot gives no versions, so nothing is dropped. The test holds the cloud read's answer while the 'other tab' writes, and covers both the add case and the delete case. docs/knowledge/05-state-auth-sync.md updated.",
-      "ci": ["36655647308"]
+      "ci": [
+        "36655647308"
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD: the fix took the versions from the record as it was before the cloud read, but the order the cloud held when this browser last synced (baseOrder) still came from the record read after it. Another tab's flush of a move (a job dragged on the board, a board moved in the grid) landing during the read wrote its new order to the shared record; the cloud's old order just read no longer matched that base, so it was taken as a move made on another device and led. This tab's list went back to the old order and the other tab took it through the storage event and sent it: the move was undone on every device. Fixed: baseOrder now comes from the same pre-read snapshot (null when that snapshot named another account or none, so the cloud's order leads)."
+    ],
+    "commits": [
+      "c8200b29a9facf7fbe24b76c6bfea88313987f17"
+    ],
+    "ci": [
+      "36668452624"
+    ],
+    "notes": "Original fix 5df9fc52 reviewed: root cause right (versions and local deletions now from the record as read before io.read, as the resume engine's known); its two tests are real fail-first tests (run 36655647308, and again on this head in 36668452624: 2 fail without it, pass with it). Checked: the snapshot is used only when its account is this one; a record naming no or another account gives no versions, so nothing is dropped; DELETED (0) marks from earlier flushes still count as local deletions as before; boards share the engine and get the same guard. Commit c8200b29 adds the order half with tests/unit/r5-hunt11-sync-review-first-sync-order-before-read.unit.mjs (failfirst ok in run 36668452624: fails without, passes with) and a docs/knowledge/05-state-auth-sync.md line. Area run in 36668452624: tests/unit/*sync*.unit.mjs, job-store-*.unit.mjs and knowledge-docs: 109/109 pass; lint ok. Note: 5df9fc52 and the branch are already in origin/claude/r4-green (deployed as 33c7c1d, unreviewed); c8200b29 still needs merging there."
+  },
   "baselineFailures": [],
   "notes": "CI run 36655647308: failfirst ok (2 tests fail without the fix, pass with it). The named-files run of the sync area tests passed: the job, board and collection sync tests, the r5-hunt7 to r5-hunt10 sync tests, job-store-resync and knowledge-docs. Lint passed. The task named base 79dc42a2, but origin/claude/r4-green was b616be3e, and the branch starts from that."
 }
