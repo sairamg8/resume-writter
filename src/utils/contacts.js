@@ -53,9 +53,12 @@ function telHref(value) {
   if (i < parts.length && EXT_AFTER.test(parts[i])) number += ` ${parts[i]}`;
   const ext = number.match(/(\d[\s.)\]-]*)[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
   const main = ext ? number.slice(0, ext.index + ext[1].length) : number;
-  const digits = main.replace(/\D/g, '');
+  const plus = /^\D*\+/.test(main);
+  // "+44 (0) 20 7946 0958": the bracketed 0 is the trunk prefix dialled only from inside the country,
+  // never after its code — +4402079460958 is no number (R5-HUNT12-REVIEW-TEL-TRUNK-ZERO).
+  const digits = (plus ? main.replace(/\(\s*0\s*\)/g, '') : main).replace(/\D/g, '');
   if (digits.length < 3) return null;
-  return `tel:${/^\D*\+/.test(main) ? '+' : ''}${digits}${ext ? `;ext=${ext[2]}` : ''}`;
+  return `tel:${plus ? '+' : ''}${digits}${ext ? `;ext=${ext[2]}` : ''}`;
 }
 
 /**

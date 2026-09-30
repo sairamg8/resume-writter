@@ -54,7 +54,8 @@ Its "Link URL" is the link only when it is one the PDF follows (`linkOverride`):
 were set, in every export.  
 A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`, `|` or "or" once seven
 digits are in — with an extension (`ext. 890`, `x890`, `#890`, also bracketed or after a comma: `(ext 12)`,
-`, ext. 890`) as `;ext=890`; the text prints as typed.  
+`, ext. 890`) as `;ext=890`; the text prints as typed; after a `+`, a
+bracketed trunk `(0)` is left out of the link (`+44 (0) 20 7946 0958` → `tel:+442079460958`).  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
 `updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).
