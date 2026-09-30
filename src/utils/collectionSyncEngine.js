@@ -112,17 +112,22 @@ export function createCollectionSync({
   };
 
   /**
-   * `versions` for the items storage holds, and the deletions: the record is saved under its own
-   * key, apart from the list. Storage full, the list's save was refused (kept in memory only) while
-   * the few bytes of the record fitted, and the record said this browser held items it never
-   * stored: at the next reload they were "known here, gone from the list" — deleted here — and the
-   * first sync deleted them from the account and every other device. With no version, an item the
-   * cloud has and storage lacks is one this browser never saw: the next first sync brings it back
-   * (R5-HUNT10-SYNC-RECORD-SAVED-LIST-REFUSED-DELETES-CLOUD).
+   * `versions` without the items shown here that storage refused to hold: the record is saved under
+   * its own key, apart from the list. Storage full, the list's save was refused (kept in memory
+   * only) while the few bytes of the record fitted, and the record said this browser held items it
+   * never stored: at the next reload they were "known here, gone from the list" — deleted here — and
+   * the first sync deleted them from the account and every other device. With no version, an item
+   * the cloud has and storage lacks is one this browser never saw: the next first sync brings it
+   * back (R5-HUNT10-SYNC-RECORD-SAVED-LIST-REFUSED-DELETES-CLOUD). Only those: an item gone from
+   * the list and from storage alike was deleted here, and keeps its version until its deletion is
+   * sent — dropped with the rest of what storage lacks, a reload or a failed flush before then had
+   * the next first sync take it for one never seen here and bring it back from the cloud (review).
    */
   function claimed(versions) {
-    const saved = new Set((store.saved?.() ?? store.items()).map((x) => x.id));
-    return Object.fromEntries(Object.entries(versions).filter(([id, v]) => v === DELETED || saved.has(id)));
+    if (!store.saved) return versions;
+    const saved = new Set(store.saved().map((x) => x.id));
+    const refused = new Set(store.items().filter((x) => !saved.has(x.id)).map((x) => x.id));
+    return refused.size ? Object.fromEntries(Object.entries(versions).filter(([id]) => !refused.has(id))) : versions;
   }
 
   function dropQueue() {
