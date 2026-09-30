@@ -1077,6 +1077,7 @@ function entriesOf(type, lines, aside) {
   // the line under it (Word's) — then each role with its dates and one field, the role. Before, the
   // employer line went into the job above as text, and each role had no company.
   let group = null;
+  let lengthGroup = null; // LinkedIn's employer over its roles, its total length under it (below)
   /** The employer lines right over a dated line, taken out of the text above: { company, place }, or null. */
   const employerOver = (L, timeline = false) => {
     const body = pool();
@@ -1288,12 +1289,31 @@ function entriesOf(type, lines, aside) {
         // A school in a side column stacks each field on a line of its own over its dates (Sidebar's
         // degree, school, field and place): up to four lines.
         const body = pool();
-        let next = L;
-        while (header.length < (type === 'education' ? 5 : 3) && body.length) {
-          const prev = body[body.length - 1];
-          if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
-          header.unshift(body.pop());
-          next = prev;
+        // LinkedIn's "Save to PDF": an employer with several roles prints its name, then its total length
+        // alone on a line ("5 years 2 months"), then each role over its dates and its place. The employer
+        // is each role's company. Before, the length (or the role above's place) became the company, and
+        // the employer went into the job above's text (R5-HUNT11-LINKEDIN-GROUPED-ROLES-COMPANY).
+        const run = (ns) => ns.every((n, k) => n && !n.bullet && !n.date && (info[n.index + 1] === (ns[k + 1] || L)) && !(ns[k + 1] || L).gap);
+        const one = (n) => n && !n.hint && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && pieces(n.text).length === 1 && !isMetaLine(n.text);
+        const [co, length, role] = body.slice(-3);
+        const onRole = (n) => { header.unshift({ ...n, group: lengthGroup }); };
+        if (type === 'experience' && body.length >= 3 && run([co, length, role]) && one(co) && LENGTH_ONLY.test(length.text) && one(role)) {
+          body.splice(-3);
+          lengthGroup = { company: co.text, place: '', lead: [] };
+          onRole(role);
+        } else if (type === 'experience' && lengthGroup && cur?.header[0]?.group === lengthGroup && run(body.slice(-1)) && one(body.at(-1))
+          // The next role, over its dates: not a next employer's job, its company over its role ("Microsoft" over "Senior Engineer").
+          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text))) {
+          onRole(body.pop());
+        } else {
+          lengthGroup = null;
+          let next = L;
+          while (header.length < (type === 'education' ? 5 : 3) && body.length) {
+            const prev = body[body.length - 1];
+            if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
+            header.unshift(body.pop());
+            next = prev;
+          }
         }
         // None over it, and the date alone on its line: the date prints above its entry's title (the
         // Timeline's rail: "Mar 2021 – Present", then "Role ⇥ Company", then the location). Its title is
@@ -1306,6 +1326,12 @@ function entriesOf(type, lines, aside) {
           const n = info[i];
           if (SECOND_LINE.has(type) && titleLike(n) && (pieces(n.text).length > 1 || PLACE.test(n.text))) header.push(info[i++]);
         }
+        // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
+        // Francisco, California, United States"): its location. Before, it went into the description, or
+        // became the next role's company.
+        const n = info[i];
+        if (JOB.has(type) && header[0] !== L && n && !n.bullet && !n.gap && !n.date && !n.hint && pieces(n.text).length === 1
+          && PLACE.test(n.text) && !ROLE.test(n.text) && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)

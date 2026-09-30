@@ -165,7 +165,8 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   Certifications and Awards (there, several after a tab or a comma, "Dean's List ⇥ 2014, 2015", are put
   in brackets, no issuer — an entry's own line, not the text under it; R5-HUNT10), or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
-  roles, R4-LO-01; in Education a school over its degree's dated line, alone or with its place at the
+  roles, R4-LO-01; LinkedIn's employer over its total length alone, "5 years 2 months", then each role
+  over its dates, R5-HUNT11 — a job's place alone under its date line its location; in Education a school over its degree's dated line, alone or with its place at the
   right tab, "Harvard University ⇥ Cambridge, MA", is that entry's school and location, the line under
   the dated line no second header line but its text or the next school's, R5-HUNT11), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
