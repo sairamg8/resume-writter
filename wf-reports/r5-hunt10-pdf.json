@@ -1,0 +1,36 @@
+{
+  "cluster": "r5-hunt10-pdf",
+  "branch": "claude/wf-r5-hunt10-pdf",
+  "base": "2a3f9dcce47b1691cbcd86725da589fbe5d0718f",
+  "rows": [
+    {
+      "id": "R5-HUNT10-SKILLS-TITLE-ORPHANED-BY-CATEGORY-KEEP",
+      "title": "PDF: a Skills title in Bars, Stacked or Tags style could be left alone at the foot of a page, because the first group's category (kept with its skills since R5-HUNT8) moved to the next page and the title never kept room for it (main column and the Sidebar's dark column)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "3791b92f6a1a355d2ec1162488d27cd16cb945ae"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt10-skills-title-category-keep.test.mjs"
+      ],
+      "summary": "Now: for Bars, Stacked and Tags the Skills title keeps the first group's category plus what that category keeps (the smaller of its keep and its skills' height: Bars' rows, Stacked's text or bullet lines, Tags at the whole keep), with a spare line. So the title moves to the next page with the category instead of ending the page alone. This holds in the main column (SkillsSection: over a Grids first row) and in the Sidebar's side column (SideSkills passes SideSectionTitle a presence, never less than its three lines). Fail-first: all 6 sweep cases (Classic and Sidebar x Bars/Stacked/Tags) fail without the fix and pass with it.",
+      "ci": [
+        36651264076
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36651264076,
+      36652553377
+    ],
+    "notes": "3791b92f reviewed against origin/claude/r4-green. Root cause fixed: the Skills title's minPresenceAhead now covers the gap under it (a spare line over its 6 pt margin), the first category's lines (main column: the larger of the face's natural line and the page line height, letter-spaced for Bars/Tags; side column: 1.2 x 8.5 pt plus its 2 pt margin) and min(category keep, measured skills). So the title can no longer stay behind when R5-HUNT8's category keep moves the category on. Arithmetic checked for short first groups (keep capped by what is under the category) and for Stacked's divider (4.5 pt) and Tags' 4 pt margin. The side column never drops below the title's own three lines, and a first group with no category keeps the old three-line default. Only PdfSectionsOne SkillsSection and PdfSidebarSkills SideSkills render these styles. Inline/Bullet are unchanged. Word export and the HTML preview do not use this code. react-pdf caps the presence at the end of what follows, so a last short section is unaffected. Fail-first run 36651264076: the 6 sweep cases fail without the fix (# fail 6) and pass with it, plus the area tests. Extra probe run 36652553377 (39 sweep cases on a throwaway branch claude/wf-r5-hunt10-pdf-probe, not merged): short first groups (Classic and Sidebar), a category that wraps, Grids (2 columns), compact 9 pt / 1.15 line height, and Modern, Minimal, Executive, Banner, Academic, Compact, Timeline for Bars, Stacked and Tags. 39/39 pass. The probe branch could not be deleted (the remote refused the delete), so it needs removing by hand. No a11y notes."
+  },
+  "baselineFailures": [],
+  "notes": "Base is origin/claude/r4-green at 2a3f9dcc (the commits after 5c6c1e38 touch only import/export/tools/docs). CI run 36651264076 passed: fail-first, lint, and the named tests (the new test, r5hunt8 category keep, r5hunt4 skills title keep, 25-skills, 94-skills-pipe, r5hunt4-empty-skill-group, 102 sidebar bars gaps, 33 sidebar fit/long words, 13-sidebar, 06-pagination, 103 section options, 31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs). docs/knowledge/06-templates-export.md updated."
+}

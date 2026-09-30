@@ -61,7 +61,8 @@ Shared building blocks live in `src/templates/pdf/shared/` (`PdfPage.jsx`, `PdfS
 heading never ends a page alone: a section title keeps its first content, an entry header two lines of
 body text (`headerKeep`), a grid row its cells' headers, and in Skills styles Stacked, Tags and Bars a
 group's category the first lines of its skills — in the Sidebar's side column too — as Word's Stacked
-category keeps with its skills (`tests/pdf/r5hunt8-skills-category-keep.test.mjs`). The Playwright
+category keeps with its skills (`tests/pdf/r5hunt8-skills-category-keep.test.mjs`); the Skills title
+keeps that first category and what it keeps (`tests/pdf/r5hunt10-skills-title-category-keep.test.mjs`). The Playwright
 suites in `tests/playwright/` check that the preview is the downloaded PDF and that every design
 control repaints it.
 

@@ -17,7 +17,7 @@ import {
   entryTextWidth,
 } from './PdfSections';
 import { EmployerHeader, headPresence, itemHeadPresence } from './PdfItemHeader';
-import { textWidth, wrappedLines } from './pdfMeasure';
+import { lineBox, textWidth, wrappedLines } from './pdfMeasure';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
@@ -151,15 +151,36 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
     const marker = isBullet ? textWidth('•', rowBox) + 4 : 0;
     return Math.max(1, wrappedLines(`${category}${category && skills ? sep : ''}${skills}`, rowBox, entryTextWidth(settings, cols) - marker));
   };
-  const presence   = first && !['bars', 'stacked', 'tags'].includes(style) ? headPresence({ lines: rowLines(first), styles: [rowBox] }) : 0;
-  // Printed by the grid, with its first row (RenderColGrid).
-  const title      = <SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />;
   // Bars, Stacked and Tags print a group's category over its skills, and a group may split between them:
   // the category, unbreakable, keeps three lines of what follows it on its page (a skills text that short
   // cannot split under react-pdf's orphans and widows of two; the keep ends with the group), so it moves
   // to the next page with its skills instead of ending a page alone (R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN).
   // entry() leads the group with SPACER, the previous sibling minPresenceAhead needs.
   const categoryKeep = { wrap: false, minPresenceAhead: Math.ceil(entrySize * lineH * 3) };
+  // The title keeps that first category and what the category keeps: with only its own three lines, a
+  // category that moved to the next page with its skills left the title alone at the foot of the page
+  // (R5-HUNT10-SKILLS-TITLE-ORPHANED-BY-CATEGORY-KEEP). The category measured in both its own face's line and
+  // the page's (the Sidebar's main column sets one), so it errs on more; its skills: Bars' rows (a label
+  // 70 pt wide, over a 3 pt margin), Stacked's text, Tags' chips at the whole keep (their rows are not measured).
+  const catBox     = { fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' };
+  const catBoxes   = [catBox, { ...catBox, lineHeight: entrySize * lineH }];
+  const width      = entryTextWidth(settings, cols);
+  const categoryPresence = (item) => {
+    const { category, skills, list } = skillGroup(item);
+    if (!category) return 0;
+    const shown = style === 'stacked' ? category : skillCategory(category, { style });
+    const lines = Math.max(1, wrappedLines(shown, style === 'stacked' ? catBox : { ...catBox, letterSpacing: tracking(entrySize, 0.5) }, width));
+    const rowBoxes = [{ ...catBox, fontSize: entrySize - 1, fontWeight: undefined }, { ...catBox, fontSize: entrySize - 1, fontWeight: undefined, lineHeight: (entrySize - 1) * lineH }];
+    const under = style === 'bars' ? list.reduce((pt, sk) => pt + 3 + Math.max(1, wrappedLines(sk, rowBoxes[0], 70)) * lineBox(rowBoxes).height, 0)
+      : style === 'stacked' ? wrappedLines(skills, { ...catBox, fontWeight: undefined }, width) * entrySize * lineH
+      : list.length ? categoryKeep.minPresenceAhead : 0;
+    return headPresence({ lines, styles: catBoxes, keep: Math.min(categoryKeep.minPresenceAhead, under), extra: style === 'stacked' ? 4.5 : style === 'tags' ? 4 : 0 });
+  };
+  const presence   = !first ? 0
+    : ['bars', 'stacked', 'tags'].includes(style) ? Math.max(0, ...visibleItems.slice(0, cols).map(categoryPresence))
+    : headPresence({ lines: rowLines(first), styles: [rowBox] });
+  // Printed by the grid, with its first row (RenderColGrid).
+  const title      = <SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
