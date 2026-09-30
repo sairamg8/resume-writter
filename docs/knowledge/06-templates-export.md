@@ -154,7 +154,7 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
-- `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
+- `importText.js` (pure) reads the lines: name, job title, contacts (a town with no region, "London", beside a contact on its line or LinkedIn's "… Area" alone under the headline, the location, R5-HUNT12), summary; a section per known
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases; in a file with no heading marks one in
   Title Case with no blank line before it too, of another type than the section it is in — not a
   summary's or a contact's, a `SUBHEADING` label, a "Languages" category in Skills, a "Volunteering" hobby in Interests nor a role over or under
