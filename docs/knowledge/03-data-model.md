@@ -72,7 +72,9 @@ Section factories: `SECTION_TYPE_DEFAULTS` in `defaultDataSectionTypes.js`.
 
 Important keys (non-exhaustive):
 
-- Typography: `font`, `fontSize`, `fontSizeBase`, deltas, `lineHeight`, `lineHeightValue`, `customFont`
+- Typography: `font`, `fontSize`, `fontSizeBase`, deltas, `lineHeight`, `lineHeightValue`, `customFont`,
+  `nameFont` / `headingFont` (a picker id or a custom font's name; normalizeResume drops one that is
+  not text, `src/constants/designFonts.js`)
 - Colors: `accentColor`, `textColor`, `sidebarBg`, `headerTextColor`, `nameColor`, `jobTitleColor`
 - Layout: `margins` / `marginH` / `marginV`, `sectionGap`, `itemGap`, `headerAlign`, `headerLayout`
 - Headings: `headingStyle`, `sectionTitleCase`, border widths/colors

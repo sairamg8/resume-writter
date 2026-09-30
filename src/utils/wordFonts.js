@@ -6,9 +6,16 @@ import { fetchMetadata, fontsourceId } from '@/utils/fontsource';
  * when the reader has it installed, else in a stand-in (wordFontTable).
  */
 
+/**
+ * The custom font's name as the PDF reads it (pdfFontLoader.js): trimmed, and a stored non-string (a
+ * hand-edited or third-party .json's 5 or true) only a name — `.trim()` on one threw, and every Word
+ * export failed (R5-HUNT11-CUSTOM-FONT-NOT-TEXT-BREAKS-WORD).
+ */
+const customName = (settings) => String(settings?.customFont || '').trim();
+
 /** The font the résumé's text is in: the custom font as typed, or the picker's label ("Georgia"). */
 export function resolveWordFont(settings = {}) {
-  if (settings?.customFont?.trim()) return settings.customFont.trim();
+  if (customName(settings)) return customName(settings);
   const fontObj = FONTS.find((f) => f.id === settings?.font);
   return fontObj?.label || fontObj?.name || 'Noto Sans';
 }
@@ -38,7 +45,7 @@ const INSTALLED = new Set(Object.values(STAND_INS).map((f) => f.name));
 
 /** A font setting's kind: the picker's, or a custom font's Fontsource category (sans-serif offline, or display / handwriting). */
 async function categoryOf(settings) {
-  const custom = settings?.customFont?.trim();
+  const custom = customName(settings);
   if (!custom) return FONTS.find((f) => f.id === settings?.font)?.category || 'sans-serif';
   const meta = await fetchMetadata(fontsourceId(custom));
   return STAND_INS[meta?.category] ? meta.category : 'sans-serif';

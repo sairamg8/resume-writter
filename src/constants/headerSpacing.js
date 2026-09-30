@@ -1,8 +1,8 @@
 // Header spacing (header_spacing_spec.md): the settings keys, their ranges, and how a stored
 // value — else the template's own (TEMPLATES' `headerGaps`) — becomes the PDF's points. Plain
 // data and functions (no react-pdf): resolveTemplateSettings reads it for every PDF.
-import { templateHeaderGaps } from '@/constants/templates';
-import { CSS_PX_TO_PT } from '@/templates/pdf/shared/pdfUnits';
+import { templateHeaderGaps } from './templates.js';
+import { CSS_PX_TO_PT } from '../templates/pdf/shared/pdfUnits.js';
 
 /**
  * Every header-spacing setting, stored in CSS px like Between Sections, with the range a stored
