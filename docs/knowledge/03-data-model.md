@@ -34,7 +34,8 @@ type Resume = {
   keep?: boolean;             // "Keep as my original" (demo accounts)
   template: 'classic' | 'modern' | 'minimal' | 'executive' | 'sidebar'
           | 'timeline' | 'banner' | 'academic' | 'compact'; // any other id prints as Classic
-  settings: Settings;         // design system; starts from ATS_DEFAULTS
+  settings: Settings;         // design system; starts from ATS_DEFAULTS. Always an object: normalizeResume
+                              // stores none, null, text or a list as {} (the defaults), whatever the version
   personal: Personal;
   sections: Section[];
   coverLetter: CoverLetter;
