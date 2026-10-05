@@ -578,6 +578,18 @@ const BARE_TOWN = {
 const CAPITALISED = /^[\p{Lu}][\p{L}.'’\-]*(?:\s+[\p{Lu}][\p{L}.'’\-]*)*$/u;
 const SMALL_WORD = /\b(?:to|in|and|for|at|with|the|or|of|on|as|by|from)\b/i;
 const POSTCODE_END = /\s*(?:\d{5}(?:-\d{4})?|[a-z]\d[a-z] ?\d[a-z]\d|[a-z]{1,2}\d[a-z\d]? ?\d[a-z]{2})$/i;
+/**
+ * The town a job line's field names right before its region, lower-cased: "round rock" in "Dell, Round
+ * Rock, TX", "austin" in "Austin, Texas, USA", else null. Only that segment: the role or the company
+ * before it ("Photographer, Studio X, Austin, TX") is no town.
+ */
+function townBeforeRegion(field) {
+  const parts = field.replace(POSTCODE_END, '').split(/\s*,\s*/);
+  const isRegion = (p) => REGION_END.test(`, ${p}`);
+  if (parts.length < 2 || !isRegion(parts[parts.length - 1])) return null;
+  while (parts.length > 1 && isRegion(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1].toLowerCase();
+}
 /** A town's own words, one to three: capitalised, no small word, no work status. */
 const townWords = (text) => CAPITALISED.test(text) && text.split(/\s+/).length <= 3 && !SMALL_WORD.test(text) && !NOT_A_PLACE.test(text);
 function regionPlace(text) {
@@ -1848,16 +1860,18 @@ export function resumeFromText(input) {
   const other = [];
   const asides = []; // entries' text with nowhere to go in them (entryOf's `aside`)
 
-  // A town the job lines name with its region ("Round Rock, TX") is a place whatever its words: the same
-  // town bare in the header is the location (a list of towns cannot hold them all).
-  let regionTowns = null;
-  const knownTown = (s) => {
-    if (BARE_TOWN.named(s)) return true;
-    if (!BARE_TOWN.shaped(s) || ROLE.test(s)) return false;
-    regionTowns ||= new Set(lines.flatMap((l) => l.text.split(/\t|\s+[|•·◆⋅∙▪—–-]\s+|\s{3,}/)
-      .filter((f) => REGION_END.test(f)).flatMap((f) => f.split(/\s*,\s*/).slice(0, -1).map((p) => p.toLowerCase()))));
-    return regionTowns.has(s.toLowerCase());
+  // A town of more words that the job lines name with its region ("Round Rock" in "Dell, Round Rock, TX")
+  // is a place whatever its words: the same town bare beside a contact in the header is the location (a
+  // list of towns cannot hold them all). Never alone on a line or under the name, where it may be a
+  // headline, and never one word: "Photographer" in "Photographer, Studio X, Austin, TX" is a title.
+  let jobTowns = null;
+  const jobTown = (s) => {
+    if (!/\s/.test(s) || !BARE_TOWN.shaped(s) || ROLE.test(s)) return false;
+    jobTowns ||= new Set(lines.flatMap((l) => l.text.split(/\t|\s+[|•·◆⋅∙▪—–-]\s+|\s{3,}/).map(townBeforeRegion)));
+    return jobTowns.has(s.toLowerCase());
   };
+  /** A town of more words, by its words or by the job lines: for a piece that has a contact beside it. */
+  const knownTown = (s) => BARE_TOWN.named(s) || jobTown(s);
   const runOf = (piece) => contactRun(piece, knownTown);
 
   /**
@@ -1901,8 +1915,8 @@ export function resumeFromText(input) {
       // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing. A town of several
       // words that says it is one ("Walnut Creek", "Greater Boston") is the location alone on its line too
       // (R5-HUNT13-HEADER-TOWN-SHAPE).
-      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)) || knownTown(unbulleted(p)));
-      if (towns.length === 1 && (found || (alone && leftover.length === 1 && knownTown(unbulleted(towns[0]))))) {
+      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)) || (found && knownTown(unbulleted(p))));
+      if (towns.length === 1 && (found || (alone && leftover.length === 1 && BARE_TOWN.named(unbulleted(towns[0]))))) {
         personal.location = unbulleted(towns[0]);
         leftover.splice(leftover.indexOf(towns[0]), 1);
       }
@@ -1932,11 +1946,11 @@ export function resumeFromText(input) {
     const contact = t && contactOf(t.text);
     const placeElsewhere = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => runOf(p) || [p]).some((p) => contactOf(p)?.key === 'location'));
     const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text) && (!REGION_END.test(t.text) || placeElsewhere());
-    // Nor a contact's label ("EMAIL", the Sidebar's, over its value), nor a town that says it is one
-    // ("Walnut Creek" right under the name, no headline) unless a place is on a later line: then it
-    // may be the headline after all.
-    const placeLater = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => runOf(p) || [p]).some((p) => contactOf(p)?.key === 'location' || BARE_TOWN.test(p) || knownTown(p)));
-    const notTitle = t && (BARE_LABEL.test(t.text) || (knownTown(t.text) && !placeLater()));
+    // Nor a contact's label ("EMAIL", the Sidebar's, over its value), nor a town that says it is one by
+    // its words ("Walnut Creek" right under the name, no headline) unless a place is on a later line:
+    // then it may be the headline after all.
+    const placeLater = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => runOf(p) || [p]).some((p) => contactOf(p)?.key === 'location' || BARE_TOWN.test(p)));
+    const notTitle = t && (BARE_LABEL.test(t.text) || (BARE_TOWN.named(t.text) && !placeLater()));
     if (t && headerPieces(t.text).length === 1 && (!contact || role) && !notTitle && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();

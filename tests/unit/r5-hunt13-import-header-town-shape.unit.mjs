@@ -159,9 +159,11 @@ test('a bare town the job lines name with its region is the location ("Round Roc
   const r = read('Jane Doe\njane@x.com | (925) 555-0100 | Round Rock', jobs);
   assert.equal(r.personal.location, 'Round Rock');
   assert.equal(extra(r), '');
+  // Alone on a line the job lines are no proof (it may be a headline): its own words must say it is a place.
   const alone = read('Jane Doe\nSenior Engineer\nRound Rock', jobs);
   assert.equal(alone.personal.title, 'Senior Engineer');
-  assert.equal(alone.personal.location, 'Round Rock');
+  assert.equal(alone.personal.location, '');
+  assert.equal(extra(alone), '<p>Round Rock</p>');
   const dash = read('Jane Doe\njane@x.com — Round Rock', jobs);
   assert.equal(dash.personal.email, 'jane@x.com');
   assert.equal(dash.personal.location, 'Round Rock');
