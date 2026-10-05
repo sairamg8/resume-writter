@@ -413,8 +413,8 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
     if (item.jobTitle) paras.push(line([normal(item.jobTitle, { size: look.base, color: ink.sub })]));
     if (item.company) paras.push(line([normal(item.company, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
-    // Linked through contactHref, as the PDF links them: a phone with under three digits ("On request")
-    // prints as text, not as an empty tel: link.
+    // Linked through contactHref, as the PDF links them: a phone that is no number ("On request", under
+    // seven digits) prints as text, not as an empty tel: link.
     // The e-mail 2 pt below the line above it, as the main column's card prints it (R5-OUT-01); the
     // Sidebar's column prints it flush (SideReferences).
     if (item.email) paras.push(line([linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links)], 20, look.side ? 0 : 40));

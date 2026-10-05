@@ -58,6 +58,13 @@ A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`,
 digits are in — with an extension (`ext. 890`, `x890`, `#890`, also bracketed or after a comma: `(ext 12)`,
 `, ext. 890`) as `;ext=890`; the text prints as typed; after a `+`, a
 bracketed trunk `(0)` is left out of the link (`+44 (0) 20 7946 0958` → `tel:+442079460958`).  
+A vanity number links to its keypad digits (ABC 2, DEF 3, GHI 4, JKL 5, MNO 6, PQRS 7, TUV 8, WXYZ 9):
+`1-800-FLOWERS` → `tel:18003569377`, `1-800-GO-FEDEX`, `800 555 CALL`; one word of letters, no space in it,
+after fewer than seven digits, or hyphen-joined to a last group of three (`1-800-555-HELP`). After seven
+digits a word is a label (`555-0100 home`, `(mobile)`, a leading `Phone:`) and adds no digit. A value that
+is not seven to fifteen digits (extension left out) links nowhere and prints as text (`Room 101`,
+`On request`, two numbers typed with no separator); a value over 200 characters is none, which keeps the
+patterns' time bounded (`telHref`, `dial`, R5-HUNT12-VANITY-PHONE-TEL-LINK-DROPS-LETTERS).  
 The import reads such a phone back as typed, its extension too (`importText.js`: `PHONE_EXT`, `linkParts`).  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
