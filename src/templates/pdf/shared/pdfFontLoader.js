@@ -111,6 +111,7 @@ function registerFaces(family, faceUrl) {
     for (const fontWeight of WEIGHTS) fonts.push({ src: absolute(faceUrl(fontWeight, fontStyle)), fontWeight, fontStyle });
   }
   Font.register({ family, fonts });
+  for (const source of Font.getRegisteredFonts()[family]?.sources || []) landPrepared(source, family);
 }
 
 function registerNoto(subset) {
@@ -416,7 +417,10 @@ function inflateGlyfOnce(font) {
  * fetched again on every preview build.
  */
 const borrowed = new Map();
-/** Borrowing faces whose own data has arrived, to be put in by the next prepareFonts before it primes them. */
+/**
+ * Borrowing faces whose own data has arrived — a fetch again (retryBorrowed), or a first fetch that outran
+ * its wait (landPrepared) — to be put in by the next prepareFonts, with no await before it is primed.
+ */
 const fetched = new Map();
 const RETRY_AFTER_MS = 60_000;
 // How long a build waits for such a fetch: a stalled one (a captive portal) must not hold every
@@ -432,8 +436,9 @@ const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(
 // wait the face counts as not loaded: when none of its family's faces loads, the family is replaced by Noto
 // Sans with the font named, as when offline; a face that stalls while others load borrows one of theirs, as a
 // failed face does. The fetch itself is left to finish (react-pdf cannot abort it), and a face that was only
-// slow is not lost: its data is used by the first build after it arrives, and faceFetched() makes the preview
-// build again then, so the notice does not wait for the next edit.
+// slow is not lost: its data lands prepared (landPrepared) and is used by the first build after it arrives (a
+// face lent a donor's data meanwhile keeps that until then), and faceFetched() makes the preview build again
+// then, so the notice does not wait for the next edit.
 // The wait is the BUILD's, for the faces it fetches from the CDN: they all share one deadline (resolvePdfFonts
 // sets it), so a résumé whose body, Name Font and Heading Font are three CDN families, on a CDN that never
 // answers, waits FONT_LOAD_MS once, not once per family in turn. That keeps a stalled CDN well inside the PDF
@@ -495,6 +500,43 @@ if (typeof globalThis.addEventListener === 'function') {
   });
 }
 
+/** A fresh copy of react-pdf FontSource `source`, with no data: a fetch into it leaves the live face alone. */
+function faceCopy(source) {
+  const { src, fontFamily, fontStyle, fontWeight, options } = source;
+  return Object.assign(Object.create(Object.getPrototypeOf(source)), {
+    src, fontFamily, fontStyle, fontWeight, options, data: null, loadResultPromise: null,
+  });
+}
+
+/**
+ * Make face `source`'s own load land prepared, and never over a donor's data. react-pdf's load writes
+ * the font it fetched straight into the live face (FontSource._load: `this.data = data`). A first fetch
+ * that outran its build's wait (loadInTime) is left to finish, and when it landed it replaced the donor
+ * face the build had lent it — before any prepareFonts had primed it: a build laying out then (an Export,
+ * the ATS view, a page picture) took a face with ligatures on and its glyph cache not seeded (ToUnicode
+ * gaps) and, in a fallback subset family, the PostScript name not made its own (the PDF writer reused
+ * another subset's embedded font: wrong glyphs). And the face stayed in `borrowed`, so a minute on it
+ * was downloaded again. Now the fetch writes a copy (faceCopy); its font is prepared (prepareFace) before
+ * any build can see it, and it goes into the face only when the face is empty. A face printing with a
+ * donor's data keeps it until the next prepareFonts puts the face's own in (`fetched`), so a build laying
+ * out meanwhile keeps the one face throughout; either way it no longer borrows and is not fetched again.
+ */
+function landPrepared(source, family) {
+  const fetchInto = source._load;
+  if (typeof fetchInto !== 'function') return;
+  source._load = async () => {
+    const copy = faceCopy(source);
+    await fetchInto.call(copy);
+    prepareFace(copy.data, family);
+    if (borrowed.has(source)) {
+      borrowed.delete(source);
+      fetched.set(source, copy.data);
+    } else if (!source.data) {
+      source.data = copy.data;
+    }
+  };
+}
+
 /**
  * Fetch borrowed face `source`'s own data again, into a copy of its react-pdf FontSource: the face
  * keeps the donor's data meanwhile, so a build laying out never finds it empty or unprimed. Resolves
@@ -504,10 +546,7 @@ if (typeof globalThis.addEventListener === 'function') {
 function retryBorrowed(source) {
   const attempt = { settled: false, late: false };
   borrowed.set(source, Infinity); // one attempt at a time, whoever asks meanwhile
-  const { src, fontFamily, fontStyle, fontWeight, options } = source;
-  const copy = Object.assign(Object.create(Object.getPrototypeOf(source)), {
-    src, fontFamily, fontStyle, fontWeight, options, data: null, loadResultPromise: null,
-  });
+  const copy = faceCopy(source);
   attempt.done = copy.load().then(
     () => {
       attempt.settled = true;
@@ -559,9 +598,10 @@ export async function prepareFonts(families, until = fontDeadline()) {
     const loaded = await Promise.all(sources.map((source) => loadInTime(source, until)));
     if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
-    // react-pdf would retry it during layout and fail the whole PDF.
+    // react-pdf would retry it during layout and fail the whole PDF. One whose own data landed after
+    // its wait ended, while the family's other faces were still waited for, keeps it (landPrepared).
     sources.forEach((source, i) => {
-      if (loaded[i]) return;
+      if (loaded[i] || source.data) return;
       const donor = sources
         .filter((_, j) => loaded[j])
         .sort((a, b) => (a.fontStyle !== source.fontStyle) - (b.fontStyle !== source.fontStyle)
@@ -576,28 +616,31 @@ export async function prepareFonts(families, until = fontDeadline()) {
       source.data = fetched.get(source);
       fetched.delete(source);
     }
-    for (const { data: font } of sources) {
-      if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
-      if (family === ARROWS) {
-        addStandIns(font, ARROW_STAND_INS);
-        for (const codePoint of ARROW_STAND_INS.keys()) font.glyphForCodePoint(codePoint);
-      }
-      for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
-      if (family !== ARROWS) addStandIns(font);
-      inflateGlyfOnce(font);
-      if (typeof font.layout === 'function') {
-        const base = font.layout.bind(font);
-        const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
-        font.layout = widenNarrowSpace(font, noLig);
-      }
-      if (fallbackFamilies.has(family)) {
-        const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;
-        Object.defineProperty(font, 'postscriptName', { value: name, configurable: true });
-      }
-      primedFonts.add(font);
-    }
+    for (const { data: font } of sources) prepareFace(font, family);
     usable.push(family);
   }
   setFacesBorrowed(borrowed.size > 0 || fetched.size > 0);
   return usable;
+}
+
+/** Get fontkit font `font`, a face of `family`, ready to render (prepareFonts' steps 1-6), once. */
+function prepareFace(font, family) {
+  if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') return;
+  if (family === ARROWS) {
+    addStandIns(font, ARROW_STAND_INS);
+    for (const codePoint of ARROW_STAND_INS.keys()) font.glyphForCodePoint(codePoint);
+  }
+  for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
+  if (family !== ARROWS) addStandIns(font);
+  inflateGlyfOnce(font);
+  if (typeof font.layout === 'function') {
+    const base = font.layout.bind(font);
+    const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
+    font.layout = widenNarrowSpace(font, noLig);
+  }
+  if (fallbackFamilies.has(family)) {
+    const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;
+    Object.defineProperty(font, 'postscriptName', { value: name, configurable: true });
+  }
+  primedFonts.add(font);
 }
