@@ -2,7 +2,7 @@ import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { entryPrints, sectionPrints } from './entryPrints.js';
-import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
+import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb, stripTags } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inMixedColumns, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { groupsRoles, roleGroups } from './roleGroups.js';
@@ -22,12 +22,17 @@ export function extractBulletsFromItem(item) {
   // 1. Direct bullets array (if populated)
   if (Array.isArray(item.bullets)) {
     for (const b of item.bullets) {
-      const clean = String(b || '').replace(/<[^>]+>/g, '').trim();
+      const clean = stripTags(b || '').trim();
       if (clean) bullets.push(clean);
     }
   }
 
-  // 2. Rich text / HTML / plain-text description
+  // 2. Rich text / HTML / plain-text description. Each bullet it gives is added once: asked of the list (includes),
+  // every one read the whole list again, so a description of 100 000 bullets took time squared.
+  const seen = new Set(bullets);
+  const addOnce = (text) => {
+    if (text && !seen.has(text)) { seen.add(text); bullets.push(text); }
+  };
   if (item.description && typeof item.description === 'string') {
     const desc = item.description;
 
@@ -54,15 +59,12 @@ export function extractBulletsFromItem(item) {
           if (at !== undefined) items[at] = `${items[at]} ${text}`.trim();
         }
       }
-      for (const clean of items) {
-        if (clean && !bullets.includes(clean)) bullets.push(clean);
-      }
+      for (const clean of items) addOnce(clean);
     } else {
       // Look for bullet characters or line breaks (<br>, </p>, </div>, \n)
-      const textWithNewlines = desc
+      const textWithNewlines = stripTags(desc
         .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/(p|div|h[1-6]|tr|blockquote)>/gi, '\n')
-        .replace(/<[^>]+>/g, '');
+        .replace(/<\/(p|div|h[1-6]|tr|blockquote)>/gi, '\n'));
       const decoded = decodeEntities(textWithNewlines);
       const lines = decoded
         .split(/[\r\n]+/)
@@ -74,15 +76,11 @@ export function extractBulletsFromItem(item) {
       if (hasBulletMarkers) {
         for (const line of lines) {
           const stripped = line.replace(/^[\s•\-*–—◦▪▸‣⁃]+/, '').replace(/^\d+[.)]\s*/, '').trim();
-          if (stripped && !bullets.includes(stripped)) {
-            bullets.push(stripped);
-          }
+          addOnce(stripped);
         }
       } else if (lines.length > 1) {
         for (const line of lines) {
-          if (line && !bullets.includes(line)) {
-            bullets.push(line);
-          }
+          addOnce(line);
         }
       }
     }

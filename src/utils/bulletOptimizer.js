@@ -4,6 +4,8 @@
  * and helps candidates write impactful, metric-driven achievements.
  */
 
+import { replaceTags } from './tagText.js';
+
 export const ACTION_VERBS_BY_CATEGORY = {
   'Leadership & Execution': [
     'Spearheaded', 'Orchestrated', 'Championed', 'Directed', 'Mobilized',
@@ -145,21 +147,9 @@ function trimNonLetters(word) {
   return word.slice(from, to);
 }
 
-/** `text` without its <tags>: what /<[^>]+>/g cut, but a "<" with no ">" after it is not read to the end again each time. */
+/** `text` without its <tags>: what /<[^>]+>/g cut (replaceTags). */
 export function stripTags(text) {
-  const s = String(text);
-  let out = '';
-  let from = 0;
-  let at = s.indexOf('<');
-  while (at !== -1) {
-    const close = s.indexOf('>', at + 1);
-    if (close === -1) break; // none ahead: no later "<" has one either
-    if (close === at + 1) { at = s.indexOf('<', close); continue; } // "<>" holds nothing: no tag
-    out += s.slice(from, at);
-    from = close + 1;
-    at = s.indexOf('<', from);
-  }
-  return out + s.slice(from);
+  return replaceTags(text);
 }
 
 /**
