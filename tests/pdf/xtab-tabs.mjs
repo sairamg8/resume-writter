@@ -16,12 +16,14 @@ const settle = async () => { for (let i = 0; i < 8; i += 1) await new Promise((r
 
 /** The one localStorage every tab shares; `writer` is the tab whose code is running (its writes raise no event for it). */
 class SharedStorage {
-  constructor(entries) { this.map = new Map(entries); this.tabs = []; this.writer = null; this.writes = 0; }
+  constructor(entries) { this.map = new Map(entries); this.tabs = []; this.writer = null; this.writes = 0; this.full = false; }
   get length() { return this.map.size; }
   key(i) { return [...this.map.keys()][i] ?? null; }
   getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
   setItem(k, v) {
     const value = String(v);
+    // `full`: the résumé store's key is refused, as a browser whose storage is full does (QuotaExceededError).
+    if (this.full && k === KEY) throw Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError', code: 22 });
     const changed = this.map.get(k) !== value;
     this.map.set(k, value);
     if (k !== KEY) return;

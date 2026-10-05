@@ -18,7 +18,7 @@ import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 import { mergeResume } from '@/utils/mergeResume';
 import { coalescedWriter } from '@/utils/coalescedWrite';
-import { leaveAccount } from '@/utils/cloudSyncLeave';
+import { leaveAccount, stashOf } from '@/utils/cloudSyncLeave';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 // A save is the whole store — every résumé, photos as base64 — stringified and written on the main
@@ -76,15 +76,21 @@ function readStore() {
  * tab changed elsewhere in it, or typed meanwhile, was lost in both tabs (typing-freeze 5). Pure:
  * React may run it twice. The same arrays as `incoming` where nothing of this tab's is kept.
  */
-function withOtherTabsSave(prev, incoming, stored) {
+function withOtherTabsSave(prev, incoming, stored, knewUid = null) {
+  // The account changed in THIS tab (signed out, or in) while storage still holds the account this tab
+  // last knew: the change is this tab's, and the other tab's save is edits made on the old account. It
+  // does not undo it: its unheard save, taken in at this tab's own write, put the account's list back
+  // into a signed-out browser and replaced what this tab had set aside for it.
+  const here = (knewUid || null) !== (prev.syncedUid || null) && (incoming.syncedUid || null) === (knewUid || null);
   // The list left its account there (signed out, or another account signed in): what this tab
   // changed that storage has not seen is that account's, kept aside for it as the other tab's
   // leaveAccount kept its own (R2-005). Kept in the list, it had no owner, stayed on screen after
   // the sign-out, and the next account to sign in sent it to its own cloud (R5-HUNT3).
-  const left = prev.syncedUid && incoming.syncedUid !== prev.syncedUid ? prev.syncedUid : null;
+  const left = !here && prev.syncedUid && incoming.syncedUid !== prev.syncedUid ? prev.syncedUid : null;
   const unsaved = left ? keepUnsaved([], prev.resumes, stored) : null;
-  const resumes = left ? incoming.resumes : keepUnsaved(incoming.resumes, prev.resumes, stored, mergeResume);
-  const stash = unsaved?.length ? { stashed: leaveAccount({ ...prev, resumes: unsaved, stashed: incoming.stashed }, left).stashed } : {};
+  const resumes = left ? incoming.resumes : here && knewUid ? prev.resumes : keepUnsaved(incoming.resumes, prev.resumes, stored, mergeResume);
+  let stash = unsaved?.length ? { stashed: stashAside(incoming.stashed, left, unsaved, stored, prev.cloudVersions) } : {};
+  if (here) stash = { stashed: knewUid ? stashedFor(prev, incoming, stored, knewUid) : prev.stashed };
   const ids = new Set(resumes.map((r) => r.id));
   const mine = (prev.deletedIds || []).filter((id) => !incoming.deletedIds.includes(id));
   const listed = mine.length ? [...incoming.deletedIds, ...mine] : incoming.deletedIds;
@@ -93,7 +99,31 @@ function withOtherTabsSave(prev, incoming, stored) {
     ? { ...incoming.deletedInfo, ...Object.fromEntries(mine.filter((id) => prev.deletedInfo?.[id]).map((id) => [id, prev.deletedInfo[id]])) }
     : incoming.deletedInfo;
   const activeId = ids.has(prev.activeId) ? prev.activeId : (ids.has(incoming.activeId) ? incoming.activeId : resumes[0]?.id ?? null);
-  return { ...incoming, resumes, deletedIds, deletedInfo, activeId, ...stash };
+  return { ...incoming, resumes, deletedIds, deletedInfo, activeId, ...stash, ...(here ? { syncedUid: prev.syncedUid, cloudVersions: prev.cloudVersions } : {}) };
+}
+
+/**
+ * `stashed` with `edits` (résumés changed since `stored`) kept aside for account `uid`
+ * (leaveAccount). One already kept aside there (by the other tab's leave) is merged with it, not
+ * replaced: the two tabs' edits to the same résumé are both the account's.
+ */
+function stashAside(stashed, uid, edits, stored, cloudVersions) {
+  const kept = new Map((stashOf({ stashed }, uid)?.resumes || []).map((r) => [r.id, r]));
+  const was = new Map(stored.map((r) => [r.id, r]));
+  const resumes = edits.map((r) => (kept.has(r.id) ? mergeResume(was.get(r.id) || kept.get(r.id), r, kept.get(r.id)) : r));
+  return leaveAccount({ resumes, syncedUid: uid, cloudVersions, stashed }, uid).stashed;
+}
+
+/**
+ * What this tab kept aside for account `uid`, which it has left, with what the other tab did to that
+ * account's list meanwhile (`incoming`, against `stored`, what this tab knew): its edits are the
+ * account's, kept aside as the other tab's own leave keeps them; a résumé it deleted is not kept. The
+ * other accounts' stashes of both tabs stay.
+ */
+function stashedFor(prev, incoming, stored, uid) {
+  const out = stashAside({ ...incoming.stashed, ...prev.stashed }, uid, keepUnsaved([], incoming.resumes, stored), stored, incoming.cloudVersions);
+  const dead = new Set(incoming.deletedIds.filter((id) => !(prev.deletedIds || []).includes(id)));
+  return out[uid] && dead.size ? { ...out, [uid]: { ...out[uid], resumes: out[uid].resumes.filter((r) => !dead.has(r.id)) } } : out;
 }
 
 /**
@@ -158,6 +188,9 @@ export function useAppStore() {
   // another tab's save just taken — storage holds it already.
   const stored = useRef(loaded.state.resumes);
   const taken = useRef(null);
+  // The account storage held when this tab last wrote or took it (withOtherTabsSave tells a change of
+  // account made in this tab from one the other tab made).
+  const storedUid = useRef(loaded.state.syncedUid);
   // The account the list belongs to (syncedUid) as this tab last saved or took it.
   const owner = useRef(loaded.state.syncedUid);
 
@@ -168,7 +201,7 @@ export function useAppStore() {
 
   /**
    * Another tab's save that this tab has not taken: what storage holds now, as `{ incoming, knew }`
-   * for withOtherTabsSave, and this tab knows it from here on; null when storage holds what this tab
+   * for withOtherTabsSave (`knewUid`: the account this tab knew storage to hold), and this tab knows it from here on; null when storage holds what this tab
    * wrote or took, or a value that cannot be read in full (not taken over this tab's — its own load
    * backs such a value up, readStore). A tab never heard another's save twice: the storage event of
    * one a write has taken in already finds nothing.
@@ -186,7 +219,9 @@ export function useAppStore() {
     const knew = stored.current;
     incoming.resumes = sameAsKnown(incoming.resumes, knew);
     stored.current = incoming.resumes;
-    return { incoming, knew };
+    const knewUid = storedUid.current;
+    storedUid.current = incoming.syncedUid;
+    return { incoming, knew, knewUid };
   }
 
   // Saves are coalesced (R2-077): every keystroke used to stringify and write the whole store.
@@ -198,16 +233,18 @@ export function useAppStore() {
       // its way, as both tabs type: written over, it lost that tab's edits (typing-freeze 5). Taken
       // in first, as the event takes it, and what is written is this tab's changes over it.
       const other = takeSave();
-      const out = other ? withOtherTabsSave(state, other.incoming, other.knew) : state;
-      if (other) {
-        taken.current = out;
-        setAppState((prev) => (prev === state ? out : withOtherTabsSave(prev, other.incoming, other.knew)));
-      }
+      const out = other ? withOtherTabsSave(state, other.incoming, other.knew, other.knewUid) : state;
+      if (other) setAppState((prev) => (prev === state ? out : withOtherTabsSave(prev, other.incoming, other.knew, other.knewUid)));
       // When storage is full, old backups make room before the change is refused (R4-8).
       const raw = JSON.stringify({ ...out, dataVersion: DATA_VERSION });
       setItemWithRoom(STORAGE_KEY, raw);
       lastRaw.current = raw;
       stored.current = out.resumes;
+      storedUid.current = out.syncedUid;
+      // Taken in and written: the effect below has nothing left to write. Set only now — a write that
+      // failed (storage full) leaves storage holding the other tab's save alone, and the merged state is
+      // still this tab's to write: marked as taken, it was read as stored, and the next event dropped it.
+      if (other) taken.current = out;
       // The dashboard's page pictures of résumés this browser no longer holds go with them (C1).
       keepPageImagesOf(out.resumes);
       setPersistError(null);
@@ -265,14 +302,14 @@ export function useAppStore() {
       if (e.key !== STORAGE_KEY || e.newValue == null) return;
       const other = takeSave();
       if (!other) return;
-      const { incoming, knew } = other;
+      const { incoming, knew, knewUid } = other;
       taken.current = incoming;
       // The held save is not written until the state it would write has taken this one in (the
       // effect above schedules it again).
       // Leaving the page before that render (pagehide) writes the held save with this one taken in
       // too, not as it was: that would put back what the other tab just changed.
-      saver.hold((held) => withOtherTabsSave(held, incoming, knew));
-      setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
+      saver.hold((held) => withOtherTabsSave(held, incoming, knew, knewUid));
+      setAppState((prev) => withOtherTabsSave(prev, incoming, knew, knewUid));
     }
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

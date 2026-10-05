@@ -51,6 +51,18 @@ not heard twice.
   once, and `keepUnsaved` without a merge only holds what storage refused), but they had the same write that
   never looked: each now reads storage first and takes in a save whose event has not arrived (`setJobs`,
   `setBoards`, `addCustomStage` / `removeCustomStage`).
+- **The account changing hands** (sign-out, or another account's sign-in) is decided by which tab did it: a tab
+  remembers the account storage held when it last wrote or took it. When this tab's account differs from that
+  and the other tab's save still carries it, the change is this tab's — the other tab's save is edits on the old
+  account's list, so this tab keeps its own `syncedUid`, `cloudVersions` and list, and keeps the other tab's
+  changes aside for the account it left (the same `stash` as its own unsent work; a résumé both tabs changed is
+  merged with `mergeResume`, one the other tab deleted is not kept) — whether the save is taken at this tab's
+  write or by its storage event. When the other tab changed the account, this tab follows it as before (its
+  unsent work is kept aside, merged with what the other tab's leave already kept for the same résumé).
+- **A write that takes in the other tab's save and fails** (storage full): the merged state is still this
+  tab's to write. It is marked as taken, so the save effect writes nothing for it, only after the write
+  reached storage; after a failure the effect schedules the write again, and the tab's edits stay unsaved
+  against what storage holds, so a later event of the other tab merges with them instead of replacing them.
 - No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
   copy as it is.
 - Known limit: a read-then-write of `localStorage` is not atomic across tabs (no lock), so two writes inside
