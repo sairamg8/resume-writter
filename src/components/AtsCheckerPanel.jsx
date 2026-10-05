@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import {
   analyzeAtsScore,
-  matchResumeWithJob,
   atsHeadingLabel,
   entriesInOneColumn,
   jobTitleFirst,
@@ -126,14 +125,9 @@ function AtsCheck({ resume, store }) {
   // The Classic switch is Design → Template's pick (usePickCard), so it raises the same notice with Undo.
   const { pick } = usePickCard(resume || {}, store || {});
 
-  // The report reads the résumé alone; only the job match reads the posting. Each key typed in the
-  // box redid the whole report with it, and now redoes the match (typing-freeze 6).
-  const report = useMemo(() => analyzeAtsScore(resume), [resume]);
-  const jobMatch = useMemo(
-    () => (jobDescription.trim() ? matchResumeWithJob(resume, jobDescription) : null),
-    [resume, jobDescription],
-  );
-  const analysis = useMemo(() => ({ ...report, jobMatch }), [report, jobMatch]);
+  const analysis = useMemo(() => {
+    return analyzeAtsScore(resume, jobDescription);
+  }, [resume, jobDescription]);
 
   function toggleCat(catKey) {
     setExpandedCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
@@ -291,7 +285,7 @@ function AtsCheck({ resume, store }) {
     setTimeout(() => setCopiedKeyword(null), 2000);
   }
 
-  const { totalScore, grade, gradeLabel, categories, criticalCount, warningCount, passedCount } = analysis;
+  const { totalScore, grade, gradeLabel, categories, criticalCount, warningCount, passedCount, jobMatch } = analysis;
 
   const scoreColor = totalScore >= 90
     ? 'text-emerald-600 bg-emerald-50 border-emerald-300'
