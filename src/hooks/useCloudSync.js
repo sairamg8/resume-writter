@@ -11,9 +11,16 @@ import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { liveStore } from '@/hooks/useResumeSyncActions';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
-const io = db
+const realIo = db
   ? cloudIo({ collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove }, db)
   : null;
+let io = realIo;
+
+/**
+ * For tests: the Firestore calls a hook mounted from now on syncs through — cloudIo over a stand-in
+ * (tests/pdf/fake-firestore.mjs) — so the hook runs signed in as the app does; null puts the real ones back.
+ */
+export function _setCloudIoForTest(next) { io = next ?? realIo; }
 
 /** The public links' calls (publicLink.js): the sync takes down a deleted résumé's copy (R2-148). */
 const publicLinks = db
