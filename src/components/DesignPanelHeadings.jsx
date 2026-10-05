@@ -2,6 +2,7 @@ import { ColorInput, DesignSection } from '@/components/DesignPanelShared';
 import { useTypedNumber } from '@/hooks/useTypedNumber';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
+import { columnsOf } from '@/constants/layoutOptions';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 import { headingBorderDefault, sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 
@@ -75,8 +76,9 @@ export function HeadingControls({ settings, template, updateSetting }) {
 
   return (
     <>
-      {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082). */}
-      {headerTemplateId(template, settings) === 'sidebar' && (
+      {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082), and
+          Mixed prints its short sections with the main ones' headings (R2-147-col). */}
+      {headerTemplateId(template, settings) === 'sidebar' && columnsOf(settings) === 'two' && (
         <p className="text-[11px] text-gray-400 leading-relaxed">
           These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case and Icons apply there.
         </p>

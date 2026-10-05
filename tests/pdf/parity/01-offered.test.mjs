@@ -12,16 +12,19 @@ const W = await walks();
 let look = null;
 before(async () => {
   await setup();
-  const [letterhead, templates, spacing] = await Promise.all([
+  const [letterhead, templates, spacing, layout] = await Promise.all([
     loadModule('/src/templates/pdf/shared/letterhead.js'),
     loadModule('/src/constants/templates.js'),
     loadModule('/src/constants/headerSpacing.js'),
+    loadModule('/src/constants/layoutOptions.js'),
   ]);
   look = {
     // A band that prints in the page's own inks (Banded's pale ground, letterhead.js `pageInks`) takes no Header Text Color.
     band: (v) => { const b = letterhead.letterheadLook(v.template, v.settings).band; return Boolean(b) && !b.pageInks; },
     // The page prints header gap `key`: its header's template has one (the walk's résumé has a summary).
     gap: (v, key) => spacing.templateGapPt(templates.headerTemplateId(v.template, v.settings), key) != null,
+    // The page has a side column to place and size: the Sidebar's two columns (sidebarLayout, R2-147-col).
+    columns: (v) => layout.sidebarLayout(v.template, v.settings) != null,
     ...templates,
   };
 });
@@ -45,6 +48,11 @@ const WHERE = [
   ['headerPadY', (v) => look.gap(v, 'headerPadY'), 'the header is a padded banner (Modern, Banner)'],
   ['headerPadX', (v) => look.gap(v, 'headerPadX'), 'the banner is padded at its sides (Modern)'],
   ['headerGapBelow', (v) => look.gap(v, 'headerGapBelow'), 'the header has a gap under it (every one)'],
+  // Design → Template → Layout's Columns, Details and Width (R2-147-col): not on Single · ATS-safe's
+  // Classic page, nor on any other template's one column.
+  ['layoutColumns', (v) => look.columns(v), 'the page prints the Sidebar\'s two columns'],
+  ['layoutDetails', (v) => look.columns(v), 'the page prints the Sidebar\'s two columns'],
+  ['layoutSideWidth', (v) => look.columns(v), 'the page prints the Sidebar\'s two columns'],
 ];
 
 describe('each control is offered where the PDF prints what it styles, and only there', () => {

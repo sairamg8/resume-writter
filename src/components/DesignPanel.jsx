@@ -19,6 +19,7 @@ import { DatesSection } from '@/components/DesignPanelDates';
 import { ListsSection } from '@/components/DesignPanelLists';
 import { LinksSection } from '@/components/DesignPanelLinks';
 import { PageNumbersSection } from '@/components/DesignPanelPageNumbers';
+import { SidebarColumnsLayout } from '@/components/DesignPanelLayout';
 import {
   ICON_SET_OPTIONS,
   ContactIcon,
@@ -239,6 +240,8 @@ export default function DesignPanel({
             <p className="text-[10px] text-gray-400 mt-2">
               Single column reads cleanly in every applicant-tracking system. The two-column look can interleave when a portal parses it.
             </p>
+            {/* The two columns' own choices (R2-147-col): none in Single · ATS-safe, Classic's page. */}
+            {!settings.sidebarSingleColumn && <SidebarColumnsLayout settings={settings} updateSetting={updateSetting} />}
           </div>
         )}
         {current === 'academic' && (

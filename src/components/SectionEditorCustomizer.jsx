@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { AlignLeft, AlignCenter, RotateCcw } from 'lucide-react';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
-import { templateId, inSidebarColumn } from '@/constants/templates';
+import { templateId, inMixedColumns, inSidebarColumn } from '@/constants/templates';
 import { SECTION_OVERRIDE_PX, sectionOverridePx } from '@/constants/spacingNumbers';
 
 export function ToggleRow({ label, value, onChange }) {
@@ -54,9 +54,12 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
   // alignment, grids and title layouts cannot apply there and are not offered (FIDB-75).
   // In Single · ATS-safe mode, all sections print in the main column.
   const sideColumn = inSidebarColumn(template, section.type, settings);
+  // In the Sidebar's Mixed layout the short sections print two to a row, each a column of its own: one
+  // entry to a row, as the side column, so no Grids is offered (R2-147-col).
+  const mixedColumn = inMixedColumns(template, section.type, settings);
   const hasLocation = ['experience', 'education', 'volunteering'].includes(section.type);
   const hasDates = !['skills', 'languages', 'references', 'interests'].includes(section.type);
-  const hasCols = !sideColumn && !['interests'].includes(section.type);
+  const hasCols = !sideColumn && !mixedColumn && !['interests'].includes(section.type);
   const hasTitleStyle = !sideColumn && ['experience', 'education', 'volunteering', 'custom'].includes(section.type);
   const skillsStyle = s.skillsStyle || 'inline';
   const set = (k, v) => updateSectionSettings(section.id, k, v);
@@ -88,6 +91,12 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
         onChange={v => set('spacing', v)}
         options={[{ label: 'Tight', value: 'compact' }, { label: 'Normal', value: 'normal' }, { label: 'Spacious', value: 'relaxed' }]}
       />
+
+      {mixedColumn && (
+        <p className="text-[11px] text-slate-500 leading-snug" data-testid="mixed-column-note">
+          Sidebar · Mixed prints this section in one of the two columns under the main sections: one entry to a row, no grid to choose.
+        </p>
+      )}
 
       {hasCols && (
         <SegmentRow

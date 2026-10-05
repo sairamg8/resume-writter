@@ -165,6 +165,16 @@ export const inSidebarColumn = (template, type, settings) =>
   && layoutOption('layoutColumns', settings?.layoutColumns) !== 'mixed' && SIDEBAR_COLUMN_TYPES.includes(type);
 
 /**
+ * Does a `type` section print in one of the Sidebar's Mixed columns — the short sections, two to a row
+ * under the full-width ones (Design → Template → Layout → Columns "Mixed", layoutOptions.js)? Each is a
+ * column of its own, one entry to a row whatever its Grids says, as the side column is: the PDF, Word,
+ * Section Options and the ATS Check read it so.
+ */
+export const inMixedColumns = (template, type, settings) =>
+  templateId(template) === 'sidebar' && !settings?.sidebarSingleColumn
+  && layoutOption('layoutColumns', settings?.layoutColumns) === 'mixed' && SIDEBAR_COLUMN_TYPES.includes(type);
+
+/**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
  * contact controls? Classic, Minimal, Executive, Timeline, Banner (in its band), Academic and Compact; Modern
  * prints a fixed banner, Sidebar a side panel.

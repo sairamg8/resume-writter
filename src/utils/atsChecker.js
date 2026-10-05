@@ -3,7 +3,7 @@ import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { entryPrints, sectionPrints } from './entryPrints.js';
 import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
-import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
+import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inMixedColumns, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { groupsRoles, roleGroups } from './roleGroups.js';
 
@@ -640,14 +640,14 @@ const MULTI_LINE_TYPES = new Set(['experience', 'education', 'projects', 'volunt
 
 /**
  * Whether `section` prints two or more of its entries side by side, as the PDF lays it out on
- * `template`: shown, of a multi-line type, in the main column (the Sidebar's side column prints one
- * column whatever Grids says), its Grids above 1 (resolveSection, as the PDF reads it) and more than
- * one shown entry to fill a row. The one rule of the layout report's section_grids item and of its
- * fix, entriesInOneColumn (R2-021).
+ * `template`: shown, of a multi-line type, in the main column (the Sidebar's side column, and each of
+ * its Mixed columns, R2-147-col, prints one column whatever Grids says), its Grids above 1
+ * (resolveSection, as the PDF reads it) and more than one shown entry to fill a row. The one rule of the
+ * layout report's section_grids item and of its fix, entriesInOneColumn (R2-021).
  */
 function printsSideBySide(section, template, settings) {
   return !!section && section.visible !== false && MULTI_LINE_TYPES.has(section.type)
-    && !inSidebarColumn(template, section.type, settings)
+    && !inSidebarColumn(template, section.type, settings) && !inMixedColumns(template, section.type, settings)
     && Number(resolveSection(section, template).settings.columns || 1) > 1
     && shownItems(section, template).length > 1;
 }
