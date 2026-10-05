@@ -1,5 +1,14 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 late — MASTER `2f20b796` IS RED (push gate 37307220635: 3 stale reference tests); THE FIX IS ON `claude/redos-rest-1005` AND NOT YET ON MASTER.**
+The auto-mode check refused my push of it to master twice (the owner's earlier order covered the first merge, not this one): the owner must say "push it" (or add a Bash permission rule), then `git push origin <sha>:refs/heads/master` (a fast-forward from 2f20b796).
+The three reds were tf-redos-bullet-autofix, tf-redos-bullet-tail-runs and tf-redos-phone: they compare the new code with frozen copies of the old files (tests/fixtures/typing-freeze-reference) and the small-bug fixes (verb chip hyphen guard, vanity phone) changed behaviour after those copies were taken.
+`8c0c3e40` refreshes the two copies (bulletOptimizer, contacts) to carry those intended changes; targeted run 37310625495 (17 files + lint) is green.
+On top of it (`4651b96c`, test `8f1b59df`): the ReDoS leftovers of the second review are fixed, with tests/unit/tf-redos-rest.unit.mjs (fail-first proved on CI, run 37311768975 green; 794 related tests + lint green in 37311338104):
+importText.js bareAddress (trailing slashes by index) and takeContacts (a suffix array instead of slice().some per line); importFile.js PAGE_OF/FURNITURE (no \s* before \s*$), the Word date cell (white space runs made one space before readDateRange), the PDF paragraph's link list (copied once, then pushed to);
+atsChecker.js email check (looksLikeEmail by index) and extractBulletsFromItem's continuation lookup (cached per depth). The full gate has NOT been run on the branch; run it once before or right after it reaches master.
+Still open from that review (small, not hunted for): the sanitizer's link-address change `d1eabe2c` (dropped links on small documents; not merged), importFile.js withLinks `kept.links = [...]` per link, no differential test for hasDataUrlInTag, the bounds that change output on huge inputs (toRoman >= 100000, MARKER_CAP 256, bracketYears 1000 characters).
+
 **2026-10-05 evening — MASTER = the merge of the typing-freeze leftovers and the small bugs; pushed at the owner's order WITHOUT waiting for the full gate.**
 **FIRST on a cold start: read master's push gate on this commit (`gh run list -R sairamg8/resume-writter --branch master --limit 3`, then `gh run view <id> --json jobs`) and fix any red on master (the owner's instruction: fix forward, never leave it).**
 Likely reds to look for first, because they could not be checked: tests/pdf 71-startup-chunks (the start-up path had 7.9 kB of margin and the cross-tab merge adds `src/utils/mergeResume.js` to it), tests of `src/utils/importText.js`
