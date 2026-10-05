@@ -20,6 +20,11 @@ The rest (5-7) is OPEN. Branch and commit names in the findings below are the hu
   deadline spent gets a bounded grace, no wait past 13 s (120); a main-thread build past its budget is not overlapped by the next (121).
 - **4. React #185:** signed out `d22467ca` (tests/pdf/114-keystroke-burst), signed in `a306dded` (useCloudSync; tests/pdf/117-keystroke-burst-signed-in).
 
+## Update 2026-10-05 evening: findings 5, 6 and 7 are FIXED on master (see the top entry of HANDOFF.md)
+Cross-tab (5): `claude/fix-tf-xtab`; ATS job-description box (6): `claude/fix-tf-ats`; composition flag, Sidebar long token and huge paste, paste/import ReDoS (7): `claude/fix-tf-comp`, `claude/fix-tf-sidebar`,
+`claude/fix-tf-redos` up to `42ad69ea`. Each fix has its test and CI proof on its branch. Still open from the last review of the ReDoS branch: the sanitizer's link-address change `d1eabe2c` is NOT merged (it dropped links on small
+documents) and the list of remaining quadratic spots (importText bareAddress, importFile PAGE_OF and links copy, atsChecker emailRegex and extractBulletsFromItem, takeContacts, extractJobKeywords) is in HANDOFF.md.
+
 ## Verdict
 The owner's "freeze while typing in Personal Info → Website" is REPRODUCED in effect, on the dev server (`yarn dev`), where it
 happens on ANY field, not just Website. It is not a hang, loop or regex in the Website code: contacts.js / safeHref are linear
