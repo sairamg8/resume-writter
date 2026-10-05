@@ -9,6 +9,8 @@
 import { newId } from './ids.js';
 import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { isText, storedText } from './storedText.js';
+import { skillLevelOf } from './skills.js';
+import { skillLevelFromText, skillLevelLabel } from '../constants/skillLevels.js';
 import { described, descriptionFrom, entries, flattened, isoDate, joined, listOf, listText, month, richDescription, richFrom } from './jsonResumeText.js';
 
 const text = (v) => storedText(v);
@@ -52,6 +54,36 @@ const REFERENCE_FIELDS = Object.keys(SECTION_TYPE_DEFAULTS.references('ref').ite
  * sets — another tool's entry with no end date stays as it was read before (no flag).
  */
 const ongoing = (item) => (item?.current ? { current: true } : {});
+
+/**
+ * A skill group's levels as the file holds them (R2-147). The schema's `level` is one text for the group
+ * and the app's levels are each skill's own, so `level` is the word (Beginner … Expert) when every keyword
+ * has the same level, and otherwise — some differ, or only some are set — the levels ride beside it as
+ * `keywordLevels` ({ "React": "Advanced" }), which the import puts back. No level set: neither is written.
+ * `levels[i]` is `keywords[i]`'s level (1–5) or null.
+ */
+function levelFields(keywords, levels) {
+  if (!levels.some(Boolean)) return {};
+  if (levels.every((l) => l === levels[0])) return { level: skillLevelLabel(levels[0]) };
+  return { keywordLevels: Object.fromEntries(keywords.flatMap((k, i) => (levels[i] ? [[k, skillLevelLabel(levels[i])]] : []))) };
+}
+
+/**
+ * The `skillLevels` a file's skill group gives its skills (`skills`, the text the import stores): the
+ * group's `keywordLevels` for the skills it names, and its `level` — the schema's one text, a word from
+ * another tool ("Master") or a number — for every other skill of the group. A text that names no level
+ * reads as none. `{}` when no skill has one, so a group without levels imports as it did.
+ */
+function levelsFrom(sk, skills) {
+  const own = sk.keywordLevels && typeof sk.keywordLevels === 'object' && !Array.isArray(sk.keywordLevels) ? sk.keywordLevels : {};
+  const group = skillLevelFromText(storedText(sk.level));
+  const skillLevels = {};
+  for (const name of skills.split(',').map((k) => k.trim()).filter(Boolean)) {
+    const level = Object.hasOwn(own, name) ? skillLevelFromText(storedText(own[name])) : group;
+    if (level) skillLevels[name] = level;
+  }
+  return Object.keys(skillLevels).length ? { skillLevels } : {};
+}
 
 /** The section types the schema has a key for, in the order an import with no `meta` lays them out. */
 export const SECTION_KEYS = {
@@ -117,15 +149,25 @@ export const SECTION_KEYS = {
     // A group with no category goes out with no name, and comes back with none (R2-006): it went out
     // as "Skills" and printed that label after the trip. A group of another tool's file with no
     // name at all still gets one.
-    out: (item) => ({
-      name: text(item.category),
-      keywords: text(item.skills || item.name).split(/[,•;]+/).map((k) => k.trim()).filter(Boolean),
+    // A level is kept for a skill as the editor parts them, by commas; the file's keywords are parted by
+    // "•" and ";" too, so each keyword of a "Python; Go" skill takes that skill's level (R2-147).
+    out: (item) => {
+      const pairs = text(item.skills || item.name).split(',').flatMap((skill) => {
+        const level = skillLevelOf(item.skillLevels, skill.trim());
+        return skill.split(/[•;]+/).map((k) => k.trim()).filter(Boolean).map((keyword) => [keyword, level]);
+      });
+      const keywords = pairs.map(([keyword]) => keyword);
+      return { name: text(item.category), ...levelFields(keywords, pairs.map(([, level]) => level)), keywords };
+    },
+    in: each((sk) => {
+      const skills = listText(sk.keywords);
+      return {
+        id: newId('sk'),
+        category: 'name' in sk ? text(sk.name) : 'Technical Skills',
+        skills,
+        ...levelsFrom(sk, skills),
+      };
     }),
-    in: each((sk) => ({
-      id: newId('sk'),
-      category: 'name' in sk ? text(sk.name) : 'Technical Skills',
-      skills: listText(sk.keywords),
-    })),
   },
   projects: {
     key: 'projects',

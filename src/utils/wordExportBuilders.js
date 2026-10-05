@@ -17,6 +17,7 @@ import { hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { SKILL_LEVEL_STEPS } from '@/constants/skillLevels';
 import { entryPrints } from '@/utils/entryPrints';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
@@ -227,12 +228,15 @@ export function buildSkills(section, accentHex, settings, centered, dateHex, loo
   const skillsInk = { tags: look.template === 'minimal' ? look.ink.sub : accentHex, bars: look.ink.bar }[s.skillsStyle] || look.ink.sub;
   const skillsSize = look.entry - ({ tags: 1, bars: 2 }[s.skillsStyle] || 0);
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
-    const { category: typed, skills, list } = skillGroup(item);
+    const { category: typed, skills, list, levels } = skillGroup(item);
     const category = skillCategory(typed, { style: s.skillsStyle, sideColumn: look.side });
     if (s.skillsStyle === 'stacked') return stackedSkills(category, skills, list, categoryInk, centered, look);
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: look.entry, color: categoryInk }));
-    if (skills) children.push(normal(skills, { size: skillsSize, color: skillsInk }));
+    // Bars, and a skill with a level: its bar as glyphs after it, where the PDF draws the bar (R2-147).
+    // No level set, or another style: the skills as typed, as before.
+    if (skills && s.skillsStyle === 'bars' && levels.some(Boolean)) children.push(...levelledSkills(list, levels, skillsSize, skillsInk, accentHex));
+    else if (skills) children.push(normal(skills, { size: skillsSize, color: skillsInk }));
     return children.length ? [new Paragraph({
       children,
       spacing: { after: 0, ...lineSpacing(look.line, look.entry) },
@@ -240,6 +244,19 @@ export function buildSkills(section, accentHex, settings, centered, dateHex, loo
       ...centredIf(centered),
     })] : [];
   })];
+}
+
+/**
+ * A Bars group's skills as Word prints them when one has a level (R2-147): "React ▰▰▰▰▱, Vue" — the
+ * skills comma-separated, each level's bar as SKILL_LEVEL_STEPS glyphs (the level's filled) in the
+ * accent after its skill, as a language's level is (levelGlyphs). A skill with no level is its word
+ * alone: the PDF's 80 % bar has no glyphs, as Word never drew one.
+ */
+function levelledSkills(list, levels, size, ink, accentHex) {
+  return list.flatMap((skill, i) => [
+    normal(`${i ? ', ' : ''}${skill}${levels[i] ? ' ' : ''}`, { size, color: ink }),
+    ...(levels[i] ? [normal('▰'.repeat(levels[i]) + '▱'.repeat(SKILL_LEVEL_STEPS - levels[i]), { size, color: accentHex })] : []),
+  ]);
 }
 
 /**

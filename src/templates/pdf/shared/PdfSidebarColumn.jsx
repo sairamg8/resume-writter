@@ -9,7 +9,7 @@ import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnit
 import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
-import { SIDE_COL } from './PdfPage';
+import { SIDE_COL, SIDE_PAD, sideShare } from './PdfPage';
 import { sidebarShades } from './pdfColors';
 import { titleTracking } from './sectionHeadingLook';
 import { headingFace } from './pdfFaces';
@@ -32,12 +32,18 @@ const NAVY = sidebarShades();
 // Sections that live in the dark sidebar column (the section editor reads the same list)
 export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
 
-/** The dark column: its share of the paper (PdfPage.jsx), and its padding on the main column's side, pt. */
+/** The dark column: its default share of the paper (PdfPage.jsx), and its padding on the main column's side, pt. */
 export { SIDE_COL };
-export const SIDE_PAD_RIGHT = 10;
+export const SIDE_PAD_RIGHT = SIDE_PAD;
 
-/** The width the column's text is laid out in, pt: its share of the paper inside its padding. */
-export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL - pageMargins(settings).h * MM_TO_PT - SIDE_PAD_RIGHT;
+/**
+ * The width the column's text is laid out in, pt: its share of the paper (Design → Layout's width,
+ * sideShare) inside its padding. `settings._sideRoomPt` is a width of its own where the sections that
+ * print in the column sit somewhere else: the contacts in the top band (PdfSidebarBand.jsx).
+ */
+export const sideColumnRoom = (settings) => (Number.isFinite(settings?._sideRoomPt)
+  ? settings._sideRoomPt
+  : pageBoxPt(settings).width * sideShare(settings) - pageMargins(settings).h * MM_TO_PT - SIDE_PAD_RIGHT);
 
 /**
  * Where a word in the column (`style`: its type, letterSpacing included) may break, `inset` pt in

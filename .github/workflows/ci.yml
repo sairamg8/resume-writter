@@ -32,6 +32,10 @@ on:
         description: 'Cypress: all, none, or spec files (space-separated). Empty: all, unless tests or failfirst is set.'
         required: false
         default: ''
+      perf:
+        description: 'Performance budgets (tests/perf; never part of the gate): node (PDF build, one keystroke, start-up size), browser (Chromium: last key to the pages), or all. Set, only this runs.'
+        required: false
+        default: ''
 
 # A push to master cancels the run it supersedes; each dispatch runs to the end, so checks started
 # side by side on one branch never cancel one another.
@@ -46,7 +50,7 @@ jobs:
   suite:
     name: suite (${{ matrix.shard }}/6)
     # The whole suite: on a push, or a dispatch that names neither test files nor fail-first checks.
-    if: github.event_name == 'push' || (inputs.tests == '' && inputs.failfirst == '')
+    if: github.event_name == 'push' || (inputs.tests == '' && inputs.failfirst == '' && inputs.perf == '')
     runs-on: ubuntu-latest
     # The PDF tests read text through Poppler and MuPDF, and some measure what Poppler 26.01 does
     # (pdftotext -raw word gaps): run them on the same Ubuntu release the project is developed on.
@@ -221,7 +225,7 @@ jobs:
           exit $status
 
   build:
-    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '')))
+    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '' && inputs.perf == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -243,7 +247,7 @@ jobs:
   playwright:
     name: playwright (${{ matrix.shard }}/3)
     needs: build
-    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '')))
+    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '' && inputs.perf == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -292,7 +296,7 @@ jobs:
   # Cypress has no sharding of its own: each machine runs every 4th spec file, in name order.
   cypress:
     name: cypress (${{ matrix.shard }}/4)
-    if: github.event_name == 'push' || (inputs.cypress != 'none' && (inputs.cypress != '' || (inputs.tests == '' && inputs.failfirst == '')))
+    if: github.event_name == 'push' || (inputs.cypress != 'none' && (inputs.cypress != '' || (inputs.tests == '' && inputs.failfirst == '' && inputs.perf == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -325,3 +329,58 @@ jobs:
           name: cypress-screenshots-${{ matrix.shard }}
           path: cypress/screenshots
           retention-days: 3
+
+  # Performance budgets (tests/perf/run.mjs, docs/knowledge/08-testing.md): a dispatch with `perf` set, and
+  # only then — never part of the gate, since a shared runner's timings say too little to fail a push over.
+  # node: the PDF build, one keystroke's build-open-paint, the start-up path's size. browser: Chromium against
+  # a production build, the last key to the pages that show it, then Gate B (perf-gate-b.spec.mjs: long tasks and
+# key delay, the PDF worker against the main thread). all: both. The run exits non-zero when a
+  # ceiling in tests/perf/budgets.mjs is missed; its table is on the job's summary.
+  perf:
+    name: perf (${{ inputs.perf }})
+    if: github.event_name == 'workflow_dispatch' && inputs.perf != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PERF: ${{ inputs.perf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: Groups
+        id: groups
+        run: |
+          case "$PERF" in
+            browser) echo "only=browser" >> "$GITHUB_OUTPUT" ;;
+            all) echo "only=render,keystroke,startup,browser" >> "$GITHUB_OUTPUT" ;;
+            *) echo "only=render,keystroke,startup" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Production build
+        if: contains(steps.groups.outputs.only, 'browser')
+        run: ./node_modules/.bin/vite build --mode production --outDir dist --emptyOutDir
+      - name: Chromium
+        if: contains(steps.groups.outputs.only, 'browser')
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Budgets
+        env:
+          ONLY: ${{ steps.groups.outputs.only }}
+        run: |
+          set -o pipefail
+          node tests/perf/run.mjs --only="$ONLY" 2>&1 | tee perf.log
+      # Gate B (tests/playwright/perf-gate-b.spec.mjs, PERF-6): the longest main-thread task and key delay while
+      # typing, with the PDF worker and with it refused. A measurement the Playwright gate skips; here it runs.
+      - name: Gate B
+        if: ${{ !cancelled() && contains(steps.groups.outputs.only, 'browser') }}
+        env:
+          PERF_GATE_B: '1'
+        run: |
+          set -o pipefail
+          ./node_modules/.bin/playwright test tests/playwright/perf-gate-b.spec.mjs --reporter=list 2>&1 | tee gate-b.log
+      - name: Summary
+        if: always()
+        run: |
+          [ -f perf.log ] && { echo '```'; cat perf.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
+          [ -f gate-b.log ] && { echo '```'; grep -E 'Gate B|passed|failed|Error' gate-b.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true

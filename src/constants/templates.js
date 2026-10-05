@@ -4,6 +4,7 @@
 
 import { TEMPLATES } from './templateTable.js';
 import { photoOption } from './photoOptions.js';
+import { layoutOption } from './layoutOptions.js';
 
 // Every template's decisions — label, ATS tier, the style it brings, its header — are one table:
 // TEMPLATES in ./templateTable.js. Everything below reads it.
@@ -154,9 +155,14 @@ export function withKnownTemplate(resume) {
 /** Section types the Sidebar template prints in its dark side column; the rest go to the main column. */
 export const SIDEBAR_COLUMN_TYPES = ['skills', 'education', 'languages', 'certifications', 'interests', 'references'];
 
-/** Does a `type` section print in the Sidebar's side column — one narrow, left-aligned column? */
+/**
+ * Does a `type` section print in the Sidebar's side column — one narrow, left-aligned column? Not in
+ * Single · ATS-safe, and not in Mixed (Design → Layout, layoutOptions.js), whose short sections are
+ * ordinary sections laid two to a row under the full-width ones.
+ */
 export const inSidebarColumn = (template, type, settings) =>
-  templateId(template) === 'sidebar' && !settings?.sidebarSingleColumn && SIDEBAR_COLUMN_TYPES.includes(type);
+  templateId(template) === 'sidebar' && !settings?.sidebarSingleColumn
+  && layoutOption('layoutColumns', settings?.layoutColumns) !== 'mixed' && SIDEBAR_COLUMN_TYPES.includes(type);
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and

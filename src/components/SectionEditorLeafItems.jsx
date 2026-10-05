@@ -2,6 +2,8 @@ import { Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { newId } from '@/utils/ids';
 import { InputField, DateField, FieldRow, ItemCard } from '@/components/SectionEditorShared';
+import { SKILL_LEVELS } from '@/constants/skillLevels';
+import { skillLevelOf, skillNames, withSkillLevel } from '@/utils/skills';
 
 export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
@@ -11,6 +13,10 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }
     const cur = item.hiddenFields || [];
     onUpdate({ ...item, hiddenFields: itemHidden.has(f) ? cur.filter(x => x !== f) : [...cur, f] });
   }
+  // One level list per skill the text names (R2-147), as the Language row's Proficiency list is drawn:
+  // Not set prints what the group always printed; the level shows as the length of the skill's bar in
+  // the Bars style. Skills the eye hid keep their levels, dimmed with the field.
+  const names = [...new Set(skillNames(item))];
   return (
     <ItemCard label={item.category || 'Skill Group'} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <FieldRow label="Title / Category" field="category" hiddenSet={itemHidden} onToggle={toggleField}>
@@ -19,6 +25,29 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }
       <FieldRow label="Skills / Details" field="skills" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.skills} onChange={v => u('skills', v)} placeholder="JavaScript, React, TypeScript, Next.js" />
       </FieldRow>
+      {names.length > 0 && (
+        <div className={itemHidden.has('skills') ? 'opacity-50' : ''}>
+          <div className="text-xs text-gray-500 mb-1">Skill levels <span className="text-gray-400">(drawn by the Bars style)</span></div>
+          <div className="space-y-1.5">
+            {names.map(name => (
+              <div key={name} className="flex items-center gap-2">
+                <span className="flex-1 min-w-0 truncate text-sm text-gray-700" title={name}>{name}</span>
+                <select
+                  aria-label={`Level of ${name}`}
+                  value={skillLevelOf(item.skillLevels, name) ?? ''}
+                  onChange={e => onUpdate(withSkillLevel(item, name, e.target.value))}
+                  className="w-36 min-w-0 shrink-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">Not set</option>
+                  {SKILL_LEVELS.map(l => (
+                    <option key={l.value} value={l.value}>{l.label}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </ItemCard>
   );
 }

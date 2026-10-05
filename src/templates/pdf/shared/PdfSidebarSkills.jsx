@@ -6,6 +6,7 @@ import { wrappedLines } from './pdfMeasure';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
+import { skillBarWidth } from '@/constants/skillLevels';
 
 /**
  * Bars, Tags and Stacked print a group's category over its skills, and a group may split between them:
@@ -69,7 +70,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
       <View style={{ marginBottom: sectionGap }}>
         <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={categoryPresence(settings, style, groups[0], trackedCat)} />
         <View style={{ gap: itemGap }}>
-          {groups.map(({ category, list }, i) => (
+          {groups.map(({ category, list, levels }, i) => (
             <View key={i}>
               {SPACER}
               {category ? (
@@ -85,7 +86,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
                 <View key={index} style={{ marginTop: index ? 4 : 0 }}>
                   <Text style={{ fontSize: 8.5, color: shades.value, marginBottom: 1, lineHeight: 1.2 }} hyphenationCallback={valBreaks}>{sk}</Text>
                   <View style={{ height: 3, borderRadius: 2, backgroundColor: shades.fill }}>
-                    <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: hexAlpha(accent, 0.5) }} />
+                    <View style={{ width: skillBarWidth(levels[index]), height: 3, borderRadius: 2, backgroundColor: hexAlpha(accent, 0.5) }} />
                   </View>
                 </View>
               ))}

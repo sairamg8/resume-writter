@@ -61,6 +61,22 @@ export), `exportToPDFReact` / `exportCoverLetterPDFReact` (download), `warmPdfEx
 3. Resolve settings/sections (`resolveTemplateSettings`, `resolveSection`)  
 4. `pdf(<Template />).toBlob()` → the preview paints it, or `downloadBlob` saves it  
 
+In the browser these steps run in a Web Worker (`pdfWorker.js` → `pdfWorkerJobs.js`), asked through
+`src/utils/pdfBuild.js`; Node and a browser with no module worker build on the main thread. A worker that
+never replies is let go by a watchdog (`pdfBuildTimeoutMs`: 20 s, twice that before its first reply, plus
+250 ms per entry): a worker that never answered anything hands its jobs to the main thread, one that had
+built before fails that build with a retryable "took too long" error and its queue goes to a fresh worker;
+what a let-go worker sends late is ignored. A clock that rings 5 s or more past its time slept with the page
+(a tab frozen in the background, a phone that put the browser away) and the worker with it, so it starts
+again with the whole budget rather than letting the worker go. Tests inject a fake Worker and a fake clock with
+`_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`).
+
+A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
+bar in Skills style Bars — the main column of every template and the Sidebar's side column
+(`skillBarWidth`: level / 5; no level keeps the old 80 %). Word prints it as `▰▰▰▱▱` glyphs after the skill,
+in Bars only; every other style, Markdown and the ATS text print nothing of it
+(`tests/pdf/147-skill-level-*`, `tests/unit/skill-levels.unit.mjs`).
+
 Shared building blocks live in `src/templates/pdf/shared/` (`PdfPage.jsx`, `PdfSections*.jsx`,
 `PdfItemHeader.jsx`, `PdfContact.jsx`, `PdfRichText.jsx`, `pdfFontLoader.js`, …). At a page break a
 heading never ends a page alone: a section title keeps its first content, an entry header two lines of
@@ -132,7 +148,12 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   field (R5-HUNT11-JSON-RESUME-EMPTY-SCHEME-CONTACT). One with a Display label still goes in, but a bare
   "https://" or "www." under it (the PDF prints the label unlinked) writes `basics.url` '' and no profile,
   and the value as typed rides as `websiteText` / `linkedinText` / `githubText` for the import to put
-  back, so the label prints again after a round trip (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL)
+  back, so the label prints again after a round trip (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL).
+  A skill group's per-skill levels (R2-147) go out as `skills[].level` (Beginner … Expert) when every
+  keyword shares one, else as `keywordLevels` (`{ "Go": "Expert" }`); a level is kept per comma-separated
+  skill, so each keyword of a skill typed "Python; Go" (keywords are parted by ";" and "•" too) takes that
+  skill's level. The import reads `keywordLevels`, then another tool's `level` (a word, a number or a
+  percentage) for every other keyword of the group
 
 ## JSON backup export/import
 

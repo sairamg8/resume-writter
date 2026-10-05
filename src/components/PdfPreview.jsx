@@ -20,7 +20,12 @@ import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
  *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
- * - Page text goes into a visually hidden element (`textId`) for screen readers and tests.
+ * - Page text goes into a visually hidden element (`textId`) for screen readers and tests. It is read
+ *   AFTER the pages are painted and on screen (pdf.js' getTextContent shares the worker with the
+ *   paint, so asking first held the first paint back, R2-142 / PERF-5); the status turns 'ready'
+ *   once it is in, so a reader of that element after 'ready' finds it filled.
+ * - Canvases are reused (a pool per preview, filled by the ones that left the screen), not created
+ *   per page per render; the pool keeps elements, never pixels (R2-170), and is dropped on unmount.
  */
 
 const GUTTER_PX = 48;    // breathing room either side of the page
@@ -37,6 +42,18 @@ const release = (pdf) => { pdf?.loadingTask?.destroy(); };
  * a page's total canvas memory and fails the next paint past it (R2-170).
  */
 const discard = (canvases) => { for (const c of canvases) { c.width = 0; c.height = 0; } };
+
+// Idle canvases a preview keeps (0×0, so no pixels) to paint into again: about twice a long résumé's
+// pages, since the pages on screen stay up while the next ones paint. Past it, one is let go.
+const POOL_MAX = 8;
+
+function newCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.display = 'block';
+  return canvas;
+}
 
 /** For tests/pdf/90-preview-*: a stand-in `{ lib, worker }` for pdf.js, or null to load the real one again. */
 export const _setPdfjsForTest = setPdfjsForTest;
@@ -61,23 +78,39 @@ function pageText(content) {
   return out.replace(/\s+/g, ' ').trim();
 }
 
-/** Paint every page into a fresh canvas at `cssWidth` (device-pixel sharp). */
-async function paint(pages, cssWidth) {
+/**
+ * Paint every page into a canvas from `take()` at `cssWidth` (device-pixel sharp); `give(canvases)`
+ * takes back the ones of a paint that failed. A failed paint waits for the other pages' paints to
+ * end first: a canvas given back while pdf.js still draws into it would be painted into by the
+ * next render as well.
+ */
+async function paint(pages, cssWidth, take, give) {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const canvases = [];
-  return Promise.all(pages.map(async ({ page, width, height }) => {
+  const settled = await Promise.allSettled(pages.map(async ({ page, width, height }) => {
     const scale = (cssWidth * dpr) / width;
     const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
+    const canvas = take();
     canvases.push(canvas);
+    // Sizing resets a reused canvas' context; pdf.js fills the page's white itself.
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
     await page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas }).promise;
     return { canvas, cssHeight: (cssWidth * height) / width };
-  })).catch((e) => { discard(canvases); throw e; });
+  }));
+  const failed = settled.find((s) => s.status === 'rejected');
+  if (failed) { give(canvases); throw failed.reason; }
+  return settled.map((s) => s.value);
+}
+
+/**
+ * Reading-order text of every page, read after the paint. Never throws: the pages are on screen
+ * already, so a page whose text cannot be read (its document was let go for a newer one) is empty.
+ */
+async function pagesText(pages) {
+  return Promise.all(pages.map(async ({ page }) => {
+    try { return pageText(await page.getTextContent()); } catch { return ''; }
+  }));
 }
 
 function PageCanvas({ canvas, width, height, label }) {
@@ -95,7 +128,8 @@ function PageCanvas({ canvas, width, height, label }) {
 }
 
 export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé', active = true }) {
-  const [view, setView] = useState(null); // { pages, painted: [{ canvas, cssHeight }], cssWidth }
+  const [view, setView] = useState(null); // { pages, painted: [{ canvas, cssHeight }], cssWidth, gen }
+  const [texts, setTexts] = useState(null); // { gen, list }: the text of the pages of view `gen`, read after they were painted
   const [status, setStatus] = useState(active ? 'rendering' : 'paused');
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
@@ -109,6 +143,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const mounted = useRef(true);
   const rootRef = useRef(null);
   const onScreen = useRef([]); // the canvases of the pages on screen
+  const pool = useRef([]);      // idle canvases (0×0), painted into again by the next render
   const handed = useRef(null);  // the last view given to setView: on screen, or about to be
   const box = previewBox(input?.settings || input);
   const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
@@ -151,23 +186,20 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         if (unwanted()) return;
         const data = new Uint8Array(await blob.arrayBuffer());
         pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
-        const pages = [];
-        for (let i = 1; i <= pdf.numPages; i += 1) {
-          const page = await pdf.getPage(i);
+        const pages = await Promise.all(Array.from({ length: pdf.numPages }, async (_, i) => {
+          const page = await pdf.getPage(i + 1);
           const [, , width, height] = page.view;
-          pages.push({ page, width, height, text: pageText(await page.getTextContent()) });
-        }
+          return { page, width, height };
+        }));
         const width = widthRef.current;
-        const painted = await paint(pages, width);
-        if (unwanted()) { release(pdf); discard(painted.map((p) => p.canvas)); return; }
+        const painted = await paint(pages, width, take, give);
+        if (unwanted()) { release(pdf); give(painted.map((p) => p.canvas)); return; }
         release(docRef.current);
         docRef.current = pdf;
         shownGen.current = gen;
-        show({ pages, painted, cssWidth: width });
-        // Older than the latest change: its pages go up, but the latest build still owns the status.
-        if (gen !== generation.current) return;
-        setError(null);
-        setStatus('ready');
+        show({ pages, painted, cssWidth: width, gen });
+        // The pages are up: only now is their text asked for (not awaited: the build is over).
+        readText(pages, gen);
       } catch (e) {
         release(pdf); // opened, then a page or the paint failed: nothing else holds it
         if (!mounted.current || gen !== generation.current) return;
@@ -200,28 +232,53 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   useEffect(() => {
     if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
-    paint(view.pages, cssWidth).then((painted) => {
+    paint(view.pages, cssWidth, take, give).then((painted) => {
       // Cancelled, or a newer render's pages were handed over while this painted: never shown.
-      if (cancelled || handed.current !== view) discard(painted.map((p) => p.canvas));
+      if (cancelled || handed.current !== view) give(painted.map((p) => p.canvas));
       else show({ ...view, painted, cssWidth });
     }).catch(() => { /* the next render repaints */ });
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
 
+  // A canvas to paint into: an idle one from the pool, else a new one.
+  function take() {
+    return pool.current.pop() ?? newCanvas();
+  }
+
+  // Canvases that left the screen or never reached it: their pixels are freed at once (R2-170) and
+  // the elements wait in the pool for the next render (PERF-5). An unmounted preview keeps none.
+  function give(canvases) {
+    discard(canvases);
+    if (!mounted.current) return;
+    for (const c of canvases) if (pool.current.length < POOL_MAX && !pool.current.includes(c)) pool.current.push(c);
+  }
+
   // Put `next` up. A view handed over before it but not on screen yet (a zoom repaint the same moment
   // as a render) never will be: free its canvases.
   function show(next) {
     const unshown = handed.current && handed.current !== next ? handed.current.painted.map((p) => p.canvas) : [];
-    discard(unshown.filter((c) => !onScreen.current.includes(c)));
+    give(unshown.filter((c) => !onScreen.current.includes(c)));
     handed.current = next;
     setView(next);
+  }
+
+  // The text of the pages of build `gen`, asked for once they are painted and on screen. Its status
+  // is 'ready' when it is in; dropped when newer pages went up meanwhile (their document is gone).
+  async function readText(pages, gen) {
+    const list = await pagesText(pages);
+    if (!mounted.current || shownGen.current !== gen) return;
+    setTexts({ gen, list });
+    // Older than the latest change: its pages are up, but the latest build still owns the status.
+    if (gen !== generation.current) return;
+    setError(null);
+    setStatus('ready');
   }
 
   // Pages replaced (a newer render, a zoom repaint): free the canvases that left the screen. A
   // layout effect, so it runs after PageCanvas has put the new ones up and before the browser paints.
   useLayoutEffect(() => {
     const next = view ? view.painted.map((p) => p.canvas) : [];
-    discard(onScreen.current.filter((c) => !next.includes(c)));
+    give(onScreen.current.filter((c) => !next.includes(c)));
     onScreen.current = next;
   }, [view]);
 
@@ -233,6 +290,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       docRef.current = null;
       discard(onScreen.current);
       onScreen.current = [];
+      pool.current = []; // the idle canvases go with the preview
     };
   }, []);
 
@@ -296,7 +354,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
 
       <div id={textId} className="sr-only">
         {view?.pages.map((p, i) => (
-          <section key={i} aria-label={`${title} page ${i + 1}`}>{p.text}</section>
+          <section key={i} aria-label={`${title} page ${i + 1}`}>{texts?.gen === view.gen ? texts.list[i] : ''}</section>
         ))}
       </div>
     </div>

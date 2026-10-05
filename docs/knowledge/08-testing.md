@@ -18,7 +18,8 @@ Helpers the PDF and unit suites share:
 - `tests/pdf/fake-dom.mjs`, `tests/unit/ui-dom-harness.mjs` — just enough DOM for react-dom to mount
   a component in Node
 - `tests/pdf/fake-firestore.mjs` — an in-memory Firestore for the cloud-sync tests
-- `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics
+- `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics (a test can wrap its
+  `getDocument` to log paint and text requests, as `110-r2-142-perf5-*` does)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
   and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
 - `tests/fixtures/` — fictional sample résumés
@@ -33,6 +34,7 @@ yarn test:pdf     # the PDF suites only
 yarn test:unit    # the unit suites only
 yarn test:pw      # production build, then Playwright
 yarn test:e2e     # e2e build, then Cypress
+yarn test:perf    # the performance budgets (tests/perf): never part of yarn test or the CI gate
 yarn lint         # oxlint
 ```
 
@@ -45,8 +47,44 @@ measure what Poppler 26.01 does, so CI runs them on Ubuntu 26.04.
 (sharded), the production build, Playwright, oxlint on `src tests cypress`, and Cypress. A dispatch
 can name what to run instead — `tests` (node test files), `failfirst` (`sha:test,…` pairs: the
 commit's `src/` changes, yarn patch and yarn.lock are undone and its tests must fail, then pass with
-them), `playwright` and `cypress` (spec files, or `none`). Sessions and agents run tests only there,
+them), `playwright` and `cypress` (spec files, or `none`), and `perf` (the budgets below: only
+that runs). Sessions and agents run tests only there,
 never on their own machine (the owner, 2026-09-24; `docs/tracking/CLUSTER-PROTOCOL.md`).
+
+## Performance budgets
+
+`tests/perf/` is the performance harness (R2-142, PERF-1). `yarn test:perf` (`node tests/perf/run.mjs`)
+measures what an edit costs, holds each number to a budget written in `tests/perf/budgets.mjs`, prints
+the table and exits 1 when one is missed (2 when the harness itself failed). It is not part of `yarn test`
+and never of the CI gate. It measures four groups, `--only=render,keystroke,startup,browser` (or `all`;
+the default is all but `browser`):
+
+| Group | Measures |
+|-------|----------|
+| `render` | N1: the PDF build (`renderResumePdf`, `renderCoverLetterPdf`) of a 1-page and of a large (3+ page) résumé, median of 7 warm builds |
+| `keystroke` | one Summary keystroke on the large résumé as far as Node reaches: build the PDF, open it in pdf.js, read every page's text, paint every page (`@napi-rs/canvas`), without the preview's 350 ms debounce |
+| `startup` | the start-up path of a production build (entry, static imports, index.html's preloads, built in memory as `71-startup-chunks` does): script kB, gzipped kB, largest chunk, and the PDF or Word library modules on it (none) |
+| `browser` | Gate A in Chromium against a built `./dist` (`yarn build`, `npx playwright install chromium`): 20 keys into Summary at 150 ms a key, then the last key to the pages that show it, the longest main-thread task, and the first pages after opening the editor |
+
+Other options: `--strict`, `--slack=N`, `--runs=N`, `--warmups=N`, `--dist=DIR`, `--json` (`--help` lists
+them). Each timing has two figures in `budgets.mjs`: `max`, the CI ceiling a run is held to (a shared
+runner is several times slower than the laptop the plan was measured on and noisy from run to run, so the
+ceilings catch a build several times slower, not a few percent), and `target`, the plan's figure for a quiet
+machine, which `--strict` holds it to; `--slack=2` (or `PERF_SLACK=2`) doubles the timing ceilings on a slow
+box. Sizes and counts have an exact `max`. A measurement without a budget fails, so nothing is timed that
+nobody limited. Tighten a ceiling from what a few dispatched runs print; never loosen one to pass. The
+plan's N2 (a WOFF face inflates its glyf table once, however many builds) is not timed: it is counted, in
+the gate, by `tests/pdf/97-woff-glyf-once.test.mjs`.
+
+`tests/perf/budget-check.mjs` is the pure part (statistics, limits, the table, the options, the start-up
+graph); `tests/unit/perf-budget-check.unit.mjs` pins it, the budgets' shape, and that the workflow runs the
+job only on a dispatch that sets `perf`. In CI: Actions → ci → Run workflow with `perf` = `node`, `browser`
+or `all`; only that job runs, and its table is on the run's summary. With `browser` or `all` the job then
+runs Gate B, `tests/playwright/perf-gate-b.spec.mjs` (PERF-6: the longest main-thread task and key delay
+while typing on a long résumé, with the PDF worker and with it refused; soft targets of 50 ms), which the
+Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
+The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
+`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/110-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
 
 ## Demo accounts and the owner's private résumé
 

@@ -61,6 +61,11 @@ activeResume → renderResumePdf (utils/pdfExportReactPDF.js)
   → PDF blob → PdfPreview.jsx paints each page with pdf.js
 ```
 
+`PdfPreview` paints the pages first and only then asks pdf.js for their text (the screen-reader element
+`textId`; the status is `ready` once it is in), and it paints into canvases it already has: one that leaves the
+screen is shrunk to 0×0 (R2-170) and kept in a per-preview pool for the next render or zoom repaint
+(`tests/pdf/110-r2-142-perf5-*`).
+
 Export:
 
 ```

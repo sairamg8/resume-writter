@@ -79,6 +79,10 @@ type Section = {
 
 Section factories: `SECTION_TYPE_DEFAULTS` in `defaultDataSectionTypes.js`.
 
+A skill group's optional per-skill level is `item.skillLevels` (`{ "React": 4 }`, skill as typed → a whole
+number 1–5, scale in `src/constants/skillLevels.js`; R2-147). `normalizeResume` → `withSkillLevels` drops
+an invalid level, a skill the text no longer lists and an empty object; a group with none has no key.
+
 ### Settings (`ATS_DEFAULTS`)
 
 Important keys (non-exhaustive):
@@ -159,9 +163,18 @@ Migration v2: strips old `demo_*` jobs from prior seeds and re-injects current `
 ```
 users/{uid}/resumes/{resumeId}   → full Resume document
 users/{uid}/meta/deletions       → { ids: string[] }
+users/{uid}/jobs/{jobId}, users/{uid}/boards/{id}, users/{uid}/meta/{jobs|boards}
+                                 → the Job Tracker's and Boards' lists (collectionSyncIo.js)
+users/{uid}/shares/{resumeId}    → { shareId, publishedAt }: the link a résumé's public copy has
+users/{uid}/meta/publicCopies    → { copies: { [shareId]: resumeId } }: every public copy the account has
+public/{shareId}                 → { owner, resume, publishedAt }: a published copy, readable by its id
 ```
 
-No jobs collection.
+The public-link documents are `src/utils/publicLink.js`'s (05-state-auth-sync.md, Public links). The
+index `meta/publicCopies` (R2-148) is written in the same transaction as each copy and taken out with it,
+deleted when it lists none; it falls under the account's owner-only rule (`users/{uid}/{document=**}`),
+so `firestore.rules` needed no change. The résumé sync reads only `resumes` and `meta/deletions`, and the
+lists' sync only their own collection and `meta/<name>`, so neither ever takes it for their data.
 
 ## Import/export schemas
 

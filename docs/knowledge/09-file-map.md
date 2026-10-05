@@ -36,7 +36,8 @@ resume-writter/
 │   │   ├── shell/             # the workspace shell around the Job Tracker and Boards
 │   │   └── ui/                # the shared UI kit (dialogs, menus, toasts, fields…)
 │   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
-│   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js…
+│   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js,
+│   │                          # skillLevels.js (a skill's 1–5 level: scale, bar width, JSON Resume words)…
 │   ├── hooks/
 │   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js, useResumeDesignActions.js
 │   │   ├── usePickCard.js, usePicture.js  # a picker card picked (with Undo); a page picture once on screen
@@ -68,6 +69,7 @@ resume-writter/
 │   ├── pdf/                   # node:test suites that render real PDFs (harness.mjs); parity/
 │   ├── unit/                  # node:test unit suites
 │   ├── playwright/            # browser suites against a built ./dist
+│   ├── perf/                  # the performance harness (`yarn test:perf`), never part of the gate
 │   ├── fixtures/              # fictional sample résumés
 │   └── helpers.js, pdf-utils.js  # stored-state builders and PDF text-run readers the browser suites share
 ├── cypress.config.js
@@ -94,7 +96,7 @@ resume-writter/
 | `vite.config.js` | React, Tailwind, `@` alias, named vendor chunks (`codeSplitting.groups`), owner-résumé plugin |
 | `vite-plugin-owner-resume.js` | `virtual:owner-resume`: `private/sairam-resume.json` on the dev server, `null` in every build |
 | `jsconfig.json` | editor path alias |
-| `firestore.rules` | owner-only user subtree; `public/{shareId}` readable by id, written by its owner with only the fields `publicLink.js` writes (public links) |
+| `firestore.rules` | owner-only user subtree (the résumés, lists, link records and the `meta/publicCopies` index); `public/{shareId}` readable by id, written by its owner with only the fields `publicLink.js` writes (public links) |
 | `playwright.config.js` | serves a built `./dist` (`PW_DIST`) on port 4173 (`PW_PORT`) for `tests/playwright/` |
 | `cypress.config.js` | the e2e build on 4173; tasks that read downloaded PDFs and .docx files |
-| `.github/workflows/ci.yml` | the CI gate and its dispatch inputs (08-testing.md) |
+| `.github/workflows/ci.yml` | the CI gate and its dispatch inputs, and the perf job a `perf` dispatch runs (08-testing.md) |

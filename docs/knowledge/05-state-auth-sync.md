@@ -273,8 +273,19 @@ résumé deleted on another device, offline, signed out or on an older build los
 first sync of any device: the engine (`publicLinks`, wired in `useCloudSync`) passes the account's
 deletion list, the ids its batch removed or flagged and the cloud's flagged originals — none the
 merged list holds — to `unpublishDeleted`, which reads
-`users/{uid}/shares` once and takes down each listed résumé's copy — not waited for, a failure only
-logged (`tests/pdf/18-cloud-sync-public-links.test.mjs`). `firestore.rules` lets **anyone get** a `public/{shareId}` document
+`users/{uid}/shares` and the index below once and takes down each listed résumé's copy, each in a
+transaction that checks the résumé is still gone (one written back since keeps its copy) — not waited for, a failure only
+logged (`tests/pdf/18-cloud-sync-public-links.test.mjs`). Every copy is also listed in the account's
+index `users/{uid}/meta/publicCopies` (`{ copies: { [shareId]: resumeId } }`, R2-148), written in the same
+transaction as the copy and taken out with it (the document goes when it lists none): the rules forbid
+listing `public/`, so a copy no record names — the record lost, or a second copy a race left — was
+public for good. Now the panel's `readShare` falls back to the index when the record is gone, Publish
+reuses the indexed copy (and takes down any other one the index lists for the résumé), and Unpublish,
+Dashboard Delete and `unpublishDeleted` take down every copy the index names
+(`tests/pdf/148-r2-148-public-copies-index.test.mjs`). It lives under the account's own rule, so
+`firestore.rules` needed no change, and no sync reads it (03-data-model.md, Firestore layout). A copy
+holds a skill group's levels only for the skills its text lists, none for a group whose skills are
+hidden (R2-147, `tests/pdf/147-skill-level-public-copy.test.mjs`). `firestore.rules` lets **anyone get** a `public/{shareId}` document
 (never list the collection) and only the account named its `owner` create, update or delete it, a
 write carrying only `{ owner, resume, publishedAt }` with the copy's template, settings, personal,
 sections and data version, each of its type (`isPublishedCopy`, R2-148-d) —
