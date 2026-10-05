@@ -220,7 +220,7 @@ function undrawn(cps, families) {
  * is named for its package and subset — "Noto Sans JP japanese" — as a chosen font's own subset is,
  * so the two never register different files under one name.
  */
-async function scriptFallbacks(text, usable) {
+async function scriptFallbacks(text, usable, until) {
   let missing = undrawn(glyphCodePoints(text), usable);
   const added = [];
   for (const font of missing.length ? scriptCandidates(missing, text) : []) {
@@ -229,7 +229,7 @@ async function scriptFallbacks(text, usable) {
     // A symbol font is taken as pass 1 takes it: Noto Sans Math's metadata lists no 'math' subset,
     // though its math files are there.
     if (!meta || (!font.name && !meta.subsets?.includes(font.subset))) continue;
-    const [family] = await prepareFonts([registerCdn(font.name || `${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
+    const [family] = await prepareFonts([registerCdn(font.name || `${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })], until);
     if (!family) continue; // offline, or blocked: the characters stay undrawn, the PDF still renders
     if (usable.includes(family) || added.includes(family)) continue;
     added.push(family);
@@ -246,10 +246,10 @@ let resolveCount = 0;
  * One font's family list for `text`: [chosen, …fallbacks], loaded and primed; Noto Sans in its place
  * when it cannot be loaded, with `fallback` naming it.
  */
-async function familyChain(settings, text) {
+async function familyChain(settings, text, until) {
   const primary = await chosenFont(settings);
   const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary))];
-  let usable = await prepareFonts(families);
+  let usable = await prepareFonts(families, until);
   const missed = primary && usable[0] !== primary.family;
   // The chosen font could not be loaded at all (offline, blocked): Noto Sans takes its place.
   if (missed) {
@@ -259,13 +259,13 @@ async function familyChain(settings, text) {
     for (const family of families.filter((f) => !usable.includes(f))) {
       for (const source of store[family]?.sources || []) if (!source.data) source.loadResultPromise = null;
     }
-    usable = await prepareFonts(['NotoSans', ...usable]);
+    usable = await prepareFonts(['NotoSans', ...usable], until);
   }
-  usable = [...usable, ...(await scriptFallbacks(text, usable))];
+  usable = [...usable, ...(await scriptFallbacks(text, usable, until))];
   // An arrow no face draws — offline, Noto Sans Math is out of reach — prints as the bundled
   // arrowhead instead of an empty box (RES-R2-045); online the chain is as it was.
   if (undrawn(glyphCodePoints(text), usable).some((cp) => ARROW_STAND_INS.has(cp))) {
-    usable = [...usable, ...(await prepareFonts([registerArrows()]))];
+    usable = [...usable, ...(await prepareFonts([registerArrows()], until))];
   }
   // Its metadata could not be fetched (chosenFont null), or none of its faces loaded.
   const fallback = (!primary || missed) ? chosenWebFont(settings) : null;
@@ -286,8 +286,10 @@ async function familyChain(settings, text) {
 export async function resolvePdfFonts(settings, text = '', { reportFont = true } = {}) {
   const build = reportFont ? ++resolveCount : 0;
   ensureNoHyphenation();
-  const body = await familyChain(settings, text);
-  const own = async (value) => (value ? familyChain(fontChoice(value), text) : null);
+  // One deadline for every CDN face this build fetches, whichever family it is of (loadInTime).
+  const until = fontDeadline();
+  const body = await familyChain(settings, text, until);
+  const own = async (value) => (value ? familyChain(fontChoice(value), text, until) : null);
   const [name, heading] = [await own(settings?.nameFont), await own(settings?.headingFont)];
   const missing = [...new Set([body, name, heading].map((f) => f?.fallback).filter(Boolean))];
   const fallback = missing.length ? missing.join(' and ') : null;
@@ -423,12 +425,73 @@ const RETRY_AFTER_MS = 60_000;
 const RETRY_WAIT_MS = 3_000;
 const retryAt = () => (typeof navigator !== 'undefined' && navigator.onLine === false ? 0 : Date.now() + RETRY_AFTER_MS);
 const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(source);
+
+// How long a build waits for a face's FIRST fetch. react-pdf's own fetch has no timeout and keeps the
+// promise it started for good: a captive portal, or a CDN that takes the connection and never answers,
+// held that build — and the worker's every job behind it — until the page was reloaded (R2-142). Past the
+// wait the face counts as not loaded: when none of its family's faces loads, the family is replaced by Noto
+// Sans with the font named, as when offline; a face that stalls while others load borrows one of theirs, as a
+// failed face does. The fetch itself is left to finish (react-pdf cannot abort it), and a face that was only
+// slow is not lost: its data is used by the first build after it arrives, and faceFetched() makes the preview
+// build again then, so the notice does not wait for the next edit.
+// The wait is the BUILD's, for the faces it fetches from the CDN: they all share one deadline (resolvePdfFonts
+// sets it), so a résumé whose body, Name Font and Heading Font are three CDN families, on a CDN that never
+// answers, waits FONT_LOAD_MS once, not once per family in turn. That keeps a stalled CDN well inside the PDF
+// worker's budget (pdfBuild.js pdfBuildTimeoutMs, 20 s), which therefore needs no room for fonts. The app's
+// own bundled faces (Noto Sans, the last resort) get the whole wait each, whatever the CDN used up.
+const FONT_LOAD_MS = 10_000;
+let fontLoadMs = FONT_LOAD_MS;
+/** For tests: how long a first fetch is waited for; no argument goes back to FONT_LOAD_MS. */
+export const _setFontLoadWaitForTest = (ms) => { fontLoadMs = ms ?? FONT_LOAD_MS; };
+/** Faces whose first fetch ran past the wait, each with when a build may wait for it again (as `borrowed`): until then it counts as not loaded, so a dead network costs the wait once, not on every build. */
+const stalledFaces = new Map();
+
+let lateNote = null;
+/**
+ * A face whose first fetch outran the wait has landed: tell the preview to build again. A family has six
+ * faces and they land together, so the word goes out once for those that do, not once each.
+ */
+function noteLateFace() {
+  if (lateNote) return;
+  lateNote = setTimeout(() => { lateNote = null; faceFetched(); }, 50);
+  lateNote.unref?.();
+}
+
+/** When a build that starts now stops waiting for CDN faces (prepareFonts' `until`). */
+const fontDeadline = () => Date.now() + fontLoadMs;
+
+/**
+ * Whether `source` loads in time: true loaded, false failed or still on its way. A CDN face is waited for
+ * until `until`, the build's deadline; a bundled one for the whole wait.
+ */
+function loadInTime(source, until) {
+  if (source.data) {
+    // Its data arrived after a build gave up on it: the load that brought it is no longer in the face.
+    source.loadResultPromise ??= Promise.resolve();
+    stalledFaces.delete(source);
+    return Promise.resolve(true);
+  }
+  if (Date.now() < (stalledFaces.get(source) ?? 0)) return Promise.resolve(false);
+  let timer;
+  const load = source.load();
+  const stalled = new Promise((resolve) => {
+    timer = setTimeout(() => {
+      stalledFaces.set(source, retryAt());
+      load.then(noteLateFace, () => { /* it failed: the cooldown retries it */ });
+      resolve(false);
+    }, String(source.src).startsWith(CDN) ? Math.max(0, until - Date.now()) : fontLoadMs);
+    timer.unref?.();
+  });
+  return Promise.race([load.then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));
+}
+
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
 if (typeof globalThis.addEventListener === 'function') {
   // A face whose fetch is still on its way (Infinity) is left to it: a second one could succeed and
   // the first then fail, marking the face borrowing again though it has its own data.
   globalThis.addEventListener('online', () => {
     for (const [source, at] of borrowed) if (at !== Infinity) borrowed.set(source, 0);
+    stalledFaces.clear(); // back online: a face that stalled is worth waiting for again
   });
 }
 
@@ -483,7 +546,7 @@ const pause = (ms) => new Promise((resolve) => { setTimeout(resolve, ms)?.unref?
  * 6. Keep a WOFF face's inflated glyf table (inflateGlyfOnce), so a build does not inflate it again
  *    for every glyph it lays out and embeds (PERF-1).
  */
-export async function prepareFonts(families) {
+export async function prepareFonts(families, until = fontDeadline()) {
   const store = Font.getRegisteredFonts();
   const usable = [];
   for (const family of families) {
@@ -493,7 +556,7 @@ export async function prepareFonts(families) {
       await Promise.race([Promise.all(retries.map((a) => a.done)), pause(RETRY_WAIT_MS)]);
       for (const attempt of retries) if (!attempt.settled) attempt.late = true;
     }
-    const loaded = await Promise.all(sources.map((source) => source.load().then(() => true, () => false)));
+    const loaded = await Promise.all(sources.map((source) => loadInTime(source, until)));
     if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
     // react-pdf would retry it during layout and fail the whole PDF.
