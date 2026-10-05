@@ -699,7 +699,10 @@ export function pdfLinesOfPages(pages) {
           }
           if (continues) {
             const last = out[out.length - 1];
-            last.text = last.text.endsWith('-') && /^\p{Ll}/u.test(line.text) ? last.text + line.text : `${last.text} ${line.text}`;
+            // Joined at the end: each join rebuilt the string to read its last character (time squared in a paragraph of
+            // 30 000 lines).
+            const pieces = last.pieces || (last.pieces = [last.text]);
+            pieces.push(pieces[pieces.length - 1].endsWith('-') && /^\p{Ll}/u.test(line.text) ? line.text : ` ${line.text}`);
             if (line.links) last.links = [...(last.links || []), ...line.links];
             // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
             if (listed && open.length) open[open.length - 1].right = line.right;
@@ -742,6 +745,7 @@ export function pdfLinesOfPages(pages) {
       if (b === blocks.length - 1) carried = column ? [] : open;
     }
   }
+  for (const line of out) if (line.pieces) { line.text = line.pieces.join(''); delete line.pieces; }
   return out;
 }
 
