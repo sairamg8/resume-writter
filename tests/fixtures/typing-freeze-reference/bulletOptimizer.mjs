@@ -1,3 +1,5 @@
+// A copy of src/utils/bulletOptimizer.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e): the reference
+// the tf-redos-bullet-optimizer tests compare the linear-time version with. Do not edit; it is slow on purpose on some inputs.
 /**
  * Bullet Point Optimizer & STAR / Google X-Y-Z Formula Engine
  * Evaluates resume bullet points, detects weak phrases, suggests action verbs,
@@ -131,21 +133,6 @@ export const ACTION_VERBS = new Set([
 ]);
 
 /**
- * `word` without the characters that are no ASCII letter at either end. The pattern for it
- * (/^[^a-zA-Z]+|[^a-zA-Z]+$/g) tried the trailing run again from every character of a long run of
- * punctuation that did not end the word: 'http://' and 100 000 slashes and an 'x' took 7.5 s
- * (typing-freeze 7b). Only the two ends are read here.
- */
-export function trimNonLetters(word) {
-  const letter = (i) => { const c = word.charCodeAt(i) | 32; return c >= 97 && c <= 122; };
-  let from = 0;
-  let to = word.length;
-  while (from < to && !letter(from)) from += 1;
-  while (to > from && !letter(to - 1)) to -= 1;
-  return word.slice(from, to);
-}
-
-/**
  * A verb as it is looked up: lowercase letters only, on both sides, so 'Co-authored' is found
  * however it is punctuated (AUD-32).
  */
@@ -159,7 +146,7 @@ const VERB_KEYS = new Set([...ACTION_VERBS].map(verbKey));
  */
 export function leadsWithActionVerb(text) {
   const trimmed = String(text || '').trim();
-  const firstWord = trimNonLetters(trimmed.split(/\s+/)[0]);
+  const firstWord = trimmed.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   // "Took part in" is "participated in", no strong verb: it read as one once "took" was listed, and the
   // chip left "Spearheaded part in the hackathon" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
   if (firstWord === '') return false;
@@ -307,7 +294,7 @@ export function analyzeBullet(text = '') {
 
   // Metric and verb: the ATS score's own rules, so the badges here say what the score will (R2-025).
   const metric = hasMetric(clean);
-  const firstWord = trimNonLetters(clean.split(/\s+/)[0]);
+  const firstWord = clean.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   const hasActionVerb = leadsWithActionVerb(clean);
 
   // Check weak phrases. String#match with a copy of the pattern: `wp.match` is global, and
@@ -517,13 +504,7 @@ const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
  * 35%", and an empty statement is the phrase alone (R4-CL-08).
  */
 export function insertMetric(text, metric) {
-  const trimmed = String(text ?? '').trim();
-  // The closing punctuation is its trailing run: /^([\s\S]*?)([.!?;:]*)$/ read that run again from each of its
-  // characters when a long one did not end the text.
-  let cut = trimmed.length;
-  while (cut > 0 && '.!?;:'.includes(trimmed[cut - 1])) cut -= 1;
-  let body = trimmed.slice(0, cut);
-  const stop = trimmed.slice(cut);
+  let [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
   // An abbreviation's dot ("etc.", "Inc.", "U.S.") is part of its word and stays on it; the sentence
   // still ends with one after the metric. "…APIs, etc." read "…APIs, etc by 35%." (R4-LO-14).
   if (stop.startsWith('.') && ABBREVIATION_END.test(body)) body += '.';
