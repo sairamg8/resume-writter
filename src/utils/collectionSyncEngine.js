@@ -270,7 +270,7 @@ export function createCollectionSync({
     status(held.size ? 'stopped' : 'synced');
   }
 
-  async function firstSync(user, gen) {
+  async function firstSync(user, gen, again = false) {
     status('syncing');
     dropQueue();
     s.ready = false;
@@ -292,6 +292,14 @@ export function createCollectionSync({
       const seenOrder = early.uid === uid ? early.order : null;
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
+      // Another tab's first sync landed during this read: it took the list kept aside at the last
+      // sign-out out of the record and named this account. What it did to those items afterwards —
+      // restored them and deleted one, say — is in the list and the record now, but the cloud copy just
+      // read and the list kept aside (taken from the record as it was, above) are older than that: a
+      // job restored from the stash and deleted there was added to this list again and sent to the
+      // account, on every device (SL-SYNC-FIRST-SYNC-STASH-CONSUMED). The three no longer make one
+      // view: read again, as a steady-state sync — the record names the account, nothing is kept aside.
+      if (!again && early.uid !== uid && meta.read().uid === uid) return firstSync(user, gen, true);
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
       const m = meta.read();
       // The last account's list could not be set aside (storage full): not merged into this one's.

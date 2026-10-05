@@ -230,7 +230,11 @@ dropped (and then deleted from the account), or one it just deleted brought back
 cloud's old order (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD). So does what was kept aside at the
 last sign-out: two tabs signing in at once, the other tab's first sync taking it out of the record during
 this one's read no longer brings back a job or project deleted just before that sign-out
-(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). A flush asks the list again once the cloud has
+(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). A first sync that finds the record naming its account
+after the read, when it did not before (the other tab's first sync took the kept-aside list meanwhile), reads
+again, once, as a steady-state sync: the cloud copy, the kept-aside list and the list were no longer one view,
+and a job that tab restored from it and then deleted was added here again and sent back to the account
+(SL-SYNC-FIRST-SYNC-STASH-CONSUMED, `tests/unit/sync-first-sync-stash-consumed.unit.mjs`). A flush asks the list again once the cloud has
 answered its read: a job or project deleted in another tab meanwhile (it reaches this one through the storage event) is
 not written back — the write would also take its id off the account's deletion list, undoing that tab's
 deletion on every device — and its queued deletion goes next; one put back meanwhile (Undo) is still written
