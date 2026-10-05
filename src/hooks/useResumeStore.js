@@ -117,13 +117,18 @@ function stashAside(stashed, uid, edits, stored, cloudVersions) {
 /**
  * What this tab kept aside for account `uid`, which it has left, with what the other tab did to that
  * account's list meanwhile (`incoming`, against `stored`, what this tab knew): its edits are the
- * account's, kept aside as the other tab's own leave keeps them; a résumé it deleted is not kept. The
- * other accounts' stashes of both tabs stay.
+ * account's, kept aside as the other tab's own leave keeps them; a résumé it deleted is not kept —
+ * unless this tab typed in it since it last read storage: an edit made after a deletion wins, as it does
+ * in the list (keepUnsaved) and in the cloud sync (R2-029), and nothing typed is lost to a sign-out. A
+ * copy this tab only held, unsent, is not kept: it would bring the deleted résumé back at the next sign-in.
+ * The other accounts' stashes of both tabs stay.
  */
 function stashedFor(prev, incoming, stored, uid) {
   const out = stashAside({ ...incoming.stashed, ...prev.stashed }, uid, keepUnsaved([], incoming.resumes, stored), stored, incoming.cloudVersions);
   const dead = new Set(incoming.deletedIds.filter((id) => !(prev.deletedIds || []).includes(id)));
-  return out[uid] && dead.size ? { ...out, [uid]: { ...out[uid], resumes: out[uid].resumes.filter((r) => !dead.has(r.id)) } } : out;
+  const was = new Map(stored.map((r) => [r.id, r]));
+  const typed = (r) => was.has(r.id) && was.get(r.id) !== r;
+  return out[uid] && dead.size ? { ...out, [uid]: { ...out[uid], resumes: out[uid].resumes.filter((r) => !dead.has(r.id) || typed(r)) } } : out;
 }
 
 /**

@@ -151,3 +151,59 @@ describe('the account changes in this tab while the other tab\'s save is unheard
     assertConverged(assert, t);
   }, signedIn()));
 });
+
+// A whole résumé the other tab deleted, with this tab signing out holding a copy of it (review round 2).
+// The résumé is the account's and unsent here (the cloud holds an older version of it), so sign-out keeps
+// it aside for the account. A copy this tab only held is not kept once the other tab's deletion is
+// heard — it would bring the deleted résumé back at the next sign-in. One this tab typed in since it last
+// read storage is an edit made after the deletion, and wins: nothing typed is lost to a sign-out, and the
+// cloud sync treats an edit after a deletion the same way (R2-029). Two résumés, so deleting one leaves a list.
+const signedInTwo = () => {
+  const first = savedResume();
+  const second = savedResume({ id: 'resume_y', name: 'Sam' });
+  return { ...storeOf([first, second]), syncedUid: UID, cloudVersions: { resume_x: 0, resume_y: second.updatedAt } };
+};
+const stashIds = (t) => (t.saved().stashed?.[UID]?.resumes || []).map((r) => r.id);
+
+describe('the other tab deleted a résumé this tab signs out holding (typing-freeze 5)', () => {
+  it('this tab only held it: the stash does not keep it, and the deletion stays waiting for the account', () => tabs(2, async (t, a, b) => {
+    await b.edit((s) => s.deleteResume('resume_x', UID));
+    await b.flush();
+    await a.edit((s) => s.leaveAccount(UID), { race: true });
+    assert.deepEqual(stashIds(t), [], 'before the filter, the stash brought the deleted résumé back at the next sign-in');
+    assert.deepEqual(t.saved().deletedIds, ['resume_x']);
+    assert.deepEqual(t.saved().resumes, []);
+    await t.quiesce();
+    for (const tab of [a, b]) assert.deepEqual(tab.store().appState.resumes, [], `tab ${tab.name}`);
+    assert.deepEqual(stashIds(t), []);
+    assertConverged(assert, t);
+  }, signedInTwo()));
+
+  it('this tab typed in it: the typing is kept aside for the account, as an edit made after the deletion', () => tabs(2, async (t, a, b) => {
+    await type(a, 'name', '!');
+    await b.edit((s) => s.deleteResume('resume_x', UID));
+    await b.flush();
+    await a.edit((s) => s.leaveAccount(UID), { race: true });
+    assert.deepEqual(stashIds(t), ['resume_x'], 'before, the deletion dropped the résumé a tab had typed in from the stash');
+    assert.equal(t.saved().stashed[UID].resumes[0].personal.name, 'Casey Example!');
+    await t.quiesce();
+    for (const tab of [a, b]) assert.deepEqual(tab.store().appState.resumes, [], `tab ${tab.name}`);
+    assert.deepEqual(stashIds(t), ['resume_x']);
+    assertConverged(assert, t);
+  }, signedInTwo()));
+
+  it('the other tab deleted it and this tab, which only held it, writes without signing out: it stays deleted', () => tabs(2, async (t, a, b) => {
+    await b.edit((s) => s.deleteResume('resume_x', UID));
+    await b.flush();
+    await a.edit((s) => { s.setActiveId('resume_y'); s.updatePersonal('name', 'Sam!'); }, { race: true });
+    await a.flush({ race: true });
+    assert.deepEqual(t.saved().resumes.map((r) => r.id), ['resume_y']);
+    assert.deepEqual(t.saved().deletedIds, ['resume_x']);
+    await t.quiesce();
+    for (const tab of [a, b]) {
+      assert.deepEqual(tab.store().appState.resumes.map((r) => r.id), ['resume_y'], `tab ${tab.name}`);
+      assert.equal(tab.store().appState.syncedUid, UID, `tab ${tab.name}`);
+    }
+    assertConverged(assert, t);
+  }, signedInTwo()));
+});

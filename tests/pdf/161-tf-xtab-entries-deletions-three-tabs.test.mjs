@@ -174,3 +174,90 @@ describe('entries, deletions and settings across tabs (typing-freeze 5)', () => 
     assertConverged(assert, t);
   }));
 });
+
+// A whole résumé deleted in one tab while the other holds it (review round 2). The rule, the same
+// as the cloud sync's (an edit made after a deletion wins, R2-029): a copy the other tab only HELD is
+// not an edit, so the deletion stands in both tabs and in storage, whether the other tab hears it or
+// writes first; one it TYPED in is an edit, and the save written second decides — the editing tab's
+// save after the deleting tab's brings the résumé back with the typing in both tabs, the deleting tab's
+// save after the editing tab's removes it in both. (An entry deleted in one tab beats an edit of it in
+// the other, above: a merged résumé keeps what each tab did, and a deleted entry has no place to put
+// the edit.) Two résumés, so deleting one leaves a list.
+const two = () => storeOf([savedResume(), savedResume({ id: 'resume_y', name: 'Sam' })]);
+const listed = (tab) => tab.store().appState.resumes.map((r) => r.id);
+const nameOf = (tab, id) => tab.store().appState.resumes.find((r) => r.id === id)?.personal.name;
+
+async function twoResumes(n, body) {
+  const t = await openTabs(n, two());
+  try { await body(t, ...t.tabs); } finally { await t.close(); }
+}
+
+describe('a résumé one tab deleted while the other holds it (typing-freeze 5)', () => {
+  for (const how of ['writes before it has heard the deletion', 'hears the deletion, then writes']) {
+    it(`the other tab only holds it and ${how}: it stays deleted in storage and in both tabs`, () => twoResumes(2, async (t, a, b) => {
+      await b.edit((s) => s.deleteResume('resume_x'));
+      await b.flush();
+      const race = how.startsWith('writes');
+      await a.edit((s) => { s.setActiveId('resume_y'); s.updatePersonal('name', 'Sam!'); }, { race });
+      await a.flush({ race });
+      assert.deepEqual(t.saved().resumes.map((r) => r.id), ['resume_y'], 'before, A\'s write put the deleted résumé back');
+      assert.deepEqual(t.saved().deletedIds, ['resume_x']);
+      await t.quiesce();
+      for (const tab of [a, b]) {
+        assert.deepEqual(listed(tab), ['resume_y'], `tab ${tab.name}`);
+        assert.equal(nameOf(tab, 'resume_y'), 'Sam!', `tab ${tab.name}`);
+        assert.deepEqual(tab.store().appState.deletedIds, ['resume_x'], `tab ${tab.name}`);
+      }
+      assertConverged(assert, t);
+    }));
+  }
+
+  it('the other tab typed in it and its save comes after the deletion\'s: the résumé is back, with the typing, in both tabs', () => twoResumes(2, async (t, a, b) => {
+    await type(a, 'website', 'https://exa');
+    await b.edit((s) => s.deleteResume('resume_x'));
+    await b.flush();
+    await a.flush({ race: true }); // takes in the deletion, and keeps what it typed
+    assert.deepEqual(t.saved().resumes.map((r) => r.id).sort(), ['resume_x', 'resume_y']);
+    assert.deepEqual(t.saved().deletedIds, [], 'the résumé is no longer listed as deleted');
+    await t.quiesce();
+    for (const tab of [a, b]) {
+      assert.deepEqual(listed(tab).sort(), ['resume_x', 'resume_y'], `tab ${tab.name}`);
+      assert.equal(tab.resume().personal.website, 'https://exa', `tab ${tab.name}`);
+      assert.deepEqual(tab.store().appState.deletedIds, [], `tab ${tab.name}`);
+    }
+    assertConverged(assert, t);
+  }));
+
+  it('the other tab typed in it and its save comes before the deletion\'s: the deletion, written second, stands in both tabs', () => twoResumes(2, async (t, a, b) => {
+    await type(a, 'website', 'https://exa');
+    await a.flush();
+    await b.edit((s) => s.deleteResume('resume_x'), { race: true });
+    await b.flush({ race: true }); // takes in A's save, and keeps the deletion it made
+    assert.deepEqual(t.saved().resumes.map((r) => r.id), ['resume_y']);
+    assert.deepEqual(t.saved().deletedIds, ['resume_x']);
+    await t.quiesce();
+    for (const tab of [a, b]) {
+      assert.deepEqual(listed(tab), ['resume_y'], `tab ${tab.name}`);
+      assert.deepEqual(tab.store().appState.deletedIds, ['resume_x'], `tab ${tab.name}`);
+    }
+    assertConverged(assert, t);
+  }));
+
+  it('three tabs: one deletes the résumé, one types in it, one only holds it: they end on the same list', () => twoResumes(3, async (t, a, b, c) => {
+    await type(a, 'website', 'itsairam');
+    await b.edit((s) => s.deleteResume('resume_x'));
+    await b.flush();
+    await a.deliver();
+    await type(a, 'website', '.netlify.app');
+    await c.edit((s) => { s.setActiveId('resume_y'); s.updatePersonal('name', 'Sam!'); }, { race: true });
+    await t.quiesce();
+    const first = listed(a);
+    for (const tab of [a, b, c]) {
+      assert.deepEqual(listed(tab), first, `tab ${tab.name} lists what the others list`);
+      assert.equal(nameOf(tab, 'resume_y'), 'Sam!', `tab ${tab.name}`);
+    }
+    assert.ok(first.includes('resume_x'), 'the typing, after the deletion was heard, brought the résumé back');
+    assert.equal(a.resume().personal.website, 'itsairam.netlify.app');
+    assertConverged(assert, t);
+  }));
+});

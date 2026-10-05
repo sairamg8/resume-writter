@@ -40,6 +40,20 @@ not heard twice.
   A copy stamped more than 10 s before the one this tab last read is an old one (a tab that never heard of
   what was saved since): it is not merged, this tab's résumé stands (read against `base` it would look like an
   edit that undid what this tab typed after it).
+- **A whole résumé deleted in one tab while the other holds it** follows the cloud sync's rule (an edit made
+  after a deletion wins, R2-029). A copy the other tab only *held* is not an edit: the deletion stands in
+  both tabs and in storage (the résumé is not written back, whether the other tab writes before it has
+  heard the deletion or after), and the id stays in `deletedIds` for the account. A copy it *typed* in
+  since it last read storage is an edit, and the save written second decides: when the editing tab saves
+  after the deleting tab, it takes the deletion in, keeps its résumé, and the résumé is back in both tabs
+  with the typing (and off `deletedIds`); when the deleting tab saves after the editing tab, it keeps the
+  deletion it made and the résumé is gone in both. Either way both tabs end on the same list. This differs
+  from an *entry* (above), which stays deleted whatever the other tab did to it: an entry is a part of a
+  résumé both tabs keep merging, and a deleted one has nowhere to put the edit, while a whole résumé the
+  other tab typed in is one a person was looking at. Signing out follows the same rule for what is kept
+  aside for the account (`stashedFor`): the other tab's deleted résumé is dropped from the stash if this
+  tab only held it, and kept, typing and all, if this tab typed in it. A `deletedInfo` entry of a résumé
+  that came back is left in place; nothing reads it without the id in `deletedIds`.
 - **Why this shape (the decision, typing-freeze 5):** the loss came from two things — a whole-résumé merge that
   keeps one tab's copy entire, and a write that never looked at storage. A résumé is a tree of small fields
   that tabs type into one at a time, so a field-level three-way merge keeps what each did without a server or
@@ -56,7 +70,7 @@ not heard twice.
   and the other tab's save still carries it, the change is this tab's — the other tab's save is edits on the old
   account's list, so this tab keeps its own `syncedUid`, `cloudVersions` and list, and keeps the other tab's
   changes aside for the account it left (the same `stash` as its own unsent work; a résumé both tabs changed is
-  merged with `mergeResume`, one the other tab deleted is not kept) — whether the save is taken at this tab's
+  merged with `mergeResume`, one the other tab deleted is not kept unless this tab typed in it, see above) — whether the save is taken at this tab's
   write or by its storage event. When the other tab changed the account, this tab follows it as before (its
   unsent work is kept aside, merged with what the other tab's leave already kept for the same résumé).
 - **A write that takes in the other tab's save and fails** (storage full): the merged state is still this
