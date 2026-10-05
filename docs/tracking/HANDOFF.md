@@ -3,7 +3,7 @@
 **2026-10-05 ~11:30 UTC — TYPING-FREEZE HUNT DONE; three fixes + review fixes are on `claude/typing-freeze-fixes` (NOT on master).**
 Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). **Next: read the newest full-gate run on this
 branch's head (dispatched with the final docs commit), fix anything red, then PR it -> master for the owner.** The branch = master + `claude/fix-dev-worker-refresh`
-(`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`, `4692e20a`) + `claude/fix-worker-watchdog` (`7dbf69e9`); each fix has its own CI proof and a second-agent review.
+(`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`, `4692e20a`) + `claude/fix-worker-watchdog` (`7dbf69e9`, `f34a9d0a`); each fix has its own CI proof and a second-agent review.
 - **1. The owner's one-off "Website freeze" was `yarn dev`, not the Website field:** the PDF worker died at load on the dev server ("window is not defined": plugin-react's
   Fast Refresh runtime is imported by every JSX module the worker loads), so every preview build ran on the main thread (0.5-1 s stalls per build, any field).
   Fix: `react({ exclude })` keeps `src/templates/pdf/` out of Fast Refresh (vite.config.js, anchored `PDF_WORKER_JSX`). Dev, same 46-key run: worst stall 1165 -> 284 ms.
@@ -14,8 +14,8 @@ branch's head (dispatched with the final docs commit), fix anything red, then PR
 - **3. Stalled worker watchdog (prod):** a PDF worker job that never replies (a font fetch that stalls) is stopped after 60 s: that build fails with Retry, the jobs behind it go to
   a fresh worker; the main-thread fallback has the same limit. A font face's first fetch is waited for 10 s, then the font prints in Noto Sans with the usual notice
   (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Checked in the real app on the prod bundle with a stand-in worker: stalled CDN -> ready in ~12 s in Noto Sans; a mute worker ->
-  alert + Retry at exactly 60.0 s, Retry works. CI on the commit: fail-first 37260427341, related tests 37260435645 (read them if not in the gate).
-- **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version of 1, rejected in review: dead-code unit test + wrong-reason fail-first) and `claude/tmp-dev-worker-unfixed`.
+  alert + Retry at exactly 60.0 s, Retry works. A face that was only slow rebuilds the preview when it lands (`f34a9d0a`, from the second-agent review). CI: `7dbf69e9` fail-first 37260427341 + related tests 37260435645 green; the same tests on the unfixed parent (branch `claude/tmp-watchdog-unfixed`, delete it) fail by hanging, as they should (37260736638); `f34a9d0a` and the final head: newest runs on this branch.
+- **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version of 1, rejected in review: dead-code unit test + wrong-reason fail-first), `claude/tmp-dev-worker-unfixed` and `claude/tmp-watchdog-unfixed` (proof branches).
 - **Still open from the hunt** (details in the write-up): (4) React error #185 after >=51 back-to-back input events drops a keystroke (suspect the setSaving effect, useResumeStore.js:163-185); (5) two tabs of one résumé typing at
   once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
   richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.
