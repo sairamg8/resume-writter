@@ -67,7 +67,7 @@ never replies is let go by a watchdog (`pdfBuildTimeoutMs`: 20 s, twice that bef
 250 ms per entry): a worker that never answered anything hands its jobs to the main thread, one that had
 built before fails that build with a retryable "took too long" error and its queue goes to a fresh worker;
 what a let-go worker sends late is ignored. Tests inject a fake Worker and a fake clock with
-`_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker`, `126-r2-142-pdf-worker-watchdog`).
+`_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`).
 
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
 bar in Skills style Bars — the main column of every template and the Sidebar's side column
