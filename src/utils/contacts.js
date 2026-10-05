@@ -47,17 +47,27 @@ const VANITY = /^(\+?[\d\s().\u2010-\u2015-]*\d[\s().\u2010-\u2015-]*?)([a-z][a-
 const KEYPAD = '22233344455566677778889999';
 
 /**
+ * Seven digits that are no whole number, which a vanity word finishes: they start with a 1 or a 0, the
+ * long-distance and trunk prefix ("1 800 555", "1 212 555", "0800 123"; a local number starts with
+ * neither), or a "+" country code, a toll-free 800 and three digits ("+44 800 123"). Tested on the
+ * digits with their leading "+".
+ */
+const UNFINISHED = /^(?:\+?[01]\d{6}|\+\d{1,3}0?800\d{3})$/;
+
+/**
  * The digits one number (its extension already cut off) dials: its own digits, and for a vanity
  * number the keypad digit of each letter ("1-800-FLOWERS" → 18003569377). Letters are a vanity only
- * when the number needs them: under seven digits before the word, or a hyphen from a last group of
- * three ("1-800-555-HELP"). After a full number, a word is a label ("555-0100 home", "555-0100
- * (mobile)") and adds nothing, as does one before the first digit ("Phone: ").
+ * when the number needs them: under seven digits before the word, or seven that are no whole number
+ * (UNFINISHED: "1 800 555 CALL", "0800 123 FLOWERS"). After a whole number, a word is a label ("555-0100
+ * home", "555 123 4567 home", "555-0100 (mobile)") and adds nothing, as does one before the first digit
+ * ("Phone: ").
  */
 function dial(text) {
   const s = text.replace(PHONE_LABEL, '').replace(/[([][^\d)\]]*[)\]]/g, '').trim();
   const v = VANITY.exec(s);
-  const lead = v ? v[1].replace(/\D/g, '') : '';
-  const vanity = lead.length > 2 && (lead.length < 7 || /(?:^|\D)\d{1,3}[.\u2010-\u2015-]$/.test(v[1]));
+  const typed = v ? v[1].replace(/[^\d+]/g, '') : '';
+  const lead = typed.replace('+', '');
+  const vanity = lead.length > 2 && (lead.length < 7 || UNFINISHED.test(typed));
   return vanity ? lead + v[2].replace(/[a-z]/gi, (c) => KEYPAD[parseInt(c, 36) - 10]).replace(/\D/g, '') : s.replace(/\D/g, '');
 }
 

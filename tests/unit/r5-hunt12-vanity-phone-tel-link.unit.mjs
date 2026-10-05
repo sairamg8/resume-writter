@@ -6,7 +6,9 @@
 // any text with three digits linked ("Room 101" → tel:101, "Available 24/7" → tel:247) and a 20-digit
 // paste linked whole. Now a vanity number dials its letters' keypad digits (ABC 2, DEF 3, GHI 4, JKL 5,
 // MNO 6, PQRS 7, TUV 8, WXYZ 9), and a value that is not seven to fifteen digits links nowhere (the
-// window the import and the ATS check use). The text prints as typed in every export.
+// window the import and the ATS check use). The text prints as typed in every export. A word after
+// seven digits is told from a label by whether they are a whole number: "1 800 555 CALL" and "0800 123
+// FLOWERS" are not (they start with the long-distance or trunk prefix), "555 0100 HOME" is.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contactHref, contactItems } from '../../src/utils/contacts.js';
@@ -45,10 +47,34 @@ test('a vanity number reads in any case, with any separator, and keeps a digit t
   ]);
 });
 
-test('a vanity number whose digits are seven already is one when a hyphen joins a last group of three', () => {
+test('a vanity number whose first seven digits are no whole number is finished by its word, with any separator', () => {
   table([
     ['1-800-356-WORD', 'tel:18003569673'],
     ['1-800-555-HELP', 'tel:18005554357'],
+    ['1 800 555 CALL', 'tel:18005552255'],
+    ['1 800 356 WORD', 'tel:18003569673'],
+    ['1 800 555 HELP', 'tel:18005554357'],
+    ['1800 356 WORD', 'tel:18003569673'],
+    ['1.800.356.WORD', 'tel:18003569673'],
+    ['1 (800) 356 WORD', 'tel:18003569673'],
+    ['1 (212) 555 WORD', 'tel:12125559673'],
+    ['0800 123 FLOWERS', 'tel:08001233569377'],
+    ['0800 123 HELP', 'tel:08001234357'],
+    ['0800-123-HELP', 'tel:08001234357'],
+    ['1 800 356 word', 'tel:18003569673'],
+    ['Phone: 1 800 555 CALL', 'tel:18005552255'],
+    ['1 800 555 CALL x12', 'tel:18005552255;ext=12'],
+    ['1 800 555 CALL / 1 800 356 WORD', 'tel:18005552255'],
+  ]);
+});
+
+test('a country code before an unfinished number keeps it a vanity number', () => {
+  table([
+    ['+1 800 356 WORD', 'tel:+18003569673'],
+    ['+1-800-356-WORD', 'tel:+18003569673'],
+    ['+44 800 123 HELP', 'tel:+448001234357'],
+    ['+44 (0) 800 123 HELP', 'tel:+448001234357'],
+    ['+61 1800 123 HELP', 'tel:+6118001234357'],
   ]);
 });
 
@@ -118,17 +144,16 @@ test('a word after a full number stays a label, and the rules before it hold', (
     ['555 0100 or 555 0101', 'tel:5550100'],
     ['+34 (91) 555 0142', 'tel:+34915550142'],
     ['+1 555 0100', 'tel:+15550100'],
-  ]);
-});
-
-// A space between the digits and the word is not told from a label: "555 0100 HOME" is one, "1 800 555
-// HELP" the other, and a guess would dial a wrong number silently. Both keep what they linked to before
-// (the digits alone), so nothing that linked correctly stops doing so.
-test('seven digits then a space-set-off word are read as a number and its label', () => {
-  table([
-    ['555 0100 HOME', 'tel:5550100'],
-    ['1 800 555 HELP', 'tel:1800555'],
-    ['0800 123 FLOWERS', 'tel:0800123'],
+    ['555 0100 home', 'tel:5550100'],
+    ['555 0100 Mobile', 'tel:5550100'],
+    ['+1 555 0100 HOME', 'tel:+15550100'],
+    ['555 123 4567 home', 'tel:5551234567'],
+    ['1 800 555 0100 home', 'tel:18005550100'],
+    ['1300 123 456 home', 'tel:1300123456'],
+    ['+44 800 123 4567 home', 'tel:+448001234567'],
+    ['+61 400 123 456 mobile', 'tel:+61400123456'],
+    ['030 123 456 home', 'tel:030123456'],
+    ['030-123-456-home', 'tel:030123456'], // a hyphen from a last group of three after nine digits: a label, not a vanity word
   ]);
 });
 
@@ -182,6 +207,8 @@ test('the printed phone is exactly what was typed, and the Markdown links the ke
   assert.deepEqual(contactItems(personal).map(({ value, href }) => [value, href]), [['1-800-FLOWERS', 'tel:18003569377']]);
   const md = generateMarkdownResume({ personal, settings: {}, sections: [] });
   assert.ok(md.includes('[1-800-FLOWERS](tel:18003569377)'), md);
+  const seven = generateMarkdownResume({ personal: { name: 'Jane', phone: '1 800 555 CALL' }, settings: {}, sections: [] });
+  assert.ok(seven.includes('[1 800 555 CALL](tel:18005552255)'), seven);
   const room = generateMarkdownResume({ personal: { name: 'Jane', phone: 'Room 101' }, settings: {}, sections: [] });
   assert.ok(room.includes('Room 101') && !room.includes('tel:'), room);
 });

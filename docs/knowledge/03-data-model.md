@@ -60,9 +60,11 @@ digits are in — with an extension (`ext. 890`, `x890`, `#890`, also bracketed 
 bracketed trunk `(0)` is left out of the link (`+44 (0) 20 7946 0958` → `tel:+442079460958`).  
 A vanity number links to its keypad digits (ABC 2, DEF 3, GHI 4, JKL 5, MNO 6, PQRS 7, TUV 8, WXYZ 9):
 `1-800-FLOWERS` → `tel:18003569377`, `1-800-GO-FEDEX`, `800 555 CALL`; one word of letters, no space in it,
-after fewer than seven digits, or hyphen-joined to a last group of three (`1-800-555-HELP`). After seven
-digits a word is a label (`555-0100 home`, `(mobile)`, a leading `Phone:`) and adds no digit. A value that
-is not seven to fifteen digits (extension left out) links nowhere and prints as text (`Room 101`,
+after an unfinished number: fewer than seven digits, or seven that start with a 1 or a 0 (the long-distance
+and trunk prefix: `1 800 555 CALL` → `tel:18005552255`, `1-800-555-HELP`, `0800 123 FLOWERS`,
+`+1 800 356 WORD`), or a `+` country code, `800` and three digits (`+44 800 123 HELP`). After any other
+number a word is a label (`555-0100 home`, `555 123 4567 home`, `030-123-456-home`, `(mobile)`, a leading
+`Phone:`) and adds no digit (`UNFINISHED`, `dial`). A value that is not seven to fifteen digits (extension left out) links nowhere and prints as text (`Room 101`,
 `On request`, two numbers typed with no separator); a value over 200 characters is none, which keeps the
 patterns' time bounded (`telHref`, `dial`, R5-HUNT12-VANITY-PHONE-TEL-LINK-DROPS-LETTERS).  
 The import reads such a phone back as typed, its extension too (`importText.js`: `PHONE_EXT`, `linkParts`).  
