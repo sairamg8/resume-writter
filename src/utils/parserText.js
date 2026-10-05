@@ -95,8 +95,17 @@ export async function readPdfLines(data, { lib, worker } = {}) {
 
 /** Text as compared: lower case, one space between words. */
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+const SEPARATOR = /[\s|·•,:;–—-]/;
 /** A run's text less the separators a template sets around a field ("Austin, TX |", "· 2021"). */
-const bare = (s) => norm(s).replace(/^[\s|·•,:;–—-]+|[\s|·•,:;–—-]+$/g, '');
+const bare = (s) => {
+  // Scanned from each end: /[…]+$/ read a long run of separators again from each of them (time squared).
+  const t = norm(s);
+  let end = t.length;
+  while (end > 0 && SEPARATOR.test(t[end - 1])) end -= 1;
+  let start = 0;
+  while (start < end && SEPARATOR.test(t[start])) start += 1;
+  return t.slice(start, end);
+};
 /**
  * A date's words and marks — a month's name, short or whole, a season ("Summer 2020" prints as it is
  * stored, as the battery's DATE_WORDS reads it), "Present" — each a whole word, so a word that only
