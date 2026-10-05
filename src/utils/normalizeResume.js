@@ -5,12 +5,13 @@
 // takes a promise: the store makes it smaller once it has it (smallerPhotos.js).
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
 import { withDesignNumbers } from '@/constants/designNumbers';
+import { withLayoutSettings } from '@/constants/layoutOptions';
 import { withFontChoices } from '@/constants/designFonts';
 import { normalizeHexColor } from '@/utils/colors';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 import { withTextFields } from '@/utils/textFields';
-import { withSkillNames } from '@/utils/skills';
+import { withSkillLevels, withSkillNames } from '@/utils/skills';
 import { withSectionShapes } from '@/utils/sectionShapes';
 import { LETTER_KIND, LETTER_NAME } from '@/utils/letters';
 
@@ -365,11 +366,13 @@ function withProjectRoles(r) {
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
  * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
- * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
+ * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), the Sidebar's
+ * column layout as choices the panel offers and a width in its range (withLayoutSettings), valid colors
  * stored as '#rrggbb' (withNormalizedColors), Name Font and Heading Font as text (withFontChoices),
  * text wherever it keeps text (withTextFields), a
  * project's link as its `url` (withProjectUrls), a project's legacy `role` in its description
- * (withProjectRoles), its skill groups as skills (withSkillNames) and an
+ * (withProjectRoles), its skill groups as skills (withSkillNames) with their per-skill levels valid
+ * (withSkillLevels) and an
  * entry's legacy bullets in its description (withBulletsInDescription),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
  * which it carries DATA_VERSION.
@@ -390,7 +393,7 @@ function withProjectRoles(r) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withSectionShapes(withKnownTemplate(resume));
-  const r = withBulletsInDescription(withSkillNames(withProjectRoles(withProjectUrls(withTextFields(withFontChoices(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))))));
+  const r = withBulletsInDescription(withSkillLevels(withSkillNames(withProjectRoles(withProjectUrls(withTextFields(withFontChoices(withNormalizedColors(withLayoutSettings(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);
   if (ahead != null) return r.dataVersion === DATA_VERSION && r.dataVersionAhead === ahead ? r : stamped(r, ahead);

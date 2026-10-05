@@ -1,9 +1,22 @@
 // A skill group as every export prints it: the PDF's main column (Classic, Modern, Minimal,
 // Executive), the Sidebar column and Word read their groups through here, so one rule decides
 // what a group shows (R6-0). Plain data (no react-pdf).
+import { skillLevelValue } from '../constants/skillLevels.js';
 
 /** A stored value as text: '' for none; a number or other value from imported data as written. */
 const asText = (v) => (v == null || v === false ? '' : String(v).trim());
+
+/** A group's skills as typed: a list (some imported data) reads as the comma-separated line the editor writes. */
+const typedSkills = (item) => (Array.isArray(item.skills) ? item.skills.map(asText).filter(Boolean).join(', ') : asText(item.skills));
+
+/** The skills a group's text lists, one by one as typed, whether or not the editor's eye hid them. */
+export const skillNames = (item = {}) => typedSkills(item).split(',').map((sk) => sk.trim()).filter(Boolean);
+
+/**
+ * The level (1–5, skillLevels.js) the group's `skillLevels` gives the skill `name`, or null: none set,
+ * or one that is not a level. Read by the skill as typed; a name like 'constructor' reads its own.
+ */
+export const skillLevelOf = (levels, name) => (levels && typeof levels === 'object' && Object.hasOwn(levels, name) ? skillLevelValue(levels[name]) : null);
 
 /**
  * `item` (a skill group) as printed:
@@ -11,18 +24,64 @@ const asText = (v) => (v == null || v === false ? '' : String(v).trim());
  *   skills    the skills as typed, '' when hidden; a list (some imported data) reads as the
  *             comma-separated line the editor writes
  *   list      the skills one by one, for Tags, Bars and the Sidebar's Stacked
+ *   levels    each skill's level (1–5) or null, in the order of `list`: Bars draws it (R2-147)
  */
 export function skillGroup(item = {}) {
   const hidden = item.hiddenFields || [];
-  const typed = Array.isArray(item.skills)
-    ? item.skills.map(asText).filter(Boolean).join(', ')
-    : asText(item.skills);
+  const typed = typedSkills(item);
   const skills = hidden.includes('skills') ? '' : typed;
+  const list = skills.split(',').map((sk) => sk.trim()).filter(Boolean);
   return {
     category: hidden.includes('category') ? '' : asText(item.category),
     skills,
-    list: skills.split(',').map((sk) => sk.trim()).filter(Boolean),
+    list,
+    levels: list.map((sk) => skillLevelOf(item.skillLevels, sk)),
   };
+}
+
+/**
+ * `item` with the skill `name`'s level set to `level` (1–5), or cleared for none (R2-147). The group's
+ * `skillLevels` is rebuilt from the skills its text lists now, in their order: a level of a skill that
+ * was renamed or deleted goes, and so does the key when no level is left. A new object.
+ */
+export function withSkillLevel(item, name, level) {
+  const next = {};
+  for (const n of skillNames(item)) {
+    const v = n === name ? skillLevelValue(level) : skillLevelOf(item.skillLevels, n);
+    if (v) next[n] = v;
+  }
+  const { skillLevels: _old, ...rest } = item;
+  return Object.keys(next).length ? { ...rest, skillLevels: next } : rest;
+}
+
+/**
+ * `r` with each skill group's `skillLevels` normalised (R2-147): an object of skill → level, a level a
+ * whole number 1–5 (a digit text of one is that number) and the skill one its text lists — an invalid
+ * level, an unknown skill or anything but an object reads as no level and is dropped, and the key goes
+ * when none is left. A skill the editor's eye hid still keeps its level. normalizeResume() runs this
+ * wherever résumés come in. The same object when every group is as it should be.
+ */
+export function withSkillLevels(r) {
+  if (!Array.isArray(r?.sections)) return r;
+  const clean = (item) => {
+    if (!item || typeof item !== 'object' || !('skillLevels' in item)) return item;
+    const kept = {};
+    for (const n of skillNames(item)) {
+      const v = skillLevelOf(item.skillLevels, n);
+      if (v) kept[n] = v;
+    }
+    const given = item.skillLevels && typeof item.skillLevels === 'object' ? item.skillLevels : {};
+    const same = Object.keys(kept).length > 0 && Object.keys(given).length === Object.keys(kept).length && Object.keys(kept).every((k) => given[k] === kept[k]);
+    if (same) return item;
+    const { skillLevels: _old, ...rest } = item;
+    return Object.keys(kept).length ? { ...rest, skillLevels: kept } : rest;
+  };
+  const sections = r.sections.map((s) => {
+    if (s?.type !== 'skills' || !Array.isArray(s.items)) return s;
+    const items = s.items.map(clean);
+    return items.some((item, i) => item !== s.items[i]) ? { ...s, items } : s;
+  });
+  return sections.some((s, i) => s !== r.sections[i]) ? { ...r, sections } : r;
 }
 
 /**

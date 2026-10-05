@@ -4,6 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { printedEntries } from '@/utils/entryPrints';
 import { skillCategory, skillGroup, skillGroupPrints, skillSeparator } from '@/utils/skills';
+import { skillBarWidth } from '@/constants/skillLevels';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
@@ -193,7 +194,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
           cols={cols}
           gap={itemGap}
           renderItem={(item) => {
-            const { category, list } = skillGroup(item);
+            const { category, list, levels } = skillGroup(item);
             return (
               <View>
                 {category ? (
@@ -205,7 +206,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                     <Text style={{ fontSize: entrySize - 1, width: 70, color: textColor, opacity: opacityFor(textColor, 0.8) }}>{sk}</Text>
                     <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tint(accent, 0x20 / 255) }}>
-                      <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: tint(accent, 0xb3 / 255) }} />
+                      <View style={{ width: skillBarWidth(levels[i]), height: 3, borderRadius: 2, backgroundColor: tint(accent, 0xb3 / 255) }} />
                     </View>
                   </View>
                 ))}

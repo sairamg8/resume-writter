@@ -68,6 +68,10 @@ type Section = {
 
 Section factories: `SECTION_TYPE_DEFAULTS` in `defaultDataSectionTypes.js`.
 
+A skill group's optional per-skill level is `item.skillLevels` (`{ "React": 4 }`, skill as typed → a whole
+number 1–5, scale in `src/constants/skillLevels.js`; R2-147). `normalizeResume` → `withSkillLevels` drops
+an invalid level, a skill the text no longer lists and an empty object; a group with none has no key.
+
 ### Settings (`ATS_DEFAULTS`)
 
 Important keys (non-exhaustive):

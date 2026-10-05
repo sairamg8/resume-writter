@@ -36,7 +36,8 @@ resume-writter/
 │   │   ├── shell/             # the workspace shell around the Job Tracker and Boards
 │   │   └── ui/                # the shared UI kit (dialogs, menus, toasts, fields…)
 │   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
-│   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js…
+│   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js,
+│   │                          # skillLevels.js (a skill's 1–5 level: scale, bar width, JSON Resume words)…
 │   ├── hooks/
 │   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js, useResumeDesignActions.js
 │   │   ├── usePickCard.js, usePicture.js  # a picker card picked (with Undo); a page picture once on screen
@@ -68,6 +69,7 @@ resume-writter/
 │   ├── pdf/                   # node:test suites that render real PDFs (harness.mjs); parity/
 │   ├── unit/                  # node:test unit suites
 │   ├── playwright/            # browser suites against a built ./dist
+│   ├── perf/                  # the performance harness (`yarn test:perf`), never part of the gate
 │   ├── fixtures/              # fictional sample résumés
 │   └── helpers.js, pdf-utils.js  # stored-state builders and PDF text-run readers the browser suites share
 ├── cypress.config.js

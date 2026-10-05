@@ -4,6 +4,9 @@
 // owner write; `users/{uid}/shares/{resumeId}` remembers which id a résumé has, under the account's
 // own rule. The copy holds what the résumé's PDF prints and nothing else: a hidden field's value, a
 // hidden section or entry, the cover letter and the résumé's name in the dashboard stay private.
+// `users/{uid}/meta/publicCopies` indexes every copy the account has published, shareId → résumé id:
+// the rules forbid listing `public/`, so a copy no record names (a second one an older build's race
+// left) would never be found again to take down with its résumé.
 // The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, runTransaction — and
 // collection, getDocsFromServer for unpublishDeleted), so the
 // tests run this very code against tests/pdf/fake-firestore.mjs.
@@ -27,6 +30,8 @@ function withoutHidden(fields) {
     if (key in out) out[key] = key === 'photo' ? null : '';
     // A hidden end date hides "Present" too (endDateOf): whether the job is current is not printed.
     if (key === 'endDate' && 'current' in out) out.current = false;
+    // Hidden skills take their levels with them: the levels are keyed by the skills' names (R2-147).
+    if (key === 'skills') delete out.skillLevels;
     for (const extra of [`${key}Label`, `${key}Url`]) if (extra in out) out[extra] = '';
   }
   return out;
@@ -164,6 +169,20 @@ export function publicIo(fs, db) {
   // The sync's own documents (cloudSyncIo.js): the résumé, and the account's deletion list.
   const resumeDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'resumes', resumeId);
   const deletionsDoc = (uid) => fs.doc(db, 'users', uid, 'meta', 'deletions');
+  // The account's index of its published copies: `{ copies: { [shareId]: resumeId } }`, kept in the
+  // same transaction as the copy itself. A record names one copy a résumé; the index names them all.
+  const indexDoc = (uid) => fs.doc(db, 'users', uid, 'meta', 'publicCopies');
+  const indexOf = (snap) => {
+    const copies = snap.exists() ? snap.data().copies : null;
+    return copies && typeof copies === 'object' && !Array.isArray(copies) ? copies : {};
+  };
+  const copiesOf = (index, resumeId) => Object.keys(index).filter((id) => index[id] === resumeId);
+  /** Writes the index `before` as `after` (a { shareId: resumeId } map): deleted when empty, untouched when unchanged. */
+  function writeIndex(tx, uid, before, after) {
+    if (stable(before) === stable(after)) return;
+    if (Object.keys(after).length) tx.set(indexDoc(uid), { copies: after });
+    else tx.delete(indexDoc(uid));
+  }
 
   /**
    * Whether the account holds the résumé again: its document is there, not flagged deleted, and its
@@ -178,12 +197,14 @@ export function publicIo(fs, db) {
   }
 
   /**
-   * Deletes résumé `resumeId`'s copies at `shareIds` and at the link the account records for it, those
-   * that are there, and its record of the link; resolves to whether it had a record. One transaction
+   * Deletes résumé `resumeId`'s copies at `shareIds`, at the link the account records for it and at
+   * every link its index lists for it, those that are there, and its record and index entries;
+   * resolves to whether it took a copy or a record down. One transaction
    * (R4-LO-22): read first and written after as a batch, a Publish on another device between the two
    * put a new copy and record up, and the batch deleted the record and left that copy public with
    * nothing naming it. Now the record read is checked at the commit, and a changed one runs it again.
-   * `onlyIfGone`: only while the account no longer holds the résumé — see unpublishDeleted.
+   * `onlyIfGone`: only while the account no longer holds the résumé — see unpublishDeleted. Run again
+   * on what it took down it finds nothing and writes nothing.
    */
   async function takeDown(uid, resumeId, shareIds, { onlyIfGone = false } = {}) {
     // Every link an attempt found recorded stays on the list when the transaction runs again.
@@ -191,27 +212,39 @@ export function publicIo(fs, db) {
     return fs.runTransaction(db, async (tx) => {
       if (onlyIfGone && await stillHeld(tx, uid, resumeId)) return false;
       const share = await tx.get(shareDoc(uid, resumeId));
+      const index = indexOf(await tx.get(indexDoc(uid)));
       if (share.exists() && share.data().shareId) ids.add(share.data().shareId);
+      for (const id of copiesOf(index, resumeId)) ids.add(id);
       // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
       const there = [];
       for (const id of ids) if ((await tx.get(publicDoc(id))).exists()) there.push(id);
-      if (!share.exists() && !there.length) return false;
+      const indexed = Object.keys(index).some((id) => ids.has(id));
+      if (!share.exists() && !there.length && !indexed) return false;
       for (const id of there) tx.delete(publicDoc(id));
       tx.delete(shareDoc(uid, resumeId));
-      return share.exists();
+      writeIndex(tx, uid, index, Object.fromEntries(Object.entries(index).filter(([id]) => !ids.has(id))));
+      return share.exists() || there.length > 0;
     });
   }
 
   return {
-    /** The résumé's public copy as it is now: `{ shareId, publishedAt, copy }`, or null when it has none. */
+    /**
+     * The résumé's public copy as it is now: `{ shareId, publishedAt, copy }`, or null when it has
+     * none. With no record, the copy the account's index lists for it (one a lost record no longer
+     * names): its panel then shows it, and Unpublish takes it down.
+     */
     async readShare(uid, resumeId) {
       const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
-      if (!share.exists()) return null;
-      const { shareId } = share.data();
-      const pub = await fs.getDocFromServer(publicDoc(shareId));
-      if (!pub.exists()) return null;
-      const { publishedAt, resume } = pub.data();
-      return { shareId, publishedAt, copy: resume };
+      const candidates = share.exists() && share.data().shareId
+        ? [share.data().shareId]
+        : copiesOf(indexOf(await fs.getDocFromServer(indexDoc(uid))), resumeId);
+      for (const shareId of candidates) {
+        const pub = await fs.getDocFromServer(publicDoc(shareId));
+        if (!pub.exists()) continue;
+        const { publishedAt, resume } = pub.data();
+        return { shareId, publishedAt, copy: resume };
+      }
+      return null;
     },
 
     /**
@@ -224,7 +257,9 @@ export function publicIo(fs, db) {
      * one public copy at most. It is one transaction (R4-LO-22): two Publishes a moment apart both
      * read "no record", and as a read then a batch each made its own copy, the first left with no
      * record naming it; now the server refuses the second's write, as the record changed since it
-     * was read, and the SDK runs it again, when it reads the first one's link and reuses it.
+     * was read, and the SDK runs it again, when it reads the first one's link and reuses it. The
+     * copy's id goes into the account's index (`users/{uid}/meta/publicCopies`) in the same write,
+     * so it can be listed and taken down whatever becomes of the record.
      */
     async publish(uid, resume, { shareId: shown, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
@@ -232,12 +267,19 @@ export function publicIo(fs, db) {
       // A transaction reads from the server, all its reads before its writes.
       const shareId = await fs.runTransaction(db, async (tx) => {
         const share = await tx.get(shareDoc(uid, resume.id));
-        const shareId = (share.exists() && share.data().shareId) || shown || newId();
+        const index = indexOf(await tx.get(indexDoc(uid)));
+        // The copies the index lists for the résumé: one a lost record no longer names is reused, as
+        // its link may be shared, and any second one goes with the panel's own.
+        const mine = copiesOf(index, resume.id);
+        const shareId = (share.exists() && share.data().shareId) || shown || mine[0] || newId();
+        const others = [...new Set([shown, ...mine])].filter((id) => id && id !== shareId);
         // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-        const stray = shown && shown !== shareId && (await tx.get(publicDoc(shown))).exists();
-        if (stray) tx.delete(publicDoc(shown));
+        const strays = [];
+        for (const id of others) if ((await tx.get(publicDoc(id))).exists()) strays.push(id);
+        for (const id of strays) tx.delete(publicDoc(id));
         tx.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
         tx.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
+        writeIndex(tx, uid, index, { ...Object.fromEntries(Object.entries(index).filter(([id]) => !others.includes(id))), [shareId]: resume.id });
         return shareId;
       });
       return { shareId, publishedAt: now, copy };
@@ -266,19 +308,26 @@ export function publicIo(fs, db) {
      * deletion list says — when they have one, and resolves to those ids. A résumé deleted on
      * another device, or offline, or on a build that did not unpublish, kept its copy public with
      * no panel left anywhere to take it down: the cloud sync calls this once it knows the list
-     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one
-     * transaction for each copy to take down. Each checks, in the transaction, that the résumé is
+     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`) and of its index
+     * of copies, which names a copy no record does, then one transaction for each résumé whose copy
+     * is to go. Each checks, in the transaction, that the résumé is
      * still gone: between the deletion reaching the cloud and this call, another device's edit the
      * deletion never saw could write it back (R2-029) and publish it again — and the copy of a
-     * résumé the account holds is not taken down. Resolves to the ids whose copy went.
+     * résumé the account holds is not taken down. Run again it finds nothing. Resolves to the ids
+     * whose copy went.
      */
     async unpublishDeleted(uid, ids) {
       const gone = new Set(ids);
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
-      const stale = shares.docs.filter((d) => gone.has(d.id));
+      const index = indexOf(await fs.getDocFromServer(indexDoc(uid)));
+      // Each deleted résumé with the copies something names for it: its record, and the index.
+      const named = new Map();
+      const name = (resumeId, shareId) => { if (gone.has(resumeId)) named.set(resumeId, [...(named.get(resumeId) || []), shareId]); };
+      for (const d of shares.docs) name(d.id, d.data().shareId);
+      for (const [shareId, resumeId] of Object.entries(index)) name(resumeId, shareId);
       const down = [];
-      for (const d of stale) if (await takeDown(uid, d.id, [d.data().shareId], { onlyIfGone: true })) down.push(d.id);
+      for (const [resumeId, shareIds] of named) if (await takeDown(uid, resumeId, shareIds, { onlyIfGone: true })) down.push(resumeId);
       return down;
     },
 

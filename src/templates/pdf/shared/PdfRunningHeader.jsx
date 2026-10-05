@@ -9,9 +9,10 @@ import { textShades } from './pdfColors';
  * and only a line drawn before the page's text takes the form feed off a heading that opens the page.
  * `insetPt`: a band the template carries along the paper's top edge (the Banner's strip), kept clear.
  * `left`: where the line's box starts (the Sidebar's main column); the right margin ends it — it is
- * set flush right, so a short name never reaches past the page's own text.
+ * set flush right, so a short name never reaches past the page's own text. `right`: where it ends
+ * instead, with the Sidebar's column on the right (Design → Layout → Details Right).
  */
-export function PdfRunningHeader({ personal, settings, insetPt = 0, left }) {
+export function PdfRunningHeader({ personal, settings, insetPt = 0, left, right }) {
   const { v, h } = pageMargins(settings);
   const top = runningHeaderTop(v, insetPt);
   if (top == null) return null;
@@ -19,7 +20,7 @@ export function PdfRunningHeader({ personal, settings, insetPt = 0, left }) {
     <Text
       fixed
       style={{
-        position: 'absolute', top, left: left ?? `${h}mm`, right: `${h}mm`,
+        position: 'absolute', top, left: left ?? `${h}mm`, right: right ?? `${h}mm`,
         fontSize: RUNNING_HEADER_PT, lineHeight: 1.2, textAlign: 'right',
         color: textShades(settings.textColor || '#111111').meta,
       }}

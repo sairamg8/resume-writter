@@ -106,7 +106,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
             label="Style"
             value={skillsStyle}
             onChange={v => set('skillsStyle', v)}
-            options={[{ label: 'Inline', value: 'inline' }, { label: 'Stacked', value: 'stacked' }, { label: 'Bullet', value: 'bullet' }, { label: 'Tags', value: 'tags' }]}
+            options={[{ label: 'Inline', value: 'inline' }, { label: 'Stacked', value: 'stacked' }, { label: 'Bullet', value: 'bullet' }, { label: 'Tags', value: 'tags' }, { label: 'Bars', value: 'bars' }]}
           />
           {/* Inline and Bullet both print "Category: skills" lines, with this separator. */}
           {(skillsStyle === 'inline' || skillsStyle === 'bullet') && (

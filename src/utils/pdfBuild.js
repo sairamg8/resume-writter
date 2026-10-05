@@ -14,6 +14,16 @@ import { downloadBlob } from '@/utils/download';
  * workers) or the worker fails to load, the build runs on the main thread as before — a build
  * already sent to a worker that dies is run there too, so none is lost.
  *
+ * A worker that stops answering is let go too (R2-142, PERF-6): dying is not the only way to fail, a
+ * worker the browser froze or killed without an error event never replies and left the preview on
+ * "Rendering preview…" for good. The job it is working on has a budget (pdfBuildTimeoutMs, 20 s and
+ * more for a long résumé, twice that before its first reply while the engine and fonts still load);
+ * one unanswered is given up on: the worker is terminated, and a late reply from it is ignored.
+ * A worker that never replied at all may never have started, so its jobs run on the main thread, as
+ * after a failed start; one that had built before was working on this résumé, so that build fails
+ * with a retryable error (a hang in layout would only freeze the page on the main thread) and the jobs
+ * queued behind it go to a fresh worker.
+ *
  * Photos are made printable here first (withPrintablePhotos): converting a WebP needs a canvas,
  * which a worker may not have, and the copy is kept for the session on this side.
  */
@@ -25,6 +35,31 @@ const pending = new Map(); // id → { job, resolve, reject }
 let nextId = 0;
 let lastBuild = 0;         // the id of the latest build asked for that reports its font: only it sets the font fallback
 let proven = false;        // a build came back from the worker: from then on its errors are the résumé's
+const gone = new WeakSet(); // workers let go (dead, or silent past their budget): whatever they still send is ignored
+
+// The watchdog's clock. The worker builds its jobs in the order it got them, so one timer runs, on the
+// oldest job it holds: a job waiting behind others is not late, and every reply restarts it for the next.
+const realTimers = { set: (fn, ms) => { const t = setTimeout(fn, ms); t?.unref?.(); return t; }, clear: (t) => clearTimeout(t) };
+let timers = realTimers;
+let watchdog = null;
+
+/** What a build gets to answer in before its worker is given up on (pdfBuildTimeoutMs adds to it). */
+export const PDF_WORKER_TIMEOUT_MS = 20_000;
+const PER_ENTRY_MS = 250;   // more for every entry of a résumé, so a long one on a slow phone is not cut off
+const MAX_ENTRIES = 200;    // the most entries counted
+
+/**
+ * How long the worker gets to answer `job`: PDF_WORKER_TIMEOUT_MS and PER_ENTRY_MS for each entry of
+ * the résumé it prints; twice the base while `cold` (before its first reply, when it is still loading
+ * the PDF engine, the template and the fonts over the network).
+ */
+export function pdfBuildTimeoutMs(job, cold = false) {
+  let entries = 0;
+  if (job?.kind !== 'letter' && Array.isArray(job?.resume?.sections)) {
+    for (const s of job.resume.sections) entries += Array.isArray(s?.items) ? s.items.length : 0;
+  }
+  return (cold ? 2 : 1) * PDF_WORKER_TIMEOUT_MS + Math.min(entries, MAX_ENTRIES) * PER_ENTRY_MS;
+}
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
 
@@ -35,23 +70,69 @@ async function runHere({ kind, resume, options }) {
   return kind === 'letter' ? m.renderCoverLetterPdf(resume, options) : m.renderResumePdf(resume, options);
 }
 
+function stopWatch() {
+  if (watchdog !== null) timers.clear(watchdog);
+  watchdog = null;
+}
+
+/** Start the clock on the job the worker is working on now: the oldest it holds. None held, none runs. */
+function watch(w) {
+  stopWatch();
+  const head = pending.values().next().value;
+  if (head) watchdog = timers.set(() => stalled(w), pdfBuildTimeoutMs(head.job, !proven));
+}
+
+/** Let `w` go: stop it, and ignore whatever it still sends (a killed worker's late reply included). */
+function retire(w) {
+  stopWatch();
+  if (!w) return;
+  gone.add(w);
+  try { w.terminate?.(); } catch { /* already gone */ }
+}
+
 /** The worker stopped (failed to load, or died): run what it held here, and every build from now. */
 function giveUp(worker) {
+  if (worker && gone.has(worker)) return; // let go already, and its jobs sent where they were going
   broken = true;
   workerPromise = null;
-  try { worker?.terminate?.(); } catch { /* already gone */ }
+  retire(worker);
   const held = [...pending.values()];
   pending.clear();
   for (const { job, resolve, reject } of held) runHere(job).then(resolve, reject);
 }
 
+/** The worker did not answer the job it is working on within its budget (pdfBuildTimeoutMs). */
+function stalled(w) {
+  watchdog = null;
+  if (gone.has(w)) return;
+  const held = [...pending.values()];
+  pending.clear();
+  workerPromise = null;
+  retire(w);
+  if (!proven) {
+    // It never answered anything: it may never have started (its script blocked, a browser that
+    // half supports module workers). Built here, as after a failed start, and every build from now.
+    broken = true;
+    for (const { job, resolve, reject } of held) runHere(job).then(resolve, reject);
+    return;
+  }
+  // It has built before, so it was working on this résumé: running it on the main thread could freeze
+  // the page for as long. That build fails, retryable; the jobs queued behind it start on a fresh worker.
+  const [hung, ...queued] = held;
+  hung?.reject(Object.assign(new Error('The PDF took too long to build'), { code: 'PDF_BUILD_TIMEOUT' }));
+  for (const { job, resolve, reject } of queued) run(job).then(resolve, reject);
+}
+
 function onReply({ data }, w) {
+  if (gone.has(w)) return; // let go: what a terminated or replaced worker still sends counts for nothing
   // Not a reply: the worker says a font face's own data arrived after its build (fontFallback.js).
   if (data?.faceFetched) { faceFetched(); return; }
   const entry = pending.get(data?.id);
   if (!entry) return;
   pending.delete(data.id);
+  // Each way out below moves the clock on to the job the worker starts next (watch).
   if (data.error !== undefined) {
+    watch(w);
     // Before the worker has built anything, its error may be its own — a browser whose workers lack
     // something react-pdf needs — not the résumé's: the build runs here, and if it works here, every
     // build does from now (the worker path is proven on Chromium only). A warm-up is best effort.
@@ -59,8 +140,9 @@ function onReply({ data }, w) {
     runHere(entry.job).then((out) => { giveUp(w); entry.resolve(out); }, entry.reject);
     return;
   }
-  if (entry.job.kind === 'warm') { entry.resolve(); return; }
+  if (entry.job.kind === 'warm') { watch(w); entry.resolve(); return; }
   proven = true;
+  watch(w);
   // As resolvePdfFonts does on the main thread: a slow build for a font since changed must not name it,
   // and a page picture (reportFont: false) never speaks for the open résumé.
   if (entry.job.options?.reportFont !== false && data.id === lastBuild) {
@@ -95,7 +177,10 @@ async function run(job) {
       // A résumé the structured clone cannot copy: build it here, as before.
       pending.delete(job.id);
       runHere(job).then(resolve, reject);
+      return;
     }
+    // The only job it holds starts its clock now; one queued behind others is timed when it is next.
+    if (pending.size === 1) watch(w);
   });
 }
 
@@ -138,9 +223,13 @@ export async function exportCoverLetterPdf(resume, filename = 'cover-letter.pdf'
 
 /**
  * For tests: `create()` returns a Worker-like object ({ postMessage, onmessage, onerror, terminate })
- * that stands in for pdfWorker.js; null goes back to the real worker (none in Node).
+ * that stands in for pdfWorker.js; null goes back to the real worker (none in Node). `timers`
+ * ({ set(fn, ms) → handle, clear(handle) }) stands in for the watchdog's clock, so a test fires the
+ * timeout when it means to instead of waiting 20 s.
  */
-export function _setPdfWorkerForTest(create) {
+export function _setPdfWorkerForTest(create, { timers: clock } = {}) {
+  stopWatch();
+  timers = clock || realTimers;
   for (const { job, resolve, reject } of pending.values()) runHere(job).then(resolve, reject);
   pending.clear();
   workerPromise = null;
