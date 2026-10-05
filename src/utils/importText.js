@@ -98,7 +98,13 @@ function toLines(input) {
 }
 
 /** An address as a résumé prints it, to tell a link's label from its address: "https://www.x.com/" → "x.com". */
-const bareAddress = (s) => String(s).trim().toLowerCase().replace(/^(?:mailto:|tel:)/, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+const bareAddress = (s) => {
+  const bare = String(s).trim().toLowerCase().replace(/^(?:mailto:|tel:)/, '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+  // The slashes at the end, by index: /\/+$/ tried a long run of slashes again from each of them when a letter followed it.
+  let end = bare.length;
+  while (end > 0 && bare.charCodeAt(end - 1) === 47) end -= 1;
+  return bare.slice(0, end);
+};
 
 /**
  * A link as its label and, where the label does not show it, the address it goes to: ["My profile",
@@ -2191,6 +2197,9 @@ export function resumeFromText(input) {
   const takeContacts = (ls, { spill, alone = false }) => {
     // A place a later line gives in full ("New York, NY") is the location, not a bare town above it.
     const placeAt = ls.map((l) => headerPieces(l.text).flatMap((p) => runOf(unbulleted(p)) || [p]).some((p) => contactOf(unbulleted(p))?.key === 'location'));
+    // Whether a later line has one, for each line: asking each line to scan all the lines after it took time squared in the lines.
+    const placeAfter = Array(ls.length + 1).fill(false);
+    for (let i = ls.length - 1; i >= 0; i -= 1) placeAfter[i] = placeAfter[i + 1] || placeAt[i];
     let labelled = false; // the piece before said "Location" (the Sidebar's label over its value)
     for (const [k, l] of ls.entries()) {
       const leftover = [];
@@ -2224,7 +2233,7 @@ export function resumeFromText(input) {
       // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing. A town of several
       // words that says it is one ("Walnut Creek", "Greater Boston") is the location alone on its line too
       // (R5-HUNT13-HEADER-TOWN-SHAPE).
-      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)) || (found && knownTown(unbulleted(p))));
+      const towns = personal.location || placeAfter[k + 1] ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)) || (found && knownTown(unbulleted(p))));
       if (towns.length === 1 && (found || (alone && leftover.length === 1 && BARE_TOWN.named(unbulleted(towns[0]))))) {
         personal.location = unbulleted(towns[0]);
         leftover.splice(leftover.indexOf(towns[0]), 1);

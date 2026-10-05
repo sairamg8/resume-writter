@@ -179,7 +179,7 @@ function joinedRows(xml) {
     if (/<w:txbxContent\b/.test(tbl)) return tbl;
     const dated = [...tbl.matchAll(ROW)].some((r) => {
       const paras = oneLineCells(r[1]);
-      return paras && readDateRange(textOf(paras[paras.length - 1][0]));
+      return paras && readDateRange(textOf(paras[paras.length - 1][0]).replace(/\s+/g, ' ')); // one space for a run: the date patterns read a long run of white space from each of its characters
     });
     if (!dated) return tbl;
     return tbl.replace(ROW, (row, inner) => {
@@ -377,8 +377,12 @@ async function docxPartLines(bytes, part) {
 
 // "page", white space, a number and "of" a number, each part optional: \s*\d*(?:\s*of\s*\d+)? split a long run of white
 // space between its two \s* every way (time squared); this reads the same text with one reading of each space.
-const PAGE_OF = 'page\\s*(?:\\d+(?:\\s*of\\s*\\d+)?|of\\s*\\d+)?';
-const FURNITURE = new RegExp(`^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|${PAGE_OF}|\\d{1,3})$`, 'i');
+// The white space before the number is part of the optional group, so no \s* is followed by another \s*: the tail below
+// ends in \s*$, and "page", a long run of spaces and a letter was read as every split of the run between the two.
+const PAGE_OF = 'page(?:\\s*\\d+(?:\\s*of\\s*\\d+)?|\\s*of\\s*\\d+)?';
+const FURNITURE = new RegExp(`^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\\s*|${PAGE_OF}|\\d{1,3})$`, 'i');
+/** The link lists a joined PDF item owns (and may add to), not the ones it shares with a line it came from. */
+const ownedLinks = new WeakSet();
 // The separator starts where a run of white space does (a match starting inside one starts at its start too), and a
 // tab in the run is looked for ahead, once, so a long run is not read again from each of its characters.
 const FURNITURE_TAIL = new RegExp(`(?<!\\s)(?:\\s+[-–—|·•]\\s+|(?=[^\\S\\t]*\\t)\\s+)(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|${PAGE_OF})\\s*$`, 'i');
@@ -704,7 +708,12 @@ export function pdfLinesOfPages(pages) {
             // 30 000 lines).
             const pieces = last.pieces || (last.pieces = [last.text]);
             pieces.push(pieces[pieces.length - 1].endsWith('-') && /^\p{Ll}/u.test(line.text) ? line.text : ` ${line.text}`);
-            if (line.links) last.links = [...(last.links || []), ...line.links];
+            if (line.links) {
+              // Added to the item's own list: a copy of the whole list for each joined line took time squared in the links. The list
+              // is copied once, as the first line's list belongs to that line.
+              if (!last.links || !ownedLinks.has(last.links)) { last.links = [...(last.links || [])]; ownedLinks.add(last.links); }
+              for (const link of line.links) last.links.push(link);
+            }
             // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
             if (listed && open.length) open[open.length - 1].right = line.right;
             prev = { ...line, x: prev.x, textX: prev.textX, listed };

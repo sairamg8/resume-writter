@@ -11,6 +11,19 @@ import { groupsRoles, roleGroups } from './roleGroups.js';
 export { generateAtsPlainText } from './atsPlainText.js';
 
 /**
+ * Whether a value reads as an address (one "@", something before it, a dot inside the domain that is neither its first character nor
+ * its last, no white space), by index: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ tried every dot of a long domain as the last one, each time reading
+ * to the end (time squared in the dots).
+ */
+function looksLikeEmail(v) {
+  if (/\s/.test(v)) return false;
+  const at = v.indexOf('@');
+  if (at < 1 || v.indexOf('@', at + 1) !== -1) return false;
+  const dot = v.indexOf('.', at + 2);
+  return dot !== -1 && dot < v.length - 1;
+}
+
+/**
  * Extracts bullet points from a resume item.
  * Supports both legacy/explicit `item.bullets` array and `item.description`
  * rich text (HTML lists <li>, bullet characters • / -, or multi-line achievements).
@@ -47,16 +60,25 @@ export function extractBulletsFromItem(item) {
       // The item open at each depth: text after a nested list, inside the same outer item, prints at
       // the outer item's depth and continues it, not the nested bullet above it (R4-LO-16).
       const openAt = [];
+      // The open item a continuation at one depth belongs to, kept until the open items change: copying the open items up to
+      // that depth for each paragraph took time squared in a deep list with many paragraphs.
+      let owner = { indent: -1, at: undefined };
       for (const block of parseRichText(desc)) {
         const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
         if (!block.inList) {
           openAt.length = 0;
+          owner = { indent: -1, at: undefined };
         } else if (block.marker) {
           openAt.length = block.indent;
           openAt[block.indent] = items.push(text ? [text] : []) - 1;
+          owner = { indent: -1, at: undefined };
         } else if (block.indent >= 1) {
-          const at = openAt.slice(0, block.indent + 1).findLast((i) => i !== undefined);
-          if (at !== undefined) if (text) items[at].push(text);
+          if (owner.indent !== block.indent) {
+            let at;
+            for (let d = Math.min(block.indent, openAt.length - 1); d >= 0 && at === undefined; d -= 1) at = openAt[d];
+            owner = { indent: block.indent, at };
+          }
+          if (owner.at !== undefined) if (text) items[owner.at].push(text);
         }
       }
       for (const parts of items) addOnce(parts.join(' '));
@@ -844,8 +866,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Email check (4 pts)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (emailRegex.test(String(shown('email') || '').trim())) {
+  if (looksLikeEmail(String(shown('email') || '').trim())) {
     contactPts += 4;
     results.categories.contact.items.push({
       id: 'email', status: 'pass', text: 'Valid professional email address',
