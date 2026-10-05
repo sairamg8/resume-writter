@@ -183,6 +183,7 @@ function takeOtherTabsList() {
   // one: unwritten, the next re-read gave them new ids, and a job page open on one lost it.
   const persistError = jobs === incoming && !repairedOnRead(incoming) ? null : persist(jobs);
   if (!persistError) stored = jobs;
+  seenRaw = rawNow();
   update({ jobs, persistError });
 }
 
@@ -230,6 +231,13 @@ function update(patch) {
 
 function setJobs(change) {
   if (!initialized) init();
+  // A job page here listens for other tabs' saves, but one whose event is still on its way is not yet
+  // heard: take it in first, or this write replaces it, and that tab, hearing the write, reads this list as
+  // the other's (typing-freeze 5). With no page listening, snapshot() below does as much (catchUp).
+  if (listeners.size) {
+    const raw = rawNow();
+    if (raw !== null && raw !== seenRaw) takeOtherTabsList();
+  }
   const jobs = change(snapshot().jobs);
   // What catchUp could not read in full is about to be replaced: keep its copy, as load does.
   if (unreadRaw !== null) {
@@ -238,7 +246,7 @@ function setJobs(change) {
   }
   const persistError = persist(jobs);
   if (!persistError) stored = jobs;
-  if (listeners.size === 0) seenRaw = rawNow();
+  seenRaw = rawNow();
   update({ jobs, persistError });
 }
 
