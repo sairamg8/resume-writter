@@ -10,6 +10,7 @@ import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
 import { DEFAULT_DATE_FORMAT, dateFormatOf } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
+import { layoutMeta } from '../constants/layoutOptions.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -157,7 +158,9 @@ export function cpwtResumeToJsonResume(resume) {
     // decides the page itself: without it the import reopened the two columns a portal may
     // interleave. Written only where it prints (headerTemplateId). And the paper (Design → Spacing →
     // Page size), which decides every page break: without it a US Letter résumé came back on A4
-    // (R2-136) — written only when it is not the A4 a résumé with none prints on.
+    // (R2-136) — written only when it is not the A4 a résumé with none prints on. And the two-column
+    // Sidebar's own layout (Design → Template → Layout: Columns, Details, Width, R2-147-col), which decides
+    // the page as much: written only where it is not the page a résumé storing none prints (layoutMeta).
     meta: {
       template: templateId(resume.template),
       dateFormat: dateFormatOf(resume.settings),
@@ -169,6 +172,7 @@ export function cpwtResumeToJsonResume(resume) {
       ...(presetOf(resume.settings, resume.template) && ownDesign(resume.settings, resume.settings.templatePreset)
         ? { designLook: ownDesign(resume.settings, resume.settings.templatePreset) } : {}),
       ...(pageSizeOf(resume.settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(resume.settings) } : {}),
+      ...(layoutMeta(templateId(resume.template), resume.settings) ? { columnLayout: layoutMeta(templateId(resume.template), resume.settings) } : {}),
       sections: layout,
     },
   };

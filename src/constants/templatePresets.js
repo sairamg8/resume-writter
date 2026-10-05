@@ -11,6 +11,7 @@
 import { offersTemplate, templateId, templateStyleDefaults } from './templates.js';
 import { withDesignNumbers } from './designNumbers.js';
 import { withFontChoices } from './designFonts.js';
+import { withLayoutSettings } from './layoutOptions.js';
 import { withNormalizedColors } from '../utils/colors.js';
 
 /**
@@ -97,12 +98,13 @@ export function ownDesign(settings, id) {
 
 /**
  * A saved design's settings with the checks a résumé's get where it comes in (normalizeResume): the
- * Design numbers as numbers in range, colours as '#rrggbb', Name Font and Heading Font as text. The app
+ * Design numbers as numbers in range, colours as '#rrggbb', Name Font and Heading Font as text, the
+ * Sidebar's column layout as choices the panel offers and a width in its range (R2-147-col). The app
  * saves only its own values, but an imported .json can carry anything in `myDesigns`, and picking the
  * design copied it onto the résumé unchecked: fontSizeBase "12" printed the name at 128 pt ("12" + 8,
  * R5-HUNT11-SAVED-DESIGN-SETTINGS-UNCHECKED). The same object when nothing needs a change.
  */
-const checkedLook = (settings) => withFontChoices(withNormalizedColors(withDesignNumbers({ settings: onlyLook(settings) }))).settings;
+const checkedLook = (settings) => withLayoutSettings(withFontChoices(withNormalizedColors(withDesignNumbers({ settings: onlyLook(settings) })))).settings;
 
 /**
  * A saved design's settings kept to what a design is (designLook): the same object when they are. Picking
