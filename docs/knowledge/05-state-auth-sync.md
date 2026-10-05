@@ -40,6 +40,17 @@ not heard twice.
   A copy stamped more than 10 s before the one this tab last read is an old one (a tab that never heard of
   what was saved since): it is not merged, this tab's résumé stands (read against `base` it would look like an
   edit that undid what this tab typed after it).
+- **Why this shape (the decision, typing-freeze 5):** the loss came from two things — a whole-résumé merge that
+  keeps one tab's copy entire, and a write that never looked at storage. A résumé is a tree of small fields
+  that tabs type into one at a time, so a field-level three-way merge keeps what each did without a server or
+  a shared history (a CRDT or operation log would add a dependency and bytes to the start-up path, which has a
+  1,100 kB cap); text is merged by the span each tab changed because a keystroke stream is one such span per
+  save. Where two changes cannot both stand (one text overlapped, one leaf set two ways) one must give way, so
+  both tabs apply the same rule, by the résumé's own `updatedAt`, and end on the same résumé. The jobs, boards
+  and custom-stage stores have neither the save window nor the whole-item merge (they write every change at
+  once, and `keepUnsaved` without a merge only holds what storage refused), but they had the same write that
+  never looked: each now reads storage first and takes in a save whose event has not arrived (`setJobs`,
+  `setBoards`, `addCustomStage` / `removeCustomStage`).
 - No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
   copy as it is.
 - Known limit: a read-then-write of `localStorage` is not atomic across tabs (no lock), so two writes inside
@@ -343,7 +354,8 @@ opens; another tab's save arrives through the `storage` event, and what storage 
 again (`src/utils/unsavedJobs.js`). While no job page is open (no `storage` listener), `snapshot()` first takes
 what storage holds if it changed (`catchUp`, pure: it runs in render), so an Undo toast or a reopened job form
 never writes this tab's old list over another tab's; a value it could not read in full is backed up before the
-next write (`backupRaw`). Signed in, it syncs with the account through `useCollectionSync` (above);
+next write (`backupRaw`); a change made while a page listens also takes in a save whose `storage` event has not
+arrived yet (typing-freeze 5). Signed in, it syncs with the account through `useCollectionSync` (above);
 `jobsNow` / `replaceJobs` are what the sync reads and replaces.
 
 ## Implications for open-source forks

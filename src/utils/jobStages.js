@@ -48,10 +48,17 @@ let current = null;
 const listeners = new Set();
 /** The saved value that could not be read in full, until the save that replaces it copies it. */
 let unreadable = null;
+/** The value storage held when this tab last read or wrote the list: a different one is another tab's save. */
+let seen = null;
+
+function rawNow() {
+  try { return localStorage.getItem(KEY); } catch { return null; }
+}
 
 export function stagesSnapshot() {
   if (!current) {
     ({ stages: current, unreadable } = load());
+    seen = rawNow();
     // Another tab's list is taken as it is saved, so a change here builds on it. globalThis is
     // window in the browser; under Node, only what a test puts there (job-stages.unit.mjs).
     globalThis.addEventListener?.('storage', e => { if (e.key === KEY) takeStoredList(); });
@@ -73,7 +80,20 @@ function update(stages) {
 function takeStoredList() {
   const read = load();
   unreadable = read.unreadable;
+  seen = rawNow();
   update(read.stages);
+}
+
+/**
+ * The list as storage holds it now: another tab's save whose event is still on its way is taken in
+ * before this tab changes the list, or its write replaces that tab's stage (typing-freeze 5).
+ */
+function freshStages() {
+  const mine = stagesSnapshot();
+  const raw = rawNow();
+  if (raw === null || raw === seen) return mine;
+  takeStoredList();
+  return current;
 }
 
 /**
@@ -85,7 +105,9 @@ function takeStoredList() {
 function persist(stages) {
   if (unreadable !== null) backupRaw(KEY, unreadable);
   try {
-    localStorage.setItem(KEY, JSON.stringify(stages));
+    const raw = JSON.stringify(stages);
+    localStorage.setItem(KEY, raw);
+    seen = raw;
     unreadable = null; // replaced, and copied
   } catch { /* not remembered */ }
 }
@@ -98,7 +120,7 @@ function persist(stages) {
 export function addCustomStage(label) {
   const trimmed = String(label ?? '').trim();
   if (!trimmed) return '';
-  const stages = stagesSnapshot();
+  const stages = freshStages();
   const existing = [...PREDEFINED_STAGES, ...stages].find(s => s.toLowerCase() === trimmed.toLowerCase());
   if (existing) return existing;
   const next = [...stages, trimmed];
@@ -108,7 +130,7 @@ export function addCustomStage(label) {
 }
 
 export function removeCustomStage(label) {
-  const stages = stagesSnapshot();
+  const stages = freshStages();
   if (!stages.includes(label)) return;
   const next = stages.filter(s => s !== label);
   persist(next);
