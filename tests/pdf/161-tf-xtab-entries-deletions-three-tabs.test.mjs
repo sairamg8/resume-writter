@@ -143,6 +143,25 @@ describe('entries, deletions and settings across tabs (typing-freeze 5)', () => 
     assertConverged(assert, t);
   }));
 
+  it('older saved data — a store with no deletedInfo or owner, a résumé at an older data version — loads in both tabs and merges the same', async () => {
+    const old = { resumes: [{ ...savedResume(), dataVersion: 11 }], activeId: 'resume_x', dataVersion: 11 };
+    const t = await openTabs(2, old);
+    try {
+      const [a, b] = t.tabs;
+      await type(a, 'website', 'itsairam.netlify.app');
+      await b.edit((s) => { s.updatePersonal('name', 'Casey R. Example'); s.removeItem(EXP, 'e_c'); });
+      await b.flush();
+      await a.deliver();
+      await t.quiesce();
+      for (const tab of [a, b]) {
+        assert.equal(tab.resume().personal.website, 'itsairam.netlify.app', `tab ${tab.name}`);
+        assert.equal(tab.resume().personal.name, 'Casey R. Example', `tab ${tab.name}`);
+        assert.deepEqual(ids(tab), ['e_a', 'e_b'], `tab ${tab.name}`);
+      }
+      assertConverged(assert, t);
+    } finally { await t.close(); }
+  });
+
   it('after everything is said the tabs stay quiet: nothing is written again', () => tabs(3, async (t, a, b, c) => {
     await type(a, 'website', 'itsairam');
     await type(b, 'jobTitle', 'Staff');
