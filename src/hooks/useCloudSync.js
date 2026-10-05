@@ -6,7 +6,7 @@ import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
-import { publicIo } from '@/utils/publicLink';
+import { lazyPublicIo } from '@/utils/firebasePublicIo';
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { liveStore } from '@/hooks/useResumeSyncActions';
 
@@ -22,9 +22,12 @@ let io = realIo;
  */
 export function _setCloudIoForTest(next) { io = next ?? realIo; }
 
-/** The public links' calls (publicLink.js): the sync takes down a deleted résumé's copy (R2-148). */
+/**
+ * The public links' calls (publicLink.js, loaded at the first: it is not on the start-up path): the sync
+ * takes down a deleted résumé's copy (R2-148).
+ */
 const publicLinks = db
-  ? publicIo({ collection, doc, getDocFromServer, getDocsFromServer, runTransaction }, db)
+  ? lazyPublicIo({ collection, doc, getDocFromServer, getDocsFromServer, runTransaction }, db)
   : null;
 
 /**

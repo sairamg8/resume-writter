@@ -96,7 +96,9 @@ ExportDropdown → useEditorExports
 
 - Vite 8 (Rolldown) + React plugin + Tailwind v4 plugin
 - `codeSplitting.groups` in `vite.config.js` names the vendor chunks: React, the react-pdf stack, docx,
-  firebase — nothing on the start-up path downloads the PDF engine (`tests/pdf/71-startup-chunks.test.mjs`)
+  firebase — nothing on the start-up path downloads the PDF engine (`tests/pdf/71-startup-chunks.test.mjs`,
+  which also caps the start-up path at 1.1 MB). The public link's calls the Dashboard and the cloud sync hold
+  load `src/utils/publicLink.js` at their first call (`lazyPublicIo` in `src/utils/firebasePublicIo.js`)
 - PDF templates use dynamic `import()` per template key for code splitting
 - The PDF is built in a Web Worker (`src/utils/pdfWorker.js`, started by `src/utils/pdfBuild.js`; main thread
   where none starts). On the dev server the React plugin wraps JSX for Fast Refresh, and that runtime needs
