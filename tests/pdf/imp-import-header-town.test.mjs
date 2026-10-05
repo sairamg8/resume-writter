@@ -1,12 +1,13 @@
 // R5-HUNT13-HEADER-TOWN-SHAPE: the round trip of a header location that is a town of several words with
 // no state after it. A fictional résumé whose location is "Walnut Creek" (a town the importer's list of
-// known places does not hold) is exported by the app's own PDF and Word code — the Classic and Compact
-// contact lines, the Sidebar's "LOCATION" label over its value — and read back: the town comes back as
-// the location, with the other contacts and the job title. Before, it printed as an "Additional
-// Information" section and the location came back empty.
+// known places does not hold) is exported by the app's own PDF code in every template — each one's
+// contact line, the Sidebar's "LOCATION" label over its value — and by its Word code, and read back:
+// the town comes back as the location, with the other contacts (and, in Classic, Sidebar, Compact and
+// Word, the job title and nothing left over). Before, it printed as an "Additional Information"
+// section and the location came back empty.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, experience, render, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, loadModule, TEMPLATES } from './harness.mjs';
 import { pdfLines, docxLines } from '../../src/utils/importFile.js';
 import { resumeFromText } from '../../src/utils/importText.js';
 
@@ -27,7 +28,7 @@ const sections = () => [
 before(async () => {
   ctx = await setup();
   const fixture = (template) => resume({ template, personal, sections: sections() });
-  for (const template of ['classic', 'sidebar', 'compact']) {
+  for (const template of TEMPLATES) {
     const lines = await pdfLines(await render(fixture(template)), ctx.pdfjs);
     read[`${template} PDF`] = { resume: resumeFromText(lines), seen: lines.map((x) => x.text).join('\n') };
   }
@@ -37,7 +38,20 @@ before(async () => {
 }, { timeout: 120_000 });
 after(teardown);
 
-describe('a header town of several words comes back as the location from the app’s own exports', () => {
+describe('a header town of several words comes back as the location from every template’s PDF', () => {
+  for (const template of TEMPLATES) {
+    it(template, () => {
+      const { resume: r, seen } = read[`${template} PDF`];
+      const p = r.personal;
+      const why = `\n--- ${template} PDF read as ---\n${seen}\n--- imported ---\n${JSON.stringify(p, null, 1)}`;
+      assert.equal(p.location, 'Walnut Creek', why);
+      assert.equal(p.email, 'avery.quinn@example.com', why);
+      assert.equal(p.phone, '+1 555 0142', why);
+    });
+  }
+});
+
+describe('and, in the three layouts and Word, with the job title and nothing left over', () => {
   for (const kind of ['classic PDF', 'sidebar PDF', 'compact PDF', 'Word']) {
     it(kind, () => {
       const { resume: r, seen } = read[kind];
