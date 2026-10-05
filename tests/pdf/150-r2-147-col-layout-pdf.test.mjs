@@ -138,7 +138,7 @@ describe('Design → Template → Layout prints the Sidebar\'s columns where it 
     for (const t of [edu, skills, langs, certs]) assert.ok(flow(snap, t) > lastJob, `"${t.str}" prints after the main sections`);
     assert.ok(near(edu.x, H_MARGIN) && near(skills.x, W * 0.38 + MAIN_PAD) && near(edu.y, skills.y, 0.5), `row 1: Education (${edu.x}) and Skills (${skills.x}) side by side`);
     assert.ok(near(langs.x, H_MARGIN) && near(certs.x, W * 0.38 + MAIN_PAD) && near(langs.y, certs.y, 0.5), `row 2: Languages (${langs.x}) and Certifications (${certs.x}) side by side`);
-    assert.ok(flow(snap, langs) > flow(snap, item(snap, 'University of Porto')), 'row 2 under row 1');
+    assert.ok(flow(snap, langs) > flow(snap, edu) + 20 && flow(snap, langs) > flow(snap, skills) + 20, 'row 2 under row 1');
     const [pt, en] = [item(snap, 'Portuguese'), item(snap, 'English')];
     assert.ok(near(pt.x, en.x) && en.y < pt.y - 1, 'Languages (Grids 2 stored) prints one language to a line in its column');
     assert.match(snap.pages[0].items[0].str, /Avery/, 'the name is the first text drawn');
@@ -158,6 +158,14 @@ describe('Design → Template → Layout prints the Sidebar\'s columns where it 
     assert.ok(near(heading(mixed, /^skills$/i).x, mixed.pages[0].W * 0.3 + MAIN_PAD), 'Mixed: the second of a row starts past 30 %');
     const clamped = await shot({ layoutSideWidth: 99 });
     assert.ok(near(columnFill(clamped, 1).x1, clamped.pages[0].W * 0.45, 0.5), 'a stored 99 prints the most the control offers, 45 %');
+  });
+
+  it('Mixed at the narrowest width: a language too wide for its column prints whole, its proficiency on the line under it', async () => {
+    const snap = await shot({ layoutColumns: 'mixed', layoutSideWidth: 24 });
+    const [pt, native] = [item(snap, 'Portuguese'), item(snap, 'Native')];
+    assert.ok(pt, '"Portuguese" prints whole, not broken inside the word');
+    assert.ok(native && native.y < pt.y - 1 && near(native.x, pt.x), `"Native" on the line under it (${native?.x}, ${native?.y} vs ${pt.x}, ${pt.y})`);
+    snap.pages.forEach((p, i) => assert.deepEqual(overlaps(p), [], `page ${i + 1}: text overlaps`));
   });
 
   it('every layout breaks pages as Left does: nothing past the bottom margin, no overlaps, no title alone at a page foot, the column on every page', async () => {
