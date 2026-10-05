@@ -419,7 +419,7 @@ function markerText(node) {
     const cur = work[work.length - 1];
     if (cur.mt !== undefined) { work.pop(); continue; }
     const pending = cur.children.filter((c) => typeof c !== 'string' && c.mt === undefined);
-    if (pending.length) { work.push(...pending); continue; }
+    if (pending.length) { for (const c of pending) work.push(c); continue; } // (not push(...pending): an element of 200 000 children is more arguments than a call takes)
     work.pop();
     let text = '';
     for (const c of cur.children) {
