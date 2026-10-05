@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Sparkles,
 } from 'lucide-react';
-import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
+import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref, hasDataUrlInTag } from '@/utils/richText';
 import { useFieldIds } from '@/hooks/useFieldIds';
 import BulletOptimizerModal from '@/components/BulletOptimizerModal';
 
@@ -54,7 +54,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     // copy. Only then: showing a value otherwise writes nothing. The data: URL is looked for inside a
     // tag, where a picture keeps it; the same words typed as text stay in the clean value, and matching
     // them wrote the field again every time it was shown.
-    if (DATA_URL.test(next || '')) {
+    if (hasDataUrlInTag(next || '')) {
       emitted.current = [clean];
       onChange(clean);
     }
@@ -668,8 +668,6 @@ function edgeLeaf(node, edge) {
 
 /** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
 const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
-/** A data: URL's base64 payload inside a tag, as a browser's own paste of a picture stores it. */
-const DATA_URL = /<[^>]*\bdata:[^\s"'>,;]*;base64,/i;
 /** The type a drag from an editor carries, with that editor's own id, so its drop knows it as a move. */
 const MOVE_TYPE = 'application/x-resume-rich-text-move';
 
