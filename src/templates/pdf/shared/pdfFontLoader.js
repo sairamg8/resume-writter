@@ -164,12 +164,12 @@ function registerCdn(family, pkg, meta, subset, { fallback = false } = {}) {
   return family;
 }
 
-/** The chosen font: { family, pkg, meta } for a Fontsource font, null for bundled Noto Sans. */
-async function chosenFont(settings) {
+/** The chosen font: { family, pkg, meta } for a Fontsource font, null for bundled Noto Sans (or no metadata by `until`). */
+async function chosenFont(settings, until) {
   const custom = String(settings?.customFont || '').trim();
   const config = custom ? { pkg: fontsourceId(custom) } : (FONT_MAP[settings?.font] || FONT_MAP.notosans);
   if (config.local) return null;
-  const meta = await fetchMetadata(config.pkg);
+  const meta = await metadataInTime(config.pkg, until);
   if (!meta) return null;
   const subset = meta.subsets?.includes('latin') ? 'latin' : (meta.defSubset || 'latin');
   return { family: registerCdn(meta.family || config.family || custom, config.pkg, meta, subset), pkg: config.pkg, meta };
@@ -190,7 +190,7 @@ export function collectText(value) {
 }
 
 /** Fallback families, by range, for the characters in `text` that the primary (latin) face lacks. */
-async function fallbacksFor(text, primary) {
+async function fallbacksFor(text, primary, until) {
   const { subsets, symbols, own } = needsOf(text, primary?.meta.subsets || []);
   const families = [];
   for (const subset of subsets) {
@@ -202,7 +202,7 @@ async function fallbacksFor(text, primary) {
   // The chosen font's own script subsets: Noto Sans JP draws Japanese in Noto Sans JP.
   for (const subset of own) families.push(registerCdn(`${primary.family} ${subset}`, primary.pkg, primary.meta, subset, { fallback: true }));
   for (const font of symbols) {
-    const meta = await fetchMetadata(font.pkg);
+    const meta = await metadataInTime(font.pkg, until);
     if (meta) families.push(registerCdn(font.family, font.pkg, meta, font.subset, { fallback: true }));
   }
   return families;
@@ -226,7 +226,7 @@ async function scriptFallbacks(text, usable, until) {
   const added = [];
   for (const font of missing.length ? scriptCandidates(missing, text) : []) {
     if (!missing.some((cp) => scriptClaims(font, cp))) continue;
-    const meta = await fetchMetadata(font.pkg);
+    const meta = await metadataInTime(font.pkg, until);
     // A symbol font is taken as pass 1 takes it: Noto Sans Math's metadata lists no 'math' subset,
     // though its math files are there.
     if (!meta || (!font.name && !meta.subsets?.includes(font.subset))) continue;
@@ -248,8 +248,8 @@ let resolveCount = 0;
  * when it cannot be loaded, with `fallback` naming it.
  */
 async function familyChain(settings, text, until) {
-  const primary = await chosenFont(settings);
-  const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary))];
+  const primary = await chosenFont(settings, until);
+  const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary, until))];
   let usable = await prepareFonts(families, until);
   const missed = primary && usable[0] !== primary.family;
   // The chosen font could not be loaded at all (offline, blocked): Noto Sans takes its place.
@@ -439,11 +439,14 @@ const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(
 // slow is not lost: its data lands prepared (landPrepared) and is used by the first build after it arrives (a
 // face lent a donor's data meanwhile keeps that until then), and faceFetched() makes the preview build again
 // then, so the notice does not wait for the next edit.
-// The wait is the BUILD's, for the faces it fetches from the CDN: they all share one deadline (resolvePdfFonts
-// sets it), so a résumé whose body, Name Font and Heading Font are three CDN families, on a CDN that never
-// answers, waits FONT_LOAD_MS once, not once per family in turn. That keeps a stalled CDN well inside the PDF
-// worker's budget (pdfBuild.js pdfBuildTimeoutMs, 20 s), which therefore needs no room for fonts. The app's
-// own bundled faces (Noto Sans, the last resort) get the whole wait each, whatever the CDN used up.
+// The wait is the BUILD's, for all it asks of the CDN: the fonts' metadata it looks up (metadataInTime) and
+// the faces it fetches share one deadline (resolvePdfFonts sets it), so a résumé whose body, Name Font and
+// Heading Font are three CDN families, on a CDN that never answers, waits FONT_LOAD_MS once, not once per
+// family in turn. The lookups were outside it: up to 8 s each (fontsource.js), in turn, so three such fonts
+// cost ~24 s before any face was asked for, past the PDF worker's 20 s budget (pdfBuild.js pdfBuildTimeoutMs):
+// the build failed "took too long", and Retry on a fresh worker the same way. Fonts do take room in that
+// budget — FONT_LOAD_MS of it at most, half — and the rest is the layout's. The app's own bundled faces (Noto
+// Sans, the last resort) get the whole wait each, whatever the CDN used up.
 const FONT_LOAD_MS = 10_000;
 let fontLoadMs = FONT_LOAD_MS;
 /** For tests: how long a first fetch is waited for; no argument goes back to FONT_LOAD_MS. */
@@ -453,8 +456,9 @@ const stalledFaces = new Map();
 
 let lateNote = null;
 /**
- * A face whose first fetch outran the wait has landed: tell the preview to build again. A family has six
- * faces and they land together, so the word goes out once for those that do, not once each.
+ * A face whose first fetch outran the wait has landed (or a font's metadata that did): tell the preview to
+ * build again. A family has six faces and they land together, so the word goes out once for those that do,
+ * not once each.
  */
 function noteLateFace() {
   if (lateNote) return;
@@ -464,6 +468,25 @@ function noteLateFace() {
 
 /** When a build that starts now stops waiting for CDN faces (prepareFonts' `until`). */
 const fontDeadline = () => Date.now() + fontLoadMs;
+
+/**
+ * Font `pkg`'s metadata (fetchMetadata), or null when it has not come by `until`, the build's deadline: the
+ * font then prints in Noto Sans and is named, as when the CDN has no answer at all. The lookup goes on, and
+ * when metadata that was only slow arrives the preview builds again (noteLateFace), as for a slow face. A
+ * lookup answered before (fontsource.js keeps it) is used whatever is left of the deadline.
+ */
+function metadataInTime(pkg, until = fontDeadline()) {
+  const lookup = fetchMetadata(pkg);
+  let timer;
+  const late = new Promise((resolve) => {
+    timer = setTimeout(() => {
+      lookup.then((meta) => { if (meta) noteLateFace(); });
+      resolve(null);
+    }, Math.max(0, until - Date.now()));
+    timer.unref?.();
+  });
+  return Promise.race([lookup, late]).finally(() => clearTimeout(timer));
+}
 
 /**
  * Whether `source` loads in time: true loaded, false failed or still on its way. A CDN face is waited for
