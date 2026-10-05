@@ -41,8 +41,8 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
   A pause while a build runs now queues ONE build, of the latest change (a newer change replaces it; hidden or unmounted drops it) and it starts the moment the
   running one finishes. CI: fail-first 37259106000 green. Coordinator's own run on the prod bundle, 12-page Sidebar résumé, 72 keys (2 keys, 420 ms pause, repeat),
   before -> after: jobs posted 25 -> 6, queued at once 15 -> 1, oldest job waited 19.4 s -> 1.45 s, preview settled after the last key 21.6 s -> 5.1 s.
-- The stalled-job watchdog (finding 3) is NOT part of this; a build that never settles now also holds back the queued one on the main-thread fallback path
-  (before, builds there ran side by side). On the worker path nothing changes: the FIFO already blocked behind it.
+- A build that never settles holds back the queued one: on the worker path the FIFO already blocked behind it, and on the main-thread fallback it is new (before, builds there
+  ran side by side). The watchdog of finding 3 ends both with an error and Retry.
 - Steps: 9-page Sidebar résumé (21 entries + photo); Personal Info → Website; type 73 chars as 2 quick keys, 420 ms pause, repeat.
   Script: repro-backlog.js. Result: 25 build jobs for 73 keys, 11-12 queued at once, oldest waited 9.7-10.7 s, preview settled
   10-11 s after the last key. Steady 160 ms typing: 1.5 s lag. 4-page Classic: no backlog. Page stays responsive (worker).
@@ -50,7 +50,19 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
   so any pause >= 350 ms posts another build without waiting for the running one (the comment at :134-136 says it should not).
   pdfWorkerJobs.js:36-42 `runJobs` is a FIFO chain with no cancel/supersede; `unwanted()` is checked only after a job returns.
 
-### 3. PROD: a worker job that never replies kills the preview for the session — MEDIUM, 2/2 (open row R2-142 "no watchdog")
+### 3. PROD: a worker job that never replies kills the preview for the session — MEDIUM, 2/2 (open row R2-142 "no watchdog") — FIXED
+- **Fixed on `claude/fix-worker-watchdog`** (built on `claude/typing-freeze-fixes`): two layers. (a) `src/utils/pdfBuild.js`: the job the worker is on (the
+  oldest pending; a job waiting its turn is not timed) gets 60 s; past it the worker is terminated, that build fails with "building took more than 60 s — a font
+  or an image may not be reachable" (the preview shows it with Retry), and the jobs behind it are re-posted, in order, to a fresh worker. The main-thread
+  fallback (`runHere`) has the same limit, which also releases the preview's queued build behind a never-settling one. (b) `src/templates/pdf/shared/pdfFontLoader.js`:
+  a face's FIRST fetch is waited for 10 s (react-pdf's own fetch has no timeout and no signal), then the face counts as not loaded and the font prints in Noto Sans
+  with the usual notice; the wait is paid once a minute (not every build), and data that arrives late is used by the next build.
+  Tests: tests/pdf/112-pdf-worker-watchdog (6) and tests/pdf/113-font-load-stall (2).
+- Coordinator's own run on the prod bundle (stand-in blob worker, fonts from the CDN never answer): the first build came back after ~12 s with `fallback=Literata`, the preview
+  was ready at ~14 s with "Literata could not be loaded — the PDF uses Noto Sans in its place", the worker not restarted (before: 'rendering' for ever). A worker that
+  swallows every job: the alert and Retry appeared exactly 60.0 s after the job was posted, the worker was terminated, Retry started a fresh worker and the preview was ready.
+- Caveat of any finite limit: a build that is only slow (a very poor connection, a huge résumé) fails at 60 s with Retry rather than waiting; Retry restarts it, and
+  fonts that finished downloading meanwhile come from the browser's cache.
 - Steps (simulated stalled CDN font fetch inside the worker; pipeline-repro-snippets.md): big résumé, Design -> "Ledger" (PT Serif).
   Result: "Updating preview…" forever (60+ s), no error, no Retry; all later builds, Export PDF, 1-Page Fit, ATS view and thumbnails queue
   behind it; only a reload recovers. A real stall is only hinted at (first Lato load took 6.6 s).

@@ -1,5 +1,7 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 ~11:00 UTC — WATCHDOG FIXED on `claude/fix-worker-watchdog` (= `claude/typing-freeze-fixes` + one commit; NOT on master).** A PDF worker job that never replies is stopped after 60 s (that build fails with Retry, the jobs behind it go to a fresh worker; the main-thread fallback has the same limit) and a font face's first fetch is waited for 10 s before the font prints in Noto Sans with the usual notice (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Verified in the real app on the prod bundle (details in the hunt write-up, finding 3). CI for it is dispatched with the commit; the full gate on `claude/typing-freeze-fixes` is run 37259450707 (read it; the watchdog branch needs its own gate before a PR). The preview reviewer approved with nits (coverage test for unmount-while-painting, stale wording, a 'three pauses' test title): to do on `claude/fix-preview-build-backlog`.
+
 **2026-10-05 ~10:00 UTC — TYPING-FREEZE HUNT DONE; two fixes ready on `claude/typing-freeze-fixes` (NOT on master).**
 Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). The branch = master +
 `claude/fix-dev-worker-refresh` (`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`). **Next: read the full gate on its head (dispatched
@@ -12,8 +14,7 @@ with the docs commit; unread), then PR it -> master for the owner.** Each fix ha
   21.6 s behind. PdfPreview now holds ONE queued build (the latest change's) behind the running one. Prod bundle, same run: 6 builds, 1 queued, 1.45 s oldest wait, 5.1 s
   to settle. CI: fail-first 37259106000 green. Four existing preview tests that held two builds in flight were updated to the documented contract (commit messages say why).
 - **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version, rejected in review: dead-code unit test + wrong-reason fail-first) and `claude/tmp-dev-worker-unfixed`.
-- **Still open from the hunt** (details in the write-up): (3) a worker job that never replies (stalled font fetch) kills the preview until reload, no watchdog (R2-142 remainder);
-  (4) React error #185 after >=51 back-to-back input events drops a keystroke (suspect the setSaving effect, useResumeStore.js:163-185); (5) two tabs of one résumé typing at
+- **Still open from the hunt** (details in the write-up): (4) React error #185 after >=51 back-to-back input events drops a keystroke (suspect the setSaving effect, useResumeStore.js:163-185); (5) two tabs of one résumé typing at
   once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
   richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.
 

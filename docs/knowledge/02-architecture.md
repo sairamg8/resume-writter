@@ -86,6 +86,10 @@ ExportDropdown → useEditorExports
   where none starts). On the dev server the React plugin wraps JSX for Fast Refresh, and that runtime needs
   `window`, which a worker lacks, so `vite.config.js` leaves `src/templates/pdf/` out of it (`PDF_WORKER_JSX`,
   pinned by `tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs`); a PDF template edit reloads the page on `yarn dev`
+- A build must come back: the worker runs jobs one at a time, so `pdfBuild.js` times the one it is on (60 s; past it the worker is
+  stopped, that build fails and the ones behind it go to a fresh worker; the main-thread fallback has the same limit), and
+  `pdfFontLoader.js` waits 10 s for a font face's first fetch before printing in Noto Sans
+  (`tests/pdf/112-pdf-worker-watchdog.test.mjs`, `tests/pdf/113-font-load-stall.test.mjs`)
 
 ## Complexity hotspots
 
