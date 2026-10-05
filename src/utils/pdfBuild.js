@@ -26,6 +26,12 @@ import { downloadBlob } from '@/utils/download';
  * tab frozen in the background, a phone that put the browser away) and the worker with it: it starts
  * again instead.
  *
+ * The main thread's builds (no worker, or the jobs a let-go worker held) get the same budget, cold: there
+ * is no thread to stop, so one past it fails the same retryable way and is left to finish unheard. A
+ * build that never settles held the preview's one queued build behind it for good (PdfPreview.jsx: one
+ * build at a time) and Export waiting. Fonts need no room in these budgets: a build waits for the CDN's
+ * font faces 10 s at most, all of them together (pdfFontLoader.js FONT_LOAD_MS), then prints in Noto Sans.
+ *
  * Photos are made printable here first (withPrintablePhotos): converting a WebP needs a canvas,
  * which a worker may not have, and the copy is kept for the session on this side.
  */
@@ -73,11 +79,37 @@ export function pdfBuildTimeoutMs(job, cold = false) {
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
 
-/** A job run on the main thread, as the worker would run it (pdfWorkerJobs.js). */
-async function runHere({ kind, resume, options }) {
+/** A job built on the main thread, as the worker would build it (pdfWorkerJobs.js). */
+async function buildHere({ kind, resume, options }) {
   const m = await mainThread();
   if (kind === 'warm') return m.warmPdfExport(resume);
   return kind === 'letter' ? m.renderCoverLetterPdf(resume, options) : m.renderResumePdf(resume, options);
+}
+
+const tookTooLong = () => Object.assign(new Error('The PDF took too long to build'), { code: 'PDF_BUILD_TIMEOUT' });
+
+/**
+ * A job run on the main thread, with the cold budget (it may be the first to load the engine and the
+ * fonts here). Past it the build fails, retryable, and runs on unheard: nothing can stop it. A clock that
+ * rings ASLEEP_MS or more late was held up by the page itself — asleep, or busy laying this very build
+ * out, which is no stall — and starts again.
+ */
+function runHere(job) {
+  const clock = timers; // the one this build started on, whatever a test sets meanwhile
+  const now = clock.now || realTimers.now;
+  return new Promise((resolve, reject) => {
+    let timer = null;
+    const arm = () => {
+      const ms = pdfBuildTimeoutMs(job, true);
+      const due = now() + ms;
+      timer = clock.set(() => {
+        if (now() - due >= ASLEEP_MS) arm();
+        else reject(tookTooLong());
+      }, ms);
+    };
+    arm();
+    buildHere(job).then(resolve, reject).finally(() => clock.clear(timer));
+  });
 }
 
 function stopWatch() {
@@ -142,7 +174,7 @@ function stalled(w) {
   // It has built before, so it was working on this résumé: running it on the main thread could freeze
   // the page for as long. That build fails, retryable; the jobs queued behind it start on a fresh worker.
   const [hung, ...queued] = held;
-  hung?.reject(Object.assign(new Error('The PDF took too long to build'), { code: 'PDF_BUILD_TIMEOUT' }));
+  hung?.reject(tookTooLong());
   for (const { job, resolve, reject } of queued) run(job).then(resolve, reject);
 }
 
@@ -247,8 +279,9 @@ export async function exportCoverLetterPdf(resume, filename = 'cover-letter.pdf'
 /**
  * For tests: `create()` returns a Worker-like object ({ postMessage, onmessage, onerror, terminate })
  * that stands in for pdfWorker.js; null goes back to the real worker (none in Node). `timers`
- * ({ set(fn, ms) → handle, clear(handle), now?() → ms }) stands in for the watchdog's clock, so a test
- * fires the timeout when it means to instead of waiting 20 s (and with `now`, says how late it rings).
+ * ({ set(fn, ms) → handle, clear(handle), now?() → ms }) stands in for the watchdog's clock, the main
+ * thread's builds' too, so a test fires the timeout when it means to instead of waiting 20 s (and with
+ * `now`, says how late it rings).
  */
 export function _setPdfWorkerForTest(create, { timers: clock } = {}) {
   stopWatch();
