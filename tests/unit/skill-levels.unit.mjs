@@ -188,3 +188,23 @@ test('JSON Resume: a hidden skills field writes no keywords, so no level; a leve
   ));
   assert.deepEqual(file.skills.map((s) => [s.level, s.keywordLevels, s.keywords]), [[undefined, undefined, []], ['Intermediate', undefined, ['A']]]);
 });
+
+test('JSON Resume out: a skill typed as "Python; Go" (keywords parted by ";" or "•") gives each keyword its level, and the trip keeps them', () => {
+  // The editor, the PDF and the level are by comma: "Python; Go • Rust" is one skill with one level. The
+  // file's keywords are parted by ";" and "•" too, and each looked its own name up, so all three went
+  // out with none (and came back with none).
+  const start = cv(
+    group({ skills: 'Python; Go • Rust, SQL', skillLevels: { 'Python; Go • Rust': 5, SQL: 2 } }),
+    group({ id: 'g2', category: 'Systems', skills: 'C; C++', skillLevels: { 'C; C++': 3 } }),
+  );
+  const file = cpwtResumeToJsonResume(start);
+  assert.deepEqual(file.skills, [
+    { name: 'Web', keywordLevels: { Python: 'Expert', Go: 'Expert', Rust: 'Expert', SQL: 'Basic' }, keywords: ['Python', 'Go', 'Rust', 'SQL'] },
+    { name: 'Systems', level: 'Intermediate', keywords: ['C', 'C++'] },
+  ]);
+  // Back in, each keyword is a skill of its own (the import parts them by commas) with its level.
+  assert.deepEqual(levelsOf(jsonResumeToCpwtResume(JSON.parse(JSON.stringify(file)))), [
+    { skills: 'Python, Go, Rust, SQL', skillLevels: { Python: 5, Go: 5, Rust: 5, SQL: 2 } },
+    { skills: 'C, C++', skillLevels: { C: 3, 'C++': 3 } },
+  ]);
+});

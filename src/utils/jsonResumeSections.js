@@ -60,9 +60,9 @@ const ongoing = (item) => (item?.current ? { current: true } : {});
  * and the app's levels are each skill's own, so `level` is the word (Beginner … Expert) when every keyword
  * has the same level, and otherwise — some differ, or only some are set — the levels ride beside it as
  * `keywordLevels` ({ "React": "Advanced" }), which the import puts back. No level set: neither is written.
+ * `levels[i]` is `keywords[i]`'s level (1–5) or null.
  */
-function levelFields(item, keywords) {
-  const levels = keywords.map((k) => skillLevelOf(item.skillLevels, k));
+function levelFields(keywords, levels) {
   if (!levels.some(Boolean)) return {};
   if (levels.every((l) => l === levels[0])) return { level: skillLevelLabel(levels[0]) };
   return { keywordLevels: Object.fromEntries(keywords.flatMap((k, i) => (levels[i] ? [[k, skillLevelLabel(levels[i])]] : []))) };
@@ -149,9 +149,15 @@ export const SECTION_KEYS = {
     // A group with no category goes out with no name, and comes back with none (R2-006): it went out
     // as "Skills" and printed that label after the trip. A group of another tool's file with no
     // name at all still gets one.
+    // A level is kept for a skill as the editor parts them, by commas; the file's keywords are parted by
+    // "•" and ";" too, so each keyword of a "Python; Go" skill takes that skill's level (R2-147).
     out: (item) => {
-      const keywords = text(item.skills || item.name).split(/[,•;]+/).map((k) => k.trim()).filter(Boolean);
-      return { name: text(item.category), ...levelFields(item, keywords), keywords };
+      const pairs = text(item.skills || item.name).split(',').flatMap((skill) => {
+        const level = skillLevelOf(item.skillLevels, skill.trim());
+        return skill.split(/[•;]+/).map((k) => k.trim()).filter(Boolean).map((keyword) => [keyword, level]);
+      });
+      const keywords = pairs.map(([keyword]) => keyword);
+      return { name: text(item.category), ...levelFields(keywords, pairs.map(([, level]) => level)), keywords };
     },
     in: each((sk) => {
       const skills = listText(sk.keywords);
