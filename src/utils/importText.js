@@ -734,6 +734,14 @@ const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|
 /** A contact's name on a line of its own, over its value: the Sidebar template's "EMAIL", "PHONE". */
 const BARE_LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address)$/i;
 
+/** What stands under a "Location" label: a short value, no digit, no @, no sentence's end ("Walnut Creek", "Greater Boston"). */
+const LABEL_VALUE = {
+  test(text) {
+    const s = String(text).trim();
+    return s.length <= 60 && s.split(/\s+/).length <= 6 && /^\p{L}/u.test(s) && !/[@\d]|[.!?:;]$/.test(s) && !NOT_A_PLACE.test(s);
+  },
+};
+
 const digits = (s) => s.replace(/\D/g, '').length;
 
 /** A link as linkText writes it: "LinkedIn (https://linkedin.com/in/pat)" → its label and address. */
@@ -752,6 +760,10 @@ const LABELLED_KEYS = new Set(['website', 'linkedin', 'github']);
  * Before, any capitalised words were: "Eagle Scout", "Spanish Speaker", "Green Card Holder" or "Kaggle
  * Grandmaster" beside the email became the location (R5-HUNT12 review). A single word is a town unless
  * it is a word a contact line prints for something else ("Bilingual", "Freelance", "Kaggle").
+ * The known list cannot hold every town, so a town of more words is one too by what its words say
+ * (PLACE_END, PLACE_START): "Walnut Creek", "Mount Pleasant Heights", "Santa Rosa", a place's own word at
+ * its end or a place's prefix with one more word; never "Eagle Scout", "Los Angeles Native" or "Smart City"
+ * (R5-HUNT13-HEADER-TOWN-SHAPE).
  */
 const TOWN_OF_WORDS = new RegExp(`^(?:${[
   'new york(?: city)?', 'los angeles', 'san francisco', 'san diego', 'san jose', 'san antonio', 'san juan', 'santa clara', 'santa monica',
@@ -766,19 +778,125 @@ const TOWN_OF_WORDS = new RegExp(`^(?:${[
   'south carolina', 'north dakota', 'south dakota', 'west virginia', 'new jersey', 'new mexico', 'new hampshire', 'rhode island',
   'british columbia', 'nova scotia', 'new south wales', 'new zealand', 'united kingdom', 'united states(?: of america)?',
   'united arab emirates', 'south africa', 'czech republic', 'hong kong sar',
+  // LinkedIn's metros that print with no "Area": "Greater Boston", not "Greater Good".
+  `greater (?:${['boston', 'philadelphia', 'atlanta', 'chicago', 'seattle', 'houston', 'dallas', 'denver', 'minneapolis', 'pittsburgh', 'detroit', 'cleveland', 'phoenix', 'nashville', 'orlando', 'miami', 'tampa', 'london', 'manchester', 'toronto', 'vancouver', 'montreal', 'sydney', 'melbourne', 'auckland', 'new york', 'los angeles', 'san diego', 'portland', 'sacramento', 'cincinnati', 'columbus', 'charlotte', 'baltimore', 'st\\.? louis', 'kansas city', 'salt lake city', 'las vegas'].join('|')})`,
 ].join('|')})$`, 'iu');
+/** A place's own word at the end of a town of more words: "Walnut Creek", "Mount Pleasant Heights", "Dallas-Fort Worth Metroplex". */
+const PLACE_END = /\s(?:creek|springs?|beach|falls|heights|hills?|valley|lakes?|city|harbou?r|bay|ridge|islands?|rapids|grove|village|junction|point|mountains?|forest|woods|oaks|mesa|prairie|meadows|shores|landing|crossing|mills|ferry|haven|coast|canyon|forks|glen|park|metroplex|metropolitan)$/i;
+/**
+ * A place's prefix and exactly one more word ("Fort Collins", "Mt. Pleasant", "Santa Rosa", "Los Altos",
+ * "Costa Mesa"), or "Rancho" and one or two ("Rancho Santa Margarita"). Of one more word only: "Los
+ * Angeles Native" is not a town. Not "New", "North", "Port", "Lake" or "Greater" ("New Grad", "Port
+ * Operations", "Greater Good": the metros are TOWN_OF_WORDS's).
+ */
+const PLACE_START = /^(?:(?:fort|ft\.?|mount|mt\.?|saint|st\.?|san|santa|santo|los|las|el|costa)\s+\S+|rancho(?:\s+\S+){1,2})$/i;
+/** A field's own word before a place's word, no town's name: "Smart City", "Random Forest", "Tech Park". */
+const GENERIC_HEAD = /^(?:smart|digital|random|decision|data|tech|technology|science|business|innovation|enterprise|software|cloud|virtual|machine|applied|product|creative|connected)\s/i;
+/** A town's own role-like words ("Hilton Head Island", "Lead Hill"): not a job title in a name that ends in a place's word. */
+const PLACE_ROLE_WORD = /\b(?:head|lead|chief|mentor)\b/gi;
+/** What a contact line prints for something else than a place: a work status, a pronoun, a title's affix. */
+const NOT_A_PLACE = /\b(?:citizen|citizenship|clearance|visa|available|availability|immediately|relocat\w*|authori[sz]ed|permit|resident|pronouns?|he|she|they|him|her|them|twitter|blog|resume|cv|references?|mr|mrs|ms|dr|phd|mba|md|jr|sr)\b/i;
+/** A word a contact line prints for something else than a town: a language, a work status, a profile site, a trade ("Dentist", "Electrician", "Cardiology"). */
+const NOT_A_TOWN_WORD = /^(?:bi|tri|multi)lingual$|^\p{L}*(?:ist|ology|ician|ographer)$|^(?:fluent|native|freelanc\w*|contract(?:or|ing)?|consulting|self-employed|onsite|on-site|nationwide|worldwide|global|international|anywhere|flexible|negotiable|veteran|student|graduate|undergraduate|alumn\w*|kaggle|behance|dribbble|medium|substack|youtube|instagram|facebook|mastodon|bluesky|threads|leetcode|hackerrank|codepen|gitlab|bitbucket|stackoverflow|orcid|researchgate|skype|telegram|whatsapp|discord|signal|wechat|linktree|x)$/iu;
 const BARE_TOWN = {
+  /** Capitalised words, a town's linking word between, no title's word, no work status, no contact's label. */
+  shaped(text) {
+    const s = String(text).trim();
+    return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|[dD]['’]\p{Lu}[\p{L}.\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
+      && s.split(/\s+/).length <= 5 && !BARE_LABEL.test(s) && !headingType(s) && !NOT_A_PLACE.test(s);
+  },
+  /** A town of more words that says it is a place, whether it stands beside a contact or alone. */
+  named(text) {
+    const s = String(text).trim();
+    if (!/\s/.test(s) || !this.shaped(s)) return false;
+    const role = ROLE.test(s);
+    if (PLACE_END.test(s)) return !GENERIC_HEAD.test(s) && (!role || !ROLE.test(s.replace(PLACE_ROLE_WORD, ' ')));
+    return !role && (TOWN_OF_WORDS.test(s) || PLACE_START.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s|\s[dD]['’]\p{Lu}/u.test(s) || /\s(?:Area|Region)$/u.test(s));
+  },
   test(text) {
     const s = String(text).trim();
-    const words = s.split(/\s+/);
-    return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
-      && words.length <= 5 && !ROLE.test(s) && !BARE_LABEL.test(s) && !headingType(s)
-      && !/\b(?:citizen|citizenship|clearance|visa|available|availability|immediately|relocat\w*|authori[sz]ed|permit|resident|pronouns?|he|she|they|him|her|them|twitter|blog|resume|cv|references?|mr|mrs|ms|dr|phd|mba|md|jr|sr)\b/i.test(s)
-      && (words.length === 1
-        ? !/^(?:bi|tri|multi)lingual$|^(?:fluent|native|freelanc\w*|contract(?:or|ing)?|consulting|self-employed|onsite|on-site|nationwide|worldwide|global|international|anywhere|flexible|negotiable|veteran|student|graduate|undergraduate|alumn\w*|kaggle|behance|dribbble|medium|substack|youtube|instagram|facebook|mastodon|bluesky|threads|leetcode|hackerrank|codepen|gitlab|bitbucket|stackoverflow|orcid|researchgate|skype|telegram|whatsapp|discord|signal|wechat|linktree|x)$/i.test(s)
-        : TOWN_OF_WORDS.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s/u.test(s) || /\s(?:Area|Region)$/u.test(s));
+    return /\s/.test(s) ? this.named(s)
+      : this.shaped(s) && !ROLE.test(s)
+        && !NOT_A_TOWN_WORD.test(s);
   },
 };
+
+/**
+ * A place with no comma in it, as a header prints one: a town of one to three capitalised words and its
+ * state, province or country ("Walnut Creek CA", "Austin Texas", "Guildford United Kingdom") and/or its
+ * postcode ("Walnut Creek CA 94596", "Guildford GU1 4AB", "Walnut Creek 94596"), or a five-digit
+ * postcode first ("10115 Berlin"). Before, only "Town, Region" was a place, so these went to "Additional
+ * Information". It takes more proof than the comma form, whose any two words are a place: "Family Medicine
+ * MD", "Orthopedic Surgery PA", "Navy Veteran TX", "Licensed Electrician Texas", "Machine Learning India"
+ * are headlines, "Open To Work IN" a status, "12345 Followers" a count. So, by its parts (placeParts):
+ *  - regionPlace, a place wherever it stands, even right under the name: a postcode with a region, or
+ *    after a town of one word or one that says it is ("Walnut Creek 94596", "10115 Berlin"), or a region
+ *    after a town that says it is one by its words ("Walnut Creek CA");
+ *  - weakPlace, one beside a contact only: a region after one word ("Austin TX") or after a town the job
+ *    lines name ("Round Rock TX") — "Dentist Ohio" alone on a line may be a headline.
+ * The region is hard evidence: a state's code in capitals only ("or", "in", "me" are words), no small
+ * word in the town's ("Open To Work IN") and no job title's.
+ */
+const CAPITALISED = /^[\p{Lu}][\p{L}.'’\-]*(?:\s+[\p{Lu}][\p{L}.'’\-]*)*$/u;
+const SMALL_WORD = /\b(?:to|in|and|for|at|with|the|or|of|on|as|by|from)\b/i;
+const POSTCODE_END = /\s*(?:\d{5}(?:-\d{4})?|[a-z]\d[a-z] ?\d[a-z]\d|[a-z]{1,2}\d[a-z\d]? ?\d[a-z]{2})$/i;
+/**
+ * The town a job line's field names right before its region, lower-cased: "round rock" in "Dell, Round
+ * Rock, TX", "austin" in "Austin, Texas, USA", else null. Only that segment: the role or the company
+ * before it ("Photographer, Studio X, Austin, TX") is no town.
+ */
+function townBeforeRegion(field) {
+  const parts = field.replace(POSTCODE_END, '').split(/\s*,\s*/);
+  const isRegion = (p) => REGION_END.test(`, ${p}`);
+  if (parts.length < 2 || !isRegion(parts[parts.length - 1])) return null;
+  while (parts.length > 1 && isRegion(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1].toLowerCase();
+}
+/** A town's own words, one to three: capitalised, no small word, no work status. */
+const townWords = (text) => CAPITALISED.test(text) && text.split(/\s+/).length <= 3 && !SMALL_WORD.test(text) && !NOT_A_PLACE.test(text);
+/** What a count prints after its five digits ("12345 Followers", "50000 Hours"): no postcode's town. */
+const COUNT_WORD = /^(?:followers|connections|subscribers|views|hours|likes|users|downloads|stars|points|miles|steps|members|visitors|customers|clients|employees|commits|repos|projects|students|people|reviews|ratings|posts|articles|impressions|installs|sales|years|days|months|weeks|minutes)$/i;
+/** A place with no comma in its parts: the town's words, and whether a state or country (region) and a postcode end it. */
+function placeParts(text) {
+  const s = String(text).trim();
+  // No comma: "Town, Region" is PLACE's. A dash between the town and its region is only a separator.
+  if (s.length > 50 || s.includes(',') || ROLE.test(s) || BARE_LABEL.test(s) || headingType(s)) return null;
+  const words = s.replace(/\s+[-–—]\s+/, ' ').split(/\s+/);
+  if (/^\d{5}\s/.test(s)) {
+    const head = words.slice(1).join(' ');
+    return words.length <= 3 && townWords(head) && !COUNT_WORD.test(words[words.length - 1]) ? { head, region: false, postcode: true } : null;
+  }
+  for (let k = 1; k <= 3 && k < words.length; k += 1) {
+    const tail = words.slice(k).join(' ');
+    const bare = tail.replace(POSTCODE_END, '');
+    const head = words.slice(0, k).join(' ');
+    // What is left of the end is a state or a country, or nothing: it was the postcode.
+    if (townWords(head) && (bare === '' || REGION_END.test(`, ${bare}`))) return { head, region: bare !== '', postcode: bare !== tail };
+  }
+  return null;
+}
+/** A no-comma place that holds its own proof (see above): a headline's words with a region are not one. */
+function regionPlace(text) {
+  const p = placeParts(text);
+  if (!p) return false;
+  return p.postcode ? p.region || BARE_TOWN.test(p.head) : p.region && BARE_TOWN.named(p.head);
+}
+/** A region after one word or after a town the job lines name (`jobTown`): "Austin TX" — beside a contact only. */
+function weakPlace(text, jobTown) {
+  const p = placeParts(text);
+  return Boolean(p && p.region && !p.postcode && (/\s/.test(p.head) ? jobTown(p.head) : BARE_TOWN.test(p.head)));
+}
+/** A street's start, "123 Main St, ": its number, its words, a street's word, the comma. */
+const STREET_START = /^\d{1,6}[a-z]?\s+(?:[\p{L}\d.'’#\-]+\s+){0,4}(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|hwy|pkwy|sq|square|terrace|cir|circle|trl|trail)\.?,\s*/iu;
+/** A place after a street ("123 Main St, Walnut Creek", "…, Walnut Creek CA"), or one of the region forms. */
+function headerPlace(text) {
+  const s = String(text).trim();
+  if (s.length > 80) return false;
+  const street = STREET_START.exec(s);
+  if (!street) return regionPlace(s);
+  const rest = s.slice(street[0].length);
+  return PLACE.test(rest) || regionPlace(rest) || townWords(rest);
+}
 
 /** What a piece of header text is: { key, value } for a contact, else null. */
 function contactOf(segment) {
@@ -793,7 +911,13 @@ function contactOf(segment) {
   }
   const number = (PHONE_EXT.exec(s) || [s, s])[1].trim();
   if (PHONE.test(number) && digits(number) >= 7 && digits(number) <= 15) return { key: 'phone', value: s.replace(/^tel:/i, '') };
-  if (PLACE.test(s) || (labelled && /^(location|address|based in)/i.test(labelled[0]))) return { key: 'location', value: s };
+  // "Based in Walnut Creek" with no colon: the words say it is a place, and the prefix is no part of it.
+  const based = labelled ? null : /^based in\s+/i.exec(s);
+  if (based) {
+    const rest = s.slice(based[0].length);
+    if (PLACE.test(rest) || headerPlace(rest) || (BARE_TOWN.shaped(rest) && !ROLE.test(rest))) return { key: 'location', value: rest };
+  }
+  if (PLACE.test(s) || headerPlace(s) || (labelled && /^(location|address|based in)/i.test(labelled[0]))) return { key: 'location', value: s };
   return null;
 }
 
@@ -817,8 +941,10 @@ const isContact = (piece) => Boolean(contactOf(piece) || (LINKED.exec(piece) && 
  * comma kept ("Seattle, WA") — else null. Two contacts at least, one of them no place, and any other
  * piece short ("Backend Engineer"): a sentence with a dash in it stays whole. Before, headerPieces
  * split only at | • · and tabs, so such a line gave no contact and printed as "Additional Information".
+ * `town`: whether a piece that is no contact is a town that says it is one ("Walnut Creek") — it counts
+ * as the second, so "jane@x.com — Walnut Creek" is a run.
  */
-function contactRun(piece) {
+function contactRun(piece, town = (p) => BARE_TOWN.named(p)) {
   if (isContact(piece)) return null;
   const out = [];
   for (const part of piece.split(/\s+[—–/-]\s+/)) {
@@ -832,8 +958,8 @@ function contactRun(piece) {
       k = j;
     }
   }
-  const found = out.filter(isContact);
-  const ok = out.length > 1 && found.length >= 2 && found.some((p) => (contactOf(p) || {}).key !== 'location')
+  const found = out.filter((p) => isContact(p) || town(p));
+  const ok = out.length > 1 && found.length >= 2 && found.some((p) => isContact(p) && (contactOf(p) || {}).key !== 'location')
     && out.every((p) => isContact(p) || (p.length <= 40 && !/[.!?]$/.test(p)));
   return ok ? out : null;
 }
@@ -2043,16 +2169,38 @@ export function resumeFromText(input) {
   const other = [];
   const asides = []; // entries' text with nowhere to go in them (entryOf's `aside`)
 
-  /** Header lines: contacts to their fields, the rest to the summary (sentences) or aside. */
+  // A town of more words that the job lines name with its region ("Round Rock" in "Dell, Round Rock, TX")
+  // is a place whatever its words: the same town bare beside a contact in the header is the location (a
+  // list of towns cannot hold them all). Never alone on a line or under the name, where it may be a
+  // headline, and never one word: "Photographer" in "Photographer, Studio X, Austin, TX" is a title.
+  let jobTowns = null;
+  const jobTown = (s) => {
+    if (!/\s/.test(s) || !BARE_TOWN.shaped(s) || ROLE.test(s)) return false;
+    jobTowns ||= new Set(lines.flatMap((l) => l.text.split(/\t|\s+[|•·◆⋅∙▪—–-]\s+|\s{3,}/).map(townBeforeRegion)));
+    return jobTowns.has(s.toLowerCase());
+  };
+  /** A town of more words, by its words or by the job lines, or one word with its region: for a piece with a contact beside it. */
+  const knownTown = (s) => BARE_TOWN.named(s) || jobTown(s) || weakPlace(s, jobTown);
+  const runOf = (piece) => contactRun(piece, knownTown);
+
+  /**
+   * Header lines: contacts to their fields, the rest to the summary (sentences) or aside. `alone`: a town
+   * of several words that says it is one may be the location alone on a line (the header's, a "Contact"
+   * heading's), not only beside a contact.
+   */
   const takeContacts = (ls, { spill, alone = false }) => {
     // A place a later line gives in full ("New York, NY") is the location, not a bare town above it.
-    const placeAt = ls.map((l) => headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p]).some((p) => contactOf(unbulleted(p))?.key === 'location'));
+    const placeAt = ls.map((l) => headerPieces(l.text).flatMap((p) => runOf(unbulleted(p)) || [p]).some((p) => contactOf(unbulleted(p))?.key === 'location'));
+    let labelled = false; // the piece before said "Location" (the Sidebar's label over its value)
     for (const [k, l] of ls.entries()) {
       const leftover = [];
       let found = false;
-      for (const listed of headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p])) {
+      for (const listed of headerPieces(l.text).flatMap((p) => runOf(unbulleted(p)) || [p])) {
         const piece = unbulleted(listed);
-        if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
+        // The name over a contact: its value says what it is — and what is under "Location" is the place.
+        if (BARE_LABEL.test(piece)) { labelled = /^(?:location|address)$/i.test(piece); continue; }
+        const afterLabel = labelled;
+        labelled = false;
         // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
         // it was shown as its Display label (R4-IMP-02).
         const linked = LINKED.exec(piece);
@@ -2066,14 +2214,18 @@ export function resumeFromText(input) {
         const c = contactOf(piece);
         if (c) found = true;
         if (c && !personal[c.key]) personal[c.key] = c.value;
+        // Under "Location" a short value with no digit or @ is the place, whatever its words ("Walnut Creek").
+        else if (!c && afterLabel && !personal.location && LABEL_VALUE.test(piece)) { personal.location = piece; found = true; }
         else leftover.push(listed); // not a contact, or a second one of a kind
       }
       // A town with no region after it ("London", "Singapore", "San Francisco Bay Area") beside a contact
       // on its line, or LinkedIn's "… Area" alone on a line of the header: the location. Before, it went
       // to "Additional Information", the location left empty, even from the app's own exports
-      // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing.
-      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)));
-      if (towns.length === 1 && (found || (alone && leftover.length === 1 && /\s(?:Area|Region)$/.test(towns[0])))) {
+      // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing. A town of several
+      // words that says it is one ("Walnut Creek", "Greater Boston") is the location alone on its line too
+      // (R5-HUNT13-HEADER-TOWN-SHAPE).
+      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)) || (found && knownTown(unbulleted(p))));
+      if (towns.length === 1 && (found || (alone && leftover.length === 1 && BARE_TOWN.named(unbulleted(towns[0]))))) {
         personal.location = unbulleted(towns[0]);
         leftover.splice(leftover.indexOf(towns[0]), 1);
       }
@@ -2094,21 +2246,32 @@ export function resumeFromText(input) {
     const t = rest[0] && more.length <= 1 ? { ...rest[0], text: unbulleted(rest[0].text) } : null;
     // A contact line set apart at dashes or commas is none either; one led by a field that is no
     // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
-    const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
+    const run = t && headerPieces(t.text).length === 1 ? runOf(t.text) : null;
     // A job title with a comma in it ("Product Manager, Payments") reads as a place: a role word says
     // it is the title, as the entries' rules check. Before, it became the location, and the real one
     // on the contact line went to "Additional Information".
     // Not a town with a role word in its name ("Hilton Head, SC", "Mentor, Ohio", "Lead, SD") alone under
     // the name: one that ends in a state or country is the title only when the header has its place elsewhere.
     const contact = t && contactOf(t.text);
-    const placeElsewhere = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => contactRun(p) || [p]).some((p) => contactOf(p)?.key === 'location'));
+    const placeElsewhere = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => runOf(p) || [p]).some((p) => contactOf(p)?.key === 'location'));
     const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text) && (!REGION_END.test(t.text) || placeElsewhere());
-    if (t && headerPieces(t.text).length === 1 && (!contact || role) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
+    // Nor a contact's label ("EMAIL", the Sidebar's, over its value), nor a town that says it is one by
+    // its words ("Walnut Creek" right under the name, no headline) unless a place is on a later line:
+    // then it may be the headline after all.
+    const placeLater = () => rest.slice(1).some((l) => headerPieces(l.text).flatMap((p) => runOf(p) || [p]).some((p) => contactOf(p)?.key === 'location' || BARE_TOWN.test(p)));
+    const notTitle = t && (BARE_LABEL.test(t.text) || (BARE_TOWN.named(t.text) && !placeLater()));
+    if (t && headerPieces(t.text).length === 1 && (!contact || role) && !notTitle && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
     } else if (run && !isContact(run[0])) {
-      personal.title = run[0];
-      rest[0] = { ...t, text: run.slice(1).join('\t') };
+      // A town first ("Walnut Creek — jane@x.com") is the location, no title: the line stays whole for
+      // takeContacts. The field after it that is neither a contact nor a town ("Walnut Creek — Senior
+      // Engineer — jane@x.com") is the title.
+      const at = knownTown(run[0]) ? 1 : 0;
+      if (run[at] && !isContact(run[at]) && !knownTown(run[at])) {
+        personal.title = run[at];
+        rest[0] = { ...t, text: run.filter((_, i) => i !== at).join('\t') };
+      }
     }
     takeContacts(rest, {
       alone: true,
@@ -2125,7 +2288,7 @@ export function resumeFromText(input) {
     const name = tamed(title);
     if (type === 'summary') { summary.push(...body); return; }
     if (type === 'contact') {
-      takeContacts(body, { spill: (text, links) => other.push({ text, links }) });
+      takeContacts(body, { alone: true, spill: (text, links) => other.push({ text, links }) });
       return;
     }
     // A heading with nothing under it keeps its words (R4-IMP-03): an unknown one is no section of its own.
