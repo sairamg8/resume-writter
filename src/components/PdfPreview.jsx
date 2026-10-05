@@ -134,7 +134,17 @@ function PageCanvas({ canvas, width, height, label }) {
 export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé', active = true }) {
   const [view, setView] = useState(null); // { pages, painted: [{ canvas, cssHeight }], cssWidth, gen }
   const [texts, setTexts] = useState(null); // { gen, list }: the text of the pages of view `gen`, read after they were painted
-  const [status, setStatus] = useState(active ? 'rendering' : 'paused');
+  const [status, setStatusState] = useState(active ? 'rendering' : 'paused');
+  // The status last set. A change of `input` asks for 'rendering' on every keystroke, and asking for what the
+  // status is already being set to is an update React cannot skip while the first one waits to render: 50 keys
+  // in a burst, with no time to render between them, and React gave up with error #185 and dropped the next
+  // key (R2-142). Only a change is asked for.
+  const statusAsked = useRef(active ? 'rendering' : 'paused');
+  function setStatus(next) {
+    if (statusAsked.current === next) return;
+    statusAsked.current = next;
+    setStatusState(next);
+  }
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
   const generation = useRef(0); // bumped by every change that asks for a build
