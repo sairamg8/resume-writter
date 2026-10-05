@@ -49,9 +49,21 @@ test('a part nobody changed here keeps its identity: no preview is built again',
   const mine = edited(base, 20, (r) => { r.personal.website = 'x'; });
   const theirs = edited(base, 30, (r) => { r.sections[1].items[0].role = 'Lead'; });
   const out = mergeResume(base, mine, theirs);
-  assert.equal(out.sections[0], mine.sections[0], 'the section only this tab holds unchanged');
-  assert.equal(out.settings, mine.settings);
+  assert.equal(out.personal, mine.personal, 'the part only this tab changed is this tab\'s object');
+  assert.equal(out.settings, mine.settings, 'the part both hold the same is this tab\'s object');
   assert.equal(out.sections[1].items[0].role, 'Lead');
+});
+
+test('a copy stamped long before the one this tab last read is an old one: this tab\'s résumé stands, not a text typed twice', () => {
+  // The other tab's copy is what the résumé was before this tab typed "Casey Example": read against the
+  // 'C' this tab last saw in storage it looks like the other tab typing "asey".
+  const base = resume({ updatedAt: 1_000_000, personal: { name: 'C', hiddenFields: [] } });
+  const mine = edited(base, 1_000_500, (r) => { r.personal.name = 'Casey Example'; });
+  const old = resume({ updatedAt: 1, personal: { name: 'Casey', hiddenFields: [] } });
+  assert.equal(mergeResume(base, mine, old), mine);
+  // Not old: a few seconds before the copy this tab read, it is a save made meanwhile and is merged.
+  const meanwhile = resume({ updatedAt: 995_000, personal: { name: 'C', hiddenFields: [], website: 'x' } });
+  assert.equal(mergeResume(base, mine, meanwhile).personal.website, 'x');
 });
 
 test('a key one tab deleted stays deleted, and one both tabs set differently goes to the later writer', () => {

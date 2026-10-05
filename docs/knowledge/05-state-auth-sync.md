@@ -33,6 +33,9 @@ through the `storage` event and takes it in (`withOtherTabsSave`).
   résumé's `updatedAt`, then its JSON as the tie-break), so that both tabs weigh the same two copies the same
   way and end on the same résumé. A merge that is neither copy is stamped one past the later `updatedAt`
   (cloud sync versions a résumé by it). A part nobody changed here keeps its object, so no preview is rebuilt.
+  A copy stamped more than 10 s before the one this tab last read is an old one (a tab that never heard of
+  what was saved since): it is not merged, this tab's résumé stands (read against `base` it would look like an
+  edit that undid what this tab typed after it).
 - No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
   copy as it is.
 

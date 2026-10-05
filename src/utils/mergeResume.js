@@ -123,6 +123,8 @@ function merge3(base, mine, theirs, mineLater) {
 }
 
 const stamp = (r) => (Number.isFinite(r?.updatedAt) ? r.updatedAt : 0);
+/** A copy stamped this much before the one this tab last read is an old one (a save lasts under 2 s). */
+const OLD_MS = 10_000;
 
 /**
  * The résumé once another tab saved `theirs` while this tab changed `base` (what storage held when it
@@ -130,8 +132,12 @@ const stamp = (r) => (Number.isFinite(r?.updatedAt) ? r.updatedAt : 0);
  * the same part changed in both by the writer who edited last (a text changed in two places by both,
  * in both). Both tabs weigh the same two copies the same way, so they end up with the same résumé.
  * A result that is neither copy is a new version of the résumé: one stamp past the later of the two.
+ * A `theirs` stamped long before `base` is an old copy of the résumé, saved by a tab that never heard of
+ * what this tab has read since: nothing in it is news, and read against `base` it would look like an
+ * edit that put back what this tab typed after it (typed text twice): this tab's résumé stands.
  */
 export function mergeResume(base, mine, theirs) {
+  if (stamp(theirs) + OLD_MS < stamp(base)) return mine;
   const mineLater = stamp(mine) !== stamp(theirs) ? stamp(mine) > stamp(theirs) : JSON.stringify(mine) > JSON.stringify(theirs);
   const merged = merge3(base, mine, theirs, mineLater);
   if (same(merged, mine)) return mine;
