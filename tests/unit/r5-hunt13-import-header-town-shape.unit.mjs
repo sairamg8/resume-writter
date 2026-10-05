@@ -186,8 +186,9 @@ test('a full place on a later header line is still the location, not a bare town
   const r = read('Jane Doe\njane@x.com | Walnut Creek\nAustin, TX');
   assert.equal(r.personal.location, 'Austin, TX');
   assert.equal(extra(r), '<p>Walnut Creek</p>');
-  const nocomma = read('Jane Doe\njane@x.com | Walnut Creek\nAustin TX');
-  assert.equal(nocomma.personal.location, 'Austin TX');
+  // A state or country after one word is a place beside a contact only; with its postcode it is one alone too.
+  const nocomma = read('Jane Doe\njane@x.com | Walnut Creek\nAustin TX 78701');
+  assert.equal(nocomma.personal.location, 'Austin TX 78701');
   assert.equal(extra(nocomma), '<p>Walnut Creek</p>');
 });
 
