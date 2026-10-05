@@ -136,7 +136,7 @@ export const ACTION_VERBS = new Set([
  * punctuation that did not end the word: 'http://' and 100 000 slashes and an 'x' took 7.5 s
  * (typing-freeze 7b). Only the two ends are read here.
  */
-export function trimNonLetters(word) {
+function trimNonLetters(word) {
   const letter = (i) => { const c = word.charCodeAt(i) | 32; return c >= 97 && c <= 122; };
   let from = 0;
   let to = word.length;

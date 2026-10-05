@@ -6,7 +6,7 @@
 // index scans now, and read what the patterns read (the old file is kept in tests/fixtures/typing-freeze-reference).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeBullet, insertActionVerb, insertMetric, leadsWithActionVerb, trimNonLetters } from '../../src/utils/bulletOptimizer.js';
+import { analyzeBullet, insertActionVerb, insertMetric, leadsWithActionVerb } from '../../src/utils/bulletOptimizer.js';
 import * as before from '../fixtures/typing-freeze-reference/bulletOptimizer.mjs';
 
 const N = 100_000;
@@ -41,9 +41,12 @@ test('a closing run of punctuation is split from the text in linear time', () =>
   assert.equal(insertMetric('...', 'by 3%'), 'by 3%');
 });
 
-test('trimNonLetters cuts the characters that are no ASCII letter from both ends, and only those', () => {
-  const table = [['"Led,"', 'Led'], ['•Engineered', 'Engineered'], ['Co-authored,', 'Co-authored'], ['123', ''], ['', ''], ['a', 'a'], ['--a--b--', 'a--b'], ['élan', 'lan'], ['aé', 'a']];
-  for (const [word, trimmed] of table) assert.equal(trimNonLetters(word), trimmed, JSON.stringify(word));
+test('a first word loses the characters that are no ASCII letter at both ends, and only those', () => {
+  const table = [['"Led,"', 'Led'], ['•Engineered', 'Engineered'], ['Co-authored,', 'Co-authored'], ['123', ''], ['a', 'a'], ['--a--b--', 'a--b'], ['élan', 'lan'], ['a\u00e9', 'a']];
+  for (const [word, first] of table) {
+    assert.equal(analyzeBullet(word).firstWord, first, JSON.stringify(word));
+    assert.equal(analyzeBullet(word).firstWord, before.analyzeBullet(word).firstWord, JSON.stringify(word));
+  }
 });
 
 const PIECES = ['Led', 'led', 'Was', 'responsible for', 'handled', 'Manage', 'Worked with', 'engineer', 'to', 'the', 'team', '.', '!', '?', ';', ':', '...', '\n', ' ', '-', '•', '"', '(', "'",

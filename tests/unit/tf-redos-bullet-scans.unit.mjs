@@ -6,7 +6,7 @@
 // scans now and answer as the patterns did (the old file is kept in tests/fixtures/typing-freeze-reference).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeBullet, hasMetric, stripTags } from '../../src/utils/bulletOptimizer.js';
+import { analyzeBullet, hasMetric } from '../../src/utils/bulletOptimizer.js';
 import * as before from '../fixtures/typing-freeze-reference/bulletOptimizer.mjs';
 
 /** The old patterns took 4 to 12 s on these; the scans read them in a few milliseconds. */
@@ -23,8 +23,8 @@ test('a long run of "<" with no ">" is read in linear time', () => {
   const { out, ms } = timed(() => analyzeBullet(text));
   assert.equal(out.clean, text);
   assert.ok(ms < LIMIT_MS, `analyzeBullet took ${ms.toFixed(0)} ms on ${text.length} characters`);
-  const mixed = timed(() => stripTags('<>'.repeat(50_000) + '<'.repeat(50_000)));
-  assert.ok(mixed.ms < LIMIT_MS, `stripTags took ${mixed.ms.toFixed(0)} ms`);
+  const mixed = timed(() => analyzeBullet('<>'.repeat(50_000) + '<'.repeat(50_000)));
+  assert.ok(mixed.ms < LIMIT_MS, `analyzeBullet took ${mixed.ms.toFixed(0)} ms on '<>' and '<' runs`);
 });
 
 test('a fiscal-year mark followed by a long run of spaces is read in linear time', () => {
@@ -47,11 +47,11 @@ test('a long number after a letter is read in linear time, and is part of a name
   for (const [text, metric] of table) assert.equal(hasMetric(text), metric, text);
 });
 
-test('stripTags cuts what /<[^>]+>/g cut', () => {
-  const table = [['<b>x</b>', 'x'], ['a<b', 'a<b'], ['<>x', '<>x'], ['a<>b<i>c', 'a<>bc'], ['<<a>b', 'b'], ['1 < 2 > 1', '1  1'], ['', ''], ['plain', 'plain']];
+test('the tags cut from a bullet are the ones /<[^>]+>/g cut', () => {
+  const table = [['<b>x</b>', 'x'], ['a<b', 'a<b'], ['<>x', '<>x'], ['a<>b<i>c', 'a<>bc'], ['<<a>b', 'b'], ['1 < 2 > 1', '1  1'], ['plain', 'plain']];
   for (const [text, stripped] of table) {
-    assert.equal(stripTags(text), stripped, JSON.stringify(text));
-    assert.equal(stripTags(text), text.replace(/<[^>]+>/g, ''), JSON.stringify(text));
+    assert.equal(analyzeBullet(text).clean, stripped, JSON.stringify(text));
+    assert.equal(analyzeBullet(text).clean, text.replace(/<[^>]+>/g, '').trim(), JSON.stringify(text));
   }
 });
 
