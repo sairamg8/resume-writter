@@ -85,13 +85,19 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
 - **Root cause (coordinator, from react-dom 19.2.8's commitRoot):** a commit counts as a "nested update" when the lanes it rendered include a discrete (sync) one and the root
   still has a Sync, InputContinuous or Default update waiting (`remainingLanes & 42`); 50 such commits in a row and the next setState throws #185, from the input's own onChange.
   Keys arriving faster than React can render its Default-lane work between them (100 presses at ~9 ms) hit it when EVERY commit leaves a freshly enqueued update. Two effects
-  asked for a state on every keystroke, and asking for the value a state is already being set to is an update React cannot skip while the first waits to render: the store's
+  asked for a state on every keystroke, and React skips setting a state to the value it already holds only when the component has no update waiting on either copy of its
+  fiber (its eager bailout); a component that re-rendered from the keystroke's own update, or still holds the last set, has one, so the set is queued again: the store's
   `setSaving(true)` (useResumeStore.js, App) and the preview's `setStatus('rendering')` (PdfPreview.jsx). Found by walking the fiber tree after a burst: only `App` and
   `PdfPreview` held pending Default-lane updates. One pending update is harmless (the next sync commit renders it); a new one per keystroke is fatal.
 - **Fixed on `claude/fix-error-185`** (on top of the other three): both setters remember the value last requested and ask only for a change. Dev build, real key events:
   100 presses into Full Name and into the Professional summary: +100 characters in the field and in storage, no error (before: 99 of 100, error at #52-53). A synchronous
   120-event burst with the preview 'ready' at the start: no error, pending lanes 0 from the third key. Test: tests/pdf/114-keystroke-burst (80 sync commits through the real
-  store and the real preview; fails with error #185 without the fix). Any other component that sets a CHANGING value from an effect on every keystroke would bring it back.
+  store and the real preview; fails with error #185 without the fix). Any other component that sets a state from an effect on every keystroke would bring it back: a
+  changing value always, and the SAME value too when that component has an update waiting (it re-rendered from its own update, as App does on every keystroke).
+- **Signed in, too (2026-10-05, review of `375a0ed6`; branch `claude/typing-merge-1005`):** the fix covered signed-out users only. Once its first sync is done the cloud
+  sync reports 'syncing' on every change of the résumés (cloudSyncQueue.js), and useCloudSync set it with the raw setter, in App: the same mechanism. useCloudSync now
+  sets the status only when it changes (the other reporters are not per keystroke). Test: tests/pdf/114-keystroke-burst-signed-in (useAppStore and useCloudSync in one
+  component, signed in over the stand-in Firestore, 100 keys ~9 ms apart; error #185 without the fix).
 
 ### 5. Cross-tab: concurrent typing in two tabs of the same résumé loses edits — MEDIUM, 2/2 (webfreeze + pipeline)
 - Tab A types Website (or Full Name) while tab B edits a DIFFERENT field once/with 4 chars: B's edit (or A's later characters) vanish in both tabs.

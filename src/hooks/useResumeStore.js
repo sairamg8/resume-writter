@@ -111,10 +111,11 @@ export function useAppStore() {
   // What the editor's save status reads: a change held until its coalesced write (`saving`), and
   // when the last write reached storage (`savedAt`) — not when the résumé last changed.
   const [saving, setSavingState] = useState(false);
-  // What `saving` was last set to. The save effect below runs on every keystroke, and asking for the value
-  // `saving` is already being set to is an update React cannot skip while the first one waits to render:
-  // 50 keys in a burst, with no time to render between them, and React gave up with error #185 and dropped
-  // the next key (R2-142). Only a change is asked for.
+  // What `saving` was last set to. The save effect below runs on every keystroke, in the component that has
+  // just re-rendered from that keystroke's own update. React skips setting a state to the value it holds only
+  // when the component has no update waiting on either copy of its fiber: in a burst of keys - no time to
+  // render between them - it has one each time, so 50 keys and React gave up with error #185 and dropped the
+  // next one (R2-142). Only a change is asked for (useCloudSync's status the same, signed in).
   const savingAsked = useRef(false);
   function setSaving(next) {
     if (savingAsked.current === next) return;

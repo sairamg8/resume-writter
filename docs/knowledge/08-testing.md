@@ -91,7 +91,8 @@ starts the dev server in-process), `tests/pdf/111-preview-one-build-at-a-time.te
 `tests/pdf/111-preview-status-undo-hidden.test.mjs` (the preview's queued build and its status),
 `tests/pdf/112-pdf-worker-watchdog.test.mjs` (the hunt's watchdog cases on the one watchdog, and the main thread's
 budget), `tests/pdf/113-font-load-stall.test.mjs` (the bounded font wait) and
-`tests/pdf/114-keystroke-burst.test.mjs` (React error #185).
+`tests/pdf/114-keystroke-burst.test.mjs` and `tests/pdf/114-keystroke-burst-signed-in.test.mjs` (React error #185; the
+second mounts `useCloudSync` signed in over the stand-in Firestore, `_setCloudIoForTest`).
 
 ## Demo accounts and the owner's private résumé
 

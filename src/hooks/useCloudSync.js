@@ -35,7 +35,14 @@ const publicLinks = db
  */
 export function useCloudSync({ user, appState, store }) {
   // Hook order is fixed — never add/remove hooks conditionally.
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle|syncing|synced|offline|error|stopped|off
+  const [syncStatus, setSyncStatusState] = useState('idle'); // idle|syncing|synced|offline|error|stopped|off
+  // The status last set. Once the first sync is done the sync reports 'syncing' on every change of the
+  // résumés (cloudSyncQueue.js) - every keystroke, in App, the component that has just re-rendered from
+  // that keystroke's own update. React skips setting a state to the value it holds only when the
+  // component has no update waiting on either copy of its fiber; in a burst of keys it has one each time,
+  // so each 'syncing' was another update, and at about the 50th React threw error #185 and dropped the
+  // key (R2-142), signed in only. Only a change is set; every transition is reported as before.
+  const statusSet = useRef('idle');
   const [lastSynced, setLastSynced] = useState(null);
   // Set once the signed-in account's résumé list is known (first sync done, or no cloud to sync
   // with): { uid, cloudOriginals, cloudDeleted } — the cloud's originals (demoSeed.js), deleted
@@ -52,7 +59,16 @@ export function useCloudSync({ user, appState, store }) {
   const [page] = useState(() => browserCloudSync(window, {
     io,
     store: liveStore(() => latest.current),
-    report: { status: setSyncStatus, synced: setLastSynced, account: setAccount, held: setHeldResumes },
+    report: {
+      status: (next) => {
+        if (statusSet.current === next) return;
+        statusSet.current = next;
+        setSyncStatusState(next);
+      },
+      // Not per keystroke: the time of a flush that reached the cloud, the account once per first sync,
+      // and the held list only when a résumé is held or let go.
+      synced: setLastSynced, account: setAccount, held: setHeldResumes,
+    },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
     publicLinks,
     log: (...args) => console.info(...args),

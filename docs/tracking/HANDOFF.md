@@ -4,7 +4,7 @@
 The hunt's branches (entries below) were cut from old master `e1267bc9`; master has since shipped PERF-5 (PdfPreview) and PERF-6 (its own
 worker watchdog). The merges keep master's code and the hunt's docs; each concern is then ported as one commit with its own fail-first proof:
 dev-server worker (`e68f64cf`, vite.config.js), one queued preview build (`4a9dcfc9`), preview status after an undone or hidden change
-(`7580111a`, new), React #185 (`d22467ca`), the 10 s font wait, now one deadline per build for all CDN faces (`de914f83`), and ONE watchdog:
+(`7580111a`, new), React #185 (`d22467ca`; signed in too: useCloudSync's status, a later commit), the 10 s font wait, now one deadline per build for all CDN faces (`de914f83`), and ONE watchdog:
 PERF-6's budgets (20 s + 250 ms/entry, 40 s cold), now also on the main thread's builds; the hunt's 60 s watchdog is not kept, its cases are
 in tests/pdf/112 (`07e823c4`). Knowledge docs and the R2-142 row updated. **Next:** the coordinator merges it after its full gate is green.
 Open from the hunt, unchanged: two tabs typing at once lose edits; the ATS job-description regex; richText/bulletOptimizer ReDoS on paste;
@@ -26,7 +26,7 @@ branch's head (dispatched with the final docs commit), fix anything red, then PR
   (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Checked in the real app on the prod bundle with a stand-in worker: stalled CDN -> ready in ~12 s in Noto Sans; a mute worker ->
   alert + Retry at exactly 60.0 s, Retry works. A face that was only slow rebuilds the preview when it lands (`f34a9d0a`, from the second-agent review). CI: `7dbf69e9` fail-first 37260427341 + related tests 37260435645 green; the same tests on the unfixed parent (branch `claude/tmp-watchdog-unfixed`, delete it) fail by hanging, as they should (37260736638); `f34a9d0a` and the final head: newest runs on this branch.
 - **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version of 1, rejected in review: dead-code unit test + wrong-reason fail-first), `claude/tmp-dev-worker-unfixed` and `claude/tmp-watchdog-unfixed` (proof branches).
-- **4. React error #185 (a burst of >=51 keystrokes dropped one): FIXED on `claude/fix-error-185`** — two effects asked React for a state on every keystroke (the store's `setSaving`, the preview's `setStatus`); each now asks only for a change. Real key events: 100 of 100 characters kept. Test 114.
+- **4. React error #185 (a burst of >=51 keystrokes dropped one): FIXED signed out on `claude/fix-error-185`, and signed in on `claude/typing-merge-1005`** — effects asked React for a state on every keystroke (the store's `setSaving`, the preview's `setStatus`, and signed in useCloudSync's sync status, 'syncing' per change); each now asks only for a change. Real key events: 100 of 100 characters kept (signed out). Tests 114 and 114-keystroke-burst-signed-in.
 - **Still open from the hunt** (details in the write-up): (5) two tabs of one résumé typing at
   once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
   richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.

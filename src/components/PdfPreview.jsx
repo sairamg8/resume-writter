@@ -135,10 +135,10 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const [view, setView] = useState(null); // { pages, painted: [{ canvas, cssHeight }], cssWidth, gen }
   const [texts, setTexts] = useState(null); // { gen, list }: the text of the pages of view `gen`, read after they were painted
   const [status, setStatusState] = useState(active ? 'rendering' : 'paused');
-  // The status last set. A change of `input` asks for 'rendering' on every keystroke, and asking for what the
-  // status is already being set to is an update React cannot skip while the first one waits to render: 50 keys
-  // in a burst, with no time to render between them, and React gave up with error #185 and dropped the next
-  // key (R2-142). Only a change is asked for.
+  // The status last set. A change of `input` asks for 'rendering' on every keystroke. React skips setting a
+  // state to the value it holds only when the component has no update waiting on either copy of its fiber,
+  // and in a burst of keys - no time to render between them - it has one each time (the last set): 50 keys
+  // and React gave up with error #185 and dropped the next one (R2-142). Only a change is asked for.
   const statusAsked = useRef(active ? 'rendering' : 'paused');
   function setStatus(next) {
     if (statusAsked.current === next) return;

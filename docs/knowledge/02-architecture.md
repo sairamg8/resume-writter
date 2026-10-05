@@ -74,7 +74,8 @@ A change undone before its build started gives the status back to the last build
 `rendering` until it does), and a change made while hidden is a generation of its own, so a build still on
 its way cannot report `ready` over `paused` (`tests/pdf/111-preview-status-undo-hidden.test.mjs`). Status
 writes ask React only for a change: one per keystroke, unchanged, in a burst of 50 made React throw error
-#185 and drop a key (`tests/pdf/114-keystroke-burst.test.mjs`, with the store's `saving`).
+#185 and drop a key (`tests/pdf/114-keystroke-burst.test.mjs`, with the store's `saving`; signed in, `useCloudSync`'s
+sync status, reported `syncing` on every change: `tests/pdf/114-keystroke-burst-signed-in.test.mjs`).
 
 Export:
 
