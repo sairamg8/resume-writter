@@ -96,8 +96,8 @@ describe('a face that never answers is waited for only so long (R2-142)', () => 
       assert.equal(told, 0, 'nothing has arrived yet');
 
       open();
-      await wait(150); // the fetch the first build gave up on finishes
-      assert.equal(told, 1, 'the preview is told to build again: the notice does not wait for the next edit');
+      await wait(400); // the fetches the first build gave up on finish (a family's six faces together)
+      assert.equal(told, 1, 'the preview is told to build again, once: the notice does not wait for the next edit');
       const fetches = net.faceFetches();
       const next = await loader.resolvePdfFonts(settings, 'Pat Example');
       assert.equal(primaryOf(next.fontFamily), 'Testface Mono', 'its own data is in');

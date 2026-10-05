@@ -439,6 +439,17 @@ export const _setFontLoadWaitForTest = (ms) => { fontLoadMs = ms ?? FONT_LOAD_MS
 /** Faces whose first fetch ran past the wait, each with when a build may wait for it again (as `borrowed`): until then it counts as not loaded, so a dead network costs the wait once, not on every build. */
 const stalledFaces = new Map();
 
+let lateNote = null;
+/**
+ * A face whose first fetch outran the wait has landed: tell the preview to build again. A family has six
+ * faces and they land together, so the word goes out once for those that do, not once each.
+ */
+function noteLateFace() {
+  if (lateNote) return;
+  lateNote = setTimeout(() => { lateNote = null; faceFetched(); }, 50);
+  lateNote.unref?.();
+}
+
 /** Whether `source` loads within the wait: true loaded, false failed or still on its way. */
 function loadInTime(source) {
   if (source.data) {
@@ -453,7 +464,7 @@ function loadInTime(source) {
   const stalled = new Promise((resolve) => {
     timer = setTimeout(() => {
       stalledFaces.set(source, retryAt());
-      load.then(() => faceFetched(), () => { /* it failed: the cooldown retries it */ });
+      load.then(noteLateFace, () => { /* it failed: the cooldown retries it */ });
       resolve(false);
     }, fontLoadMs);
     timer.unref?.();
