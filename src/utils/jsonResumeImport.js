@@ -93,6 +93,18 @@ function addRest(sections, type, items) {
 }
 
 /**
+ * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org). Here, beside the
+ * import, so the Dashboard reads both from this module: jsonResume.js also carries the export
+ * (jsonResumeExport.js), which only the editor uses, and importing from it put that on the start-up path.
+ */
+export function isJsonResume(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+  if (obj.basics && typeof obj.basics === 'object') return true;
+  if (Array.isArray(obj.work) && Array.isArray(obj.education) && !Array.isArray(obj.sections)) return true;
+  return false;
+}
+
+/**
  * Converts a standard JSON Resume (jsonresume.org schema) to a CPWT-CV resume object. Each value
  * is stored as text (storedText): a file written by hand or by another tool can hold a number, a
  * list or an object where the schema has text. Such a value either stopped the import here or was

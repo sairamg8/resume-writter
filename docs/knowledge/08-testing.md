@@ -22,6 +22,10 @@ Helpers the PDF and unit suites share:
   `getDocument` to log paint and text requests, as `110-r2-142-perf5-*` does)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
   and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
+- `tests/pdf/startup-modules.mjs` — the start-up path by module, walked from `src/main.jsx` through static
+  imports only, so a test can name a module that must stay lazy (`71-startup-public-link-lazy`,
+  `122-startup-json-resume-export-lazy`); `71-startup-chunks` weighs the built chunks and logs the kB left
+  under the 1,100 kB cap
 - `tests/fixtures/` — fictional sample résumés
 
 `tests/pdf/11-photo.test.mjs` paints pages through `@napi-rs/canvas` (a devDependency).

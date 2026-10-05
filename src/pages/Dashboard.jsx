@@ -11,7 +11,7 @@ import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
-import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
+import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResumeImport'; // not jsonResume.js: its export is the editor's
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';

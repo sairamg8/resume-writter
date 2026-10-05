@@ -10,13 +10,9 @@
 // size in 71-startup-chunks.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { fakeFirestore, resumePath } from './fake-firestore.mjs';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+import { startupModules } from './startup-modules.mjs';
 
 let link;
 let lazy;
@@ -89,39 +85,6 @@ describe('lazyPublicIo: publicIo\'s calls, publicLink.js loaded at the first (R2
     assert.equal(loads, 2, 'a load that worked is kept');
   });
 });
-
-/**
- * The app's own modules the entry (index.html's src/main.jsx) reaches through static imports only: the
- * start-up path, as a build makes it (dynamic import() starts a chunk of its own; 71-startup-chunks walks
- * the built chunks). Packages are not followed: none imports the app's modules.
- */
-function startupModules() {
-  const STATIC = /^\s*(?:import|export)\s(?:[^'";]*?\sfrom\s)?\s*['"]([^'"]+)['"]/gm;
-  const resolve = (from, spec) => {
-    const bare = spec.split('?')[0];
-    let base = null;
-    if (bare.startsWith('@/')) base = path.join(ROOT, 'src', bare.slice(2));
-    else if (bare.startsWith('.')) base = path.resolve(path.dirname(from), bare);
-    if (!base) return null;
-    for (const ext of ['', '.js', '.jsx', '.mjs', '/index.js', '/index.jsx']) {
-      if (existsSync(base + ext) && statSync(base + ext).isFile()) return base + ext;
-    }
-    return null;
-  };
-  const seen = new Set();
-  const stack = [path.join(ROOT, 'src/main.jsx')];
-  while (stack.length) {
-    const file = stack.pop();
-    if (seen.has(file)) continue;
-    seen.add(file);
-    if (!/\.(m?js|jsx)$/.test(file)) continue;
-    for (const [, spec] of readFileSync(file, 'utf8').matchAll(STATIC)) {
-      const next = resolve(file, spec);
-      if (next) stack.push(next);
-    }
-  }
-  return new Set([...seen].map((f) => path.relative(ROOT, f).split(path.sep).join('/')));
-}
 
 describe('publicLink.js is off the start-up path (R2-142)', () => {
   it('no module the entry imports statically reaches it; its callers there do, through lazyPublicIo', () => {
