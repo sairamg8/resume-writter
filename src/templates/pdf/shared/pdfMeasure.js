@@ -215,12 +215,18 @@ export function breakToFit(style, maxWidth) {
   // react-pdf asks again for a word it has seen (each measure of the same Text), and the answer
   // depends on nothing but the word.
   const seen = new Map();
+  const widths = new Map();
+  const advance = (ch) => {
+    let w = widths.get(ch);
+    if (w === undefined) { w = textWidth(ch, { ...style, letterSpacing: 0 }); widths.set(ch, w); }
+    return w;
+  };
   return (word) => {
     if (seen.has(word)) return seen.get(word);
     let out;
     if (fitsOnLine(word, style, maxWidth)) out = registered(word);
     else {
-      const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits)));
+      const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits, guessRuns(part, style, maxWidth - FIT_SLACK, advance))));
       out = parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
     }
     seen.set(word, out);
@@ -230,12 +236,15 @@ export function breakToFit(style, maxWidth) {
 
 /**
  * `part` cut into the longest runs of characters that `fits` (one character at the least). Each
- * run's end is found by doubling its length until a prefix no longer fits, then halving between the
- * last that did and that one — a prefix is never narrower than a shorter one of the same text, so
- * a run costs a handful of measures of its own length, not one per character (typing-freeze 7: a
- * 20 000-character token measured every prefix of every run, ~9 s).
+ * run's end is found from `guess(start, room)`, the length a run starting at character `start` is
+ * expected to have (at most `room`), then confirmed with the real measure: when that length fits
+ * and one more does not, it is the run, at two measures of a run's own length. Where the guess is
+ * off (kerning, joined scripts) the end is searched out from it by doubling steps then halving.
+ * With no guess, from one character by doubling. A prefix is never narrower than a shorter one of
+ * the same text, so a run costs a handful of measures of its own length, not one per character
+ * (typing-freeze 7: a 20 000-character token measured every prefix of every run, ~9 s).
  */
-export function runsThatFit(part, fits) {
+export function runsThatFit(part, fits, guess) {
   const chars = [...part];
   const at = [0]; // at[i]: where character i starts in `part`
   for (const ch of chars) at.push(at[at.length - 1] + ch.length);
@@ -246,9 +255,20 @@ export function runsThatFit(part, fits) {
     const fitsLen = (n) => fits(part.slice(at[start], at[start + n]));
     let good = 1; // a run is one character at the least
     let bad = 0; // the shortest length known not to fit; 0: none yet
+    const first = guess ? Math.min(room, Math.max(1, guess(start, room) | 0)) : 1;
+    if (first > 1 && !fitsLen(first)) {
+      bad = first; // too long: step down from it
+      for (let step = 1; ; step *= 2) {
+        const probe = bad - step;
+        if (probe <= 1) break;
+        if (fitsLen(probe)) { good = probe; break; }
+        bad = probe;
+      }
+    } else good = first;
+    let step = 1;
     while (!bad && good < room) {
-      const probe = Math.min(room, good * 2);
-      if (fitsLen(probe)) good = probe;
+      const probe = Math.min(room, good + step);
+      if (fitsLen(probe)) { good = probe; step *= 2; }
       else bad = probe;
     }
     while (bad - good > 1) {
@@ -260,4 +280,28 @@ export function runsThatFit(part, fits) {
     start += good;
   }
   return runs;
+}
+
+/**
+ * Where a run of `part`'s characters is expected to end in a column `limit` pt wide: from each
+ * character's own advance (a width kept per character for the style, so a token of one thousand
+ * different characters is laid out once each, not once per run) and the letterSpacing between
+ * them. It leaves out kerning and shaping, which is why runsThatFit confirms it with the real
+ * measure; it is exact for the usual run of Latin, CJK or emoji.
+ */
+function guessRuns(part, style, limit, advance) {
+  const chars = [...part];
+  const total = [0];
+  for (const ch of chars) total.push(total[total.length - 1] + advance(ch));
+  const spacing = style?.letterSpacing ?? 0;
+  return (start, room) => {
+    let lo = 1;
+    let hi = room;
+    while (lo < hi) { // the most characters whose summed advances stay inside the limit
+      const mid = (lo + hi + 1) >> 1;
+      if (total[start + mid] - total[start] + spacing * (mid - 1) <= limit) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
+  };
 }

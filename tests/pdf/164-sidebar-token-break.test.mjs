@@ -7,7 +7,7 @@
 // the old loop is kept below as the reference, compared on a seeded corpus.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, loadModule } from './harness.mjs';
+import { setup, teardown, resume, loadModule, render, read, allText } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -135,5 +135,43 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     assert.equal(parts.join(''), token);
     assert.ok(parts.length > 100);
     for (const part of parts.slice(0, -1)) assert.ok(textWidth(part, style) <= 145, 'a run fits the box');
+  });
+
+  it('lays a 20 000-character token out in about two characters of layout per character, at the real column width', async (t) => {
+    if (!(await isOnline())) return t.skip('offline');
+    // Review of the first fix: halving still laid out ~5-6 characters per character at a real width
+    // (a run is ~30 characters, and each probe is up to twice that). The run's end is now predicted
+    // from per-character advances and confirmed by two layouts. Counted at the font's layout call.
+    const r = resume({ template: 'sidebar' });
+    const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
+    const { breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
+    const { Font } = await loadModule('@react-pdf/renderer');
+    const { fontFamily } = await resolvePdfFonts(r.settings, collectText(r));
+    const face = Font.getFont({ fontFamily, fontWeight: 400, fontStyle: 'normal' }).data;
+    const real = face.layout;
+    let laid = 0;
+    face.layout = function counted(run, ...rest) { laid += [...run].length; return real.call(this, run, ...rest); };
+    try {
+      const rand = rng(1640);
+      for (const [name, token, limit] of [['x', 'x'.repeat(20000), 3], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 4]]) {
+        laid = 0;
+        const parts = breakToFit({ fontFamily, fontSize: 9 }, 146)(token).map(String).filter(Boolean);
+        assert.equal(parts.join(''), token, `${name}: reads as typed`);
+        assert.ok(laid <= token.length * limit, `${name}: ${(laid / token.length).toFixed(2)} characters laid out per character (limit ${limit})`);
+      }
+    } finally {
+      face.layout = real;
+    }
+  });
+
+  it('builds a Sidebar resume whose contact is one 20 000-character token, every character printed', async (t) => {
+    if (!(await isOnline())) return t.skip('offline');
+    const token = 'x'.repeat(20000);
+    const r = resume({ template: 'sidebar', personal: { location: token } });
+    const started = Date.now();
+    const pages = await read(await render(r));
+    console.log(`sidebar build with a 20 000-character token: ${Date.now() - started} ms`);
+    const printed = allText(pages).replace(/[^x]/g, '');
+    assert.ok(printed.length >= 20000, `${printed.length} of the 20 000 characters are on the page`);
   });
 });
