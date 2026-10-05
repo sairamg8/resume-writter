@@ -171,8 +171,14 @@ export const DESIGN = {
       return placed === v ? [] : [`${v}: prints as ${placed} (Education x ${edu.x.toFixed(1)}, Experience x ${exp.x.toFixed(1)})`];
     }),
   },
-  // Width: the side column's share of the paper — the main column, and its Experience title, start further right.
-  'setting.layoutSideWidth': { family: 'template', check: ({ runs }) => grows(runs, 'setting.layoutSideWidth', (r) => heading(r.snap, EXPERIENCE)?.x, 'the main column\'s left edge') },
+  // Width: the side column's share of the paper — the main column, and its Experience title, start further
+  // right; in Mixed (the panel offers it there too) the left one of each row's: Skills, the second of the
+  // first row, starts further right.
+  'setting.layoutSideWidth': {
+    family: 'template',
+    check: ({ runs }) => grows(runs, 'setting.layoutSideWidth', (r) => heading(r.snap, r.state.settings.layoutColumns === 'mixed' ? /^skills$/i : EXPERIENCE)?.x,
+      'the column after the side one: its left edge'),
+  },
   'setting.accentColor': { family: 'colors', check: ({ runs }) => runs.filter((r) => !hasColour(r.snap, valueOf(r, 'setting.accentColor'))).map((r) => `${valueOf(r, 'setting.accentColor')} prints nowhere`) },
   'setting.textColor': {
     family: 'colors',

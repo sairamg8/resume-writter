@@ -64,9 +64,11 @@ describe('Word prints the Sidebar\'s column layout where it can (R2-147-col)', (
   });
 
   it('Details Left, Right and Top and the column\'s width print the same Word file: Word has no side column', async () => {
-    const base = (await renderDocx(cv())).xml;
+    // A link's relationship id is drawn at random on each build: compared without it.
+    const file = async (settings) => (await renderDocx(cv(settings))).xml.replace(/r:id="[^"]*"/g, 'r:id=""');
+    const base = await file({});
     for (const settings of [{ layoutColumns: 'two', layoutDetails: 'left', layoutSideWidth: 38 }, { layoutDetails: 'right' }, { layoutDetails: 'top' }, { layoutSideWidth: 26 }]) {
-      assert.equal((await renderDocx(cv(settings))).xml, base, JSON.stringify(settings));
+      assert.equal(await file(settings), base, JSON.stringify(settings));
     }
   });
 });
