@@ -193,6 +193,8 @@ export function fitFontSize(text, style, maxWidth) {
 const squeeze = (s) => Math.max(0, 2 * [...s].length - 2) * (11 / 256);
 /** How far past its box a closed-up word may still print, pt: nothing a reader sees. */
 const OVERHANG = 0.5;
+/** A text of fewer characters than this is always measured whole (breakToFit's clearlyWider). */
+const SCREEN_MIN = 200;
 
 /** Whether `text` prints on one line `maxWidth` pt wide: as wide as that, or closed up to it by textkit (a line a little wider than its box). */
 export const fitsOnLine = (text, style, maxWidth) => !(maxWidth > 0) || textWidth(text, style) - squeeze(text) <= maxWidth + OVERHANG;
@@ -221,12 +223,23 @@ export function breakToFit(style, maxWidth) {
     if (w === undefined) { w = textWidth(ch, { ...style, letterSpacing: 0 }); widths.set(ch, w); }
     return w;
   };
+  // A long text far wider than the box is known from the sum of its cached advances (kerning and
+  // shaping move a width by a few per cent, never by half), so it is not laid out whole to learn
+  // that: laying a 20 000-character token out twice, to find it too wide, was a third of the cost.
+  const spacing = style?.letterSpacing ?? 0;
+  const clearlyWider = (s, limit) => {
+    if (s.length < SCREEN_MIN) return false;
+    let sum = 0;
+    let n = 0;
+    for (const ch of s) { sum += advance(ch); n += 1; }
+    return sum + spacing * Math.max(0, n - 1) > 2 * Math.max(0, limit);
+  };
   return (word) => {
     if (seen.has(word)) return seen.get(word);
     let out;
-    if (fitsOnLine(word, style, maxWidth)) out = registered(word);
+    if (!(maxWidth > 0) || (!clearlyWider(word, maxWidth + OVERHANG) && fitsOnLine(word, style, maxWidth))) out = registered(word);
     else {
-      const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits, guessRuns(part, style, maxWidth - FIT_SLACK, advance))));
+      const parts = word.split(BREAK_AFTER).flatMap((part) => (!clearlyWider(part, maxWidth - FIT_SLACK) && fits(part) ? [part] : runsThatFit(part, fits, guessRuns(part, style, maxWidth - FIT_SLACK, advance))));
       out = parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
     }
     seen.set(word, out);

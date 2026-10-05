@@ -137,11 +137,14 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     for (const part of parts.slice(0, -1)) assert.ok(textWidth(part, style) <= 145, 'a run fits the box');
   });
 
-  it('lays a 20 000-character token out in a few characters of layout per character, at the real column width', async (t) => {
+  it('lays a 20 000-character token out in about two characters of layout per character, never the token whole', async (t) => {
     if (!(await isOnline())) return t.skip('offline');
     // Review of the first fix: halving still laid out ~5-6 characters per character at a real width
     // (a run is ~30 characters, and each probe is up to twice that). The run's end is now predicted
-    // from per-character advances and confirmed by two layouts (plus the token laid out whole twice: is it wider than the box, is each piece). Counted at the font's layout call.
+    // from per-character advances and confirmed by two layouts. Review round 2: the token itself was
+    // also laid out whole, twice (is it wider than the box, is each piece), ~2 of the ~4 characters a
+    // character; a text far wider than its box is now known from the cached advances. Counted at the
+    // font's layout call: the sum, and the longest single layout.
     const r = resume({ template: 'sidebar' });
     const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const { breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
@@ -151,18 +154,50 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     assert.ok(faces.length, 'the page font is loaded');
     const reals = faces.map((f) => f.layout);
     let laid = 0;
-    faces.forEach((f, i) => { f.layout = function counted(run, ...rest) { laid += [...run].length; return reals[i].call(this, run, ...rest); }; });
+    let longest = 0;
+    faces.forEach((f, i) => { f.layout = function counted(run, ...rest) { const n = [...run].length; laid += n; longest = Math.max(longest, n); return reals[i].call(this, run, ...rest); }; });
     try {
       const rand = rng(1640);
-      for (const [name, token, limit] of [['x', 'x'.repeat(20000), 5], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 6]]) {
+      for (const [name, token, limit] of [['x', 'x'.repeat(20000), 3], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 3.5]]) {
         laid = 0;
+        longest = 0;
         const parts = breakToFit({ fontFamily, fontSize: 9 }, 146)(token).map(String).filter(Boolean);
         assert.equal(parts.join(''), token, `${name}: reads as typed`);
         assert.ok(laid <= token.length * limit, `${name}: ${(laid / token.length).toFixed(2)} characters laid out per character (limit ${limit})`);
+        assert.ok(longest <= 500, `${name}: the longest single layout is ${longest} characters (a run is ~30; the token whole is 20 000)`);
       }
     } finally {
       faces.forEach((f, i) => { f.layout = reals[i]; });
     }
+  });
+
+  it('builds a Sidebar resume whose contact is one long token, its layout work in step with the token', async (t) => {
+    if (!(await isOnline())) return t.skip('offline');
+    // Counted over the whole build (textkit lays the broken text out through the same faces), at 5 000
+    // and 20 000 characters: 4x the token is at most ~5x the characters laid out, and the build time
+    // of each size is logged for the commit's profile.
+    const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
+    const { Font } = await import('@react-pdf/renderer');
+    const run = async (length) => {
+      const r = resume({ template: 'sidebar', personal: { location: 'x'.repeat(length) } });
+      const { fontFamily } = await resolvePdfFonts(r.settings, collectText(r));
+      const faces = [...new Set([].concat(fontFamily).map((family) => Font.getFont({ fontFamily: family, fontWeight: 400, fontStyle: 'normal' })?.data).filter((f) => typeof f?.layout === 'function'))];
+      const reals = faces.map((f) => f.layout);
+      let laid = 0;
+      faces.forEach((f, i) => { f.layout = function counted(chunk, ...rest) { laid += [...chunk].length; return reals[i].call(this, chunk, ...rest); }; });
+      try {
+        const started = Date.now();
+        const pages = await read(await render(r));
+        console.log(`sidebar build, ${length}-character token: ${Date.now() - started} ms, ${laid} characters laid out`);
+        assert.ok(allText(pages).replace(/[^x]/g, '').length >= length, `all ${length} characters are on the page`);
+      } finally {
+        faces.forEach((f, i) => { f.layout = reals[i]; });
+      }
+      return laid;
+    };
+    const small = await run(5000);
+    const big = await run(20000);
+    assert.ok(big <= small * 5.5, `4x the token laid out ${(big / small).toFixed(1)}x the characters (${small} -> ${big})`);
   });
 
   it('builds a Sidebar resume whose contact is one 20 000-character token, every character printed', async (t) => {
