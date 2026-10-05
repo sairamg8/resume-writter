@@ -16,6 +16,7 @@ import { isLetter, letterFrom, LETTER_KIND, LETTER_NAME } from '@/utils/letters'
 import { resumeFrom, starterFrom } from '@/utils/newResume';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
+import { mergeResume } from '@/utils/mergeResume';
 import { coalescedWriter } from '@/utils/coalescedWrite';
 import { leaveAccount } from '@/utils/cloudSyncLeave';
 
@@ -65,8 +66,10 @@ function readStore() {
  * the list this tab last knew storage to hold — as the job and board stores do); its deletions, and
  * any made here that it does not list yet; the résumé open here stays open here. Each tab saved its
  * whole list on every change and never read the other's: a résumé created in one tab was erased by
- * the next edit in the other, and an edit made there undone (bug audit 2026-09-22). Pure: React may
- * run it twice. The same arrays as `incoming` where nothing of this tab's is kept.
+ * the next edit in the other, and an edit made there undone (bug audit 2026-09-22). A résumé changed
+ * in both tabs is merged field by field (mergeResume), not taken whole from this one: what the other
+ * tab changed elsewhere in it, or typed meanwhile, was lost in both tabs (typing-freeze 5). Pure:
+ * React may run it twice. The same arrays as `incoming` where nothing of this tab's is kept.
  */
 function withOtherTabsSave(prev, incoming, stored) {
   // The list left its account there (signed out, or another account signed in): what this tab
@@ -75,7 +78,7 @@ function withOtherTabsSave(prev, incoming, stored) {
   // the sign-out, and the next account to sign in sent it to its own cloud (R5-HUNT3).
   const left = prev.syncedUid && incoming.syncedUid !== prev.syncedUid ? prev.syncedUid : null;
   const unsaved = left ? keepUnsaved([], prev.resumes, stored) : null;
-  const resumes = left ? incoming.resumes : keepUnsaved(incoming.resumes, prev.resumes, stored);
+  const resumes = left ? incoming.resumes : keepUnsaved(incoming.resumes, prev.resumes, stored, mergeResume);
   const stash = unsaved?.length ? { stashed: leaveAccount({ ...prev, resumes: unsaved, stashed: incoming.stashed }, left).stashed } : {};
   const ids = new Set(resumes.map((r) => r.id));
   const mine = (prev.deletedIds || []).filter((id) => !incoming.deletedIds.includes(id));

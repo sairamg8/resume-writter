@@ -15,6 +15,27 @@
   to a seed. A version above this build's is stamped down to it and the claim kept in
   `dataVersionAhead` (AUD-26). `tests/unit/knowledge-docs.unit.mjs` fails when this number drifts.
 
+### Two tabs of one résumé (typing-freeze 5)
+
+Every tab keeps its own state and shares only `localStorage` (`cpwtcv_v1`); it hears another tab's save
+through the `storage` event and takes it in (`withOtherTabsSave`).
+
+- **Résumés** are taken by id (`keepUnsaved` in `src/utils/unsavedJobs.js`): a résumé this tab did not change
+  is the other tab's; one added here stays; one deleted here stays deleted; the résumé open here stays open.
+- **A résumé changed in both tabs is merged field by field** (`mergeResume`, `src/utils/mergeResume.js`), a
+  three-way merge of `base` (the copy this tab last read from or wrote to storage), `mine` and `theirs`:
+  objects per key; lists of entries (sections, entries) by `id`, where an entry added in either tab stays, one
+  deleted in either stays deleted whatever the other tab did to it, and the order is the one the tab that
+  moved entries gave (the later writer's if both did); lists of words (hidden fields) as sets; a text both
+  tabs changed keeps both changes when they touch different parts of it (compared as the common prefix and
+  suffix of each change against `base`), two insertions at one point in the order of their writers; a leaf
+  both tabs changed to different values, or changes of one text that overlap, go to the later writer (the
+  résumé's `updatedAt`, then its JSON as the tie-break), so that both tabs weigh the same two copies the same
+  way and end on the same résumé. A merge that is neither copy is stamped one past the later `updatedAt`
+  (cloud sync versions a résumé by it). A part nobody changed here keeps its object, so no preview is rebuilt.
+- No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
+  copy as it is.
+
 ### Core API (conceptual)
 
 | Method | Role |
