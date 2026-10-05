@@ -32,15 +32,29 @@ export const ACTION_VERBS_BY_CATEGORY = {
 };
 
 /**
+ * The adverbs a statement puts inside or before a weak phrase: "Worked extensively on…", "Helped
+ * significantly to…", "Actively assisted in…". A list, not any word ending in -ly: that would take a first
+ * name ("Helped Emily with…") or "early on" for one, and Auto-Fix would drop it with the phrase. They sat
+ * between the verb and its particle, so no phrase matched and a chip's verb went in front of the weak one:
+ * "Spearheaded Worked extensively on the billing service" (R5-HUNT13-VERB-CHIP-ADVERB-IN-WEAK-PHRASE).
+ */
+const ADVERB_WORDS = 'extensively|heavily|closely|actively|directly|primarily|mainly|mostly|largely|jointly|collaboratively|tirelessly|diligently|regularly|frequently|consistently|continuously|continually|independently|exclusively|solely|only|also|often|always|significantly|substantially|repeatedly|successfully|effectively|proactively|personally|fully';
+/** Between a verb and its particle: one adverb, "very" before it or not, and "hard" or "together". */
+const GAP_ADVERB = `(?:very )?(?:${ADVERB_WORDS}|hard|together)`;
+
+/**
  * A weak-phrase entry: `phrases` matched as whole words — not inside a longer word ("Networked with",
  * "unhandled", R4-LO-11), accented letters counted as letters — with `after` a further condition on
- * what follows. `match` has one capture group (autoFixWeakPhrases reads its offset from that).
+ * what follows, and not before a hyphenated word ("Worked on-call rotations" is no "worked on").
+ * `gapped`: the phrases that take an adverb after their first word ("worked extensively on"). `match` has
+ * one capture group (autoFixWeakPhrases reads its offset from that), and the chip, Auto-Fix, the badge and
+ * the ATS score all read it.
  */
-const weak = (phrases, replacement, alternatives, after = '') => ({
+const weak = (phrases, replacement, alternatives, after = '', gapped = []) => ({
   phrases,
   replacement,
   alternatives,
-  match: new RegExp(`(?<![\\p{L}\\d])(${phrases.join('|')})(?![\\p{L}\\d])${after}`, 'giu'),
+  match: new RegExp(`(?<![\\p{L}\\d])(${phrases.map((p) => (gapped.includes(p) ? p.replace(' ', ` (?:${GAP_ADVERB} )?`) : p)).join('|')})(?![\\p{L}\\d]|-[\\p{L}\\d])${after}`, 'giu'),
 });
 
 // ── The one weak-phrase list: the ATS score's "passive language" and the optimizer's ──
@@ -48,23 +62,24 @@ const weak = (phrases, replacement, alternatives, after = '') => ({
 // said "No Weak Words" and Auto-Fix could not touch it; "Ensured…" was the reverse (R4-SW-WT-03). The
 // ATS score reads this list too (atsChecker.js), so every phrase it counts has a replacement here.
 export const WEAK_PHRASE_REPLACEMENTS = [
-  weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
-  weak(['worked on'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded'], '', ['responsibilities included', 'duties included']),
+  weak(['worked on'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built'], '', ['worked on']),
   // "Worked with" takes people as its object: "Engineered product managers to define the roadmap" was
   // what Auto-Fix wrote (R5-HUNT10-AUTOFIX-WORKED-WITH-ENGINEERED).
   weak(['worked with'], 'Collaborated with', ['Partnered with', 'Coordinated with', 'Liaised with']),
-  weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
+  weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated'], '', ['helped with', 'assisted with', 'assisted in']),
   // "Helped to cut costs" has a verb after it, as "tried to" has: "Facilitated cut costs" was no sentence.
-  weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to']),
+  weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to'], '', ['helped to']),
   weak(['handled'], 'Managed', ['Resolved', 'Administered', 'Executed']),
   // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
   weak(['did'], 'Delivered', ['Conducted', 'Accomplished', 'Produced'], '(?!\\s+(?:not|never)(?![\\p{L}\\d]))'),
   weak(['made sure', 'ensured that', 'ensured'], 'Guaranteed', ['Maintained compliance with', 'Enforced', 'Safeguarded']),
   weak(['changed'], 'Transformed', ['Modernized', 'Overhauled', 'Refactored']),
-  weak(['participated in', 'was involved in'], 'Contributed to', ['Partnered in', 'Active member of', 'Drove']),
+  // "Was directly involved in" is no weak phrase, and keeps its adverb: only "participated in" takes one.
+  weak(['participated in', 'was involved in'], 'Contributed to', ['Partnered in', 'Active member of', 'Drove'], '', ['participated in']),
   weak(['in charge of'], 'Oversaw', ['Led', 'Directed', 'Headed']),
   // "Tried to cut costs" → "Led efforts to cut costs": a bare verb read "Drove cut costs".
-  weak(['tried to', 'attempted to'], 'Led efforts to', ['Drove efforts to', 'Spearheaded efforts to', 'Championed efforts to']),
+  weak(['tried to', 'attempted to'], 'Led efforts to', ['Drove efforts to', 'Spearheaded efforts to', 'Championed efforts to'], '', ['tried to', 'attempted to']),
 ];
 
 // ── The one verb list: high-impact action verbs (150+), the ATS score's and the optimizer's ──
@@ -209,8 +224,8 @@ function isPresentActionVerb(word, after) {
   return pasts.some((p) => p && p !== w && VERB_KEYS.has(verbKey(p)));
 }
 
-/** "Took part" and "Take part", which open no action: see leadsWithActionVerb. */
-const TOOK_PART = /^(?:took|take)\s+part(?![\p{L}\d])/iu;
+/** "Took part" and "Take part", and "Took an active part", which open no action: see leadsWithActionVerb. */
+const TOOK_PART = /^(?:took|take)\s+(?:(?:an?\s+)?(?:active|key|major|direct|full|leading)\s+)?part(?![\p{L}\d])/iu;
 
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
@@ -347,6 +362,10 @@ export function analyzeBullet(text = '') {
  * character is kept. A statement opening with a helper verb or a negation ("Did not miss…", "Was
  * promoted…", "Never missed…") is returned as it is (opensWithAuxiliary): no verb can go before it —
  * "Spearheaded did not miss…" — and dropping the words would change what it says (R4-SW-WT-04).
+ * An adverb before the opening stays in front of the verb, as Auto-Fix keeps it ("Actively assisted
+ * in the audit" → "Actively spearheaded the audit"), and one inside a weak phrase goes with it ("Worked
+ * extensively on the billing service" → "Spearheaded the billing service"): the chip put its verb in
+ * front of the weak one ("Spearheaded Worked extensively on…", R5-HUNT13-VERB-CHIP-ADVERB-IN-WEAK-PHRASE).
  */
 export function insertActionVerb(text, verb) {
   const s = String(text ?? '');
@@ -354,6 +373,25 @@ export function insertActionVerb(text, verb) {
   // Bullet marks, quotes and spaces before the first word stay where they are ("- Led …").
   const lead = s.match(LEAD_MARKS)[0];
   const rest = s.slice(lead.length);
+  const adverbs = rest.match(LEADING_ADVERBS)?.[0] ?? '';
+  const opening = replaceOpening(rest.slice(adverbs.length), verb, adverbs !== '');
+  if (opening === KEEP) return s;
+  if (opening !== null) return lead + (adverbs && adverbs[0].toUpperCase() + adverbs.slice(1).toLowerCase()) + opening;
+  const [word] = rest.match(/^\p{L}*/u);
+  return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+}
+
+/** insertActionVerb's answer for a statement it leaves as it is. */
+const KEEP = Symbol('keep');
+
+/**
+ * The statement `rest` (after its bullet marks and leading adverbs) with its opening replaced by `verb`;
+ * KEEP when it is left as it is, null when there is no opening to replace (the verb then goes in front).
+ * `mid`: an adverb stands before it, so the verb is lowercase.
+ */
+function replaceOpening(rest, verb, mid) {
+  const lower = verb[0].toLowerCase() + verb.slice(1);
+  const v = mid ? lower : verb;
   // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
   // chip left "Spearheaded to the hackathon".
   // "Led efforts to" keeps its "efforts to", which has a verb after it: "Led efforts to cut costs"
@@ -364,17 +402,21 @@ export function insertActionVerb(text, verb) {
   // other would make the people its object ("Spearheaded product managers…") or read "Spearheaded
   // with PMs", so the statement is left for a rewrite (R5-HUNT11-VERB-CHIP-ON-WORKED-WITH).
   const withVerb = rest.match(WITH_LEAD);
-  if (withVerb) return takesWith(verb) ? lead + verb + rest.slice(withVerb[0].length) : s;
+  if (withVerb) return takesWith(verb) ? v + rest.slice(withVerb[0].length) : KEEP;
   const phrase = rest.match(LEADING_VERB_PHRASE);
-  if (phrase) return lead + verb + (/ (?:efforts|out) to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
+  if (phrase) return v + (/ (?:efforts|out) to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
+  // The same with an adverb in it: "Contributed extensively to the SDK" read "Spearheaded extensively to
+  // the SDK", "Took active part in the audit" "Spearheaded active part in the audit".
+  const gapped = rest.match(PHRASAL_VERB_GAP);
+  if (gapped) return v + rest.slice(gapped[0].length);
   if (leadsWithActionVerb(rest)) {
     const first = rest.match(/^\p{L}[\p{L}'’-]*/u);
-    if (!first) return lead + rest;
+    if (!first) return KEEP;
     // The verb's particle goes with it ("Set up", "Rolled back", "Took on"), or the chip left
     // "Spearheaded back a bad release" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
     const after = rest.slice(first[0].length);
     const particle = after.match(['took', 'take'].includes(verbKey(first[0])) ? TOOK_PARTICLE : VERB_PARTICLE);
-    return lead + verb + after.slice(particle ? particle[0].length : 0);
+    return v + after.slice(particle ? particle[0].length : 0);
   }
   // A verb that puts someone in the role goes with a phrase that is no verb, as in Auto-Fix: "Became
   // responsible for payroll" read "Spearheaded Became responsible for payroll"
@@ -382,22 +424,66 @@ export function insertActionVerb(text, verb) {
   // as Auto-Fix keeps it: "Became solely responsible for payroll" read "Spearheaded Became solely
   // responsible for payroll", and "Got involved in hiring" "Spearheaded Got involved in hiring"; now
   // "Solely spearheaded payroll" and "Spearheaded hiring" (review of R5-HUNT12-AUTOFIX-HELPER-GAP-THEN-BECAME).
+  // A helper verb alone goes too, with an adverb or not: "Was tasked with rebuilding the API" was refused
+  // (and "Am responsible for payroll" got a second verb), as Auto-Fix replaces both (R5-HUNT13).
   const role = rest.match(PUT_IN_ROLE_OPENING);
   if (role) {
-    const adverb = role[1];
-    const opening = adverb ? `${adverb[0].toUpperCase()}${adverb.slice(1).toLowerCase()} ${verb[0].toLowerCase()}${verb.slice(1)}` : verb;
-    return lead + opening + rest.slice(role[0].length);
+    const adverb = [role[1], role[2]].filter(Boolean).join(' ');
+    if (!adverb) return v + rest.slice(role[0].length);
+    return `${mid ? adverb.toLowerCase() : adverb[0].toUpperCase() + adverb.slice(1).toLowerCase()} ${lower}${rest.slice(role[0].length)}`;
   }
-  for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    const weak = new RegExp(`^${wp.match.source}`, 'iu');
+  for (const pattern of LEADING_WEAK) {
     // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
     // Auto-Fix does ("Spearheaded efforts to cut costs", not "Spearheaded cut costs").
-    if (weak.test(rest)) return lead + rest.replace(weak, (_, found) => (/\sto$/i.test(found) ? `${verb} efforts to` : verb));
+    if (pattern.test(rest)) return rest.replace(pattern, (_, found) => (/\sto$/i.test(found) ? `${v} efforts to` : v));
   }
-  if (AUXILIARY_LEAD.test(rest)) return s;
-  const [word] = rest.match(/^\p{L}*/u);
-  return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+  // The weak phrases' other tenses and "worked to": a current job writes "Working on…", "Handle…",
+  // "Ensure…", and every one of them took the verb in front ("Spearheaded Working on the billing service").
+  // Chip only: Auto-Fix and the weak list stay in the past tense.
+  const inflected = rest.match(LEADING_INFLECTED);
+  if (inflected) return (/\sto$/i.test(inflected[1]) ? `${v} efforts to` : v) + rest.slice(inflected[0].length);
+  // A weak verb with no phrase after it to replace ("Worked as a lead on…", "Helped the team ship…")
+  // cannot take a verb in front of it either: "Spearheaded Worked as a lead on…".
+  if (AUXILIARY_LEAD.test(rest) || UNPLACEABLE_LEAD.test(rest)) return KEEP;
+  return null;
 }
+
+/**
+ * The weak phrases as a statement's opening, one pattern each (the chip's loop): the whole phrase, the
+ * adverb inside it too.
+ */
+const LEADING_WEAK = WEAK_PHRASE_REPLACEMENTS.map((wp) => new RegExp(`^${wp.match.source}`, 'iu'));
+
+/**
+ * The adverbs a statement opens with ("Actively assisted in…", "Solely responsible for…", "Successfully
+ * delivered…", "Later became responsible for…"): the chip's verb goes after them, lowercase. A list, as
+ * ADVERB_WORDS is: "Family support program" and "Daily support rotation" open with a noun and an adjective.
+ */
+const LEADING_ADVERBS = new RegExp(`^(?:(?:${ADVERB_WORDS}|previously|currently|recently|initially|subsequently|formerly|later|then|soon|once|still|now|again|eventually|quickly|rapidly)[ \\t]+)+`, 'iu');
+
+/**
+ * Contributed and collaborated with an adverb before the preposition, and "Took active part in": a strong
+ * verb and its preposition, which go whole as "Contributed to" does (LEADING_VERB_PHRASE).
+ */
+const PHRASAL_VERB_GAP = new RegExp(`^(?:contribut(?:ed|e) (?:${GAP_ADVERB} )to|collaborat(?:ed|e) (?:${GAP_ADVERB} )on|(?:took|take) (?:an? )?(?:active|key|major|direct|full|leading) part in)(?![\\p{L}\\d])`, 'iu');
+
+/**
+ * The present tense, the gerund and the third person of the weak phrases, and "worked to": "Work on",
+ * "Working on", "Works on", "Help with", "Assist in", "Participate in", "Handle", "Ensure", "Try to",
+ * "Worked hard to". A noun that opens the same way is none of them: "Work experience…", "Help desk for…",
+ * "Handling fees…" ("on", "with", "in" or "to" is needed after work, help, assist, participate and try).
+ * "Ensure that…" has a clause after it, no object, and is left to the verb in front as "Ensured that…" was
+ * before. Group 1: the phrase, to tell an infinitive ("Try to cut costs" → "efforts to cut costs").
+ */
+const GAP = `(?:${GAP_ADVERB} )?`;
+const LEADING_INFLECTED = new RegExp(`^(work(?:s|ing)? ${GAP}on|help(?:s|ing)? ${GAP}with|assist(?:s|ing)? ${GAP}(?:with|in)|participat(?:e|es|ing) ${GAP}in|handl(?:e|es|ing)(?!\\s+(?:fees?|charges?|costs?|time|instructions?|requirements?)(?![\\p{L}\\d]))|ensur(?:e|es|ing)(?!\\s+that(?![\\p{L}\\d]))|(?:work(?:ed|s|ing)?|help(?:s|ing)?|tr(?:y|ies|ying)|attempt(?:s|ing)?) ${GAP}to)(?![\\p{L}\\d]|-[\\p{L}\\d])`, 'iu');
+
+/**
+ * A weak verb that no phrase follows, as the first word: "Worked as a backend engineer on…", "Helped
+ * the team ship…", "Assisted customers with…", "Participated as a speaker in…". The chip leaves it, as it
+ * leaves a helper verb (opensWithAuxiliary).
+ */
+const UNPLACEABLE_LEAD = /^(?:worked|helped|assisted|participated|tried|attempted)(?![\p{L}\d'’-])/iu;
 
 /**
  * A verb that takes people after "with" as a statement's first word, in any tense: "Worked with",
@@ -410,8 +496,10 @@ export function insertActionVerb(text, verb) {
  * A noun ending in -ly is no adverb: "Aligned supply with demand forecasts" has "supply" as its object, and
  * a chip replaces its verb as any ("Spearheaded supply with…"); taken for an adverb, it was left with a tip
  * that only a verb taking "with" could go there (review of R5-HUNT12-VERB-CHIP-WORKED-CLOSELY-WITH-TWO-VERBS).
+ * "Working with" and "Works with", "very closely", "hand in hand", "side by side" and "in tandem" before "with"
+ * are the same: all but "Worked closely with" wrote "Spearheaded Worked hand in hand with PMs" (R5-HUNT13).
  */
-const WITH_LEAD = /^(?:(?:work(?:ed)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?:\s+up(?=\s+with(?![\p{L}\d])))?)(?=(?:\s+(?:(?!(?:supply|assembly|family|anomaly|reply|rally|ally|july|italy|monopoly|oligopoly|fly|ply|butterfly)(?![\p{L}\d-]))[\p{L}-]+ly|together))?\s+(?:with|alongside)(?![\p{L}\d]))/iu;
+const WITH_LEAD = /^(?:(?:work(?:ed|ing|s)?|collaborat(?:ed?)|partner(?:ed)?|coordinat(?:ed?)|liais(?:ed?)|teamed|align(?:ed)?|negotiat(?:ed?)|integrat(?:ed?))(?:\s+up(?=\s+with(?![\p{L}\d])))?)(?=(?:\s+(?:very\s+)?(?:(?!(?:supply|assembly|family|anomaly|reply|rally|ally|july|italy|monopoly|oligopoly|fly|ply|butterfly)(?![\p{L}\d-]))[\p{L}-]+ly|together|hand[\s-]in[\s-]hand|side[\s-]by[\s-]side|in\s+tandem))?\s+(?:with|alongside)(?![\p{L}\d]))/iu;
 
 /** The power verbs that take "with" as those do: "Partnered with PMs", not "Spearheaded with PMs". */
 const WITH_VERBS = new Set(['collaborated', 'partnered', 'coordinated', 'liaised', 'aligned', 'negotiated', 'integrated', 'worked', 'teamed']);
@@ -439,15 +527,16 @@ const AUXILIARY_LEAD = /^(?:(?:active\s+)?member\s+of(?![\p{L}\d])|(?:did|does|d
  * "Did" as a main verb ("Did the audit") is a weak phrase the chip replaces, and is not one of these.
  */
 export function opensWithAuxiliary(text, verb = 'Led') {
-  const rest = String(text ?? '').replace(LEAD_MARKS, '');
+  // After the marks and the adverbs the chip's verb goes behind ("Also worked with PMs").
+  const rest = String(text ?? '').replace(LEAD_MARKS, '').replace(LEADING_ADVERBS, '');
   // "Worked with…" takes a verb that takes "with" ("Partnered"), and no other (R5-HUNT11-VERB-CHIP-ON-WORKED-WITH).
   if (WITH_LEAD.test(rest)) return !takesWith(verb);
-  return AUXILIARY_LEAD.test(rest) && insertActionVerb(text, 'Led') === String(text ?? '');
+  return (AUXILIARY_LEAD.test(rest) || UNPLACEABLE_LEAD.test(rest)) && insertActionVerb(text, 'Led') === String(text ?? '');
 }
 
 /** Whether `text` opens with a verb and "with" ("Worked with PMs"): only a verb that takes "with" goes there. */
 export function opensWithVerbWith(text) {
-  return WITH_LEAD.test(String(text ?? '').replace(LEAD_MARKS, ''));
+  return WITH_LEAD.test(String(text ?? '').replace(LEAD_MARKS, '').replace(LEADING_ADVERBS, ''));
 }
 
 /**
@@ -557,9 +646,13 @@ function dropHelperVerb(found, helperAdverb, roleAdverb, phrase, offset, whole) 
  * A statement opening with a verb that puts someone in the role, a helper verb before it or not, an
  * adverb after it or not, and a phrase that is no verb: "Became responsible for", "Was put in charge
  * of", "Became solely responsible for", "Got involved in". The power-verb chip replaces all of it but
- * the adverb. Group 1: the adverb.
+ * the adverb. A helper verb alone is enough ("Was tasked with", "Am responsible for", "Were in charge of"),
+ * as it is to Auto-Fix, and an adverb after it too ("Was solely responsible for") — but not before
+ * "involved in", which no weak phrase has with an adverb ("Was directly involved in hiring" is left as it is,
+ * as Auto-Fix leaves it). A negation after the helper verb is no adverb: "Was not responsible for" matches
+ * nothing. Group 1: the adverb after the helper verb; group 2: the one after the role verb.
  */
-const PUT_IN_ROLE_OPENING = new RegExp(`^(?:(?:${HELPER}) )?(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?(?:responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d])`, 'iu');
+const PUT_IN_ROLE_OPENING = new RegExp(`^(?=(?:${HELPER}|${PUT_IN_ROLE}) )(?:(?:${HELPER}) (?:(${ADVERB}) (?!involved in))?)?(?:(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?)?(?:responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d])`, 'iu');
 
 /**
  * A negation before a phrase that is no verb: "Was not responsible for billing" read "Was not led
