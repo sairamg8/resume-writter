@@ -438,9 +438,17 @@ function rowsOf(items) {
   const rows = [];
   const sorted = items.filter((it) => typeof it.str === 'string' && it.str.trim())
     .sort((a, b) => b.y - a.y || a.x - b.x);
+  // The rows are in order of their y, highest first, as the items are: an item can only join one whose y is within
+  // its own height's reach of its own, at the end of the list. (Asking every row for each item took time squared in
+  // the rows: 16 000 of them, six seconds.) Without finite y's the order says nothing, and every row is asked.
+  const ordered = sorted.every((it) => Number.isFinite(it.y));
   for (const it of sorted) {
     const h = heightOf(it);
-    let row = rows.find((r) => sameLine(r.y, r.h, it.y, h));
+    let row;
+    if (ordered) {
+      const reach = it.y + Math.max(1.5, h * 0.35);
+      for (let i = rows.length - 1; i >= 0 && rows[i].y <= reach; i -= 1) if (sameLine(rows[i].y, rows[i].h, it.y, h)) row = rows[i]; // the first of them, the highest
+    } else row = rows.find((r) => sameLine(r.y, r.h, it.y, h));
     if (!row) { row = { y: it.y, h, items: [] }; rows.push(row); }
     row.h = Math.max(row.h, h);
     row.items.push(it);
