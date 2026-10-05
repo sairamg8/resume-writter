@@ -29,7 +29,7 @@ test('a Roman list starting at an enormous number is read at once', () => {
 test('Roman numerals below 100 000 print as they did', () => {
   const numbers = [];
   for (let n = 1; n <= 2500; n += 1) numbers.push(n);
-  numbers.push(3999, 4000, 4999, 5000, 12345, 40000, 99999);
+  numbers.push(3999, 4000, 4999, 5000, 12345, 40000, 99998); // the list prints n and n + 1: 99999 would reach 100 000
   for (const n of numbers) {
     for (const type of ['i', 'I']) {
       const html = `<ol type="${type}" start="${n}"><li>x</li><li>y</li></ol>`;
