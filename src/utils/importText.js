@@ -580,14 +580,27 @@ const SAME_YEAR = new RegExp(`^(${MONTH})(?=${SEP}(${MONTH}),?\\s+(\\d{4})(?!\\d
 const MONTH_AT = (m) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m.slice(0, 3).toLowerCase());
 const withYear = (t) => t.replace(SAME_YEAR, (first, _, end, year) => `${first} ${MONTH_AT(first) > MONTH_AT(end) ? Number(year) - 1 : year}`);
 
+/**
+ * `text` without the opening brackets, stars and underscores at its start and the closing ones at its end:
+ * what /^[(*_[]+|[)*_\]]+$/g cut, which read a long closing run again from each of its characters when
+ * something else ended the text (time squared in the run).
+ */
+function trimMarks(text) {
+  let from = 0;
+  while (from < text.length && '(*_['.includes(text[from])) from += 1;
+  let to = text.length;
+  while (to > from && ')*_]'.includes(text[to - 1])) to -= 1;
+  return text.slice(from, to);
+}
+
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
 export function readDateRange(text) {
-  let t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
+  let t = trimMarks(String(text ?? '').trim()).trim();
   if (!t) return null;
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
   let m = RANGE.exec(withYear(t));
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
-  if (/\([^)]*$/.test(t)) t = `${t})`;
+  if (t.lastIndexOf('(') > t.lastIndexOf(')')) t = `${t})`; // a "(" with no ")" after it (a pattern read each "(" to the end)
   // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
   // "2011-12" is read as December 2011 above (the app's YYYY-MM Date format), so only a hyphen with
   // two digits over 12, or another dash, gets here.
@@ -654,6 +667,9 @@ function bracketDates(text) {
  * others for its issuer (R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER). Else the text as it is.
  */
 function bracketYears(text) {
+  // A line of this kind is a title and its years: a longer one is a paragraph, and testing each of its separators
+  // against the rest of it took time squared (a run of 12 000 characters of commas, half a second).
+  if (text.length > 1000) return text;
   for (const sep of text.matchAll(/\t|\s[-–—|]\s|,\s/g)) {
     const before = text.slice(0, sep.index).trim();
     const after = text.slice(sep.index + sep[0].length).trim();
@@ -1064,10 +1080,17 @@ function inlinePair(parts) {
     // company-first section swapped them: the role "Gensler Architects", the company "Senior Engineer".
     if (a && b && ROLE.test(a) && firm) return Object.assign([a, b], { roleLeads: true });
   }
+  // Where the job title's words are, read once: a title is in the text before a comma when one ends by it, and
+  // after it when one starts past it. (Testing each side of each comma took time squared in the commas.)
+  const titles = [...text.matchAll(ROLE_ALL)];
+  const firstEnd = titles.length ? titles[0].index + titles[0][0].length : Infinity;
+  const lastStart = titles.length ? titles[titles.length - 1].index : -1;
+  const firstWord = text.search(/\S/);
+  const lastWord = text.trimEnd().length - 1;
   for (const m of text.matchAll(/,\s+/g)) {
-    const a = text.slice(0, m.index).trim();
-    const b = text.slice(m.index + m[0].length).trim();
-    if (a && b && ROLE.test(a) !== ROLE.test(b)) return [a, b];
+    const after = m.index + m[0].length;
+    if (firstWord < 0 || firstWord >= m.index || after > lastWord) continue; // one side is empty
+    if ((firstEnd <= m.index) !== (lastStart >= after)) return [text.slice(0, m.index).trim(), text.slice(after).trim()];
   }
   return parts;
 }
@@ -1797,6 +1820,26 @@ function skillsOf(lines) {
 
 const LEVEL = /\b(native|bilingual|fluent|proficient|professional|full professional|working|limited|conversational|intermediate|advanced|basic|beginner|elementary|upper[- ]intermediate|mother tongue|[abc][12])\b.*$/i;
 
+/**
+ * `text` split at each comma and semicolon that is not inside brackets: that is, not followed by a ")" before any
+ * "(" or ")" — what text.split(/[,;](?![^()]*\))/) did, reading to the next bracket from each one (time squared in
+ * a run of commas).
+ */
+function splitOutsideBrackets(text) {
+  const closes = new Uint8Array(text.length + 1); // 1: the first bracket at or after the index is ")"
+  for (let i = text.length - 1; i >= 0; i -= 1) {
+    const c = text[i];
+    closes[i] = c === ')' ? 1 : c === '(' ? 0 : closes[i + 1];
+  }
+  const parts = [];
+  let from = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if ((text[i] === ',' || text[i] === ';') && !closes[i + 1]) { parts.push(text.slice(from, i)); from = i + 1; }
+  }
+  parts.push(text.slice(from));
+  return parts;
+}
+
 /** Language lines: "English: Native", "English — Native", "English (Native)", two to a row in a grid. */
 function languagesOf(lines) {
   const items = [];
@@ -1805,8 +1848,9 @@ function languagesOf(lines) {
     let last = null; // the language before on this line
     // Cells: at tabs and | • ·, and at commas and semicolons outside brackets — "English, Spanish,
     // French" is three languages, "English (Native), Spanish (Fluent)" two (R4-IMP-11).
-    const cells = line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).flatMap((c) => c.split(/[,;](?![^()]*\))/));
-    for (const cell of cells.map((s) => s.trim()).filter(Boolean)) {
+    const cells = line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).flatMap(splitOutsideBrackets);
+    const filled = cells.map((s) => s.trim()).filter(Boolean);
+    for (const cell of filled) {
       const m = /^(.+?)\s*(?::|\s[—–-]\s|\()\s*(.+?)\)?$/.exec(cell);
       if (m) { last = itemOf('languages', { language: m[1], proficiency: m[2] }); items.push(last); bare = null; continue; }
       const level = LEVEL.exec(cell);
@@ -1815,7 +1859,7 @@ function languagesOf(lines) {
       if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
       // So does a cell in lower case after a level ("Spanish: Working knowledge, written"): the level's rest.
       // (only the line's last cell: "Native, german, french" are languages).
-      const rest = /^\p{Ll}/u.test(cell) && cell === cells.map((c) => c.trim()).filter(Boolean).at(-1);
+      const rest = /^\p{Ll}/u.test(cell) && cell === filled.at(-1);
       if (last?.proficiency && ((level && level.index === 0) || rest)) { last.proficiency = `${last.proficiency}, ${cell}`; continue; }
       if (level && level.index === 0 && last) { last.proficiency = cell; continue; }
       if (level && level.index > 0) { last = itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }); items.push(last); bare = null; continue; }
