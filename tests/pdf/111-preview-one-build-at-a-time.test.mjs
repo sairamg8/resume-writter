@@ -15,7 +15,7 @@ before(setupPreview);
 after(teardownPreview);
 
 describe('a pause in typing while a build is on its way queues one build, of the latest change (R2-142)', () => {
-  it('four pauses behind a running build: still one build running; the latest starts when it finishes', async () => {
+  it('three pauses behind a running build: still one build running; the latest starts when it finishes', async () => {
     const [v0, v1, v2, v3, v4] = versions(5);
     const { view, set, calls, build, shown, status } = await opened(v0);
     try {
