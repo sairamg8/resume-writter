@@ -399,7 +399,31 @@ function numberMarker(n, type) {
   return `${n}.`;
 }
 
-const textOf = (node) => (typeof node === 'string' ? node : node.children.map(textOf).join(''));
+// A typed list marker is a few characters ("1.", "(a)", "iv."): longer text is no marker.
+const MARKER_CAP = 256;
+
+/**
+ * The text of a node with its whitespace gone, cut after MARKER_CAP characters, kept on the node. A tree of
+ * nested Word markers, each inside the last, read the text of everything below it once per level (time
+ * squared), and recursed as deep as the nesting (typing-freeze 7a).
+ */
+function markerText(node) {
+  const work = [node];
+  while (work.length) {
+    const cur = work[work.length - 1];
+    if (cur.mt !== undefined) { work.pop(); continue; }
+    const pending = cur.children.filter((c) => typeof c !== 'string' && c.mt === undefined);
+    if (pending.length) { work.push(...pending); continue; }
+    work.pop();
+    let text = '';
+    for (const c of cur.children) {
+      if (text.length > MARKER_CAP) break;
+      text += typeof c === 'string' ? c.replace(/[\s\u00a0]+/g, '') : c.mt;
+    }
+    cur.mt = text.slice(0, MARKER_CAP + 1);
+  }
+  return node.mt;
+}
 
 // The blocks Word writes a list item as. An <li> already sits in a real list (Outlook, Word's
 // HTML export: <ol><li style="mso-list:l0 level1 lfo1">), so it is left as it is.
@@ -421,9 +445,20 @@ function wordListItem(child) {
  * Runs of them become real lists, nested by level; a numbered marker ("1.", "a)") makes an <ol>.
  * The marker text itself is dropped by the walk (#mso-marker, mso-list:Ignore).
  */
-function wordLists(node) {
-  if (typeof node === 'string') return;
-  node.children.forEach(wordLists);
+function wordLists(tree) {
+  // Children before their parent, as a recursive walk would, without recursing: a document nested ten
+  // thousand tags deep threw a RangeError (typing-freeze 7a).
+  const nodes = [];
+  const todo = [tree];
+  while (todo.length) {
+    const node = todo.pop();
+    nodes.push(node);
+    for (const c of node.children) if (typeof c !== 'string') todo.push(c);
+  }
+  for (let k = nodes.length - 1; k >= 0; k -= 1) wordListsOf(nodes[k]);
+}
+
+function wordListsOf(node) {
   const out = [];
   let open = []; // [{ level, id, ordered, list }]
   for (const child of node.children) {
@@ -436,7 +471,7 @@ function wordLists(node) {
     }
     const [id, level] = m;
     const markerNode = child.children.find((c) => typeof c !== 'string' && c.tag === '#mso-marker' && c.closed);
-    const marker = markerNode ? textOf(markerNode).replace(/[\s\u00a0]+/g, '') : '';
+    const marker = markerNode ? markerText(markerNode) : '';
     const num = /^\(?([0-9]+|[a-z]+|[A-Z]+)[.)]$/.exec(marker);
     const ordered = !!num;
     while (open.length && open[open.length - 1].level > level) open.pop();
@@ -505,8 +540,22 @@ export function parseRichText(html) {
     cur.parts.push({ br: true });
   };
 
-  const walk = (node, ctx) => {
-    for (const child of node.children) {
+  // The tree is walked with a stack of its own, not by recursion: a document nested ten thousand tags
+  // deep (pasted or imported) threw a RangeError (typing-freeze 7a). `flushAfter` is the flush that
+  // closes a block, run when its children are done.
+  const walk = (tree0, ctx0) => {
+    const frames = [{ node: tree0, at: 0, ctx: ctx0, flushAfter: false }];
+    while (frames.length) {
+      const frame = frames[frames.length - 1];
+      if (frame.at >= frame.node.children.length) {
+        frames.pop();
+        if (frame.flushAfter) flush();
+        continue;
+      }
+      const child = frame.node.children[frame.at];
+      frame.at += 1;
+      const { ctx } = frame;
+      const enter = (next, flushAfter) => frames.push({ node: child, at: 0, ctx: next, flushAfter });
       if (typeof child === 'string') { addText(child, ctx); continue; }
       const { tag, attrs } = child;
       if (tag === 'br') { addBreak(ctx); continue; }
@@ -515,7 +564,7 @@ export function parseRichText(html) {
       if ((tag === '#mso-marker' && child.closed) || styleOf(attrs)['mso-list'] === 'ignore') continue;
       if (tag === 'hr') { flush(); continue; }
       if (!BLOCK_TAGS.has(tag)) {
-        walk(child, { ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) });
+        enter({ ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) }, false);
         continue;
       }
       const align = alignOf(attrs) || (tag === 'center' ? 'center' : ctx.align);
@@ -525,8 +574,7 @@ export function parseRichText(html) {
         listCount += 1;
         const list = { id: listCount, ordered: tag === 'ol', type: listType(attrs), next: Number.parseInt(attrs.start, 10) };
         if (!Number.isFinite(list.next)) list.next = 1;
-        walk(child, { ...ctx, align, depth, list, li: null, indent: depth });
-        flush();
+        enter({ ...ctx, align, depth, list, li: null, indent: depth }, true);
         continue;
       }
       if (tag === 'li') {
@@ -546,14 +594,12 @@ export function parseRichText(html) {
         }
         // Which list the item is in, its type and its number: sanitizeRichText writes them back.
         const li = { marker, used: false, list: { id: list.id, type: list.type, number } };
-        walk(child, { ...ctx, align, depth, indent: depth, li, fmt: formatOf(tag, attrs, ctx.fmt) });
-        flush();
+        enter({ ...ctx, align, depth, indent: depth, li, fmt: formatOf(tag, attrs, ctx.fmt) }, true);
         continue;
       }
       flush();
       const indent = tag === 'blockquote' || tag === 'dd' ? ctx.indent + 1 : ctx.indent;
-      walk(child, { ...ctx, align, indent, fmt: formatOf(tag, attrs, ctx.fmt) });
-      flush();
+      enter({ ...ctx, align, indent, fmt: formatOf(tag, attrs, ctx.fmt) }, true);
     }
   };
 
