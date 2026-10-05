@@ -124,6 +124,13 @@ bar in Skills style Bars — the main column of every template and the Sidebar's
 in Bars only; every other style, Markdown and the ATS text print nothing of it
 (`tests/pdf/147-skill-level-*`, `tests/unit/skill-levels.unit.mjs`).
 
+A pasted paragraph of more than 12 000 characters is laid out as several paragraphs of a few thousand
+(`splitHugeBlock.js`, called by `PdfRichText.jsx`; the spaces at the cuts are dropped, every other character
+prints in order): textkit's time on one paragraph grows with its square, and a 200 000-character paste took
+12 s (`tests/unit/tf-sidebar-huge-paragraph.unit.mjs`, `tests/pdf/164-huge-paste-linear.test.mjs`). The
+Sidebar's `breakToFit` (`pdfMeasure.js`) cuts a long unbroken token into runs by doubling then halving, not
+character by character (`tests/pdf/164-sidebar-token-break.test.mjs`).
+
 Shared building blocks live in `src/templates/pdf/shared/` (`PdfPage.jsx`, `PdfSections*.jsx`,
 `PdfItemHeader.jsx`, `PdfContact.jsx`, `PdfRichText.jsx`, `pdfFontLoader.js`, …). At a page break a
 heading never ends a page alone: a section title keeps its first content, an entry header two lines of
