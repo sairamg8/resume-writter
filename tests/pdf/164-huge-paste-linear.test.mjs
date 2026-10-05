@@ -43,7 +43,11 @@ describe('a very long paste builds in time that follows its length (typing-freez
   it('prints every word of a long paste, in order', async () => {
     const text = words(40000, 5);
     const pages = await read(await render(paste(text)));
-    const printed = allText(pages).replace(/\s+/g, '');
-    assert.ok(printed.includes(text.replace(/\s+/g, '')), 'the pasted words, in order, on the pages');
+    // Page numbers and the entry's header sit between the pages' lines: read only the lower-case words.
+    const printed = allText(pages).split(/\s+/).filter((w) => /^[a-z]{2,10}$/.test(w));
+    const pasted = text.split(' ');
+    const at = printed.findIndex((w, i) => w !== pasted[i]);
+    assert.equal(at, -1, `word ${at} printed as "${printed[at]}", pasted as "${pasted[at]}"`);
+    assert.equal(printed.length, pasted.length, 'every pasted word printed once');
   });
 });
