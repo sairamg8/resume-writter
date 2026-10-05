@@ -93,8 +93,17 @@ never replies is let go by a watchdog (`pdfBuildTimeoutMs`: 20 s, twice that bef
 built before fails that build with a retryable "took too long" error and its queue goes to a fresh worker;
 what a let-go worker sends late is ignored. A clock that rings 5 s or more past its time slept with the page
 (a tab frozen in the background, a phone that put the browser away) and the worker with it, so it starts
-again with the whole budget rather than letting the worker go. Tests inject a fake Worker and a fake clock with
-`_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`).
+again with the whole budget rather than letting the worker go. The main thread's builds (no worker, or the
+jobs a let-go worker held) have the same budget, cold: one past it fails with the same retryable error and runs
+on unheard, so it cannot hold the preview's queued build or an export for good. This is the only watchdog; the
+budgets leave fonts no room because none is needed: `pdfFontLoader.js` waits for a CDN face's first fetch
+`FONT_LOAD_MS` (10 s) at most, one deadline shared by every CDN face of a build (bundled Noto Sans faces get the
+whole wait each); past it the face counts as not loaded (the font prints in Noto Sans with the usual notice), a
+stalled face is not waited for again for a minute, and when its data lands the preview is told to build again,
+once per family (`faceFetched`). Tests inject a fake Worker and a fake clock with
+`_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`,
+`tests/pdf/112-pdf-worker-watchdog.test.mjs`); the font wait with `_setFontLoadWaitForTest(ms)`
+(`tests/pdf/113-font-load-stall.test.mjs`).
 
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
 bar in Skills style Bars — the main column of every template and the Sidebar's side column

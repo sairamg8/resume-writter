@@ -1,5 +1,15 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 — TYPING-FREEZE WORK RECONCILED WITH MASTER on `claude/typing-merge-1005` (master `69fdb98a` + `claude/fix-error-185` up to `7a57c73b`; not merged).**
+The hunt's branches (entries below) were cut from old master `e1267bc9`; master has since shipped PERF-5 (PdfPreview) and PERF-6 (its own
+worker watchdog). The merges keep master's code and the hunt's docs; each concern is then ported as one commit with its own fail-first proof:
+dev-server worker (`e68f64cf`, vite.config.js), one queued preview build (`4a9dcfc9`), preview status after an undone or hidden change
+(`7580111a`, new), React #185 (`d22467ca`), the 10 s font wait, now one deadline per build for all CDN faces (`de914f83`), and ONE watchdog:
+PERF-6's budgets (20 s + 250 ms/entry, 40 s cold), now also on the main thread's builds; the hunt's 60 s watchdog is not kept, its cases are
+in tests/pdf/112 (`07e823c4`). Knowledge docs and the R2-142 row updated. **Next:** the coordinator merges it after its full gate is green.
+Open from the hunt, unchanged: two tabs typing at once lose edits; the ATS job-description regex; richText/bulletOptimizer ReDoS on paste;
+the composition flag. A fully dead CDN still costs 8 s per uncached font metadata lookup (fontsource.js, before any face wait).
+
 **2026-10-05 ~11:30 UTC — TYPING-FREEZE HUNT DONE; three fixes + review fixes are on `claude/typing-freeze-fixes` (NOT on master).**
 Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). **Next: read the newest full-gate run on this
 branch's head (dispatched with the final docs commit), fix anything red, then PR it -> master for the owner.** The branch = master + `claude/fix-dev-worker-refresh`

@@ -85,6 +85,13 @@ while typing on a long résumé, with the PDF worker and with it refused; soft t
 Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
 The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
 `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/110-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
+The typing-freeze fixes (2026-10-05, `docs/tracking/TYPING-FREEZE-HUNT-2026-10-05.md`) by
+`tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs` (the dev server serves the worker no Fast Refresh runtime; it
+starts the dev server in-process), `tests/pdf/111-preview-one-build-at-a-time.test.mjs` and
+`tests/pdf/111-preview-status-undo-hidden.test.mjs` (the preview's queued build and its status),
+`tests/pdf/112-pdf-worker-watchdog.test.mjs` (the hunt's watchdog cases on the one watchdog, and the main thread's
+budget), `tests/pdf/113-font-load-stall.test.mjs` (the bounded font wait) and
+`tests/pdf/114-keystroke-burst.test.mjs` (React error #185).
 
 ## Demo accounts and the owner's private résumé
 

@@ -68,6 +68,7 @@ resume-writter/
 │       └── storageBackup.js, ids.js, richText.js, fonts.js, …
 ├── tests/
 │   ├── pdf/                   # node:test suites that render real PDFs (harness.mjs); parity/
+│   │                          # the preview and PDF worker: `tests/pdf/{90-preview,110,111,112,113,114,126}-*.test.mjs`
 │   ├── unit/                  # node:test unit suites
 │   ├── playwright/            # browser suites against a built ./dist
 │   ├── perf/                  # the performance harness (`yarn test:perf`), never part of the gate
@@ -94,7 +95,7 @@ resume-writter/
 
 | File | Role |
 |------|------|
-| `vite.config.js` | React, Tailwind, `@` alias, named vendor chunks (`codeSplitting.groups`), owner-résumé plugin |
+| `vite.config.js` | React (Fast Refresh off for `src/templates/pdf/`, which the PDF worker loads: `PDF_WORKER_JSX`), Tailwind, `@` alias, named vendor chunks (`codeSplitting.groups`), owner-résumé plugin |
 | `vite-plugin-owner-resume.js` | `virtual:owner-resume`: `private/sairam-resume.json` on the dev server, `null` in every build |
 | `jsconfig.json` | editor path alias |
 | `firestore.rules` | owner-only user subtree (the résumés, lists, link records and the `meta/publicCopies` index); `public/{shareId}` readable by id, written by its owner with only the fields `publicLink.js` writes (public links) |
