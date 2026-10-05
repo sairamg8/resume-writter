@@ -43,7 +43,9 @@ function shown(item) {
  * A bare scheme with no host ("https://", "www.", "https://www") is no address: a Display label prints
  * over it unlinked in the PDF (contactHref is null), so the file's url is '' — not "https://", a link to
  * nothing beside the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL,
- * R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL). The value as typed rides as `${key}Text`.
+ * R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL). A Link URL the PDF does not follow ("https://" alone)
+ * is no override: the PDF links the value (R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK). The value
+ * as typed rides as `${key}Text`.
  */
 function linkUrl(p, key) {
   const override = linkOverride(key, p);

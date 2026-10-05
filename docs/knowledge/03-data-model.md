@@ -50,9 +50,15 @@ Includes name, title, contact fields, optional photo, `hiddenFields[]`.
 Every template and export prints the contacts `contactItems` (`src/utils/contacts.js`) returns: a
 website, LinkedIn or GitHub prints its Display label, else its address as a bare domain, and one whose
 printed value is empty (typed as just `https://` or `www.`) is no contact at all. Its Link URL override
-counts only when it names an address (`linkOverride`): one of just `https://`, `www.` or `https://www.`
-is unset, so the value typed in the field is still linked, and an http(s) address with no host is no
-link anywhere (`safeHref`, R5-HUNT12-LINK-URL-OVERRIDE-BARE-SCHEME).  
+counts only when it names an address and is one the PDF follows (`linkOverride`): one of just `https://`,
+`www.` or `https://www.`, or a `javascript:` address, is unset, so the value typed in the field is still
+linked in every export, and an http(s) address with no host is no link anywhere (`safeHref`,
+R5-HUNT12-LINK-URL-OVERRIDE-BARE-SCHEME, R5-HUNT12-LINK-URL-PLACEHOLDER-KILLS-CONTACT-LINK).  
+A phone links (`contactHref`) to its first number only — cut at `/`, `,`, `;`, `|` or "or" once seven
+digits are in — with an extension (`ext. 890`, `x890`, `#890`, also bracketed or after a comma: `(ext 12)`,
+`, ext. 890`) as `;ext=890`; the text prints as typed; after a `+`, a
+bracketed trunk `(0)` is left out of the link (`+44 (0) 20 7946 0958` → `tel:+442079460958`).  
+The import reads such a phone back as typed, its extension too (`importText.js`: `PHONE_EXT`, `linkParts`).  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
 `updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).

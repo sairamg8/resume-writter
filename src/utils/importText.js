@@ -13,6 +13,7 @@ import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { getStarterSettings } from './starterSettings.js';
 import { DATA_VERSION } from './dataVersion.js';
 import { ATS_STANDARD_SECTIONS } from './atsChecker.js';
+import { contactHref } from './contacts.js';
 
 // ── Headings ─────────────────────────────────────────────────────────────────
 
@@ -110,7 +111,11 @@ function linkParts(label, href) {
   if (!/^[a-z]+:/i.test(to)) return linkParts(text, `https://${to}`);
   if (!text) return [to];
   if (bareAddress(text) === bareAddress(to)) return [text];
-  if (/^tel:/i.test(to) && text.replace(/\D/g, '') === to.replace(/\D/g, '')) return [text];
+  // A phone is its text when the link dials the digits it shows, or is the link the app's exports write
+  // for it: "+1 555 010 0000 / +1 555 010 0001" → tel:+15550100000, "+44 (0) 20 7946 0958" →
+  // tel:+442079460958. Before, those came back as the link's bare digits — the typed text, its second
+  // number and its format lost (R5-HUNT12-REVIEW-IMPORT-PHONE-OWN-TEL-LINK).
+  if (/^tel:/i.test(to) && (text.replace(/\D/g, '') === to.replace(/\D/g, '') || contactHref('phone', { phone: text }) === to)) return [text];
   return [text, to];
 }
 
@@ -437,6 +442,12 @@ const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
 /**
+ * A phone with its extension after it: "+1 (555) 123-4567 ext. 890", "(555) 123-4567, x12", "… (ext 12)"
+ * — the number before it. Before, the letters failed PHONE, so the export's own phone with an extension
+ * imported as no phone at all (R5-HUNT12-REVIEW-IMPORT-PHONE-EXTENSION).
+ */
+const PHONE_EXT = /^(.*?\d[\s.)\]-]*),?\s*[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*\d{1,6}[)\]]?$/i;
+/**
  * "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. With its postcode
  * too ("Chicago, IL 60601", "Toronto, ON M5V 2T6"), and then its street before it ("123 Main St,
  * Chicago, IL 60601"): before, the digits failed the test, and the place printed as "Additional Information".
@@ -533,7 +544,8 @@ function contactOf(segment) {
     if (/(^|\.|\/)github\.com\//i.test(s)) return { key: 'github', value: s };
     return { key: 'website', value: s };
   }
-  if (PHONE.test(s) && digits(s) >= 7 && digits(s) <= 15) return { key: 'phone', value: s.replace(/^tel:/i, '') };
+  const number = (PHONE_EXT.exec(s) || [s, s])[1].trim();
+  if (PHONE.test(number) && digits(number) >= 7 && digits(number) <= 15) return { key: 'phone', value: s.replace(/^tel:/i, '') };
   if (PLACE.test(s) || (labelled && /^(location|address|based in)/i.test(labelled[0]))) return { key: 'location', value: s };
   return null;
 }
