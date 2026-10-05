@@ -41,8 +41,10 @@ describe('lazyPublicIo: publicIo\'s calls, publicLink.js loaded at the first (R2
     const b = await io.publish(UID, cv('resume_b'));
     const d = await io.publish(UID, cv('resume_c'));
     assert.deepEqual(publicDocs(c), [`public/${b.shareId}`, `public/${d.shareId}`].sort());
-    await io.unpublishResume(UID, 'resume_b');
-    await io.unpublishDeleted(UID, ['resume_c']);
+    assert.equal(await io.unpublishResume(UID, 'resume_b'), true, 'b\'s copy taken down');
+    assert.deepEqual(await io.unpublishDeleted(UID, ['resume_c']), [], 'c is still in the account: its copy stays, as publicIo has it');
+    c.data.delete(resumePath(UID, 'resume_c')); // deleted on another device
+    assert.deepEqual(await io.unpublishDeleted(UID, ['resume_c']), ['resume_c'], 'deleted: its copy goes');
     assert.deepEqual(publicDocs(c), [], 'both copies taken down');
   });
 
