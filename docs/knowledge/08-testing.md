@@ -19,7 +19,7 @@ Helpers the PDF and unit suites share:
   a component in Node
 - `tests/pdf/fake-firestore.mjs` — an in-memory Firestore for the cloud-sync tests
 - `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics (a test can wrap its
-  `getDocument` to log paint and text requests, as `110-r2-142-perf5-*` does)
+  `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
   and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
 - `tests/pdf/startup-modules.mjs` — the start-up path by module, walked from `src/main.jsx` through static
@@ -88,14 +88,14 @@ runs Gate B, `tests/playwright/perf-gate-b.spec.mjs` (PERF-6: the longest main-t
 while typing on a long résumé, with the PDF worker and with it refused; soft targets of 50 ms), which the
 Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
 The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
-`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/110-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
+`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/115-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
 The typing-freeze fixes (2026-10-05, `docs/tracking/TYPING-FREEZE-HUNT-2026-10-05.md`) by
 `tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs` (the dev server serves the worker no Fast Refresh runtime; it
 starts the dev server in-process), `tests/pdf/111-preview-one-build-at-a-time.test.mjs` and
-`tests/pdf/111-preview-status-undo-hidden.test.mjs` (the preview's queued build and its status),
+`tests/pdf/116-preview-status-undo-hidden.test.mjs` (the preview's queued build and its status),
 `tests/pdf/112-pdf-worker-watchdog.test.mjs` (the hunt's watchdog cases on the one watchdog, and the main thread's
 budget), `tests/pdf/113-font-load-stall.test.mjs` (the bounded font wait) and
-`tests/pdf/114-keystroke-burst.test.mjs` and `tests/pdf/114-keystroke-burst-signed-in.test.mjs` (React error #185; the
+`tests/pdf/114-keystroke-burst.test.mjs` and `tests/pdf/117-keystroke-burst-signed-in.test.mjs` (React error #185; the
 second mounts `useCloudSync` signed in over the stand-in Firestore, `_setCloudIoForTest`).
 
 ## Demo accounts and the owner's private résumé

@@ -2,8 +2,23 @@
 
 Sources: three finder agents (webfreeze = Website field, pipeline = the keystroke pipeline, richtext = rich text and
 other typing surfaces) plus the coordinator's own checks. Their scratch scripts were not kept; the numbers and file:line
-are below. Status: findings 1, 2, 3 and 4 are FIXED (4 on `claude/fix-error-185`, merged into `claude/typing-freeze-fixes` with the others) (= `claude/fix-dev-worker-refresh` + `claude/fix-preview-build-backlog` + `claude/fix-worker-watchdog`;
-not merged to master); the rest is OPEN.
+are below. Status: findings 1, 2, 3 and 4 are FIXED and MERGED: master `38e7b70e` (live) carries them, reconciled with master's
+PERF-5/PERF-6 on `claude/typing-merge-1005`; the hunt's branches are gone (their notes: tag `archive/typing-freeze-session-notes`).
+The rest (5-7) is OPEN. Branch and commit names in the findings below are the hunt's; what shipped is this:
+
+## Shipped (master `38e7b70e`, 2026-10-05)
+- **1. Dev worker:** `e68f64cf` (vite.config.js `react({ exclude })`; tests/pdf/110-dev-pdf-worker-no-refresh; ci.yml's `failfirst` reverts vite.config.js too).
+- **2. One queued preview build:** `4a9dcfc9` (PdfPreview.jsx; tests/pdf/111-preview-one-build-at-a-time), and the status after an undone or hidden
+  change, `7580111a` (tests/pdf/116-preview-status-undo-hidden).
+- **3. Watchdog: ONE, master's PERF-6** (pdfBuild.js `pdfBuildTimeoutMs`): a worker job gets 20 s + 250 ms per entry (max 200 entries), twice the
+  base (40 s) before the worker's first reply; a worker that never replied hands its jobs to the main thread, one that had built fails that build
+  (retryable "took too long") and its queue goes to a fresh worker; a clock ringing 5 s or more late (the page asleep) starts again. The main
+  thread's builds get the same budget, cold (`07e823c4`). The hunt's 60 s watchdog was NOT kept; its cases run on the one watchdog in
+  tests/pdf/112-pdf-worker-watchdog. **Font wait:** one 10 s deadline per build shared by every CDN face (`de914f83`, tests/pdf/113-font-load-stall).
+  Follow-ups after review (branch `claude/review-followups-1005`): a face that lands after its wait lands prepared and never over its donor
+  (tests/pdf/118); metadata lookups share the deadline and a timed-out one is not asked again for a minute (119); a wait that starts with the
+  deadline spent gets a bounded grace, no wait past 13 s (120); a main-thread build past its budget is not overlapped by the next (121).
+- **4. React #185:** signed out `d22467ca` (tests/pdf/114-keystroke-burst), signed in `a306dded` (useCloudSync; tests/pdf/117-keystroke-burst-signed-in).
 
 ## Verdict
 The owner's "freeze while typing in Personal Info → Website" is REPRODUCED in effect, on the dev server (`yarn dev`), where it
@@ -53,7 +68,11 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
   pdfWorkerJobs.js:36-42 `runJobs` is a FIFO chain with no cancel/supersede; `unwanted()` is checked only after a job returns.
 
 ### 3. PROD: a worker job that never replies kills the preview for the session — MEDIUM, 2/2 (open row R2-142 "no watchdog") — FIXED
-- **Fixed on `claude/fix-worker-watchdog`** (built on `claude/typing-freeze-fixes`): two layers. (a) `src/utils/pdfBuild.js`: the job the worker is on (the
+- **What shipped differs: see "Shipped" above** — master keeps ONE watchdog, PERF-6's budgets (20 s + 250 ms per entry, 40 s cold), not the 60 s
+  below; the 60 s figures in this section are the hunt's own version and its measurements. The review's accepted items are closed: (a) by the one
+  deadline per build (`de914f83`) and the metadata lookups within it (follow-up, tests/pdf/119); (b) by the prepared landing (follow-up,
+  tests/pdf/118); (c) by PERF-6: a worker that never replied sends its jobs to the main thread.
+- **The hunt's fix, on `claude/fix-worker-watchdog`** (built on `claude/typing-freeze-fixes`): two layers. (a) `src/utils/pdfBuild.js`: the job the worker is on (the
   oldest pending; a job waiting its turn is not timed) gets 60 s; past it the worker is terminated, that build fails with "building took more than 60 s — a font
   may not be reachable" (the preview shows it with Retry), and the jobs behind it are re-posted, in order, to a fresh worker. The main-thread
   fallback (`runHere`) has the same limit, which also releases the preview's queued build behind a never-settling one. (b) `src/templates/pdf/shared/pdfFontLoader.js`:
@@ -96,7 +115,7 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
   changing value always, and the SAME value too when that component has an update waiting (it re-rendered from its own update, as App does on every keystroke).
 - **Signed in, too (2026-10-05, review of `375a0ed6`; branch `claude/typing-merge-1005`):** the fix covered signed-out users only. Once its first sync is done the cloud
   sync reports 'syncing' on every change of the résumés (cloudSyncQueue.js), and useCloudSync set it with the raw setter, in App: the same mechanism. useCloudSync now
-  sets the status only when it changes (the other reporters are not per keystroke). Test: tests/pdf/114-keystroke-burst-signed-in (useAppStore and useCloudSync in one
+  sets the status only when it changes (the other reporters are not per keystroke). Test: tests/pdf/117-keystroke-burst-signed-in (useAppStore and useCloudSync in one
   component, signed in over the stand-in Firestore, 100 keys ~9 ms apart; error #185 without the fix).
 
 ### 5. Cross-tab: concurrent typing in two tabs of the same résumé loses edits — MEDIUM, 2/2 (webfreeze + pipeline)

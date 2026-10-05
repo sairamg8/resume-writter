@@ -176,8 +176,9 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const last = built.current;
     if (last && last.input === input && last.render === render && last.retry === retry) {
       waiting.current = null;
-      // Back to what the last build was asked for: a change undone (Undo, or a value typed back) before
-      // its own build started, or made while hidden and undone. That build speaks for the status again —
+      // Back to what the last build was asked for: a change undone before its own build started (an Undo
+      // that puts back that very résumé object: inputs match by reference, so a value typed back, a new
+      // object, builds again), or made while hidden and undone. That build speaks for the status again —
       // how it ended, or, still on its way, 'rendering' until it does. It was left on 'rendering' (or
       // 'paused') for good, the "Updating preview…" chip up over pages that were current; a change that
       // waits for a running build (one build at a time) widened that window to the whole build.

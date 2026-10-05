@@ -64,7 +64,7 @@ activeResume → renderResumePdf (utils/pdfExportReactPDF.js)
 `PdfPreview` paints the pages first and only then asks pdf.js for their text (the screen-reader element
 `textId`; the status is `ready` once it is in), and it paints into canvases it already has: one that leaves the
 screen is shrunk to 0×0 (R2-170) and kept in a per-preview pool for the next render or zoom repaint
-(`tests/pdf/110-r2-142-perf5-*`).
+(`tests/pdf/115-r2-142-perf5-*`).
 
 One build at a time (R2-142): a change waits for a pause in typing (`DEBOUNCE_MS`, at most `MAX_WAIT_MS` of
 steady typing) and, while a build is on its way, for that build: the latest change's build is queued and
@@ -72,10 +72,10 @@ starts the moment the running one ends (a newer change replaces it; unmount or h
 versions never pile up in the PDF worker's queue (`tests/pdf/111-preview-one-build-at-a-time.test.mjs`).
 A change undone before its build started gives the status back to the last build (how it ended, or
 `rendering` until it does), and a change made while hidden is a generation of its own, so a build still on
-its way cannot report `ready` over `paused` (`tests/pdf/111-preview-status-undo-hidden.test.mjs`). Status
+its way cannot report `ready` over `paused` (`tests/pdf/116-preview-status-undo-hidden.test.mjs`). Status
 writes ask React only for a change: one per keystroke, unchanged, in a burst of 50 made React throw error
 #185 and drop a key (`tests/pdf/114-keystroke-burst.test.mjs`, with the store's `saving`; signed in, `useCloudSync`'s
-sync status, reported `syncing` on every change: `tests/pdf/114-keystroke-burst-signed-in.test.mjs`).
+sync status, reported `syncing` on every change: `tests/pdf/117-keystroke-burst-signed-in.test.mjs`).
 
 Export:
 

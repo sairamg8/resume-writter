@@ -1,7 +1,8 @@
 // The preview's status after a change that never built (R2-142). A change sets 'rendering' and waits
-// for a pause (or, one build at a time, for the build on its way). Undone before its build started —
-// Undo, or a value typed back — the input is again what the last build was asked for, so nothing is
-// built; but the status stayed 'rendering' for good, the "Updating preview…" chip up over pages that
+// for a pause (or, one build at a time, for the build on its way). Undone before its build started — an
+// Undo that puts back the very résumé object the last build was asked for (inputs are matched by
+// reference: a value typed back is a new object, and simply builds again) — nothing is built; but the
+// status stayed 'rendering' for good, the "Updating preview…" chip up over pages that
 // were current, and a failed build's alert never came back. Waiting for a running build
 // (tests/pdf/111-preview-one-build-at-a-time) widened that window from the 350 ms pause to the whole
 // build. And a change made while the preview is hidden left it 'paused', but a build still on its way

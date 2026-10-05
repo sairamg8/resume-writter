@@ -5,6 +5,9 @@
 // the pages it builds go up while typing goes on; one build at a time — while one is still on its
 // way the next waits for it, so a build slower than that never piles more of them up. The pause
 // after the typing still builds the latest, as before (tests/pdf/90-preview-mechanics).
+// The one-build-at-a-time change (4a9dcfc9, the typing-freeze hunt) updated this file, but this file passes
+// with or without that fix: it pins the repaint while typing, not the queue. The proof that the preview
+// holds one build at a time is tests/pdf/111-preview-one-build-at-a-time, which fails without it.
 // PdfPreview over fake-dom with a stand-in pdf.js and builds the test finishes (preview-stub.mjs).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
