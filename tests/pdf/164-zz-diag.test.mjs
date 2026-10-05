@@ -14,7 +14,7 @@ function words(n, seed = 1) {
 }
 
 it('diag', async () => {
-  for (const [kind, n] of [['words', 50000], ['words', 100000], ['words', 200000], ['words', 400000], ['cjk', 100000], ['unbroken', 100000]]) {
+  for (const [kind, n] of [['words', 50000], ['words', 200000], ['words', 400000], ['cjk', 200000], ['unbroken', 200000]]) {
     const r = resume({ template: 'classic', sections: [experience([{ description: `<p>${kind === 'words' ? words(n) : kind === 'cjk' ? '山田太郎東京大学'.repeat(n / 8) : 'x'.repeat(n)}</p>` }])] });
     const session = new inspector.Session();
     session.connect();

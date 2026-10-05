@@ -1,8 +1,9 @@
 import { createContext, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
-import { Text, splitLongText } from './PdfText';
+import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
+import { splitHugeBlocks } from './splitHugeBlock';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -46,9 +47,9 @@ function Runs({ runs, color }) {
     if (href) {
       // Underline adds its line to a struck-through link's, as Word keeps both.
       const deco = look.textDecoration && run.strike ? { textDecoration: 'underline line-through' } : {};
-      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{splitLongText(run.text)}</Link>;
+      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{run.text}</Link>;
     }
-    return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : splitLongText(run.text);
+    return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : run.text;
   });
 }
 
@@ -69,7 +70,7 @@ function markerWidth(chars, fontSize) {
  */
 export function PdfRichText({ html, style = {}, breaks }) {
   const bulletStyle = useContext(BulletStyle);
-  const blocks = parseRichText(html);
+  const blocks = splitHugeBlocks(parseRichText(html)); // a paste of 200 000 characters: typing-freeze 7b
   if (!blocks.length) return null;
   const { marginTop, marginBottom, ...textStyle } = style;
   const fontSize = textStyle.fontSize || 11;
@@ -88,7 +89,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
   return blocks.map((block, i) => {
     const prev = blocks[i - 1];
     const edges = {
-      marginTop: i === 0 ? marginTop : (prev.marker && block.marker ? LIST_GAP : PARA_GAP),
+      marginTop: i === 0 ? marginTop : (block.joined ? 0 : prev.marker && block.marker ? LIST_GAP : PARA_GAP),
       marginBottom: i === blocks.length - 1 ? marginBottom : undefined,
     };
     const align = block.align || textStyle.textAlign;
