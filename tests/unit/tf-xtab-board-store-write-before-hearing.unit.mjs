@@ -10,7 +10,8 @@ import { freshStorage, openTab, savedBoards, settle } from './board-store-harnes
 let storage;
 beforeEach(() => { storage = freshStorage(); });
 
-const titles = (boards) => boards.map((b) => b.title).sort();
+/** The projects the test made: a new store starts with its own sample project, in every tab. */
+const titles = (boards) => boards.map((b) => b.title).filter((t) => t.startsWith('From ')).sort();
 
 test('two tabs add a project each before either has heard of the other: both projects stay, in both tabs and in storage', async () => {
   const A = await openTab(storage);
