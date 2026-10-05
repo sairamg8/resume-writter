@@ -81,6 +81,12 @@ Important keys (non-exhaustive):
   not text, `src/constants/designFonts.js`)
 - Colors: `accentColor`, `textColor`, `sidebarBg`, `headerTextColor`, `nameColor`, `jobTitleColor`
 - Layout: `margins` / `marginH` / `marginV`, `sectionGap`, `itemGap`, `headerAlign`, `headerLayout`
+- The Sidebar's columns (read on its two columns only, R2-147-col): `sidebarSingleColumn` (Single ·
+  ATS-safe, wins), `layoutColumns` (`two` | `mixed`), `layoutDetails` (`left` | `right` | `top`),
+  `layoutSideWidth` (24–45, % of the paper) — not in `ATS_DEFAULTS`: unset prints Side column, Left, 38 %,
+  the page every résumé printed before, so they came with no migration and no DATA_VERSION step.
+  `normalizeResume` → `withLayoutSettings` drops a choice no build offered and clamps the width
+  (`src/constants/layoutOptions.js`); Reset Design Settings drops all three
 - Headings: `headingStyle`, `sectionTitleCase`, border widths/colors
 - Contact: `contactStyle`, `contactCols`, `contactLayout`, `iconSize`
 - Photo: `photoShape`, `photoSize`, `photoBorder`, …
