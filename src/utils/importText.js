@@ -1989,8 +1989,14 @@ export function resumeFromText(input) {
       personal.title = t.text;
       rest.shift();
     } else if (run && !isContact(run[0])) {
-      personal.title = run[0];
-      rest[0] = { ...t, text: run.slice(1).join('\t') };
+      // A town first ("Walnut Creek — jane@x.com") is the location, no title: the line stays whole for
+      // takeContacts. The field after it that is neither a contact nor a town ("Walnut Creek — Senior
+      // Engineer — jane@x.com") is the title.
+      const at = knownTown(run[0]) ? 1 : 0;
+      if (run[at] && !isContact(run[at]) && !knownTown(run[at])) {
+        personal.title = run[at];
+        rest[0] = { ...t, text: run.filter((_, i) => i !== at).join('\t') };
+      }
     }
     takeContacts(rest, {
       alone: true,
