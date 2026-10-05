@@ -3,6 +3,13 @@
 // closing and the signature.
 import { formatDayDate, todayLocalISO } from '@/utils/dates';
 
+/** `s` less the white space and commas at its end, scanned from the end (not /[\s,]+$/, which read a long run again from each of its characters). */
+function withoutTrailingCommas(s) {
+  let end = s.length;
+  while (end > 0 && (s[end - 1] === ',' || /\s/.test(s[end - 1]))) end -= 1;
+  return s.slice(0, end);
+}
+
 const text = (v) => (typeof v === 'string' ? v.trim() : '');
 
 /**
@@ -97,7 +104,7 @@ const ENDS_ITS_CLAUSE = /[\p{Term}…]$/u;
  * same signature (R2-044), and one never set follows later edits of the name and title.
  */
 export function letterSignature(cl = {}, personal = {}) {
-  const closing = text(cl.closing).replace(/[\s,]+$/, '') || 'Sincerely';
+  const closing = withoutTrailingCommas(text(cl.closing)) || 'Sincerely';
   return {
     closing: ENDS_ITS_CLAUSE.test(closing) ? closing : `${closing},`,
     name: text(cl.signatureName) || personal?.name || '',
