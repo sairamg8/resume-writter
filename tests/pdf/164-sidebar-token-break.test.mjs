@@ -145,12 +145,13 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     const r = resume({ template: 'sidebar' });
     const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const { breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
-    const { Font } = await loadModule('@react-pdf/renderer');
+    const { Font } = await import('@react-pdf/renderer');
     const { fontFamily } = await resolvePdfFonts(r.settings, collectText(r));
-    const face = Font.getFont({ fontFamily, fontWeight: 400, fontStyle: 'normal' }).data;
-    const real = face.layout;
+    const faces = [...new Set([].concat(fontFamily).map((family) => Font.getFont({ fontFamily: family, fontWeight: 400, fontStyle: 'normal' })?.data).filter((f) => typeof f?.layout === 'function'))];
+    assert.ok(faces.length, 'the page font is loaded');
+    const reals = faces.map((f) => f.layout);
     let laid = 0;
-    face.layout = function counted(run, ...rest) { laid += [...run].length; return real.call(this, run, ...rest); };
+    faces.forEach((f, i) => { f.layout = function counted(run, ...rest) { laid += [...run].length; return reals[i].call(this, run, ...rest); }; });
     try {
       const rand = rng(1640);
       for (const [name, token, limit] of [['x', 'x'.repeat(20000), 3], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 4]]) {
@@ -160,7 +161,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
         assert.ok(laid <= token.length * limit, `${name}: ${(laid / token.length).toFixed(2)} characters laid out per character (limit ${limit})`);
       }
     } finally {
-      face.layout = real;
+      faces.forEach((f, i) => { f.layout = reals[i]; });
     }
   });
 
