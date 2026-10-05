@@ -135,7 +135,7 @@ export function linkText(label, href) {
 // no partner: a pasted run of 20 000 of them took half a second, 100 000 twelve (time squared). Every one reads
 // the same text the same way, with each position looked at once (typing-freeze 7b).
 
-const LINE_END = /[\n\r\u2028\u2029]/g;
+const HAS_LINE_END = /[\n\r\u2028\u2029]/; // never global: a global one keeps its place between calls, and a later call read from there
 const isLineEnd = (c) => c === '\n' || c === '\r' || c === '\u2028' || c === '\u2029';
 const isSpace = (c) => c !== undefined && /\s/.test(c);
 
@@ -270,9 +270,8 @@ function emphasisOff(text, marker, opens, closes) {
     while (hit !== -1 && !closes(text[hit - 1], text[hit + marker.length])) hit = text.indexOf(marker, hit + 1);
     return hit;
   });
-  const lineEnd = forwardSearch((from) => { LINE_END.lastIndex = from; const m = LINE_END.exec(text); return m ? m.index : -1; });
-  const hasLineEnd = LINE_END.test(text);
-  LINE_END.lastIndex = 0;
+  const lineEnd = forwardSearch((from) => { for (let i = from; i < text.length; i += 1) if (isLineEnd(text[i])) return i; return -1; });
+  const hasLineEnd = HAS_LINE_END.test(text);
   let out = '';
   let from = 0;
   let matched = 0; // where the last run ended
