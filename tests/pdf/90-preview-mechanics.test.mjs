@@ -1,5 +1,5 @@
 // The preview's mechanics with builds that succeed (R2-165): the typing debounce keeps the pages on
-// screen and builds once per pause; a stale render is dropped; a zoom change repaints the pages
+// screen and builds once per pause; a newer change waits for the build on its way; a zoom change repaints the pages
 // already built, at the new width, without building again (and not while hidden); a failed build
 // shows an alert with its message and a Retry that builds again at once and, when that succeeds,
 // clears the alert. tests/pdf/71-preview-* pin the same debounce and Retry with builds that fail at

@@ -19,8 +19,8 @@ import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
  *   laid each of them out in turn: a 9-page résumé's preview lagged 10-20 s behind typing that
  *   paused every few keys (R2-142).
  * - A finished render is shown when it is newer than the pages on screen, even while a newer
- *   change is still waiting (steady typing would otherwise freeze the preview); only one older
- *   than the pages on screen is dropped.
+ *   change is still waiting (steady typing would otherwise freeze the preview). Builds never
+ *   overlap, so one cannot finish after a newer one is up; the guard that would drop it is defensive.
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
  *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
@@ -149,7 +149,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       building.current += 1;
       built.current = { input, render, retry };
       let pdf = null;
-      // Unmounted meanwhile (Cover Letter clicked mid-render), or overtaken by newer pages on screen.
+      // Unmounted meanwhile (Cover Letter clicked mid-render). `gen < shownGen` is defensive: builds run one at a time.
       const unwanted = () => !mounted.current || gen < shownGen.current;
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
