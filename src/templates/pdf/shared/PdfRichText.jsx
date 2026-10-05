@@ -3,6 +3,7 @@ import { View, Link } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
+import { splitHugeBlocks } from './splitHugeBlock';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -69,7 +70,7 @@ function markerWidth(chars, fontSize) {
  */
 export function PdfRichText({ html, style = {}, breaks }) {
   const bulletStyle = useContext(BulletStyle);
-  const blocks = parseRichText(html);
+  const blocks = splitHugeBlocks(parseRichText(html)); // a paste of 200 000 characters: typing-freeze 7b
   if (!blocks.length) return null;
   const { marginTop, marginBottom, ...textStyle } = style;
   const fontSize = textStyle.fontSize || 11;
@@ -88,7 +89,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
   return blocks.map((block, i) => {
     const prev = blocks[i - 1];
     const edges = {
-      marginTop: i === 0 ? marginTop : (prev.marker && block.marker ? LIST_GAP : PARA_GAP),
+      marginTop: i === 0 ? marginTop : (block.joined ? 0 : prev.marker && block.marker ? LIST_GAP : PARA_GAP),
       marginBottom: i === blocks.length - 1 ? marginBottom : undefined,
     };
     const align = block.align || textStyle.textAlign;
