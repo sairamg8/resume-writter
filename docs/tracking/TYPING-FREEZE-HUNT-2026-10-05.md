@@ -53,14 +53,19 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
 ### 3. PROD: a worker job that never replies kills the preview for the session — MEDIUM, 2/2 (open row R2-142 "no watchdog") — FIXED
 - **Fixed on `claude/fix-worker-watchdog`** (built on `claude/typing-freeze-fixes`): two layers. (a) `src/utils/pdfBuild.js`: the job the worker is on (the
   oldest pending; a job waiting its turn is not timed) gets 60 s; past it the worker is terminated, that build fails with "building took more than 60 s — a font
-  or an image may not be reachable" (the preview shows it with Retry), and the jobs behind it are re-posted, in order, to a fresh worker. The main-thread
+  may not be reachable" (the preview shows it with Retry), and the jobs behind it are re-posted, in order, to a fresh worker. The main-thread
   fallback (`runHere`) has the same limit, which also releases the preview's queued build behind a never-settling one. (b) `src/templates/pdf/shared/pdfFontLoader.js`:
   a face's FIRST fetch is waited for 10 s (react-pdf's own fetch has no timeout and no signal), then the face counts as not loaded and the font prints in Noto Sans
-  with the usual notice; the wait is paid once a minute (not every build), and data that arrives late is used by the next build.
-  Tests: tests/pdf/112-pdf-worker-watchdog (6) and tests/pdf/113-font-load-stall (2).
+  with the usual notice; the wait is paid once a minute (not every build), and data that arrives late is used by the next build,
+  and the preview builds again when it lands (faceFetched), so the notice does not wait for the next edit.
+  Tests: tests/pdf/112-pdf-worker-watchdog (9) and tests/pdf/113-font-load-stall (2).
 - Coordinator's own run on the prod bundle (stand-in blob worker, fonts from the CDN never answer): the first build came back after ~12 s with `fallback=Literata`, the preview
   was ready at ~14 s with "Literata could not be loaded — the PDF uses Noto Sans in its place", the worker not restarted (before: 'rendering' for ever). A worker that
   swallows every job: the alert and Retry appeared exactly 60.0 s after the job was posted, the worker was terminated, Retry started a fresh worker and the preview was ready.
+- Accepted, from the second-agent review: (a) with a dead CDN, a build that chains several distinct CDN fonts (body, name, heading, script fallbacks) waits 10 s per family, so
+  past 60 s it fails with Retry rather than falling back, and the fresh worker has no memory of what stalled; (b) a face that stalls while others of its family load borrows
+  a donor's data, and if its own data lands during that same build's layout the build may lay out with an unprimed font (it heals at the next prepareFonts); (c) a
+  browser whose worker hangs silently from the very first job would loop on Retry instead of falling back to the main thread (the 'not proven' fallback is for worker errors only).
 - Caveat of any finite limit: a build that is only slow (a very poor connection, a huge résumé) fails at 60 s with Retry rather than waiting; Retry restarts it, and
   fonts that finished downloading meanwhile come from the browser's cache.
 - Steps (simulated stalled CDN font fetch inside the worker; pipeline-repro-snippets.md): big résumé, Design -> "Ledger" (PT Serif).

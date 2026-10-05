@@ -91,6 +91,39 @@ describe('a PDF build the worker never answers fails, and the builds behind it g
     assert.equal(made.length, 1);
   });
 
+  it('a second stall in a row fails the next build too, on yet another fresh worker', { timeout: 5000 }, async () => {
+    const made = workers(120);
+    await assert.rejects(build.buildResumePdf(sample()), /took more than/);
+    await assert.rejects(build.buildResumePdf(sample()), /took more than/);
+    assert.deepEqual(made.map((w) => w.terminated), [true, true], 'each stalled worker was stopped, one build each');
+  });
+
+  it('a late word from the stopped worker changes nothing', { timeout: 5000 }, async () => {
+    const made = workers(120);
+    const a = build.buildResumePdf(sample());
+    await wait(30);
+    const idA = made[0].sent[0].id;
+    await assert.rejects(a, /took more than/);
+    made[0].answer(done(idA)); // a message already on its way when the worker was stopped
+    const b = build.buildResumePdf(sample());
+    await wait(30);
+    made[1].answer(done(made[1].sent[0].id));
+    assert.equal((await b).type, 'application/pdf');
+  });
+
+  it('a build moved to the fresh worker gets a whole limit of its own', { timeout: 5000 }, async () => {
+    const made = workers(300);
+    const [a, b] = [build.buildResumePdf(sample()), build.buildResumePdf(sample())];
+    const aFails = assert.rejects(a, /took more than/);
+    await wait(40);
+    const idB = made[0].sent[1].id;
+    await aFails;
+    await wait(150); // b was sent over 450 ms ago, past the limit it was first held to
+    assert.equal(made[1].terminated, false, 'b has been on the fresh worker for 150 ms only');
+    made[1].answer(done(idB));
+    assert.equal((await b).type, 'application/pdf');
+  });
+
   it('a build the worker answers in time leaves nothing to fail later', { timeout: 5000 }, async () => {
     const made = workers(120);
     const a = build.buildResumePdf(sample());
