@@ -82,6 +82,10 @@ ExportDropdown → useEditorExports
 - `codeSplitting.groups` in `vite.config.js` names the vendor chunks: React, the react-pdf stack, docx,
   firebase — nothing on the start-up path downloads the PDF engine (`tests/pdf/71-startup-chunks.test.mjs`)
 - PDF templates use dynamic `import()` per template key for code splitting
+- The PDF is built in a Web Worker (`src/utils/pdfWorker.js`, started by `src/utils/pdfBuild.js`; main thread
+  where none starts). On the dev server the React plugin wraps JSX for Fast Refresh, and that runtime needs
+  `window`, which a worker lacks, so `vite.config.js` leaves `src/templates/pdf/` out of it (`PDF_WORKER_JSX`,
+  pinned by `tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs`); a PDF template edit reloads the page on `yarn dev`
 
 ## Complexity hotspots
 

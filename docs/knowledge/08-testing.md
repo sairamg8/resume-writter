@@ -44,7 +44,7 @@ measure what Poppler 26.01 does, so CI runs them on Ubuntu 26.04.
 `.github/workflows/ci.yml` runs on every push to master and on a manual dispatch: the node suite
 (sharded), the production build, Playwright, oxlint on `src tests cypress`, and Cypress. A dispatch
 can name what to run instead — `tests` (node test files), `failfirst` (`sha:test,…` pairs: the
-commit's `src/` changes, yarn patch and yarn.lock are undone and its tests must fail, then pass with
+commit's `src/` and `vite.config.js` changes, yarn patch and yarn.lock are undone and its tests must fail, then pass with
 them), `playwright` and `cypress` (spec files, or `none`). Sessions and agents run tests only there,
 never on their own machine (the owner, 2026-09-24; `docs/tracking/CLUSTER-PROTOCOL.md`).
 

@@ -9,9 +9,21 @@ import { refusedBuild } from './vite-deploy-guard.js'
 const refused = refusedBuild()
 if (refused) throw new Error(refused)
 
+// The JSX the PDF worker loads (src/utils/pdfWorker.js -> pdfExportReactPDF.js -> the templates): every file
+// under this project's src/templates/pdf/. They stay out of React Fast Refresh. On the dev server a refreshed
+// module begins with `import "/@react-refresh"`, and that runtime's first statement assigns to `window`; a worker
+// has none, so the PDF worker died at load ("window is not defined"), pdfBuild.js gave up on it, and every
+// preview build ran on the main thread: the editor stood still for up to a second per build while typing
+// (`yarn dev` only: a build never refreshes). The worker keeps its own copy of these modules and a hot update
+// never reached it, so a template edit now reloads the page. Anchored to the project, so a checkout under some
+// other `src/templates/pdf` directory cannot switch Fast Refresh off for the whole app.
+// tests/pdf/110-dev-pdf-worker-no-refresh walks the modules the dev server serves the worker and names any that slip.
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const PDF_WORKER_JSX = new RegExp('^' + escapeRegExp(fileURLToPath(new URL('./src/templates/pdf/', import.meta.url)).replace(/\\/g, '/')))
+
 export default defineConfig({
   // ownerResume: the owner's git-ignored résumé on the dev server only; null in every build.
-  plugins: [react(), tailwindcss(), ownerResume()],
+  plugins: [react({ exclude: [/[\\/]node_modules[\\/]/, PDF_WORKER_JSX] }), tailwindcss(), ownerResume()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
