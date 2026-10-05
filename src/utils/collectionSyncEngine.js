@@ -298,8 +298,15 @@ export function createCollectionSync({
       if (m.uid && m.uid !== uid && !leave(m.uid)) throw noRoom();
       const record = meta.read();
       const own = store.items();
-      const mine = record.uid === uid;
-      const stash = stashOf(record, uid);
+      // The list kept aside at the last sign-out, too, as it was before the read: two tabs signing
+      // in at once, the other tab's first sync landing during this one's read took it out of the
+      // record and named the account — a job deleted before that sign-out was no longer one deleted
+      // here, came back from the cloud copy read before it went, and the other tab sent it back to
+      // the account (R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). The record read now when it
+      // does not name the account: it holds what a sign-out meanwhile kept aside.
+      const knew = record.uid === uid ? early : record;
+      const mine = knew.uid === uid;
+      const stash = stashOf(knew, uid);
       const local = [...own, ...stash.items.filter((x) => !own.some((o) => o.id === x.id))];
       // An id the cloud cannot name is in no copy of it: its version (a nested document an older
       // build wrote) would have the job dropped here as removed from the cloud.
