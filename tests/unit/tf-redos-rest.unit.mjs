@@ -39,11 +39,17 @@ test('a link whose address ends in a long run of slashes and then a letter is re
   assert.equal(linkText('example.com', 'https://example.com/'), 'example.com');
 });
 
-test('a text résumé of 80 000 lines with no heading is read in linear time', () => {
-  const text = Array.from({ length: 80_000 }, (_, i) => `Word${i} and more`).join('\n');
-  const { out, ms } = timed(() => resumeFromText(text));
+test('a text résumé of 60 000 lines with no heading costs no more than the same one with its location on the first line', () => {
+  // With the location found on the first line, takeContacts no longer asks whether a later line gives a place; without, it asked
+  // for each of the 60 000 lines (a copy of the rest of the lines each time). The same lines, both read here: the cost is the
+  // difference, whatever the machine's speed.
+  const lines = Array.from({ length: 60_000 }, (_, i) => `Word${i} and more`);
+  const without = lines.join('\n');
+  const withPlace = `London, UK\n${without}`;
+  const placed = Math.min(timed(() => resumeFromText(withPlace)).ms, timed(() => resumeFromText(withPlace)).ms);
+  const { out, ms } = timed(() => resumeFromText(without));
   assert.ok(out, 'a résumé comes back');
-  assert.ok(ms < 3 * LIMIT_MS, `resumeFromText took ${ms.toFixed(0)} ms on ${text.length} characters`);
+  assert.ok(ms < 2 * placed + LIMIT_MS, `without a place on the first line it took ${ms.toFixed(0)} ms, with one ${placed.toFixed(0)} ms`);
 });
 
 const zipOf = (parts) => {
