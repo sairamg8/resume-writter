@@ -77,7 +77,12 @@ on hover); what a failure means: `src/utils/cloudSyncRetry.js`.
 - Queue writes and deletes
 - Debounce ~1.5s then flush
 - Each flush first reads the server's copies of the résumés it sends — the deletion list only when a
-  copy the cloud had is gone, and nothing is written from what it read (R8-4, R2-029)
+  copy the cloud had is gone, and nothing is written from what it read (R8-4, R2-029). The store is
+  asked again once the cloud has answered: a résumé deleted in this browser meanwhile (another tab's
+  Delete reaches this one through the storage event) is not written, and not taken off the deletion
+  list as an edit; its queued deletion goes next, and a newer copy another device made meanwhile
+  comes back with it, as a deletion from an older copy always did. One put back meanwhile (Undo) is
+  still written (SL-SYNC-FLUSH-WRITES-DELETED, `tests/pdf/18-cloud-sync-deleted-meanwhile.test.mjs`)
 - Offline, or a flush that failed: the résumé store keeps the edits and deletions, and the next first
   sync sends them. Firestore's cache is in memory only (`memoryLocalCache`, R2-005): nothing reads it
   (every read asks the server), and a persistent one kept every account's résumés on disk after sign-out
@@ -95,7 +100,7 @@ equality only, never by clock. The store keeps the cloud's versions it last knew
 | First sync: the copy here is one the cloud had, the cloud's is newer | the cloud's loads, whatever the clocks say |
 | First sync: changed on both sides (an offline edit, even across a reload) | both kept, as above |
 | The tab is shown again ≥ 10 s after the account was read | the account is read again, so the next edit starts from the other device's copy |
-| Deleted on another device, edited here where the deletion was never seen (a page left open, or offline; R2-029) | the edit wins: written under its id, taken off the deletion list, back on every device. A copy the cloud had, written again (a demo restore racing a deletion for good), is no edit: it stays listed (V2OWNER-DATA-0); one held back (too large) stays listed until it goes |
+| Deleted on another device, edited here where the deletion was never seen (a page left open, or offline; R2-029) — not one this browser already holds as deleted (another tab's Delete, while a flush reads) | the edit wins: written under its id, taken off the deletion list, back on every device. A copy the cloud had, written again (a demo restore racing a deletion for good), is no edit: it stays listed (V2OWNER-DATA-0); one held back (too large) stays listed until it goes |
 | First sync: a listed id the cloud holds again (an older build wrote it back after the deletion) | loaded and taken off the list; a demo account's original there (a restore's copy) is removed from the cloud instead |
 | First sync: a listed id, the copy here unchanged since the cloud had it, or of no known version | left out, deleted, as before |
 
@@ -225,7 +230,20 @@ dropped (and then deleted from the account), or one it just deleted brought back
 cloud's old order (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD). So does what was kept aside at the
 last sign-out: two tabs signing in at once, the other tab's first sync taking it out of the record during
 this one's read no longer brings back a job or project deleted just before that sign-out
-(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). Signing out (or another account signing in) takes
+(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). A first sync that finds the record naming its account
+after the read, when it did not before (the other tab's first sync took the kept-aside list meanwhile), reads
+again, once, as a steady-state sync: the cloud copy, the kept-aside list and the list were no longer one view,
+and a job that tab restored from it and then deleted was added here again and sent back to the account
+(SL-SYNC-FIRST-SYNC-STASH-CONSUMED, `tests/unit/sync-first-sync-stash-consumed.unit.mjs`). A first sync applies its merge to the list as it is once its batch is acknowledged,
+and tells what was changed meanwhile by content, not by object (as the queue's `changed()` does): another tab's save
+re-reads the whole list, and every item, a job the phone had deleted among them, then counted as edited here, was added
+back and sent, taking the phone's deletion off the account's list (SL-SYNC-FIRST-SYNC-SAVED-MEANWHILE,
+`tests/unit/sync-first-sync-saved-meanwhile.unit.mjs`); an item whose content was edited here meanwhile still stays.
+A flush asks the list again once the cloud has
+answered its read: a job or project deleted in another tab meanwhile (it reaches this one through the storage event) is
+not written back — the write would also take its id off the account's deletion list, undoing that tab's
+deletion on every device — and its queued deletion goes next; one put back meanwhile (Undo) is still written
+(SL-SYNC-FLUSH-WRITES-DELETED-ITEM, `tests/unit/sync-flush-deleted-meanwhile.unit.mjs`). Signing out (or another account signing in) takes
 the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
 aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
 before. Storage too full to take the record with what was kept aside: the list goes first to make

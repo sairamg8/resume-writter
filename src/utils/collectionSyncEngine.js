@@ -270,7 +270,7 @@ export function createCollectionSync({
     status(held.size ? 'stopped' : 'synced');
   }
 
-  async function firstSync(user, gen) {
+  async function firstSync(user, gen, again = false) {
     status('syncing');
     dropQueue();
     s.ready = false;
@@ -292,6 +292,14 @@ export function createCollectionSync({
       const seenOrder = early.uid === uid ? early.order : null;
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
+      // Another tab's first sync landed during this read: it took the list kept aside at the last
+      // sign-out out of the record and named this account. What it did to those items afterwards —
+      // restored them and deleted one, say — is in the list and the record now, but the cloud copy just
+      // read and the list kept aside (taken from the record as it was, above) are older than that: a
+      // job restored from the stash and deleted there was added to this list again and sent to the
+      // account, on every device (SL-SYNC-FIRST-SYNC-STASH-CONSUMED). The three no longer make one
+      // view: read again, as a steady-state sync — the record names the account, nothing is kept aside.
+      if (!again && early.uid !== uid && meta.read().uid === uid) return firstSync(user, gen, true);
       const docs = cloud.docs.map((d) => store.fromCloud(d)).filter(Boolean);
       const m = meta.read();
       // The last account's list could not be set aside (storage full): not merged into this one's.
@@ -337,10 +345,14 @@ export function createCollectionSync({
       }
 
       // Applied to the list as it is now: what was changed while the batch was on its way stays,
-      // and is sent by the queue (the list it compares with is the merged one).
+      // and is sent by the queue (the list it compares with is the merged one). Changed is told by
+      // content, as changed() tells it, not by object: another tab's save re-reads the whole list,
+      // every item a new object, and each item the plan dropped (deleted on another device, not
+      // changed here) then counted as edited here and was added back — written by the next flush,
+      // which took it off the account's deletion list: that deletion undone on every device
+      // (SL-SYNC-FIRST-SYNC-SAVED-MEANWHILE).
       const current = store.items();
-      const before = new Map(own.map((x) => [x.id, x]));
-      const edited = new Map(current.filter((x) => before.get(x.id) !== x).map((x) => [x.id, x]));
+      const edited = new Map(diffLists(own, current).writes.map((x) => [x.id, x]));
       const removed = new Set(own.filter((x) => !current.some((c) => c.id === x.id)).map((x) => x.id));
       const result = plan.merged.filter((x) => !removed.has(x.id)).map((x) => edited.get(x.id) || x);
       const added = [...edited.values()].filter((x) => !result.some((r) => r.id === x.id));
@@ -449,6 +461,13 @@ export function createCollectionSync({
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
       const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
       if (!current()) return;
+      // An item deleted here while its copy was being read — another tab's delete, taken through the
+      // storage event: changed() queued its deletion — is not written back. The write would also come
+      // off the account's deletion list (collectionSyncIo.commit), undoing that tab's deletion on
+      // every device (SL-SYNC-FLUSH-WRITES-DELETED-ITEM). The list as it is now; one put back
+      // meanwhile (Undo) is in it, and goes.
+      const here = new Set(store.items().map((x) => x.id));
+      queued = queued.filter((x) => here.has(x.id));
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
       const newer = queued.map((x) => {
         const d = cloudCopy.get(x.id);
