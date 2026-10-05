@@ -109,8 +109,13 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   holding only a Link label with its Link URL cleared, or interests that are only commas: `entryPrints`
   counts what the renderers draw (R5-HUNT10-ENTRYPRINTS-COUNTS-UNPRINTED-LEFTOVERS). A current role's
   "Present" counts only while its End Date's eye is on: a current job with every eye off prints
-  nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS)
-- **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
+  nothing (R5-HUNT10-REVIEW-CURRENT-HIDDEN-END-PRINTS). A certificate whose URL cannot be linked prints
+  its Link label (else the URL) as plain text, as the PDF and Word do (R5-HUNT12-MD-CERT-LABEL-LOST-UNLINKABLE-URL)
+- **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`); its contact line prints
+  each value as typed (or its Link URL), not the Display label, so the full address stays followable —
+  but a website, LinkedIn or GitHub typed as just "https://", "www." or "https://www" under a label
+  prints the label, as every other export does — `namesAddress`, the test `linkOverride` and JSON Resume
+  share (R5-HUNT12-ATS-TEXT-BARE-SCHEME-UNDER-LABEL, R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL)
 - **ATS Check** — its score items (roles, dates, degrees, skills, grids) and "What a parser reads" (`printedJobs`) read only the entries that print (`entryPrints`): a blank entry just added is no role missing its title or dates, and splits no grouped roles (R5-HUNT11-ATS-SCORES-BLANK-ENTRIES)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema); only
   what prints goes in the file: a hidden section, entry or field stays out, and so does an entry that
@@ -149,12 +154,12 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
   a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
-  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10; an undated one's role or degree line over its date line too, a place there its location, R5-HUNT11), a deeper heading under an entry a grouped role; a link as "label
+  `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10; an undated one's role or degree line over its date line too, a place there its location, R5-HUNT11, and its role and place a line each over it, R5-HUNT12), a deeper heading under an entry a grouped role; a link as "label
   (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
   Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
   (R4-LO-05). A password-protected PDF is told so (R4-IMP).
-- `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
+- `importText.js` (pure) reads the lines: name, job title, contacts (a town with no region, "London", beside a contact on its line or LinkedIn's "… Area" alone under the headline, the location, R5-HUNT12 — of more words than one only a known place's, "Hong Kong", or one with a linking word, "Frankfurt am Main", not "Eagle Scout", and a full place on a later header line first, R5-HUNT12 review), summary; a section per known
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases; in a file with no heading marks one in
   Title Case with no blank line before it too, of another type than the section it is in — not a
   summary's or a contact's, a `SUBHEADING` label, a "Languages" category in Skills, a "Volunteering" hobby in Interests nor a role over or under
@@ -170,9 +175,9 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   in brackets, no issuer — an entry's own line, not the text under it; R5-HUNT10), or (not in Education) first in its section or over a list; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01; LinkedIn's employer over its total length alone, "5 years 2 months", then each role
-  over its dates, R5-HUNT11 — a job's place alone under its date line its location, not a next job's company over its role or dates ("Globex, Inc."); in Education a school over its degree's dated line, alone or with its place at the
+  over its dates, R5-HUNT11, a role's text with lower-case words over the next role no next employer (a name's particle, "Universidad de Chile", no such word), R5-HUNT12 — a job's company, role and place a line each over its dates, in any order, that job's with the place its location (the line over them its company only when it reads as a name, else the job above's text; a role over "Mountain View, CA" alone that job's location, not its company), R5-HUNT12 — a job's place alone under its date line its location, not a next job's company over its role or dates ("Globex, Inc."); in Education a school over its degree's dated line, alone or with its place at the
   right tab, "Harvard University ⇥ Cambridge, MA", is that entry's school and location (over a "High School Diploma" too), the line under
-  the dated line no second header line but its text or the next school's, R5-HUNT11), and in a dated section an undated block (first, or after a blank line) that opens
+  the dated line no second header line but its text or the next school's, R5-HUNT11; LinkedIn's "Bachelor of Science - BS, Computer Science" the degree and its field of study, the short form dropped, R5-HUNT12), and in a dated section an undated block (first, or after a blank line) that opens
   with a title line an entry of its own (R5-HUNT8) — but not a sub-heading label inside the entry above
   ("Key Responsibilities", "Highlights", "Relevant Coursework", "Activities": `SUBHEADING`, R5-HUNT9),
   which stays that entry's text; every line it cannot place in a custom "Additional

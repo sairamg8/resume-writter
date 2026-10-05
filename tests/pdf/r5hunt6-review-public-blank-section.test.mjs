@@ -33,12 +33,15 @@ it('a section whose entries are all blank, or all hidden with their eyes, is not
   assert.ok(!lines.some((l) => /^(Toolbox|Side Quests|Odd Jobs):/.test(l)), lines.join(' | '));
 });
 
-it('a section with one entry that prints keeps its blank one beside it (the guard)', () => {
+// The section stays; its blank entry does not, as the PDF has drawn none since R5-HUNT7-BLANK-ENTRY
+// (printedEntries) — updated for R5-HUNT12-SHARE-BLANK-ENTRY-CHANGED-SINCE, where kept it was counted
+// under "What is public" and made the copy look out of date.
+it('a section with one entry that prints stays, without its blank one (the guard)', () => {
   const r = sample();
   r.sections[1].items.push({ ...r.sections[1].items[0], id: 'sk_2', category: 'Tools', skills: 'Figma' });
   const copy = link.publicSnapshot(r);
   assert.deepEqual(copy.sections.map((s) => s.title), [r.sections[0].title, 'Toolbox']);
-  assert.equal(copy.sections[1].items.length, 2);
+  assert.deepEqual(copy.sections[1].items.map((i) => i.id), ['sk_2']);
 });
 
 it('the copy still prints exactly as the résumé does', async () => {

@@ -4,7 +4,7 @@
 import { isText, storedText } from './storedText.js';
 import { entries, flattened, isoDate } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
-import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems, displayUrl } from './contacts.js';
+import { CONTACT_FIELDS, CONTACT_KEYS, contactHref, contactItems, linkOverride, namesAddress } from './contacts.js';
 import { entryPrints } from './entryPrints.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { ownDesign, presetOf } from '../constants/templatePresets.js';
@@ -40,15 +40,16 @@ function shown(item) {
  * Link URL override when set and one the PDF follows (contactHref), else the value as typed. The file
  * wrote the typed value ('jdoe', 'My site'), a dead link in every other JSON Resume tool, while the
  * PDF, Word, Markdown and ATS text link to the override (R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE).
- * A bare scheme with no host ("https://", "www.") is no address: a Display label prints over it unlinked
- * in the PDF (contactHref is null), so the file's url is '' — not "https://", a link to nothing beside
- * the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL). The value as typed rides as `${key}Text`.
+ * A bare scheme with no host ("https://", "www.", "https://www") is no address: a Display label prints
+ * over it unlinked in the PDF (contactHref is null), so the file's url is '' — not "https://", a link to
+ * nothing beside the label (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL,
+ * R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL). The value as typed rides as `${key}Text`.
  */
 function linkUrl(p, key) {
-  const override = String(p[`${key}Url`] || '').trim();
+  const override = linkOverride(key, p);
   const href = contactHref(key, p);
   if (override && href) return override;
-  return !href && !displayUrl(p[key]) ? '' : p[key];
+  return !href && !namesAddress(p[key]) ? '' : p[key];
 }
 
 /**

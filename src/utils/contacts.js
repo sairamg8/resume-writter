@@ -31,9 +31,30 @@ export const CONTACT_GRID = { cell: 0.46, gapPx: 24 };
 const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
 
 /**
+ * A website / LinkedIn / GitHub's "Link URL" override, or '' when it is unset. An override of just a
+ * scheme or "www." ("https://", "www.", "https://www.", "http://www") names no address, so it counts
+ * as unset, as such a value does in contactItems: it replaced the valid value typed in the field,
+ * which printed unlinked or linked to "https://www." (R5-HUNT12-LINK-URL-OVERRIDE-BARE-SCHEME).
+ */
+export function linkOverride(key, personal) {
+  const override = String(personal?.[`${key}Url`] || '').trim();
+  return namesAddress(override) ? override : '';
+}
+
+/**
+ * Whether a website / LinkedIn / GitHub value names an address: not '' nor just a scheme and "www"
+ * ("https://", "www.", "https://www.", "http://www") — the values safeHref links nowhere. The one
+ * test linkOverride, the ATS text and JSON Resume share, so "https://www" under a Display label is
+ * no address in any of them (R5-HUNT12-REVIEW-ATS-HOSTLESS-WWW-UNDER-LABEL).
+ */
+export function namesAddress(value) {
+  return Boolean(displayUrl(value).replace(/^www\.?$/i, ''));
+}
+
+/**
  * Where a contact line should link to, or null. E-mail → mailto:, phone → tel:, website /
- * LinkedIn / GitHub → the "Link URL" override when set, else the value itself (https:// added
- * to a bare domain). Location is never a link.
+ * LinkedIn / GitHub → the "Link URL" override when set (linkOverride), else the value itself
+ * (https:// added to a bare domain). Location is never a link.
  */
 export function contactHref(key, personal) {
   const value = String(personal?.[key] || '').trim();
@@ -44,7 +65,7 @@ export function contactHref(key, personal) {
     return dial.replace(/\D/g, '').length >= 3 ? `tel:${dial}` : null;
   }
   if (key === 'location') return null;
-  return safeHref(String(personal?.[`${key}Url`] || '').trim() || value);
+  return safeHref(linkOverride(key, personal) || value);
 }
 
 /**

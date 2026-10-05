@@ -1,5 +1,22 @@
 # Session Handoff — Resume Here
 
+**2026-09-30 06:05 UTC — ROUND 12 import/export/tools merged: r4-green `c283b4b1`** (11 fixes + review fixes: import 4 — stacked
+company/role/place/dates, one-word header city, LinkedIn degree abbreviation and grouped role; export 3 — bare-scheme links and labels;
+tools 4 — auto-fix and verb chips, share-link 'changed since' counting a blank entry). Seen-list 202. Full gate on c283b4b1 dispatched.
+PR #9 (b414cd6) is still open for the owner; a newer deploy PR follows a green c283b4b1. Running: wf_3d096ca1-696 (round 12 dash,
+pdf, sync, editor, jobs) and wf_4f72ce87-720 (round 13 import, export, tools). boards DONE.
+
+**2026-09-30 05:20 UTC — master `e1267bc9` (live, the owner's deploy) is GREEN (run 36670757485). DEPLOY: PR #9**
+(`claude/deploy-r11-b414cd6`, full gate 36671003710 on `b414cd6a` GREEN) = master + the 5 round-11 import review fixes (live
+regressions from the unreviewed import changes). Owner: merge #9 (or `git push origin b414cd6a:refs/heads/master`). Round 12 running.
+
+**2026-09-30 04:55 UTC — ROUND 11 DONE and merged: r4-green `b414cd6a`** (17 seen-list rows; import 5 +review fixes merged now;
+jobs review fix 0403359c; dash/sync review fixes). The Website-freeze lead is fixed (33647938: two regexes in displayUrl/safeHref
+took quadratic time on long values; test r5-hunt11-website-typing-linear-time). boards DONE (dry in rounds 10 and 11); pdf dry in 11.
+Full gate on b414cd6a dispatched ~04:55; when green, pin `claude/deploy-r11-b414cd6` and open the deploy PR (master 33c7c1da is
+round 11 before review). Round 12 running: wf_3d096ca1-696 (dash, pdf, sync, editor, jobs) and wf_25bcc698-261 (import, export,
+tools), base b414cd6a. Seen-list 191.
+
 **2026-09-30 ~05:00 UTC — DEPLOYED by the owner's order (no CI wait): master = `fa9c6ba4`** = everything: r4-green (round 11 review fixes:
 dash, sync, jobs), every claude/wf-r5-hunt11-* branch (incl. import, unreviewed), plus the 7 leftovers (JSON Resume bare-scheme label fixed;
 Website typing quadratic paths in contacts.js/richText.js fixed, freeze itself still unreproduced; AUD-09/19/23/25/26 were already fixed,

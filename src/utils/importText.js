@@ -485,6 +485,43 @@ const ADDRESS = /^(?:https?:\/\/|mailto:)[^\s()]+$/i;
 /** The contacts a Display label can stand for (contacts.js: the `link` fields). */
 const LABELLED_KEYS = new Set(['website', 'linkedin', 'github']);
 
+/**
+ * A town named alone, with no state or country after a comma: "London", "Singapore", "Frankfurt am
+ * Main", LinkedIn's "San Francisco Bay Area". Each word capitalised (a small linking word between), no
+ * job title's word and none a work status or a contact's label says ("US Citizen", "Portfolio").
+ * Of more words than one, only what names a place: a known town, state or country of more words ("San
+ * Francisco", "Hong Kong"), one with a town's linking word ("Frankfurt am Main"), or LinkedIn's "… Area".
+ * Before, any capitalised words were: "Eagle Scout", "Spanish Speaker", "Green Card Holder" or "Kaggle
+ * Grandmaster" beside the email became the location (R5-HUNT12 review). A single word is a town unless
+ * it is a word a contact line prints for something else ("Bilingual", "Freelance", "Kaggle").
+ */
+const TOWN_OF_WORDS = new RegExp(`^(?:${[
+  'new york(?: city)?', 'los angeles', 'san francisco', 'san diego', 'san jose', 'san antonio', 'san juan', 'santa clara', 'santa monica',
+  'santa barbara', 'santa cruz', 'santa fe', 'palo alto', 'mountain view', 'menlo park', 'redwood city', 'foster city', 'sunnyvale',
+  'las vegas', 'salt lake city', 'kansas city', 'oklahoma city', 'jersey city', 'new orleans', 'st\\.? louis', 'saint louis', 'st\\.? paul',
+  'fort worth', 'fort lauderdale', 'el paso', 'long beach', 'long island', 'baton rouge', 'des moines', 'ann arbor', 'grand rapids',
+  'colorado springs', 'virginia beach', 'washington,? d\\.?c\\.?', 'research triangle', 'silicon valley', 'new delhi', 'navi mumbai',
+  'hong kong', 'kuala lumpur', 'tel aviv', 'buenos aires', 'mexico city', 'são paulo', 'sao paulo', 'rio de janeiro', 'cape town',
+  'abu dhabi', 'ho chi minh city', 'quezon city', 'st\\.? petersburg', 'saint petersburg', 'the hague', 'den haag', 'isle of man',
+  'milton keynes', 'newcastle upon tyne', 'kuwait city', 'panama city', 'guatemala city', 'port louis', 'addis ababa', 'dar es salaam',
+  'phnom penh', 'san salvador', 'santo domingo', 'costa rica', 'puerto rico', 'sri lanka', 'saudi arabia', 'south korea', 'north carolina',
+  'south carolina', 'north dakota', 'south dakota', 'west virginia', 'new jersey', 'new mexico', 'new hampshire', 'rhode island',
+  'british columbia', 'nova scotia', 'new south wales', 'new zealand', 'united kingdom', 'united states(?: of america)?',
+  'united arab emirates', 'south africa', 'czech republic', 'hong kong sar',
+].join('|')})$`, 'iu');
+const BARE_TOWN = {
+  test(text) {
+    const s = String(text).trim();
+    const words = s.split(/\s+/);
+    return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
+      && words.length <= 5 && !ROLE.test(s) && !BARE_LABEL.test(s) && !headingType(s)
+      && !/\b(?:citizen|citizenship|clearance|visa|available|availability|immediately|relocat\w*|authori[sz]ed|permit|resident|pronouns?|he|she|they|him|her|them|twitter|blog|resume|cv|references?|mr|mrs|ms|dr|phd|mba|md|jr|sr)\b/i.test(s)
+      && (words.length === 1
+        ? !/^(?:bi|tri|multi)lingual$|^(?:fluent|native|freelanc\w*|contract(?:or|ing)?|consulting|self-employed|onsite|on-site|nationwide|worldwide|global|international|anywhere|flexible|negotiable|veteran|student|graduate|undergraduate|alumn\w*|kaggle|behance|dribbble|medium|substack|youtube|instagram|facebook|mastodon|bluesky|threads|leetcode|hackerrank|codepen|gitlab|bitbucket|stackoverflow|orcid|researchgate|skype|telegram|whatsapp|discord|signal|wechat|linktree|x)$/i.test(s)
+        : TOWN_OF_WORDS.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s/u.test(s) || /\s(?:Area|Region)$/u.test(s));
+  },
+};
+
 /** What a piece of header text is: { key, value } for a contact, else null. */
 function contactOf(segment) {
   const labelled = LABEL.exec(segment);
@@ -669,6 +706,17 @@ const SUBHEADING = /^(?:(?:key|main|major|core|notable|selected|relevant|select|
 
 /** Title Case for a line typed in capitals ("PROFESSIONAL EXPERIENCE", "AVERY QUINN"); others as they are. */
 const SMALL = new Set(['and', 'of', 'the', 'in', 'for', 'at', 'on', 'to', 'a', 'an', 'or', '&']);
+/** A name's own words in lower case: "Universidad de Chile", "Banco do Brasil", "Ludwig van Beethoven". */
+const PARTICLE = new Set(['de', 'del', 'della', 'der', 'den', 'di', 'da', 'do', 'dos', 'das', 'du', 'des', 'la', 'le', 'les', 'y', 'e', 'et', 'und', 'van', 'von', 'zu', 'am', 'im', 'sans', 'al', 'el', 'bin', 'ibn']);
+/**
+ * Whether a line can be a name (an employer's): no word in lower case but "of", "the" or a name's
+ * particle, and none of those first. "Leading the storage team" or "and Kubernetes" (a paragraph's last
+ * line) is a role's text; "Bank of America" and "Universidad de Chile" are names.
+ */
+const nameLike = (text) => {
+  const words = String(text).trim().split(/\s+/);
+  return !SMALL.has(words[0]) && !PARTICLE.has(words[0]) && !words.some((w) => /^\p{Ll}+$/u.test(w) && !SMALL.has(w) && !PARTICLE.has(w));
+};
 function tamed(text) {
   if (!/\p{Lu}/u.test(text) || /\p{Ll}/u.test(text)) return text;
   return text.toLowerCase().split(/(\s+)/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase()).replace(/([-'’.])(\p{L})/gu, (_, a, c) => a + c.toUpperCase()))).join('');
@@ -923,6 +971,15 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
           else fields.institution = part;
         }
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
+        // LinkedIn's "Bachelor of Science - BS, Computer Science": the degree's short form after its name,
+        // then its field. Before, the field of study was empty, and "BS, Computer Science" became the
+        // description (R5-HUNT12-LINKEDIN-DEGREE-ABBR-FIELD). The short form alone ("… - MBA") is the degree's too.
+        else if (fields.degree && DEGREE_NAME.test(fields.degree) && /^[\p{Lu}][\p{L}.]{0,7}(?:,\s*(.+))?$/u.test(part)
+          && DEGREE.test(part.split(',')[0]) && !/\s/.test(part.split(',')[0])) {
+          const rest = part.split(',').slice(1).join(',').trim();
+          if (rest && !fields.fieldOfStudy) fields.fieldOfStudy = rest;
+          else if (rest) left.push(rest);
+        }
         else left.push(part);
       }
       // A place on a line of its own (a side column's stacked fields): the location.
@@ -1265,11 +1322,23 @@ function entriesOf(type, lines, aside) {
       const m = info[i + 1];
       // A place alone there ("### Amazon", "Seattle, WA", "*Jan 2020 – Present*") is the entry's location,
       // not its role or degree: the role read "Seattle, WA" (R5-HUNT11 review).
+      const placeLine = (n) => pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text);
+      const plain = (n) => n && !n.bullet && !n.gap && n.hint !== 'entry';
+      let cap = 3;
       if (!L.date && second(info[i]) && m && !m.bullet && m.hint !== 'entry' && dateLine(m)) {
         const n = info[i++];
-        header.push(pieces(n.text).length === 1 && PLACE.test(n.text) && !ROLE.test(n.text) ? { ...n, hint: 'end' } : n);
+        header.push(placeLine(n) ? { ...n, hint: 'end' } : n);
+      } else if (!L.date && second(info[i]) && plain(m) && second(m) && placeLine(info[i]) !== placeLine(m)
+        && plain(info[i + 2]) && dateLine(info[i + 2])) {
+        // Its role and its place a line each ("### Google", "Software Engineer", "Mountain View, CA",
+        // "2017 – 2021"; a school's degree over its place): both the entry's, the place its location.
+        // Before, the place ended the header, and the date line took the role into an untitled entry
+        // of its own (R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY).
+        for (const n of [info[i], m]) header.push(placeLine(n) ? { ...n, hint: 'end' } : n);
+        i += 2;
+        cap = 4;
       }
-      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < 3 && under(info[i])) header.push(info[i++]);
+      while (i < info.length && !info[i].bullet && (!info[i].gap || dateLine(info[i])) && header.length < cap && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
     }
@@ -1311,7 +1380,12 @@ function entriesOf(type, lines, aside) {
           onRole(role);
         } else if (type === 'experience' && lengthGroup && cur?.header[0]?.group === lengthGroup && run(body.slice(-1)) && one(body.at(-1))
           // The next role, over its dates: not a next employer's job, its company over its role ("Microsoft" over "Senior Engineer").
-          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text))) {
+          // A role's text over it is no employer: "Leading the storage team" has words in lower case a
+          // name has none of (R5-HUNT12-LINKEDIN-GROUPED-ROLE-DESC-BECOMES-COMPANY: it was the next role's company).
+          // A name's particle is no such word: "Universidad de Chile" is the next employer (R5-HUNT12 review:
+          // it went into the role above's text, and its role joined the group).
+          && !(run(body.slice(-2)) && body.length >= 2 && one(body.at(-2)) && !PLACE.test(body.at(-2).text)
+            && nameLike(body.at(-2).text))) {
           onRole(body.pop());
         } else {
           lengthGroup = null;
@@ -1321,6 +1395,29 @@ function entriesOf(type, lines, aside) {
             if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
             header.unshift(body.pop());
             next = prev;
+          }
+          // A job printed as its company, its role and its place a line each over its dates ("Google",
+          // "Software Engineer", "Mountain View, CA", "2017 – 2021", in any order): the place is its
+          // location, and the line over the two is its title's other field. Before, three lines were
+          // the most, so the place became the company, and the company went into the job above's text
+          // (R5-HUNT12-STACKED-PLACE-LINE-LOSES-COMPANY).
+          const lone = (n) => n && !n.hint && pieces(n.text).length === 1 && fieldsOf(n.text).length === 1 && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && !isMetaLine(n.text);
+          const placeLine = (n) => lone(n) && PLACE.test(n.text) && !ROLE.test(n.text) && !CORPORATE.test(n.text);
+          const titles = header.slice(0, -1);
+          const at = titles.findIndex(placeLine);
+          const prev = body[body.length - 1];
+          if (JOB.has(type) && titles.length === 2 && at >= 0 && lone(titles[1 - at])) {
+            // The line over them a name, not the job above's text: "Mentored junior engineers" or
+            // "Kubernetes migration" stays there (R5-HUNT12 review: it became this job's role or company).
+            if (prev && lone(prev) && !placeLine(prev) && !prev.bullet && !prev.date && prev.index === header[0].index - 1
+              && !header[0].gap && !sentence(prev.text) && nameLike(prev.text)) {
+              header[at] = { ...header[at], hint: 'end' };
+              header.unshift(body.pop());
+            } else if ((REGION_END.test(titles[at].text) || /^(?:remote|hybrid)$/i.test(titles[at].text)) && !placeAfterComma(titles[at].text)) {
+              // None over them: the place ("Mountain View, CA", "Remote") is still the job's location, not
+              // its company. Not "Google, Mountain View, CA": the company with its place, which entryOf parts.
+              header[at] = { ...header[at], hint: 'end' };
+            }
           }
         }
         // None over it, and the date alone on its line: the date prints above its entry's title (the
@@ -1660,9 +1757,12 @@ export function resumeFromText(input) {
   const asides = []; // entries' text with nowhere to go in them (entryOf's `aside`)
 
   /** Header lines: contacts to their fields, the rest to the summary (sentences) or aside. */
-  const takeContacts = (ls, { spill }) => {
-    for (const l of ls) {
+  const takeContacts = (ls, { spill, alone = false }) => {
+    // A place a later line gives in full ("New York, NY") is the location, not a bare town above it.
+    const placeAt = ls.map((l) => headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p]).some((p) => contactOf(unbulleted(p))?.key === 'location'));
+    for (const [k, l] of ls.entries()) {
       const leftover = [];
+      let found = false;
       for (const listed of headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p])) {
         const piece = unbulleted(listed);
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
@@ -1677,8 +1777,18 @@ export function resumeFromText(input) {
           continue;
         }
         const c = contactOf(piece);
+        if (c) found = true;
         if (c && !personal[c.key]) personal[c.key] = c.value;
         else leftover.push(listed); // not a contact, or a second one of a kind
+      }
+      // A town with no region after it ("London", "Singapore", "San Francisco Bay Area") beside a contact
+      // on its line, or LinkedIn's "… Area" alone on a line of the header: the location. Before, it went
+      // to "Additional Information", the location left empty, even from the app's own exports
+      // (R5-HUNT12-HEADER-ONE-WORD-CITY-LOST). One such piece only: two tell nothing.
+      const towns = personal.location || placeAt.slice(k + 1).some(Boolean) ? [] : leftover.filter((p) => BARE_TOWN.test(unbulleted(p)));
+      if (towns.length === 1 && (found || (alone && leftover.length === 1 && /\s(?:Area|Region)$/.test(towns[0])))) {
+        personal.location = unbulleted(towns[0]);
+        leftover.splice(leftover.indexOf(towns[0]), 1);
       }
       if (leftover.length) spill(leftover.join(' | '), l.links);
     }
@@ -1714,6 +1824,7 @@ export function resumeFromText(input) {
       rest[0] = { ...t, text: run.slice(1).join('\t') };
     }
     takeContacts(rest, {
+      alone: true,
       spill: (text, links) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push({ text, links }),
     });
   }

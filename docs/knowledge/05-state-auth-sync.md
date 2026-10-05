@@ -255,8 +255,9 @@ hidden otherwise) publishes a read-only copy of one résumé (`src/utils/publicL
 `src/components/ShareLinkModal.jsx`). The copy is `publicSnapshot(resume)`: template, design, and
 what the PDF prints — hidden fields' values blanked (a hidden contact's Display label and Link URL
 with it), only the `personal` keys the PDF reads, a section's dates with Show dates off and its
-locations with Show location off blanked, hidden sections and entries and sections with no shown
-entry dropped, the design's saved designs, last-applied look name and hidden contacts' icons left
+locations with Show location off blanked, hidden sections and entries, entries that print nothing
+(blank, or every field hidden: the panel neither counts one nor calls adding one a change,
+R5-HUNT12) and sections with no entry that prints dropped, the design's saved designs, last-applied look name and hidden contacts' icons left
 out, no cover letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume,
 publishedAt }`, `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId,
 publishedAt }`) in one transaction; Publish first reads that record and reuses the link it names, so two tabs
