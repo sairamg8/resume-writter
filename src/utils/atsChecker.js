@@ -43,7 +43,7 @@ export function extractBulletsFromItem(item) {
     // no bullet, as before, and ends every open item: a quote after the list (indented as a top-level
     // item is) was glued onto the last bullet, which the PDF prints apart from it (R4-SW-WT-01).
     if (/<li[\s>]/i.test(desc)) {
-      const items = [];
+      const items = []; // each item's text in parts, joined once: gluing each paragraph on flattened the string again (time squared)
       // The item open at each depth: text after a nested list, inside the same outer item, prints at
       // the outer item's depth and continues it, not the nested bullet above it (R4-LO-16).
       const openAt = [];
@@ -53,13 +53,13 @@ export function extractBulletsFromItem(item) {
           openAt.length = 0;
         } else if (block.marker) {
           openAt.length = block.indent;
-          openAt[block.indent] = items.push(text) - 1;
+          openAt[block.indent] = items.push(text ? [text] : []) - 1;
         } else if (block.indent >= 1) {
           const at = openAt.slice(0, block.indent + 1).findLast((i) => i !== undefined);
-          if (at !== undefined) items[at] = `${items[at]} ${text}`.trim();
+          if (at !== undefined) if (text) items[at].push(text);
         }
       }
-      for (const clean of items) addOnce(clean);
+      for (const parts of items) addOnce(parts.join(' '));
     } else {
       // Look for bullet characters or line breaks (<br>, </p>, </div>, \n)
       const textWithNewlines = stripTags(desc

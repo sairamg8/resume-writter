@@ -22,12 +22,22 @@ test('a bullet of "<" repeated is read in linear time', () => {
   assert.ok(ms < LIMIT_MS, `extractBulletsFromItem took ${ms.toFixed(0)} ms on ${bullet.length} characters`);
 });
 
-test('a description of 40 000 bullets is read in linear time, each once', () => {
-  const lines = Array.from({ length: 40_000 }, (_, i) => `• bullet ${i % 30_000}`);
+test('a description of 100 000 bullets is read in linear time, each once', () => {
+  // 100 000 distinct ones: the old includes() takes some 28 s here, so a slow machine cannot hide it (40 000 took 2 s).
+  const lines = Array.from({ length: 130_000 }, (_, i) => `• bullet ${i % 100_000}`);
   const { out, ms } = timed(() => extractBulletsFromItem({ description: lines.join('\n') }));
-  assert.equal(out.length, 30_000);
+  assert.equal(out.length, 100_000);
   assert.equal(out[0], 'bullet 0');
-  assert.ok(ms < LIMIT_MS, `extractBulletsFromItem took ${ms.toFixed(0)} ms on 40 000 lines`);
+  assert.ok(ms < LIMIT_MS, `extractBulletsFromItem took ${ms.toFixed(0)} ms on 130 000 lines`);
+});
+
+test('a list item with 40 000 continuation paragraphs is read in linear time, as one bullet', () => {
+  // Each paragraph was glued on with `${text} ${next}`.trim(): the string flattened again each time (7 s here).
+  const description = `<ul><li>a${'<p>bbbbbbbbbb</p>'.repeat(40_000)}</li></ul>`;
+  const { out, ms } = timed(() => extractBulletsFromItem({ description }));
+  assert.equal(out.length, 1);
+  assert.equal(out[0], `a${' bbbbbbbbbb'.repeat(40_000)}`);
+  assert.ok(ms < 2500, `extractBulletsFromItem took ${ms.toFixed(0)} ms on ${description.length} characters`);
 });
 
 // The old bullet extraction, as it was, for the seeded corpus.
