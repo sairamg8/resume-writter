@@ -456,9 +456,11 @@ export function buildCustom(section, accentHex, settings, centered, dateHex, loo
  * in capitals for "ABC", as typed for "Abc" — the template's own when none is stored (Executive's
  * is "Abc"). Design → Spacing spaces it as the PDF does (R2-062): Line Height, Between Items, and
  * the section's own Spacing Override Before above its title; the space under it is
- * sectionSpaceAfter's. Its entries print in the PDF's colours (sectionLook's ink, R2-063).
+ * sectionSpaceAfter's. Its entries print in the PDF's colours (sectionLook's ink, R2-063). `width`:
+ * the twips its text is laid out in where it prints in a column of its own (a Sidebar Mixed column,
+ * R2-147-col), else the page's.
  */
-export function buildSection(section, accentHex, settings, template) {
+export function buildSection(section, accentHex, settings, template, { width } = {}) {
   if (section.visible === false || !shown(section).length) return [];
   const side = inSidebarColumn(template, section.type, settings);
   const centered = section.settings?.alignment === 'center' && !side;
@@ -474,7 +476,7 @@ export function buildSection(section, accentHex, settings, template) {
   };
   // The date in the PDF's colour for the template, from the Text colour it prints (its own when none is stored).
   const dateHex = accent2Hex(solid(getDateColor({ ...s, _template: templateId(template) })), '6b7280');
-  const look = sectionLook(section, settings, s, template, side);
+  const look = sectionLook(section, settings, s, template, side, width);
   const args = [{ ...section, title: upperSectionTitles(s.sectionTitleCase) ? title.toUpperCase() : title, heading }, accentHex, settings, centered, dateHex, look];
   switch (section.type) {
     case 'experience':     return buildExperience(...args);
