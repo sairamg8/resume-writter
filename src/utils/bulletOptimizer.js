@@ -567,7 +567,18 @@ const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|a
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
  * sentence's end (". ", "! ", "? "), then only spaces, bullet marks or opening quotes.
  */
-const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
+const SENTENCE_START_PATTERN = '(?:^|[.!?]\\s|\\n)[\\s•\\-*–—◦▪▸‣⁃"\'“‘(]*';
+
+/**
+ * A test of whether a pattern ends exactly at `end` in `text`: `re` is that pattern as a sticky lookbehind, read
+ * backwards from `end`. The text before `end` is not cut off (whole.slice(0, offset)) and read from its start for
+ * every match Auto-Fix finds in it: a long text full of weak phrases took time squared (typing-freeze 7b).
+ */
+const endingAt = (re) => (text, end) => {
+  re.lastIndex = end;
+  return re.test(text);
+};
+const startsSentenceAt = endingAt(new RegExp(`(?<=${SENTENCE_START_PATTERN})`, 'y'));
 
 /**
  * A helper verb ("was", "were", "is", "are", "am", "been") and its space before a weak phrase that is
@@ -594,13 +605,13 @@ const PUT_IN_ROLE = 'became|become|becomes|got|held|put|placed|made';
 const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?=(?:${HELPER}|${PUT_IN_ROLE}) )(?:(?:${HELPER}) (?:(${ADVERB}) )?)?(?:(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?)?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
 function dropHelperVerb(found, helperAdverb, roleAdverb, phrase, offset, whole) {
   // "Was not put in charge of QA" says no more than "Was not in charge of QA": left as it is (NOT_A_VERB).
-  if (NEGATED_BEFORE.test(whole.slice(0, offset))) return found;
+  if (negatedBefore(whole, offset)) return found;
   const involved = /^involved/i.test(phrase);
   const adverb = [helperAdverb, roleAdverb].filter(Boolean).join(' ');
   // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
   if (!adverb) return involved ? 'was ' : '';
   if (involved) return found;
-  const starts = SENTENCE_START.test(whole.slice(0, offset));
+  const starts = startsSentenceAt(whole, offset);
   return `${starts ? adverb[0].toUpperCase() + adverb.slice(1) : adverb} `;
 }
 
@@ -617,7 +628,8 @@ const PUT_IN_ROLE_OPENING = new RegExp(`^(?:(?:${HELPER}) )?(?:${PUT_IN_ROLE}) (
  * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
  * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
  */
-const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?$`, 'iu');
+const NEGATED_BEFORE_PATTERN = `(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?`;
+const negatedBefore = endingAt(new RegExp(`(?<=${NEGATED_BEFORE_PATTERN})`, 'iuy'));
 const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
@@ -634,8 +646,8 @@ export function autoFixWeakPhrases(text = '') {
     // Each pattern has one group, so the offset and the whole text are the last two arguments.
     result = result.replace(wp.match, (...args) => {
       const [offset, whole] = args.slice(-2);
-      if (NOT_A_VERB.test(args[1]) && NEGATED_BEFORE.test(whole.slice(0, offset))) return args[0];
-      return SENTENCE_START.test(whole.slice(0, offset))
+      if (NOT_A_VERB.test(args[1]) && negatedBefore(whole, offset)) return args[0];
+      return startsSentenceAt(whole, offset)
         ? wp.replacement
         : wp.replacement[0].toLowerCase() + wp.replacement.slice(1);
     });
