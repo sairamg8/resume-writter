@@ -66,7 +66,7 @@ describe('two tabs typing in one résumé at once (typing-freeze 5)', () => {
   it('both tabs type at the very same place: both texts are kept, in the same order in both tabs', () => twoTabs(async (t, a, b) => {
     const text = a.resume().personal.summary;
     await a.edit((s) => s.updatePersonal('summary', `AAA${text}`));
-    t.tick(5);
+    await t.tick(5);
     await b.edit((s) => s.updatePersonal('summary', `BBB${text}`)); // the later edit
     await a.flush();
     await b.deliver();
@@ -82,7 +82,7 @@ describe('two tabs typing in one résumé at once (typing-freeze 5)', () => {
     for (const order of ['B flushes first', 'A flushes first']) {
       await twoTabs(async (t, a, b) => {
         await b.edit((s) => s.updatePersonal('name', 'Blair Example'));
-        t.tick(5);
+        await t.tick(5);
         await a.edit((s) => s.updatePersonal('name', 'Alex Example')); // the later edit
         if (order === 'B flushes first') { await b.flush(); await a.deliver(); } else { await a.flush(); await b.deliver(); }
         await t.quiesce();

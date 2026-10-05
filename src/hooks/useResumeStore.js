@@ -32,6 +32,11 @@ function emptyStore() {
   return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [], deletedInfo: {}, syncedUid: null };
 }
 
+/** What storage holds under the key now: null when nothing, or when it cannot be read. */
+function storedRaw() {
+  try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
+}
+
 const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) && r.id);
 
 /**
@@ -156,16 +161,55 @@ export function useAppStore() {
   // The account the list belongs to (syncedUid) as this tab last saved or took it.
   const owner = useRef(loaded.state.syncedUid);
 
+  // The value storage held when this tab last wrote or took it. Another tab's save that this tab has
+  // not heard of yet (its storage event is on its way) is a value that differs from it.
+  const lastRaw = useRef(undefined);
+  if (lastRaw.current === undefined) lastRaw.current = storedRaw();
+
+  /**
+   * Another tab's save that this tab has not taken: what storage holds now, as `{ incoming, knew }`
+   * for withOtherTabsSave, and this tab knows it from here on; null when storage holds what this tab
+   * wrote or took, or a value that cannot be read in full (not taken over this tab's — its own load
+   * backs such a value up, readStore). A tab never heard another's save twice: the storage event of
+   * one a write has taken in already finds nothing.
+   */
+  function takeSave() {
+    const raw = storedRaw();
+    if (raw === null || raw === lastRaw.current) return null;
+    const { state: incoming, unreadable } = readStore();
+    if (unreadable !== null) return null;
+    lastRaw.current = raw;
+    // Storage holds the other tab's save from now on, whether or not a save of this tab's is held
+    // (R2-077): a second save of the other tab before that one is written is weighed against this
+    // one, not against this tab's last write — which counted every résumé taken from the first as
+    // changed here and undid the second.
+    const knew = stored.current;
+    incoming.resumes = sameAsKnown(incoming.resumes, knew);
+    stored.current = incoming.resumes;
+    return { incoming, knew };
+  }
+
   // Saves are coalesced (R2-077): every keystroke used to stringify and write the whole store.
   // Until a held save is written, storage has not seen its changes, so another tab's save keeps
   // them (stored stays the list last written).
   const [saver] = useState(() => coalescedWriter((state) => {
     try {
+      // A save of another tab's that landed since this tab last looked — its storage event is still on
+      // its way, as both tabs type: written over, it lost that tab's edits (typing-freeze 5). Taken
+      // in first, as the event takes it, and what is written is this tab's changes over it.
+      const other = takeSave();
+      const out = other ? withOtherTabsSave(state, other.incoming, other.knew) : state;
+      if (other) {
+        taken.current = out;
+        setAppState((prev) => (prev === state ? out : withOtherTabsSave(prev, other.incoming, other.knew)));
+      }
       // When storage is full, old backups make room before the change is refused (R4-8).
-      setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...state, dataVersion: DATA_VERSION }));
-      stored.current = state.resumes;
+      const raw = JSON.stringify({ ...out, dataVersion: DATA_VERSION });
+      setItemWithRoom(STORAGE_KEY, raw);
+      lastRaw.current = raw;
+      stored.current = out.resumes;
       // The dashboard's page pictures of résumés this browser no longer holds go with them (C1).
-      keepPageImagesOf(state.resumes);
+      keepPageImagesOf(out.resumes);
       setPersistError(null);
       setSavedAt(Date.now());
     } catch (e) {
@@ -219,19 +263,14 @@ export function useAppStore() {
   useEffect(() => {
     function onStorage(e) {
       if (e.key !== STORAGE_KEY || e.newValue == null) return;
-      const { state: incoming, unreadable } = readStore();
-      if (unreadable !== null) return;
+      const other = takeSave();
+      if (!other) return;
+      const { incoming, knew } = other;
       taken.current = incoming;
-      // Storage holds the other tab's save from now on, whether or not a save of this tab's is held
-      // (R2-077): a second save of the other tab before that one is written is weighed against this
-      // one, not against this tab's last write — which counted every résumé taken from the first as
-      // changed here and undid the second. The held save is not written until the state it would
-      // write has taken this one in (the effect above schedules it again).
+      // The held save is not written until the state it would write has taken this one in (the
+      // effect above schedules it again).
       // Leaving the page before that render (pagehide) writes the held save with this one taken in
       // too, not as it was: that would put back what the other tab just changed.
-      const knew = stored.current;
-      incoming.resumes = sameAsKnown(incoming.resumes, knew);
-      stored.current = incoming.resumes;
       saver.hold((held) => withOtherTabsSave(held, incoming, knew));
       setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
     }

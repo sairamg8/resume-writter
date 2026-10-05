@@ -68,15 +68,15 @@ export async function openTabs(n, state) {
     return timer;
   };
   globalThis.clearTimeout = (timer) => { if (timer && 'cancelled' in timer) timer.cancelled = true; else real.clearTimeout(timer); };
-  function tick(ms) {
+  /** The clock moves `ms`: the timers that fall due ring, each as the tab that set it. */
+  async function tick(ms) {
     clock += ms;
     for (const timer of timers.filter((x) => x.at <= clock && !x.cancelled).sort((x, y) => x.at - y.at)) {
       timer.cancelled = true;
-      const was = storage.writer;
-      storage.writer = timer.who;
-      try { timer.run(); } finally { storage.writer = was; }
+      await as(timer.who, timer.run);
     }
   }
+
   /** Runs `fn` as `tab`: what it writes raises its event for the others, not for `tab`. */
   async function as(tab, fn) {
     const was = storage.writer;
@@ -158,9 +158,11 @@ export function assertConverged(assert, { tabs, saved }) {
 /** Types `text` into a personal field of `tab`'s résumé a character at a time, at `at` (default: the end). */
 export async function type(tab, field, text, at = null) {
   for (let i = 0; i < text.length; i += 1) {
-    const now = tab.resume().personal[field] ?? '';
-    const pos = at === null ? now.length : at + i;
-    await tab.edit((s) => s.updatePersonal(field, now.slice(0, pos) + text[i] + now.slice(pos)));
+    await tab.edit((s) => {
+      const now = tab.resume().personal[field] ?? ''; // as the tab holds it once it has heard what was waiting
+      const pos = at === null ? now.length : at + i;
+      s.updatePersonal(field, now.slice(0, pos) + text[i] + now.slice(pos));
+    });
   }
 }
 

@@ -18,7 +18,11 @@
 ### Two tabs of one résumé (typing-freeze 5)
 
 Every tab keeps its own state and shares only `localStorage` (`cpwtcv_v1`); it hears another tab's save
-through the `storage` event and takes it in (`withOtherTabsSave`).
+through the `storage` event, and also looks at storage right before each of its own writes, because that
+event is still on its way when both tabs type (the write used to overwrite the other tab's save, and the
+event then read this tab's own write back). A tab remembers the raw value it last wrote or took: a value
+that differs is another tab's save, taken in first (`takeSave`, `withOtherTabsSave`); one that equals it is
+not heard twice.
 
 - **Résumés** are taken by id (`keepUnsaved` in `src/utils/unsavedJobs.js`): a résumé this tab did not change
   is the other tab's; one added here stays; one deleted here stays deleted; the résumé open here stays open.
@@ -38,6 +42,9 @@ through the `storage` event and takes it in (`withOtherTabsSave`).
   edit that undid what this tab typed after it).
 - No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
   copy as it is.
+- Known limit: a read-then-write of `localStorage` is not atomic across tabs (no lock), so two writes inside
+  the same few microseconds can still overwrite each other; the window is the gap between a tab's read and its
+  write, not the save interval.
 
 ### Core API (conceptual)
 
