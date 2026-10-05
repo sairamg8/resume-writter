@@ -22,7 +22,9 @@ import { downloadBlob } from '@/utils/download';
  * A worker that never replied at all may never have started, so its jobs run on the main thread, as
  * after a failed start; one that had built before was working on this résumé, so that build fails
  * with a retryable error (a hang in layout would only freeze the page on the main thread) and the jobs
- * queued behind it go to a fresh worker.
+ * queued behind it go to a fresh worker. A clock that rings well past its time slept with the page (a
+ * tab frozen in the background, a phone that put the browser away) and the worker with it: it starts
+ * again instead.
  *
  * Photos are made printable here first (withPrintablePhotos): converting a WebP needs a canvas,
  * which a worker may not have, and the copy is kept for the session on this side.
@@ -39,9 +41,17 @@ const gone = new WeakSet(); // workers let go (dead, or silent past their budget
 
 // The watchdog's clock. The worker builds its jobs in the order it got them, so one timer runs, on the
 // oldest job it holds: a job waiting behind others is not late, and every reply restarts it for the next.
-const realTimers = { set: (fn, ms) => { const t = setTimeout(fn, ms); t?.unref?.(); return t; }, clear: (t) => clearTimeout(t) };
+const realTimers = {
+  set: (fn, ms) => { const t = setTimeout(fn, ms); t?.unref?.(); return t; },
+  clear: (t) => clearTimeout(t),
+  now: () => globalThis.performance?.now?.() ?? Date.now(),
+};
 let timers = realTimers;
 let watchdog = null;
+// A timer that fires this long after its time was not run because the page itself was asleep — a tab
+// the browser froze in the background, a phone that put the browser away — and the worker slept with
+// it, so its silence says nothing: it gets its budget again from now.
+const ASLEEP_MS = 5_000;
 
 /** What a build gets to answer in before its worker is given up on (pdfBuildTimeoutMs adds to it). */
 export const PDF_WORKER_TIMEOUT_MS = 20_000;
@@ -75,11 +85,24 @@ function stopWatch() {
   watchdog = null;
 }
 
-/** Start the clock on the job the worker is working on now: the oldest it holds. None held, none runs. */
+/**
+ * Start the clock on the job the worker is working on now: the oldest it holds. None held, none runs.
+ * A clock that rings ASLEEP_MS or more past its time slept with the page (and the worker): it starts
+ * again rather than letting a worker go that was never given its time.
+ */
 function watch(w) {
   stopWatch();
   const head = pending.values().next().value;
-  if (head) watchdog = timers.set(() => stalled(w), pdfBuildTimeoutMs(head.job, !proven));
+  if (!head) return;
+  const ms = pdfBuildTimeoutMs(head.job, !proven);
+  const now = timers.now || realTimers.now;
+  const due = now() + ms;
+  watchdog = timers.set(() => {
+    watchdog = null;
+    if (gone.has(w)) return;
+    if (now() - due >= ASLEEP_MS) watch(w);
+    else stalled(w);
+  }, ms);
 }
 
 /** Let `w` go: stop it, and ignore whatever it still sends (a killed worker's late reply included). */
@@ -224,8 +247,8 @@ export async function exportCoverLetterPdf(resume, filename = 'cover-letter.pdf'
 /**
  * For tests: `create()` returns a Worker-like object ({ postMessage, onmessage, onerror, terminate })
  * that stands in for pdfWorker.js; null goes back to the real worker (none in Node). `timers`
- * ({ set(fn, ms) → handle, clear(handle) }) stands in for the watchdog's clock, so a test fires the
- * timeout when it means to instead of waiting 20 s.
+ * ({ set(fn, ms) → handle, clear(handle), now?() → ms }) stands in for the watchdog's clock, so a test
+ * fires the timeout when it means to instead of waiting 20 s (and with `now`, says how late it rings).
  */
 export function _setPdfWorkerForTest(create, { timers: clock } = {}) {
   stopWatch();

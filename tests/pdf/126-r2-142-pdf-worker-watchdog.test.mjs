@@ -275,3 +275,90 @@ describe('a worker that errors is let go at once, with no clock left behind', ()
     assert.deepEqual(clock.armed, []);
   });
 });
+
+// The watchdog's clock runs on the page's main thread. A tab the browser froze in the background, or a
+// phone that put the browser away, stops the page and the worker together; when it wakes, a clock whose
+// time passed meanwhile rings at once, before the worker (which slept too) has had a moment to reply. It
+// let that worker go: a cold one sent every build of the session to the main thread (the typing jank the
+// worker is there to end), a warm one failed the build with "took too long". A clock that rings well
+// past its time (ASLEEP_MS, 5 s) now starts again instead, with the whole budget.
+describe('a clock that rings long past its time slept with the page: the worker gets its time again (R2-142, PERF-6)', () => {
+  /** fakeClock with a `now` (ms) the test moves on: how late a timer rings. */
+  function sleepyClock() {
+    const clock = fakeClock();
+    clock.at = 1_000;
+    clock.now = () => clock.at;
+    return clock;
+  }
+
+  it('a worker that has not replied yet, its clock ringing a minute late: not let go, and its reply builds the file', async () => {
+    const w = scriptedWorker();
+    const clock = sleepyClock();
+    build._setPdfWorkerForTest(() => w, { timers: clock });
+    const pdf = await render(sample('Wokeword'));
+    const held = build.buildResumePdf(sample());
+    await until(() => w.sent.length);
+    const budget = build.pdfBuildTimeoutMs(w.sent[0], true);
+    clock.at += budget + 60_000; // the tab was frozen for a minute past the budget
+    clock.fire();
+    assert.equal(w.terminated, false, 'not let go (was: terminated, and every build after on the main thread)');
+    assert.deepEqual(clock.armed, [budget], 'its clock starts again, with the whole budget');
+    w.answer({ id: w.sent[0].id, bytes: pdf, fallback: null });
+    assert.match(allText(await read(await bytesOf(await within(held)))), /Wokeword/, 'the worker\'s file');
+    assert.deepEqual(clock.armed, []);
+    const next = build.buildResumePdf(sample());
+    await until(() => w.sent.length === 2);
+    assert.equal(w.sent.length, 2, 'the next build goes to the worker, not the main thread');
+    w.answer({ id: w.sent[1].id, bytes: pdf, fallback: null });
+    await within(next);
+  });
+
+  it('a worker that has built before, its clock ringing late: the build is not failed as "took too long"', async () => {
+    const w = scriptedWorker();
+    const clock = sleepyClock();
+    build._setPdfWorkerForTest(() => w, { timers: clock });
+    const pdf = await render(sample('Wokeword'));
+    const proof = build.buildResumePdf(sample());
+    await until(() => w.sent.length);
+    w.answer({ id: w.sent[0].id, bytes: pdf, fallback: null });
+    await within(proof);
+    const held = build.buildResumePdf(sample());
+    await until(() => w.sent.length === 2);
+    const budget = build.pdfBuildTimeoutMs(w.sent[1], false);
+    clock.at += budget + 10 * 60_000;
+    clock.fire();
+    assert.equal(w.terminated, false);
+    assert.deepEqual(clock.armed, [budget]);
+    w.answer({ id: w.sent[1].id, bytes: pdf, fallback: null });
+    assert.match(allText(await read(await bytesOf(await within(held)))), /Wokeword/, 'resolved with the file (was: rejected, PDF_BUILD_TIMEOUT)');
+  });
+
+  it('a clock that rings on time, or a few seconds late (a busy page), still lets a silent worker go — after a late ring too', async () => {
+    for (const late of [0, 4_000]) {
+      const w = scriptedWorker();
+      const clock = sleepyClock();
+      build._setPdfWorkerForTest(() => w, { timers: clock });
+      const held = build.buildResumePdf(sample('Ontimeword'));
+      await until(() => w.sent.length);
+      clock.at += build.pdfBuildTimeoutMs(w.sent[0], true) + late;
+      clock.fire();
+      assert.ok(w.terminated, `${late} ms late: let go`);
+      assert.match(allText(await read(await bytesOf(await within(held)))), /Ontimeword/, 'built on the main thread');
+    }
+    // Asleep once, then silent for its whole budget again: let go then.
+    const w = scriptedWorker();
+    const clock = sleepyClock();
+    build._setPdfWorkerForTest(() => w, { timers: clock });
+    const held = build.buildResumePdf(sample('Twiceword'));
+    await until(() => w.sent.length);
+    const budget = build.pdfBuildTimeoutMs(w.sent[0], true);
+    clock.at += budget + 60_000;
+    clock.fire();
+    assert.equal(w.terminated, false);
+    clock.at += budget;
+    clock.fire();
+    assert.ok(w.terminated, 'awake and still silent for its budget: let go');
+    assert.match(allText(await read(await bytesOf(await within(held)))), /Twiceword/);
+    assert.deepEqual(clock.armed, []);
+  });
+});
