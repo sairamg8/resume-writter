@@ -55,10 +55,15 @@ describe('typing that never pauses still repaints the preview (R2-142)', () => {
       await settle();
       assert.equal(p.shown(), name(p.calls[2].input));
 
-      // Typing stops: the pause builds the last key, and the preview is ready on it.
+      // Typing stops: the pause builds the last key, and the preview is ready on it. One build at a time:
+      // a build the typing started on the way is still running, and the last key waits for it.
       await type(p, keys.slice(at));
       await pause();
-      assert.equal(p.calls.at(-1).input, keys.at(-1), 'the pause builds the last key');
+      for (let i = 0; i < 3 && p.calls.at(-1).input !== keys.at(-1); i += 1) {
+        p.calls.at(-1).finish();
+        await settle();
+      }
+      assert.equal(p.calls.at(-1).input, keys.at(-1), 'the pause builds the last key, once the build before it has finished');
       assert.ok(p.calls.length <= 6, `${p.calls.length} builds for ${keys.length} keys: not one per key`);
       p.calls.at(-1).finish();
       await settle();
