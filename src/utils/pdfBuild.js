@@ -33,15 +33,16 @@ let nextId = 0;
 let lastBuild = 0;         // the id of the latest build asked for that reports its font: only it sets the font fallback
 let proven = false;        // a build came back from the worker: from then on its errors are the résumé's
 let liveWorker = null;     // the worker `pending` is waiting on
-// Comfortably past a long résumé on a slow phone, a first CJK font over a poor connection, and the 10 s a
-// stalled font is waited for (pdfFontLoader.js) before the name, heading and script fonts' own waits.
+// Comfortably past a long résumé on a slow phone and the 10 s a stalled font is waited for (pdfFontLoader.js)
+// before the name, heading and script fonts' own waits. A font that is only slow prints in Noto Sans meanwhile
+// and the preview builds again when it lands: this limit is for a build that does not come back at all.
 const BUILD_TIMEOUT_MS = 60_000;
 let buildTimeoutMs = BUILD_TIMEOUT_MS;
 let clock = null;          // { id, timer }: the job the worker is on, and how long it has left
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
 
-const stalledError = () => new Error(`building took more than ${Math.max(1, Math.round(buildTimeoutMs / 1000))} s — a font or an image may not be reachable`);
+const stalledError = () => new Error(`building took more than ${Math.max(1, Math.round(buildTimeoutMs / 1000))} s — a font may not be reachable`);
 
 /** A job run on the main thread, as the worker would run it (pdfWorkerJobs.js). */
 async function buildHere({ kind, resume, options }) {

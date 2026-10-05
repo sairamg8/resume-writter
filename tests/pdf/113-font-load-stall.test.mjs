@@ -22,6 +22,7 @@ const realFetch = globalThis.fetch;
  * 'stall' never, or `gate` (a promise) once it resolves. Anything else on the CDN is offline.
  */
 function network({ faces = 'ok', gate = null } = {}) {
+  let faceFetches = 0;
   globalThis.fetch = async (url, opts) => {
     const u = String(url);
     if (!u.includes('cdn.jsdelivr.net')) return realFetch(url, opts);
@@ -32,12 +33,14 @@ function network({ faces = 'ok', gate = null } = {}) {
       return new Response(JSON.stringify({ family, weights: [400], styles: ['normal'], subsets: ['latin'] }), { status: 200 });
     }
     if (u.endsWith('.woff')) {
+      faceFetches += 1;
       if (faces === 'stall') return new Promise(() => {});
       if (gate) { await gate; return new Response(NOTO, { status: 200 }); }
       return new Response(NOTO, { status: 200 });
     }
     throw new TypeError('fetch failed');
   };
+  return { faceFetches: () => faceFetches };
 }
 
 const primaryOf = (fontFamily) => (Array.isArray(fontFamily) ? fontFamily[0] : fontFamily);
@@ -81,18 +84,30 @@ describe('a face that never answers is waited for only so long (R2-142)', () => 
   it('a face whose data arrives after the wait is used by the next build', { timeout: 8000 }, async () => {
     loader._setFontLoadWaitForTest?.(150);
     let open;
-    network({ gate: new Promise((resolve) => { open = resolve; }) });
+    const net = network({ gate: new Promise((resolve) => { open = resolve; }) });
     const settings = { customFont: 'Testface Mono' };
+    let told = 0;
+    const stop = store.onFaceFetched(() => { told += 1; });
 
-    const first = await loader.resolvePdfFonts(settings, 'Pat Example');
-    assert.equal(primaryOf(first.fontFamily), 'NotoSans');
-    assert.equal(first.fallback, 'Testface Mono');
+    try {
+      const first = await loader.resolvePdfFonts(settings, 'Pat Example');
+      assert.equal(primaryOf(first.fontFamily), 'NotoSans');
+      assert.equal(first.fallback, 'Testface Mono');
+      assert.equal(told, 0, 'nothing has arrived yet');
 
-    open();
-    await wait(150); // the fetch the first build gave up on finishes
-    const next = await loader.resolvePdfFonts(settings, 'Pat Example');
-    assert.equal(primaryOf(next.fontFamily), 'Testface Mono', 'its own data is in');
-    assert.equal(next.fallback, null);
-    assert.equal(store.fontFallback(), null, 'the notice clears');
+      open();
+      await wait(150); // the fetch the first build gave up on finishes
+      assert.equal(told, 1, 'the preview is told to build again: the notice does not wait for the next edit');
+      const fetches = net.faceFetches();
+      const next = await loader.resolvePdfFonts(settings, 'Pat Example');
+      assert.equal(primaryOf(next.fontFamily), 'Testface Mono', 'its own data is in');
+      assert.equal(next.fallback, null);
+      assert.equal(store.fontFallback(), null, 'the notice clears');
+      assert.equal(net.faceFetches(), fetches, 'the data that arrived is used, not fetched again');
+      // react-pdf's own load (layout asks for it) must not fetch it again either: the face is marked loaded.
+      const { Font } = await import('@react-pdf/renderer');
+      await Font.getRegisteredFonts()['Testface Mono'].sources[0].load();
+      assert.equal(net.faceFetches(), fetches, 'nor does react-pdf\'s own load');
+    } finally { stop(); }
   });
 });

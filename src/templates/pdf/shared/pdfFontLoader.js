@@ -427,9 +427,11 @@ const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(
 // How long a build waits for a face's FIRST fetch. react-pdf's own fetch has no timeout and keeps the
 // promise it started for good: a captive portal, or a CDN that takes the connection and never answers,
 // held that build — and the worker's every job behind it — until the page was reloaded (R2-142). Past the
-// wait the face counts as not loaded, and its family is replaced by Noto Sans with the font named, as when
-// offline. The fetch itself is left to finish (react-pdf cannot abort it): its data is used by the first
-// build after it arrives.
+// wait the face counts as not loaded: when none of its family's faces loads, the family is replaced by Noto
+// Sans with the font named, as when offline; a face that stalls while others load borrows one of theirs, as a
+// failed face does. The fetch itself is left to finish (react-pdf cannot abort it), and a face that was only
+// slow is not lost: its data is used by the first build after it arrives, and faceFetched() makes the preview
+// build again then, so the notice does not wait for the next edit.
 const FONT_LOAD_MS = 10_000;
 let fontLoadMs = FONT_LOAD_MS;
 /** For tests: how long a first fetch is waited for; no argument goes back to FONT_LOAD_MS. */
@@ -447,11 +449,16 @@ function loadInTime(source) {
   }
   if (Date.now() < (stalledFaces.get(source) ?? 0)) return Promise.resolve(false);
   let timer;
+  const load = source.load();
   const stalled = new Promise((resolve) => {
-    timer = setTimeout(() => { stalledFaces.set(source, retryAt()); resolve(false); }, fontLoadMs);
+    timer = setTimeout(() => {
+      stalledFaces.set(source, retryAt());
+      load.then(() => faceFetched(), () => { /* it failed: the cooldown retries it */ });
+      resolve(false);
+    }, fontLoadMs);
     timer.unref?.();
   });
-  return Promise.race([source.load().then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));
+  return Promise.race([load.then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));
 }
 
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
