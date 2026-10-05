@@ -1,10 +1,12 @@
-import { dateRange, formatDate, presentLabel } from './dates.js';
-import { parseRichText, safeHref } from './richText.js';
-import { contactHref, contactItems } from './contacts.js';
-import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
-import { templateId } from '../constants/templates.js';
-import { employerOf, groupPlaces, groupsRoles, roleGroups } from './roleGroups.js';
-import { printedEntries } from './entryPrints.js';
+// A copy of src/utils/markdownExport.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e), its imports pointed at
+// src: the reference the tf-redos-markdown-export test compares the linear-time version with. Do not edit.
+import { dateRange, formatDate, presentLabel } from '../../../src/utils/dates.js';
+import { parseRichText, safeHref } from '../../../src/utils/richText.js';
+import { contactHref, contactItems } from '../../../src/utils/contacts.js';
+import { resolveSection } from '../../../src/templates/pdf/shared/templateSectionDefaults.js';
+import { templateId } from '../../../src/constants/templates.js';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '../../../src/utils/roleGroups.js';
+import { printedEntries } from '../../../src/utils/entryPrints.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -65,12 +67,7 @@ function markedLine(runs) {
   let space = ''; // whitespace waiting to be written: after any mark that closes, before any that opens
   const open = []; // the delimiters open, outermost first
   for (const run of runs) {
-    // The white space at its start and end, and what is between: not /^(\s*)([\s\S]*?)(\s*)$/, which read a long run of
-    // white space in the middle of the text again from each of its characters (time squared).
-    const trimmed = run.text.trimStart();
-    const before = run.text.slice(0, run.text.length - trimmed.length);
-    const core = trimmed.trimEnd();
-    const after = trimmed.slice(core.length);
+    const [, before, core, after] = /^(\s*)([\s\S]*?)(\s*)$/.exec(run.text);
     space += before;
     if (core) {
       const want = MARKS.filter(([k]) => run[k]).map(([, d]) => d);

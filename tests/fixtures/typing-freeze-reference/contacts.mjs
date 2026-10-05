@@ -1,4 +1,6 @@
-import { safeHref } from './richText.js'; // relative: the plain-node unit tests load it via atsChecker.js
+// A copy of src/utils/contacts.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e), its import pointed at
+// src/utils: the reference the tf-redos-phone test compares the linear-time version with. Do not edit; it is slow on purpose on some inputs.
+import { safeHref } from '../../../src/utils/richText.js'; // relative: the plain-node unit tests load it via atsChecker.js
 
 /**
  * The contact fields, in the order every export prints them — the one table every place that
@@ -33,8 +35,7 @@ const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key
 const digitCount = (s) => s.replace(/\D/g, '').length;
 
 /** What follows a phone's separator when it is the number's extension: " ext. 890", " x12", " (ext 12)". */
-// (An optional bracket between two \s* gave a long run of spaces two ways to be read at every split: time squared.)
-const EXT_AFTER = /^\s*(?:[([]\s*)?(?:ext(?:ension)?\.?|x|#)[\s:]*\d+/i;
+const EXT_AFTER = /^\s*[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*\d+/i;
 
 /**
  * A website / LinkedIn / GitHub's "Link URL" override, or '' when it is unset or no link. An override of
@@ -69,21 +70,20 @@ export function namesAddress(value) {
 function telHref(value) {
   const parts = value.split(/[/,;|]|\bor\b/i);
   let number = parts[0];
-  let digits = digitCount(number); // kept as parts join: counting the whole each time took time squared in the parts
   let i = 1;
-  for (; i < parts.length && digits < 7; i += 1) { number += parts[i]; digits += digitCount(parts[i]); }
+  for (; i < parts.length && digitCount(number) < 7; i += 1) number += parts[i];
   // An extension set off by a comma ("(555) 123-4567, ext. 890") is this number's, not a second
   // number; one in brackets ("(ext. 12)") is read as one too. Before, the first lost its extension
   // and the second had its digits glued onto the number (R5-HUNT12-REVIEW-TEL-EXT-BRACKET-COMMA).
   if (i < parts.length && EXT_AFTER.test(parts[i])) number += ` ${parts[i]}`;
-  const ext = number.match(/(\d[\s.)\]-]*)(?:[([]\s*)?(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
+  const ext = number.match(/(\d[\s.)\]-]*)[([]?\s*(?:ext(?:ension)?\.?|x|#)[\s:]*(\d+)/i);
   const main = ext ? number.slice(0, ext.index + ext[1].length) : number;
   const plus = /^\D*\+/.test(main);
   // "+44 (0) 20 7946 0958": the bracketed 0 is the trunk prefix dialled only from inside the country,
   // never after its code — +4402079460958 is no number (R5-HUNT12-REVIEW-TEL-TRUNK-ZERO).
-  const dialled = (plus ? main.replace(/\(\s*0\s*\)/g, '') : main).replace(/\D/g, '');
-  if (dialled.length < 3) return null;
-  return `tel:${plus ? '+' : ''}${dialled}${ext ? `;ext=${ext[2]}` : ''}`;
+  const digits = (plus ? main.replace(/\(\s*0\s*\)/g, '') : main).replace(/\D/g, '');
+  if (digits.length < 3) return null;
+  return `tel:${plus ? '+' : ''}${digits}${ext ? `;ext=${ext[2]}` : ''}`;
 }
 
 /**

@@ -1,3 +1,5 @@
+// A copy of src/utils/richText.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e): the reference the
+// tf-redos-richtext-* tests compare the linear-time version with. Do not edit; it is slow on purpose on some inputs.
 /**
  * The rich-text editor's HTML → a flat list of text blocks.
  *
@@ -89,144 +91,31 @@ function parseAttrs(src) {
   return attrs;
 }
 
-// Characters the tag scanner stops on: the quotes that open an attribute value, and the ">" that ends the tag.
-const isSpecial = (c) => c === 62 || c === 34 || c === 39;
-
-/**
- * Where in `html` an attribute list that starts at `from` ends: the index of its ">", or -1. Quoted values
- * may hold a ">" (and the other quote); a quote never closed fails the whole list. This is what the
- * pattern ((?:[^>"']|"[^"]*"|'[^']*')*)> read, but each quote is paired once, however many tags read over
- * it: the pattern tried every tag of '<a "<a "<a "…' again from its start (time squared), and every way of
- * splitting a long run of '<p<p<p…' into a name and attributes (time cubed; typing-freeze 7a).
- */
-function attrScanner(html) {
-  const n = html.length;
-  // next[i]: the first ">" or quote at or after i (n when there is none).
-  const next = new Int32Array(n + 1);
-  next[n] = n;
-  for (let i = n - 1; i >= 0; i -= 1) next[i] = isSpecial(html.charCodeAt(i)) ? i : next[i + 1];
-  const seen = new Map(); // an opening quote → the ">" the list read from it ends at (or -1)
-  return (from) => {
-    const path = [];
-    let p = from;
-    let end;
-    for (;;) {
-      const k = next[p];
-      if (k >= n) { end = -1; break; }
-      const c = html.charCodeAt(k);
-      if (c === 62) { end = k; break; }
-      const known = seen.get(k);
-      if (known !== undefined) { end = known; break; }
-      path.push(k);
-      let close = k + 1; // the quote that closes this one, skipping the other kind
-      for (;;) {
-        close = next[close];
-        if (close >= n || html.charCodeAt(close) === c) break;
-        close += 1;
-      }
-      if (close >= n) { end = -1; break; }
-      p = close + 1;
-    }
-    for (const k of path) seen.set(k, end);
-    return end;
-  };
-}
-
-/** Tolerant HTML → tree of { tag, attrs, children } / text strings. Linear in the length of `html`. */
+/** Tolerant HTML → tree of { tag, attrs, children } / text strings. */
 function buildTree(html) {
   const root = { tag: '#root', attrs: {}, children: [] };
   const stack = [root];
-  // Where each tag name is open in the stack, so closing a tag or asking whether one is open does not
-  // walk a deep stack: '<section>' or a stray '</x>' repeated over 'n' open elements took time squared.
-  const openAt = new Map(); // tag → indexes in `stack`, innermost last
   const top = () => stack[stack.length - 1];
-  const pushOpen = (node) => {
-    stack.push(node);
-    const at = openAt.get(node.tag);
-    if (at) at.push(stack.length - 1);
-    else openAt.set(node.tag, [stack.length - 1]);
-  };
-  const cutTo = (length) => {
-    while (stack.length > length) openAt.get(stack.pop().tag).pop();
-  };
-  const innermost = (tag) => {
-    const at = openAt.get(tag);
-    return at && at.length ? at[at.length - 1] : -1;
-  };
   const closeTo = (tag) => {
-    const i = innermost(tag);
-    if (i < 1) return false;
-    cutTo(i);
-    return true;
+    for (let i = stack.length - 1; i > 0; i -= 1) {
+      if (stack[i].tag === tag) { stack.length = i; return true; }
+    }
+    return false;
   };
-  // True when `tag` is open and no element of `stopAt` was opened inside it.
   const inScope = (tag, stopAt) => {
-    const i = innermost(tag);
-    if (i < 1) return false;
-    for (const stop of stopAt) if (innermost(stop) > i) return false;
-    return true;
+    for (let i = stack.length - 1; i > 0; i -= 1) {
+      if (stack[i].tag === tag) return true;
+      if (stopAt.includes(stack[i].tag)) return false;
+    }
+    return false;
   };
 
-  // The tokens, by hand: comments (to "-->" or the end), CDATA, "<!…>" and "<?…>", a tag, text, a lone "<".
-  // One regex did this, and backtracked over the rest of the text from every "<" that never closed.
-  const n = html.length;
-  const lastGt = html.lastIndexOf('>');
-  const NAME_END = /[\s/>]/g;
-  let nameFrom = 1; // the first whitespace, "/" or ">" at or after nameFrom is nameTo
-  let nameTo = 0;
-  let scan = null;
-  let failedName = -1; // a tag name that ended here has no reading (its quotes all failed)
+  const re = /<!--[\s\S]*?(?:-->|$)|<!\[CDATA\[[\s\S]*?(?:\]\]>|$)|<![^>]*>|<\?[^>]*>|<\/?([a-zA-Z][^\s/>]*)((?:[^>"']|"[^"]*"|'[^']*')*)>|[^<]+|</g;
+  let m;
   let skipping = null;
-  let i = 0;
-  while (i < n) {
-    let end; // index after the token
-    let rawTag = null;
-    let attrs = '';
-    if (html.charCodeAt(i) !== 60) {
-      end = html.indexOf('<', i + 1);
-      if (end === -1) end = n;
-    } else if (html.startsWith('<!--', i)) {
-      end = html.indexOf('-->', i + 4);
-      end = end === -1 ? n : end + 3;
-    } else if (html.startsWith('<![CDATA[', i)) {
-      end = html.indexOf(']]>', i + 9);
-      end = end === -1 ? n : end + 3;
-    } else if (html.startsWith('<!', i) || html.startsWith('<?', i)) {
-      end = lastGt < i + 2 ? -1 : html.indexOf('>', i + 2);
-      end = end === -1 ? i + 1 : end + 1; // no ">" ahead: a lone "<"
-    } else {
-      end = i + 1; // a lone "<" unless a tag starts here
-      const s = html[i + 1] === '/' ? i + 2 : i + 1;
-      const first = s < n ? html.charCodeAt(s) | 32 : 0;
-      if (first >= 97 && first <= 122 && lastGt > s) {
-        if (s + 1 >= nameFrom && s + 1 <= nameTo) { /* same name run as the last tag read */ } else {
-          NAME_END.lastIndex = s + 1;
-          const hit = NAME_END.exec(html);
-          nameFrom = s + 1;
-          nameTo = hit ? hit.index : n;
-        }
-        const maxEnd = nameTo;
-        if (maxEnd !== failedName) {
-          if (!scan) scan = attrScanner(html);
-          // The name is as long as it can be; where that leaves an unclosed quote it gives characters back
-          // to the attributes, so a quote inside the name opens one ('<a"b c" d>' is "a" with '"b c" d').
-          let gt = scan(maxEnd);
-          let nameEnd = maxEnd;
-          for (let q = maxEnd - 1; gt === -1 && q > s; q -= 1) {
-            const c = html.charCodeAt(q);
-            if (c === 34 || c === 39) { gt = scan(q); nameEnd = q; }
-          }
-          if (gt === -1) failedName = maxEnd;
-          else {
-            rawTag = html.slice(s, nameEnd);
-            attrs = html.slice(nameEnd, gt);
-            end = gt + 1;
-          }
-        }
-      }
-    }
-    const token = html.slice(i, end);
-    i = end;
+  while ((m = re.exec(html))) {
+    const token = m[0];
+    const rawTag = m[1];
     if (skipping) {
       if (rawTag && token[1] === '/' && rawTag.toLowerCase() === skipping) skipping = null;
       continue;
@@ -237,12 +126,13 @@ function buildTree(html) {
       if (/^<!(--)?\[if !supportLists\]/i.test(token)) {
         const node = { tag: '#mso-marker', attrs: {}, children: [] };
         top().children.push(node);
-        pushOpen(node);
+        stack.push(node);
         continue;
       }
       if (/^<!(--)?\[endif\]/i.test(token)) {
-        const at = innermost('#mso-marker');
-        if (at > 0) { stack[at].closed = true; cutTo(at); }
+        for (let i = stack.length - 1; i > 0; i -= 1) {
+          if (stack[i].tag === '#mso-marker') { stack[i].closed = true; stack.length = i; break; }
+        }
         continue;
       }
       if (token.startsWith('<!') || token.startsWith('<?')) continue; // comments, doctype, CDATA
@@ -250,11 +140,6 @@ function buildTree(html) {
       continue;
     }
     const tag = rawTag.toLowerCase();
-    const selfClosed = () => { // the tag ends in "/>" (with whitespace allowed between)
-      let k = token.length - 2;
-      while (k > 0 && /\s/.test(token[k])) k -= 1;
-      return token[k] === '/';
-    };
     if (token[1] === '/') {
       if (tag === 'p' && !inScope('p', ['li', 'td', 'th', 'blockquote', 'div'])) {
         top().children.push({ tag: 'p', attrs: {}, children: [] }); // a stray </p> is an empty <p>
@@ -265,15 +150,15 @@ function buildTree(html) {
       continue;
     }
     if (SKIP_TAGS.has(tag)) {
-      if (!selfClosed()) skipping = tag;
+      if (!/\/\s*>$/.test(token)) skipping = tag;
       continue;
     }
-    const node = { tag, attrs: parseAttrs(attrs), children: [] };
+    const node = { tag, attrs: parseAttrs(m[2] || ''), children: [] };
     if (CLOSES_P.has(tag) && inScope('p', ['li', 'td', 'th', 'blockquote', 'div', 'ul', 'ol'])) closeTo('p');
     if (tag === 'li' && inScope('li', ['ul', 'ol'])) closeTo('li');
     if ((tag === 'dt' || tag === 'dd') && inScope(tag, ['dl'])) closeTo(tag);
     top().children.push(node);
-    if (!VOID_TAGS.has(tag) && !selfClosed()) pushOpen(node);
+    if (!VOID_TAGS.has(tag) && !/\/\s*>$/.test(token)) stack.push(node);
   }
   return root;
 }
@@ -349,16 +234,10 @@ export function listMarker(marker, style) {
 export const bulletAt = (depth, style) => listMarker(BULLETS[(depth - 1) % BULLETS.length], style);
 
 function toRoman(n) {
-  // A list started at "1e15" took a loop of 10^12 turns (typing-freeze 7a): past what Roman numerals
-  // were ever written for, the digits read better than a run of "m"s too.
-  if (!(n < 100000)) return String(n);
   const table = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
   let out = '';
   let rest = n;
-  for (const [v, s] of table) {
-    const times = Math.floor(rest / v);
-    if (times > 0) { out += s.repeat(times); rest -= v * times; }
-  }
+  for (const [v, s] of table) while (rest >= v) { out += s; rest -= v; }
   return out;
 }
 
@@ -405,31 +284,7 @@ function numberMarker(n, type) {
   return `${n}.`;
 }
 
-// A typed list marker is a few characters ("1.", "(a)", "iv."): longer text is no marker.
-const MARKER_CAP = 256;
-
-/**
- * The text of a node with its whitespace gone, cut after MARKER_CAP characters, kept on the node. A tree of
- * nested Word markers, each inside the last, read the text of everything below it once per level (time
- * squared), and recursed as deep as the nesting (typing-freeze 7a).
- */
-function markerText(node) {
-  const work = [node];
-  while (work.length) {
-    const cur = work[work.length - 1];
-    if (cur.mt !== undefined) { work.pop(); continue; }
-    const pending = cur.children.filter((c) => typeof c !== 'string' && c.mt === undefined);
-    if (pending.length) { for (const c of pending) work.push(c); continue; } // (not push(...pending): an element of 200 000 children is more arguments than a call takes)
-    work.pop();
-    let text = '';
-    for (const c of cur.children) {
-      if (text.length > MARKER_CAP) break;
-      text += typeof c === 'string' ? c.replace(/[\s\u00a0]+/g, '') : c.mt;
-    }
-    cur.mt = text.slice(0, MARKER_CAP + 1);
-  }
-  return node.mt;
-}
+const textOf = (node) => (typeof node === 'string' ? node : node.children.map(textOf).join(''));
 
 // The blocks Word writes a list item as. An <li> already sits in a real list (Outlook, Word's
 // HTML export: <ol><li style="mso-list:l0 level1 lfo1">), so it is left as it is.
@@ -451,20 +306,9 @@ function wordListItem(child) {
  * Runs of them become real lists, nested by level; a numbered marker ("1.", "a)") makes an <ol>.
  * The marker text itself is dropped by the walk (#mso-marker, mso-list:Ignore).
  */
-function wordLists(tree) {
-  // Children before their parent, as a recursive walk would, without recursing: a document nested ten
-  // thousand tags deep threw a RangeError (typing-freeze 7a).
-  const nodes = [];
-  const todo = [tree];
-  while (todo.length) {
-    const node = todo.pop();
-    nodes.push(node);
-    for (const c of node.children) if (typeof c !== 'string') todo.push(c);
-  }
-  for (let k = nodes.length - 1; k >= 0; k -= 1) wordListsOf(nodes[k]);
-}
-
-function wordListsOf(node) {
+function wordLists(node) {
+  if (typeof node === 'string') return;
+  node.children.forEach(wordLists);
   const out = [];
   let open = []; // [{ level, id, ordered, list }]
   for (const child of node.children) {
@@ -477,7 +321,7 @@ function wordListsOf(node) {
     }
     const [id, level] = m;
     const markerNode = child.children.find((c) => typeof c !== 'string' && c.tag === '#mso-marker' && c.closed);
-    const marker = markerNode ? markerText(markerNode) : '';
+    const marker = markerNode ? textOf(markerNode).replace(/[\s\u00a0]+/g, '') : '';
     const num = /^\(?([0-9]+|[a-z]+|[A-Z]+)[.)]$/.exec(marker);
     const ordered = !!num;
     while (open.length && open[open.length - 1].level > level) open.pop();
@@ -546,22 +390,8 @@ export function parseRichText(html) {
     cur.parts.push({ br: true });
   };
 
-  // The tree is walked with a stack of its own, not by recursion: a document nested ten thousand tags
-  // deep (pasted or imported) threw a RangeError (typing-freeze 7a). `flushAfter` is the flush that
-  // closes a block, run when its children are done.
-  const walk = (tree0, ctx0) => {
-    const frames = [{ node: tree0, at: 0, ctx: ctx0, flushAfter: false }];
-    while (frames.length) {
-      const frame = frames[frames.length - 1];
-      if (frame.at >= frame.node.children.length) {
-        frames.pop();
-        if (frame.flushAfter) flush();
-        continue;
-      }
-      const child = frame.node.children[frame.at];
-      frame.at += 1;
-      const { ctx } = frame;
-      const enter = (next, flushAfter) => frames.push({ node: child, at: 0, ctx: next, flushAfter });
+  const walk = (node, ctx) => {
+    for (const child of node.children) {
       if (typeof child === 'string') { addText(child, ctx); continue; }
       const { tag, attrs } = child;
       if (tag === 'br') { addBreak(ctx); continue; }
@@ -570,7 +400,7 @@ export function parseRichText(html) {
       if ((tag === '#mso-marker' && child.closed) || styleOf(attrs)['mso-list'] === 'ignore') continue;
       if (tag === 'hr') { flush(); continue; }
       if (!BLOCK_TAGS.has(tag)) {
-        enter({ ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) }, false);
+        walk(child, { ...ctx, fmt: formatOf(tag, attrs, ctx.fmt) });
         continue;
       }
       const align = alignOf(attrs) || (tag === 'center' ? 'center' : ctx.align);
@@ -580,7 +410,8 @@ export function parseRichText(html) {
         listCount += 1;
         const list = { id: listCount, ordered: tag === 'ol', type: listType(attrs), next: Number.parseInt(attrs.start, 10) };
         if (!Number.isFinite(list.next)) list.next = 1;
-        enter({ ...ctx, align, depth, list, li: null, indent: depth }, true);
+        walk(child, { ...ctx, align, depth, list, li: null, indent: depth });
+        flush();
         continue;
       }
       if (tag === 'li') {
@@ -600,12 +431,14 @@ export function parseRichText(html) {
         }
         // Which list the item is in, its type and its number: sanitizeRichText writes them back.
         const li = { marker, used: false, list: { id: list.id, type: list.type, number } };
-        enter({ ...ctx, align, depth, indent: depth, li, fmt: formatOf(tag, attrs, ctx.fmt) }, true);
+        walk(child, { ...ctx, align, depth, indent: depth, li, fmt: formatOf(tag, attrs, ctx.fmt) });
+        flush();
         continue;
       }
       flush();
       const indent = tag === 'blockquote' || tag === 'dd' ? ctx.indent + 1 : ctx.indent;
-      enter({ ...ctx, align, indent, fmt: formatOf(tag, attrs, ctx.fmt) }, true);
+      walk(child, { ...ctx, align, indent, fmt: formatOf(tag, attrs, ctx.fmt) });
+      flush();
     }
   };
 
@@ -780,33 +613,6 @@ export function sanitizeRichText(html) {
   }
   closeLists(0);
   return out;
-}
-
-/**
- * Whether `html` holds a data: URL's base64 payload inside a tag, as a browser's own paste of a picture stores it:
- * what /<[^>]*\bdata:[^\s"'>,;]*;base64,/i found, reading each "<" with no "data:" after it to the end of the
- * text (time squared in a run of them; typing-freeze 7a). One pass: each "data:" is checked once, against the last
- * "<" and ">" before it.
- */
-export function hasDataUrlInTag(html) {
-  const text = String(html);
-  const found = /\bdata:/gi;
-  let lt = -1; // the last "<" and ">" before `scanned`
-  let gt = -1;
-  let scanned = 0;
-  let runEnd = -1; // the payload run of the last "data:" that was read, which no later "data:" inside it can change
-  for (let m = found.exec(text); m; m = found.exec(text)) {
-    for (; scanned < m.index; scanned += 1) {
-      const c = text.charCodeAt(scanned);
-      if (c === 60) lt = scanned;
-      else if (c === 62) gt = scanned;
-    }
-    if (lt <= gt || m.index < runEnd) continue; // inside no tag, or in a run already read
-    runEnd = m.index + 5;
-    while (runEnd < text.length && !/[\s"'>,;]/.test(text[runEnd])) runEnd += 1;
-    if (text.slice(runEnd, runEnd + 8).toLowerCase() === ';base64,') return true;
-  }
-  return false;
 }
 
 /** Plain text (a paste without HTML) as editor HTML: escaped, one line per <br>. */

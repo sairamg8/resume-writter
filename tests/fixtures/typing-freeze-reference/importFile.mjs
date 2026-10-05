@@ -1,7 +1,9 @@
+// A copy of src/utils/importFile.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e), its imports pointed at
+// src/utils: the reference the tf-redos-import-docx tests compare the linear-time version with. Do not edit; it is slow on purpose on some inputs.
 // Import from a PDF, a Word file (.docx), Markdown or plain text (R2-148): the file's text as lines,
 // read by importText.js into a new résumé. JSON stays with the importers it always had (the
 // Dashboard's and the editor's); importDocument.js loads this on demand, and pdf.js only for a PDF.
-import { linkText, markdownLines, readDateRange, resumeFromText } from './importText.js';
+import { linkText, markdownLines, readDateRange, resumeFromText } from '../../../src/utils/importText.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 const SCANNED = 'That PDF looks like a scanned image: its pages have no text layer to read. Export the résumé again as a text PDF from the program it was written in, save it as a Word file, or run the scan through OCR (text recognition) first, and import that.';
@@ -59,76 +61,6 @@ const xmlText = (s) => s
   .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
   .replace(/&amp;/g, '&');
-
-// The elements whose patterns below read forward to the element's own end tag.
-const BLOCK_ELEMENTS = new Set(['w:p', 'w:pPr', 'w:tbl', 'w:tr', 'w:tc']);
-
-/**
- * `xml` as well-formed as the patterns below need: every "<" ends in a ">" before the next "<" (a stray one is the
- * text "&lt;"), and each paragraph, table, row, cell and paragraph-properties element has its end tag (the
- * missing ones are written where the enclosing element ends). A .docx from Word is that already, and comes back as
- * it is. Those patterns read to a ">" or an end tag from each start tag: a file with 20 000 start tags that
- * never close took seconds (time squared), and one with 400 000 of them minutes (typing-freeze 7a).
- */
-function wellFormedXml(xml) {
-  const n = xml.length;
-  const lastGt = xml.lastIndexOf('>');
-  const ends = { comment: xml.lastIndexOf('-->'), cdata: xml.lastIndexOf(']]>'), instruction: xml.lastIndexOf('?>') };
-  const stack = []; // the open BLOCK_ELEMENTS, innermost last
-  const openAt = new Map(); // name → their indexes in `stack`
-  let out = '';
-  let from = 0;
-  let changed = false;
-  const name = /\/?([^\s/>]+)/y;
-  let gtAt = -2; // the first ">" at or after the last place asked from, which only moves forward
-  const nextGt = (from) => {
-    if (gtAt < from) gtAt = xml.indexOf('>', from);
-    return gtAt;
-  };
-  const closeAbove = (index, at) => { // write the end tags of the elements above `index`, before `at`
-    if (stack.length <= index) return;
-    changed = true;
-    out += xml.slice(from, at);
-    from = at;
-    while (stack.length > index) { const open = stack.pop(); openAt.get(open).pop(); out += `</${open}>`; }
-  };
-  for (let at = xml.indexOf('<'); at !== -1; at = xml.indexOf('<', at + 1)) {
-    let end = -1; // the index after this token; -1: a "<" that starts none
-    let tag = false;
-    if (xml.startsWith('<!--', at)) { if (ends.comment >= at + 4) end = xml.indexOf('-->', at + 4) + 3; }
-    else if (xml.startsWith('<![CDATA[', at)) { if (ends.cdata >= at + 9) end = xml.indexOf(']]>', at + 9) + 3; }
-    else if (xml.startsWith('<?', at)) { if (ends.instruction >= at + 2) end = xml.indexOf('?>', at + 2) + 2; }
-    else if (lastGt > at) {
-      const gt = nextGt(at + 1);
-      const lt = xml.indexOf('<', at + 1);
-      if (lt === -1 || lt > gt) { end = gt + 1; tag = true; }
-    }
-    if (end === -1) { // a stray "<": text
-      changed = true;
-      out += `${xml.slice(from, at)}&lt;`;
-      from = at + 1;
-      continue;
-    }
-    if (tag) {
-      name.lastIndex = at + 1;
-      const found = name.exec(xml);
-      const tagName = found && found[1];
-      if (tagName && BLOCK_ELEMENTS.has(tagName)) {
-        const closing = xml[at + 1] === '/';
-        const open = openAt.get(tagName);
-        if (closing) {
-          if (open && open.length) closeAbove(open[open.length - 1] + 1, at), stack.pop(), open.pop();
-        } else if (xml[end - 2] !== '/') {
-          stack.push(tagName);
-          if (open) open.push(stack.length - 1); else openAt.set(tagName, [stack.length - 1]);
-        }
-      }
-    }
-    at = end - 1;
-  }
-  if (stack.length) closeAbove(0, n);
-  return changed ? out + xml.slice(from) : xml;
-}
 
 /**
  * `xml` without its <mc:Fallback> copies (docxXmlLines): each from its start to its own end — a copy
@@ -207,36 +139,16 @@ function joinedRows(xml) {
  * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
 export function docxXmlLines(xml, links = {}) {
-  const source = wellFormedXml(String(xml));
-  const body = joinedRows(withoutFallbacks(source.split(/<w:body\b[^>]*>/)[1] ?? source));
+  const body = joinedRows(withoutFallbacks(String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml)));
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  // A paragraph's line goes before the lines of the text boxes anchored in it (a heading's after them). Those were
-  // put in with splice at the index the paragraph started at, which moves every line after it: paragraphs nested
-  // 100 000 deep took minutes (time squared). Each finished paragraph keeps the ones that finished inside it
-  // instead, and the lines are written out in order at the end.
-  const finished = []; // the paragraphs that finished outside any other
-  const emit = (node, parent) => (parent ? parent.kids : finished).push(node);
   const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|ptab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
   // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
   // `para`'s text from `at` as a link to `to` (linkText), kept in its links for the rich text (R4-LO-05).
-  // A paragraph's text is kept as pieces and its length: a link rewrote the string from its start (slice and
-  // concatenate), so a paragraph of 20 000 links took seconds (time squared).
-  const add = (para, text) => { para.pieces.push(text); para.size += text.length; };
-  const takeFrom = (para, at) => { // the text from index `at` on, taken off
-    const taken = [];
-    let need = para.size - at;
-    while (need > 0 && para.pieces.length) {
-      const piece = para.pieces.pop();
-      if (piece.length <= need) { taken.push(piece); need -= piece.length; para.size -= piece.length; }
-      else { taken.push(piece.slice(piece.length - need)); para.pieces.push(piece.slice(0, piece.length - need)); para.size -= need; need = 0; }
-    }
-    return taken.reverse().join('');
-  };
   const link = (para, at, to) => {
-    const label = takeFrom(para, at);
-    add(para, linkText(label, to));
+    const label = para.text.slice(at);
+    para.text = para.text.slice(0, at) + linkText(label, to);
     // Only an address the rich text may link (as the Markdown's and the PDF's): not javascript:, file: or a relative one.
     if (label.trim() && /^(?:https?:|mailto:|tel:)/i.test(to)) (para.links || (para.links = [])).push({ label: label.trim(), url: to });
   };
@@ -253,15 +165,15 @@ export function docxXmlLines(xml, links = {}) {
       if (!para) continue;
       const fields = para.fields || (para.fields = []);
       if (m[5] === 'begin') fields.push({ instr: '', at: -1 });
-      else if (m[5] === 'separate') { if (fields.length) fields[fields.length - 1].at = para.size; }
+      else if (m[5] === 'separate') { if (fields.length) fields[fields.length - 1].at = para.text.length; }
       else if (m[5] === 'end') linkField(para, fields.pop());
       else if (m[6] !== undefined) { if (fields.length) fields[fields.length - 1].instr += xmlText(m[6]); }
       else if (m[7] !== undefined) {
-        if (!m[8]) fields.push({ instr: xmlText(/\bw:instr="([^"]*)"/.exec(m[7])?.[1] ?? ''), at: para.size, simple: true });
+        if (!m[8]) fields.push({ instr: xmlText(/\bw:instr="([^"]*)"/.exec(m[7])?.[1] ?? ''), at: para.text.length, simple: true });
       } else if (fields[fields.length - 1]?.simple) linkField(para, fields.pop());
     } else if (m[4] !== undefined) {
       const id = /\br:id="([^"]*)"/.exec(m[4])?.[1];
-      if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.size };
+      if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.text.length };
     } else if (m[0] === '</w:hyperlink>') {
       if (para?.link?.to) link(para, para.link.at, para.link.to);
       if (para) para.link = null;
@@ -279,40 +191,25 @@ export function docxXmlLines(xml, links = {}) {
       // anchored to the first paragraph, often the name, and the name comes first. A heading's after
       // them: a box of the name and contacts anchored to the first section's title ("PROFILE") is the
       // page's header, over that title.
-      const level = heading ? Number(heading[1] || 1) : 0;
+      const at = heading ? lines.length : para.start;
+      levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
       // A list item's level: a nested one's is 1 and more (R4-LO-02). Its own w:ilvl, else its list
       // style's number less one: List Bullet 2 is a level-1 item (R4-SW-I-02).
       const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
       const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
-      const text = para.pieces.join('');
-      const line = { text: list && text.trim() ? `• ${text}` : text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) };
-      emit({ line, level, after: Boolean(heading), kids: para.kids }, open[open.length - 1]);
+      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
     } else if (/^<w:p[\s>]/.test(m[0])) { // a paragraph's start (not <w:pPr>, not <w:ptab/>)
-      if (!m[0].endsWith('/>')) open.push({ pieces: [], size: 0, props: '', kids: [] }); // <w:p/>: an empty one, no line (as before)
+      if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }
     else if (!para) continue;
     else if (m[1] !== undefined) para.props = m[1];
-    else if (m[2] !== undefined) add(para, xmlText(m[2]));
+    else if (m[2] !== undefined) para.text += xmlText(m[2]);
     // A non-breaking hyphen (Ctrl+Shift+-, "2019‑2021" kept on one line) is a hyphen; a soft one
     // (an optional break) is nothing. Before, both were dropped, and "2019‑2021" read "20192021".
-    else if (m[3] === 'noBreakHyphen') add(para, '-');
+    else if (m[3] === 'noBreakHyphen') para.text += '-';
     // An alignment tab (<w:ptab/>, Insert Alignment Tab: a date pushed to the right margin) is a tab too;
     // skipped before, "Acme Corp" and its date ran together and no date was read (R5-HUNT7-DOCX-ALIGNMENT-TAB-DROPPED).
-    else if (m[3] !== 'softHyphen') add(para, m[3] === 'tab' || m[3] === 'ptab' ? '\t' : '\n');
-  }
-  // Written out in order: a paragraph's line, then its text boxes' paragraphs (a heading's line last).
-  const todo = finished.map((node) => ({ node, seen: false })).reverse();
-  while (todo.length) {
-    const top = todo.pop();
-    const { node } = top;
-    if (top.seen || !node.kids.length) {
-      if (!top.seen || node.after) { lines.push(node.line); levels.push(node.level); }
-      continue;
-    }
-    // Pushed in reverse, so they come off in order: before the kids, or after them for a heading.
-    if (node.after) todo.push({ node, seen: true });
-    for (let i = node.kids.length - 1; i >= 0; i -= 1) todo.push({ node: node.kids[i], seen: false });
-    if (!node.after) todo.push({ node: { ...node, kids: [] }, seen: false });
+    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' || m[3] === 'ptab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
 }
@@ -342,11 +239,11 @@ function hyperlinkTarget(instr) {
 function headingLevels(lines, levels) {
   const used = levels.filter(Boolean);
   if (!used.length) return lines;
-  let top = used.reduce((a, b) => Math.min(a, b), Infinity); // (not Math.min(...used): an argument list that long throws)
+  let top = Math.min(...used);
   const first = lines.findIndex((l) => l.text.trim());
   const named = !lines.some((l) => l.hint === 'name') && levels[first] === top
     && used.filter((v) => v === top).length === 1 && used.some((v) => v > top);
-  if (named) top = used.filter((v) => v !== top).reduce((a, b) => Math.min(a, b), Infinity);
+  if (named) top = Math.min(...used.filter((v) => v !== top));
   return lines.map((l, i) => {
     if (!levels[i]) return l;
     if (named && i === first) return { ...l, hint: 'name' };
@@ -356,7 +253,7 @@ function headingLevels(lines, levels) {
 
 /** A part's relationships file (word/_rels/<part>.rels) as its relationships: { id, type, target }. */
 function docxRels(rels) {
-  return [...wellFormedXml(String(rels ?? '')).matchAll(/<Relationship\b([^>]*)>/g)].map(([, attrs]) => {
+  return [...String(rels ?? '').matchAll(/<Relationship\b([^>]*)>/g)].map(([, attrs]) => {
     const attr = (name) => xmlText(new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1] ?? '');
     return { id: attr('Id'), type: attr('Type'), target: attr('Target') };
   });
@@ -375,13 +272,8 @@ async function docxPartLines(bytes, part) {
   return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
 }
 
-// "page", white space, a number and "of" a number, each part optional: \s*\d*(?:\s*of\s*\d+)? split a long run of white
-// space between its two \s* every way (time squared); this reads the same text with one reading of each space.
-const PAGE_OF = 'page\\s*(?:\\d+(?:\\s*of\\s*\\d+)?|of\\s*\\d+)?';
-const FURNITURE = new RegExp(`^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|${PAGE_OF}|\\d{1,3})$`, 'i');
-// The separator starts where a run of white space does (a match starting inside one starts at its start too), and a
-// tab in the run is looked for ahead, once, so a long run is not read again from each of its characters.
-const FURNITURE_TAIL = new RegExp(`(?<!\\s)(?:\\s+[-–—|·•]\\s+|(?=[^\\S\\t]*\\t)\\s+)(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|${PAGE_OF})\\s*$`, 'i');
+const FURNITURE = /^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?|\d{1,3})$/i;
+const FURNITURE_TAIL = /(?:\s+[-–—|·•]\s+|\s*\t\s*)(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?)\s*$/i;
 
 /**
  * The page header the first page shows, as lines, else []: many résumés set the name and the contact
@@ -392,8 +284,7 @@ const FURNITURE_TAIL = new RegExp(`(?<!\\s)(?:\\s+[-–—|·•]\\s+|(?=[^\\S\\
  * none of that is read.
  */
 async function docxHeaderLines(bytes, xml) {
-  // (Without an end tag no start is worth trying: each read to the end.)
-  const sect = xml.includes('</w:sectPr>') ? /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(xml)?.[0] ?? '' : '';
+  const sect = /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(xml)?.[0] ?? '';
   const titlePage = /<w:titlePg(?:\s+w:val="(?:1|true|on)")?\s*\/>/.test(sect);
   const ref = [...sect.matchAll(/<w:headerReference\b[^>]*>/g)].map(([tag]) => tag)
     .find((tag) => new RegExp(`w:type="${titlePage ? 'first' : 'default'}"`).test(tag));
@@ -416,7 +307,7 @@ async function docxHeaderLines(bytes, xml) {
 export async function docxLines(bytes) {
   const xml = await unzipEntry(bytes, 'word/document.xml');
   if (!xml) throw new Error('That Word file has no document in it.');
-  const text = wellFormedXml(decode(xml));
+  const text = decode(xml);
   const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
   const body = docxXmlLines(text, docxLinks(rels && decode(rels)));
   const opening = new Set(body.map((l) => l.text.trim()).filter(Boolean).slice(0, 12));
@@ -438,17 +329,9 @@ function rowsOf(items) {
   const rows = [];
   const sorted = items.filter((it) => typeof it.str === 'string' && it.str.trim())
     .sort((a, b) => b.y - a.y || a.x - b.x);
-  // The rows are in order of their y, highest first, as the items are: an item can only join one whose y is within
-  // its own height's reach of its own, at the end of the list. (Asking every row for each item took time squared in
-  // the rows: 16 000 of them, six seconds.) Without finite y's the order says nothing, and every row is asked.
-  const ordered = sorted.every((it) => Number.isFinite(it.y));
   for (const it of sorted) {
     const h = heightOf(it);
-    let row;
-    if (ordered) {
-      const reach = it.y + Math.max(1.5, h * 0.35);
-      for (let i = rows.length - 1; i >= 0 && rows[i].y <= reach; i -= 1) if (sameLine(rows[i].y, rows[i].h, it.y, h)) row = rows[i]; // the first of them, the highest
-    } else row = rows.find((r) => sameLine(r.y, r.h, it.y, h));
+    let row = rows.find((r) => sameLine(r.y, r.h, it.y, h));
     if (!row) { row = { y: it.y, h, items: [] }; rows.push(row); }
     row.h = Math.max(row.h, h);
     row.items.push(it);
@@ -498,9 +381,8 @@ export function pdfPageBlocks(items) {
   const one = [{ items, column: false }];
   const texts = items.filter((it) => typeof it.str === 'string' && it.str.trim());
   if (texts.length < 8) return one;
-  // (Not Math.min(...list): a page of 200 000 text items is more arguments than a call takes.)
-  const minX = texts.reduce((m, it) => Math.min(m, it.x), Infinity);
-  const maxX = texts.reduce((m, it) => Math.max(m, it.x + (it.w || 0)), -Infinity);
+  const minX = Math.min(...texts.map((it) => it.x));
+  const maxX = Math.max(...texts.map((it) => it.x + (it.w || 0)));
   // Candidates: where an item starts, the right column's edge. The one fewest lines cross wins.
   let best = null;
   for (const at of new Set(texts.map((it) => it.x))) {
@@ -526,11 +408,11 @@ export function pdfPageBlocks(items) {
       // Each call has fewer items than the last, both sides holding lines, so this ends.
       const side = (part) => pdfPageBlocks(part).map((b) => ({ items: b.items, column: true }));
       blocks.push(...side(its.filter((it) => it.x < at)), ...side(its.filter((it) => it.x >= at)));
-    } else for (const r of run) for (const it of r.items) whole.push(it);
+    } else whole.push(...run.flatMap((r) => r.items));
     run = [];
   };
   for (const row of rowsOf(texts)) {
-    if (crosses(row)) { endRun(); for (const it of row.items) whole.push(it); } else run.push(row);
+    if (crosses(row)) { endRun(); whole.push(...row.items); } else run.push(row);
   }
   endRun();
   if (whole.length) blocks.push({ items: whole, column: false });
@@ -667,8 +549,8 @@ export function pdfLinesOfPages(pages) {
     const blocks = pdfPageBlocks(withoutPageFurniture(page, index));
     for (const [b, { items, column }] of blocks.entries()) {
       const lines = pdfPageLines(items);
-      const right = lines.reduce((m, l) => Math.max(m, l.right), 0);
-      const left = lines.reduce((m, l) => Math.min(m, l.x), Infinity);
+      const right = Math.max(0, ...lines.map((l) => l.right));
+      const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
       // The list items still open in this block, outermost first: each one's marker x, where its text
       // starts and its middle — for a list item's depth (R4-SW-I-01).
@@ -700,10 +582,7 @@ export function pdfLinesOfPages(pages) {
           }
           if (continues) {
             const last = out[out.length - 1];
-            // Joined at the end: each join rebuilt the string to read its last character (time squared in a paragraph of
-            // 30 000 lines).
-            const pieces = last.pieces || (last.pieces = [last.text]);
-            pieces.push(pieces[pieces.length - 1].endsWith('-') && /^\p{Ll}/u.test(line.text) ? line.text : ` ${line.text}`);
+            last.text = last.text.endsWith('-') && /^\p{Ll}/u.test(line.text) ? last.text + line.text : `${last.text} ${line.text}`;
             if (line.links) last.links = [...(last.links || []), ...line.links];
             // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
             if (listed && open.length) open[open.length - 1].right = line.right;
@@ -746,7 +625,6 @@ export function pdfLinesOfPages(pages) {
       if (b === blocks.length - 1) carried = column ? [] : open;
     }
   }
-  for (const line of out) if (line.pieces) { line.text = line.pieces.join(''); delete line.pieces; }
   return out;
 }
 
@@ -758,17 +636,6 @@ async function loadPdfjs() {
   ]);
   if (!lib.GlobalWorkerOptions.workerSrc) lib.GlobalWorkerOptions.workerSrc = worker.default;
   return lib;
-}
-
-const LABEL_LEAD = /[\s|•·]/;
-const LABEL_TAIL = /[\s|•·,.;:!?]/;
-/** `text` without the separators at its start and the separators and punctuation at its end (/^[\s|•·]+|[\s|•·,.;:!?]+$/g, which read a long run again from each of its characters). */
-function trimEdges(text) {
-  let from = 0;
-  let to = text.length;
-  while (from < to && LABEL_LEAD.test(text[from])) from += 1;
-  while (to > from && LABEL_TAIL.test(text[to - 1])) to -= 1;
-  return text.slice(from, to);
 }
 
 /**
@@ -815,7 +682,7 @@ function withLinks(items, links) {
     if (!hits.length) continue;
     hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
     // A box snapped to a word's edge takes the punctuation after the word ("Tidewater,"): not the label's.
-    const label = trimEdges(hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ')).replace(/\s+/g, ' ');
+    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·,.;:!?]+$/g, '').replace(/\s+/g, ' ');
     if (!label) continue;
     // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
     if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
@@ -828,8 +695,7 @@ function withLinks(items, links) {
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
     // Never after the separator past its label: a box a little wider than its letters.
-    let end = last.to;
-    while (end > 0 && LABEL_TAIL.test(last.it.str[end - 1])) end -= 1;
+    const end = last.it.str.slice(0, last.to).replace(/[\s|•·,.;:!?]+$/, '').length;
     inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {

@@ -1,10 +1,10 @@
+// A copy of src/utils/bulletOptimizer.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e): the reference
+// the tf-redos-bullet-optimizer tests compare the linear-time version with. Do not edit; it is slow on purpose on some inputs.
 /**
  * Bullet Point Optimizer & STAR / Google X-Y-Z Formula Engine
  * Evaluates resume bullet points, detects weak phrases, suggests action verbs,
  * and helps candidates write impactful, metric-driven achievements.
  */
-
-import { replaceTags } from './tagText.js';
 
 export const ACTION_VERBS_BY_CATEGORY = {
   'Leadership & Execution': [
@@ -133,26 +133,6 @@ export const ACTION_VERBS = new Set([
 ]);
 
 /**
- * `word` without the characters that are no ASCII letter at either end. The pattern for it
- * (/^[^a-zA-Z]+|[^a-zA-Z]+$/g) tried the trailing run again from every character of a long run of
- * punctuation that did not end the word: 'http://' and 100 000 slashes and an 'x' took 7.5 s
- * (typing-freeze 7b). Only the two ends are read here.
- */
-function trimNonLetters(word) {
-  const letter = (i) => { const c = word.charCodeAt(i) | 32; return c >= 97 && c <= 122; };
-  let from = 0;
-  let to = word.length;
-  while (from < to && !letter(from)) from += 1;
-  while (to > from && !letter(to - 1)) to -= 1;
-  return word.slice(from, to);
-}
-
-/** `text` without its <tags>: what /<[^>]+>/g cut (replaceTags). */
-export function stripTags(text) {
-  return replaceTags(text);
-}
-
-/**
  * A verb as it is looked up: lowercase letters only, on both sides, so 'Co-authored' is found
  * however it is punctuated (AUD-32).
  */
@@ -166,7 +146,7 @@ const VERB_KEYS = new Set([...ACTION_VERBS].map(verbKey));
  */
 export function leadsWithActionVerb(text) {
   const trimmed = String(text || '').trim();
-  const firstWord = trimNonLetters(trimmed.split(/\s+/)[0]);
+  const firstWord = trimmed.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   // "Took part in" is "participated in", no strong verb: it read as one once "took" was listed, and the
   // chip left "Spearheaded part in the hackathon" (review of R5-HUNT9-OPTIMIZER-VERB-CHIP-DOUBLES-UNLISTED-VERB).
   if (firstWord === '') return false;
@@ -250,25 +230,12 @@ export function hasMetric(text) {
     .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '')
     // A fiscal year ("FY2021", "FY21-22", "FY '21") is a date too (R4-LO-15).
-    .replace(/(?<!\p{L})FY\s*(?:['’-]\s*)?\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
+    .replace(/(?<!\p{L})FY\s*['’-]?\s*\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
     // A multiplier or currency written before its number ("x10", "Rs.500", "EUR500k") leaves the number whole.
     .replace(/(?<!\p{L})(?:x|rs\.?|inr|usd|eur|gbp|aud|cad|chf|jpy|cny|sgd)(?=\s?\d)/giu, ' ');
   // Digits glued to letters are part of a name, all of them: the "021" of "FY2021" and the "0" of
   // "v2.0" counted as a number of their own, only the first digit was checked (R4-LO-15).
-  return hasFreeDigit(noYears) && !/^\d{4}$/.test(clean);
-}
-
-/**
- * Whether `text` has a digit that is no part of a name: none after a letter and a run of digits, dots and
- * commas ("S3", "v2.0", "a1,5"). The same as /(?<!\p{L}[\d.,]*)\d/u, which read back over the whole run
- * before every digit of it (time squared in a long number after a letter: 'a' and 100 000 digits).
- */
-function hasFreeDigit(text) {
-  let glued = false; // a letter, then only digits, dots and commas, so far
-  for (const ch of text) {
-    if (ch >= '0' && ch <= '9') { if (!glued) return true; } else if (ch !== '.' && ch !== ',') glued = /\p{L}/u.test(ch);
-  }
-  return false;
+  return /(?<!\p{L}[\d.,]*)\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
@@ -313,7 +280,7 @@ export const GOOGLE_XYZ_TEMPLATES = [
  * Analyzes a given bullet point text for action verbs, metrics, and weak phrases.
  */
 export function analyzeBullet(text = '') {
-  const clean = stripTags(text).trim();
+  const clean = text.replace(/<[^>]+>/g, '').trim();
   if (!clean) {
     return {
       clean,
@@ -327,7 +294,7 @@ export function analyzeBullet(text = '') {
 
   // Metric and verb: the ATS score's own rules, so the badges here say what the score will (R2-025).
   const metric = hasMetric(clean);
-  const firstWord = trimNonLetters(clean.split(/\s+/)[0]);
+  const firstWord = clean.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   const hasActionVerb = leadsWithActionVerb(clean);
 
   // Check weak phrases. String#match with a copy of the pattern: `wp.match` is global, and
@@ -537,13 +504,7 @@ const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
  * 35%", and an empty statement is the phrase alone (R4-CL-08).
  */
 export function insertMetric(text, metric) {
-  const trimmed = String(text ?? '').trim();
-  // The closing punctuation is its trailing run: /^([\s\S]*?)([.!?;:]*)$/ read that run again from each of its
-  // characters when a long one did not end the text.
-  let cut = trimmed.length;
-  while (cut > 0 && '.!?;:'.includes(trimmed[cut - 1])) cut -= 1;
-  let body = trimmed.slice(0, cut);
-  const stop = trimmed.slice(cut);
+  let [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
   // An abbreviation's dot ("etc.", "Inc.", "U.S.") is part of its word and stays on it; the sentence
   // still ends with one after the metric. "…APIs, etc." read "…APIs, etc by 35%." (R4-LO-14).
   if (stop.startsWith('.') && ABBREVIATION_END.test(body)) body += '.';
@@ -557,18 +518,7 @@ const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|a
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
  * sentence's end (". ", "! ", "? "), then only spaces, bullet marks or opening quotes.
  */
-const SENTENCE_START_PATTERN = '(?:^|[.!?]\\s|\\n)[\\s•\\-*–—◦▪▸‣⁃"\'“‘(]*';
-
-/**
- * A test of whether a pattern ends exactly at `end` in `text`: `re` is that pattern as a sticky lookbehind, read
- * backwards from `end`. The text before `end` is not cut off (whole.slice(0, offset)) and read from its start for
- * every match Auto-Fix finds in it: a long text full of weak phrases took time squared (typing-freeze 7b).
- */
-const endingAt = (re) => (text, end) => {
-  re.lastIndex = end;
-  return re.test(text);
-};
-const startsSentenceAt = endingAt(new RegExp(`(?<=${SENTENCE_START_PATTERN})`, 'y'));
+const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
 
 /**
  * A helper verb ("was", "were", "is", "are", "am", "been") and its space before a weak phrase that is
@@ -595,13 +545,13 @@ const PUT_IN_ROLE = 'became|become|becomes|got|held|put|placed|made';
 const HELPER_BEFORE_WEAK_PHRASE = new RegExp(`(?<![\\p{L}\\d'’])(?=(?:${HELPER}|${PUT_IN_ROLE}) )(?:(?:${HELPER}) (?:(${ADVERB}) )?)?(?:(?:${PUT_IN_ROLE}) (?:(${ADVERB}) )?)?(?=(responsible for|tasked with|in charge of|involved in)(?![\\p{L}\\d]))`, 'giu');
 function dropHelperVerb(found, helperAdverb, roleAdverb, phrase, offset, whole) {
   // "Was not put in charge of QA" says no more than "Was not in charge of QA": left as it is (NOT_A_VERB).
-  if (negatedBefore(whole, offset)) return found;
+  if (NEGATED_BEFORE.test(whole.slice(0, offset))) return found;
   const involved = /^involved/i.test(phrase);
   const adverb = [helperAdverb, roleAdverb].filter(Boolean).join(' ');
   // "Was directly involved in" is no weak phrase ("was involved in" is): it is left as it is.
   if (!adverb) return involved ? 'was ' : '';
   if (involved) return found;
-  const starts = startsSentenceAt(whole, offset);
+  const starts = SENTENCE_START.test(whole.slice(0, offset));
   return `${starts ? adverb[0].toUpperCase() + adverb.slice(1) : adverb} `;
 }
 
@@ -618,8 +568,7 @@ const PUT_IN_ROLE_OPENING = new RegExp(`^(?:(?:${HELPER}) )?(?:${PUT_IN_ROLE}) (
  * billing", "Wasn't in charge of QA" "Wasn't oversaw QA". No verb can take its place without saying
  * something else, so Auto-Fix leaves it (review of R5-HUNT11-AUTOFIX-AFTER-HELPER-VERB).
  */
-const NEGATED_BEFORE_PATTERN = `(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?`;
-const negatedBefore = endingAt(new RegExp(`(?<=${NEGATED_BEFORE_PATTERN})`, 'iuy'));
+const NEGATED_BEFORE = new RegExp(`(?:(?<![\\p{L}\\d'’])(?:not|never)|n['’]t)\\s+(?:(?:${ADVERB})\\s+)?(?:(?:${PUT_IN_ROLE})\\s+(?:(?:${ADVERB})\\s+)?)?$`, 'iu');
 const NOT_A_VERB = /^(?:was\s+)?(?:responsible for|tasked with|in charge of)$/iu;
 
 /**
@@ -636,8 +585,8 @@ export function autoFixWeakPhrases(text = '') {
     // Each pattern has one group, so the offset and the whole text are the last two arguments.
     result = result.replace(wp.match, (...args) => {
       const [offset, whole] = args.slice(-2);
-      if (NOT_A_VERB.test(args[1]) && negatedBefore(whole, offset)) return args[0];
-      return startsSentenceAt(whole, offset)
+      if (NOT_A_VERB.test(args[1]) && NEGATED_BEFORE.test(whole.slice(0, offset))) return args[0];
+      return SENTENCE_START.test(whole.slice(0, offset))
         ? wp.replacement
         : wp.replacement[0].toLowerCase() + wp.replacement.slice(1);
     });

@@ -1,11 +1,13 @@
+// A copy of src/utils/coverLetterGenerator.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e), its imports pointed
+// at src/utils: the reference the tf-redos-cover-letter test compares the linear-time version with. Do not edit.
 /**
  * Smart Cover Letter Generator
  * Synthesizes candidate's background, top achievements, and skills from their resume
  * to create high-converting, tailored cover letters.
  */
 
-import { plainTextToHtml } from './richText.js';
-import { storedText } from './storedText.js';
+import { plainTextToHtml } from '../../../src/utils/richText.js';
+import { storedText } from '../../../src/utils/storedText.js';
 
 export const COVER_LETTER_ARCHETYPES = [
   {
@@ -177,11 +179,10 @@ export function generateCoverLetter({
 
   // Every value above is text — résumé fields can come from an imported file — so each paragraph
   // is escaped before it is wrapped: a name like `<img onerror=…>` prints as typed, never as markup.
-  // A line break inside a field reads as a space, as it did in the unescaped HTML, not as a <br> (white space with one in it is
-  // that one space: /\s*[\r\n]+\s*/g tried every character of a long run of white space, time squared).
+  // A line break inside a field reads as a space, as it did in the unescaped HTML, not as a <br>.
   // An empty paragraph — the blank line Enter-Enter leaves in the editor — separates two, so the
   // PDF and Word print them apart as the modal previews them, not 2 pt apart in one block (R2-130).
-  const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s+/g, (run) => (/[\r\n]/.test(run) ? ' ' : run)))}</p>`).join(BLANK_LINE);
+  const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s*[\r\n]+\s*/g, ' '))}</p>`).join(BLANK_LINE);
 
   // The recipient block holds only what the user typed (AUD-31): the letter prints every filled
   // line, so a generic 'Hiring Manager' for a blank name sat above "Dear Hiring Team,", and the

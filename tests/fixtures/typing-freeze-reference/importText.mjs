@@ -1,3 +1,5 @@
+// A copy of src/utils/importText.js as it was before the typing-freeze ReDoS fixes (master 084a9c4e), its imports pointed at
+// src/utils: the reference the tf-redos-import-* tests compare the linear-time version with. Do not edit; it is slow on purpose on some inputs.
 // A résumé read from text (R2-148): what a PDF, a Word file, a Markdown or a plain-text résumé says,
 // as lines (importFile.js gets them out of the file), turned into a résumé of the app's. It is a
 // best-effort read — a page of text does not say which line is a company and which a job title — so
@@ -7,13 +9,13 @@
 // section; and every line the reading cannot place lands in a custom section, as text to review.
 //
 // Pure: no DOM, no file reading, relative imports only, so Node's test runner loads it as it is.
-import { newId } from './ids.js';
-import { BASE_COVER_LETTER } from './defaultDataContent.js';
-import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
-import { getStarterSettings } from './starterSettings.js';
-import { DATA_VERSION } from './dataVersion.js';
-import { ATS_STANDARD_SECTIONS } from './atsChecker.js';
-import { contactHref } from './contacts.js';
+import { newId } from '../../../src/utils/ids.js';
+import { BASE_COVER_LETTER } from '../../../src/utils/defaultDataContent.js';
+import { SECTION_TYPE_DEFAULTS } from '../../../src/utils/defaultDataSectionTypes.js';
+import { getStarterSettings } from '../../../src/utils/starterSettings.js';
+import { DATA_VERSION } from '../../../src/utils/dataVersion.js';
+import { ATS_STANDARD_SECTIONS } from '../../../src/utils/atsChecker.js';
+import { contactHref } from '../../../src/utils/contacts.js';
 
 // ── Headings ─────────────────────────────────────────────────────────────────
 
@@ -60,10 +62,7 @@ const NUMBERED = /^\s*\(?(?:\d{1,2}|[a-z]|[ivx]{1,4})[.)]\s+/i;
 /** A line of dashes, equals or underscores under a heading (the ATS text's rule). */
 const RULE = /^\s*[-=_─━—–]{3,}\s*$/;
 
-const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[^\S\t\n]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
-
-/** A line that starts at a tab, has no other, and has a character that is no white space after it (not /^\t[^\t]*\S[^\t]*$/, which tried every split of a long line). */
-const startsAtTab = (text) => text[0] === '\t' && text.indexOf('\t', 1) === -1 && /\S/.test(text);
+const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[ \f\v\r]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
 
 /** How far a list item is indented, in columns (a tab four): a nested item's is more than its parent's. */
 const indentOf = (text) => {
@@ -87,7 +86,7 @@ function toLines(input) {
     // a degree's or a role's (an indented "⇥University of Porto" is a second field).
     if (l && typeof l === 'object') {
       const lines = String(l.text ?? '').split('\n');
-      const atEnd = (text) => lines[0].includes('\t') && startsAtTab(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
+      const atEnd = (text) => lines[0].includes('\t') && /^\t[^\t]*\S[^\t]*$/.test(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
       return lines.map((text, i) => ({
         text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
         ...(l.fields && !i ? { fields: l.fields } : {}),
@@ -133,168 +132,6 @@ export function linkText(label, href) {
   return to ? `${text} (${to})` : text;
 }
 
-// ── Markdown's inline marks, read in one pass over a line ───────────────────────
-// Each of these was a regex that tried every "[", "*", "_" or "~~" of a line again to the line's end when it had
-// no partner: a pasted run of 20 000 of them took half a second, 100 000 twelve (time squared). Every one reads
-// the same text the same way, with each position looked at once (typing-freeze 7b).
-
-const HAS_LINE_END = /[\n\r\u2028\u2029]/; // never global: a global one keeps its place between calls, and a later call read from there
-const isLineEnd = (c) => c === '\n' || c === '\r' || c === '\u2028' || c === '\u2029';
-const isSpace = (c) => c !== undefined && /\s/.test(c);
-
-/**
- * A search that only moves forward, asked again and again: `find(from)` is the first place at or after `from`,
- * and an answer holds for every later `from` up to it, so a run of misses is read once.
- */
-function forwardSearch(find) {
-  let lo = 0;
-  let hit = -2; // -2: nothing asked yet; -1: nothing from `lo` on
-  return (from) => {
-    if (hit !== -2 && from >= lo && (hit === -1 || from <= hit)) return hit;
-    lo = from;
-    hit = find(from);
-    return hit;
-  };
-}
-
-/**
- * For each index of `text`, where the first "]" that no backslash escapes is (a backslash takes the next character
- * with it, but not a line end), or -1: where (?:\\.|[^\]\\])* ends.
- */
-function bracketEnds(text) {
-  const ends = new Int32Array(text.length + 2).fill(-1);
-  for (let i = text.length - 1; i >= 0; i -= 1) {
-    const c = text[i];
-    if (c === ']') ends[i] = i;
-    else if (c === '\\') ends[i] = i + 1 < text.length && !isLineEnd(text[i + 1]) ? ends[i + 2] : -1;
-    else ends[i] = ends[i + 1];
-  }
-  return ends;
-}
-
-/** `text` with each image, "![alt](url)", as its alt text: /!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, replaced by "$1". */
-function imagesOff(text) {
-  if (!text.includes('![')) return text;
-  const ends = bracketEnds(text);
-  const lastParen = text.lastIndexOf(')');
-  let out = '';
-  let from = 0; // text before it is in `out`
-  let next = 0; // where to look for the next "!["
-  for (let at = text.indexOf('![', next); at !== -1; at = text.indexOf('![', next)) {
-    const close = ends[at + 2];
-    const end = close >= 0 && text[close + 1] === '(' && lastParen >= close + 2 ? text.indexOf(')', close + 2) : -1;
-    if (end === -1) { next = at + 1; continue; }
-    out += text.slice(from, at) + text.slice(at + 2, close);
-    from = next = end + 1;
-  }
-  return out + text.slice(from);
-}
-
-/**
- * `text` with each link, "[label](url "title")", replaced by `replace(label, url)`: the pattern
- * /\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g. A label holds escapes, pairs of brackets
- * and other characters but "[", "]" and "\"; where one scan of a label meets another's, they end alike, so it
- * is read from each place once.
- */
-function linksReplace(text, replace) {
-  if (!text.includes('](')) return text;
-  const ends = bracketEnds(text);
-  const lastParen = text.lastIndexOf(')');
-  const labelEnd = new Int32Array(text.length + 2).fill(-2); // from an item's start: the "]" ending the label, -1 for none
-  const readLabel = (start) => {
-    const path = [];
-    let pos = start;
-    let end;
-    for (;;) {
-      if (labelEnd[pos] !== -2) { end = labelEnd[pos]; break; }
-      path.push(pos);
-      const c = text[pos];
-      if (c === ']') { end = pos; break; }
-      if (c === undefined) { end = -1; break; }
-      if (c === '\\') {
-        if (pos + 1 < text.length && !isLineEnd(text[pos + 1])) pos += 2;
-        else { end = -1; break; }
-      } else if (c === '[') {
-        if (ends[pos + 1] < 0) { end = -1; break; }
-        pos = ends[pos + 1] + 1;
-      } else pos += 1;
-    }
-    for (const at of path) labelEnd[at] = end;
-    return end;
-  };
-  let out = '';
-  let from = 0;
-  let next = 0;
-  for (let at = text.indexOf('[', next); at !== -1; at = text.indexOf('[', next)) {
-    const close = readLabel(at + 1);
-    if (close < 0 || text[close + 1] !== '(' || lastParen < close + 2) { next = at + 1; continue; }
-    let hrefEnd = close + 2;
-    while (hrefEnd < text.length && text[hrefEnd] !== ')' && !isSpace(text[hrefEnd])) hrefEnd += 1;
-    const end = text.indexOf(')', hrefEnd);
-    out += text.slice(from, at) + replace(text.slice(at + 1, close), text.slice(close + 2, hrefEnd));
-    from = next = end + 1;
-  }
-  return out + text.slice(from);
-}
-
-/** `text` with each "<https://…>" or "<mailto:…>" replaced by `replace(address)`: /<((?:https?:\/\/|mailto:)[^>]+)>/g. */
-function anglesReplace(text, replace) {
-  const scheme = /https?:\/\/|mailto:/y;
-  const lastGt = text.lastIndexOf('>');
-  let out = '';
-  let from = 0;
-  let next = 0;
-  for (let at = text.indexOf('<', next); at !== -1; at = text.indexOf('<', next)) {
-    scheme.lastIndex = at + 1;
-    const found = scheme.exec(text);
-    const body = found ? at + 1 + found[0].length : -1; // the address's first character after its scheme
-    if (!found || body >= text.length || text[body] === '>') { next = at + 1; continue; }
-    if (lastGt <= body) break; // no ">" ahead for this one or any later
-    const end = text.indexOf('>', body + 1);
-    out += text.slice(from, at) + replace(text.slice(at + 1, end));
-    from = next = end + 1;
-  }
-  return out + text.slice(from);
-}
-
-/**
- * `text` with each emphasised run's marks off: `marker`, the run, `marker`, replaced by the run. The run starts
- * where its first character is no space, and is as short as it can be, ending at the first `marker` that
- * `closes` accepts. `opens(c)`: whether the character before the opening mark may stand there (the text's start
- * may too); it is kept; null where none is wanted. This is what
- *   /(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g (italic with *), the same with _, and
- *   /~~(?!\s)(.+?)(?<![\s\\])~~/g (strike-through)
- * did, and each tried every opening mark that had no closing one against the rest of the line again.
- */
-function emphasisOff(text, marker, opens, closes) {
-  if (!text.includes(marker)) return text;
-  const closer = forwardSearch((from) => {
-    let hit = text.indexOf(marker, from);
-    while (hit !== -1 && !closes(text[hit - 1], text[hit + marker.length])) hit = text.indexOf(marker, hit + 1);
-    return hit;
-  });
-  const lineEnd = forwardSearch((from) => { for (let i = from; i < text.length; i += 1) if (isLineEnd(text[i])) return i; return -1; });
-  const hasLineEnd = HAS_LINE_END.test(text);
-  let out = '';
-  let from = 0;
-  let matched = 0; // where the last run ended
-  let next = 0;
-  for (let at = text.indexOf(marker, next); at !== -1; at = text.indexOf(marker, next)) {
-    next = at + 1;
-    // The character before the opening mark is part of the match, so it comes after the last run; with none
-    // wanted (`opens` null) the mark itself does.
-    if (opens ? at > 0 && (at - 1 < matched || !opens(text[at - 1])) : at < matched) continue;
-    const start = at + marker.length;
-    if (start >= text.length || isSpace(text[start])) continue;
-    const end = closer(start + 1);
-    if (end === -1) break; // no closing mark ahead for this opening mark or any later one
-    if (hasLineEnd) { const stop = lineEnd(start); if (stop !== -1 && stop < end) continue; }
-    out += text.slice(from, at) + text.slice(start, end);
-    from = matched = next = end + marker.length;
-  }
-  return out + text.slice(from);
-}
-
 /**
  * Markdown's inline marks off: bold and italics, links to their text (linkText; `as` 'label' the
  * label alone; an array, the label, each address pushed to it — an entry's title line gives them as
@@ -305,25 +142,23 @@ function unmark(text, as, found) {
   // A link's address is no text to format: kept aside, as written, from the passes over the rest (R5-IMP-01).
   const kept = [];
   const keep = (address) => `\uE001${kept.push(address) - 1}\uE001`;
-  const withLinks = linksReplace(imagesOff(String(text)), (label, href) => {
+  return inlineOff(String(text)
+    .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
     // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
-    if (as === 'label') return label || keep(href);
-    const [t, to] = linkParts(label, href);
-    if (found) {
-      const url = to || linkParts('', href)[0];
-      // Its label as the line prints it, its marks off too: "[**Bold**](url)" is found as "Bold" (R4-SW-I-04).
-      if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: inlineOff(t), url });
-    }
-    if (!to) return t;
-    if (Array.isArray(as)) { as.push(to); return t; }
-    return `${t} (${keep(to)})`;
-  });
-  const marked = inlineOff(anglesReplace(withLinks, keep), kept);
-  // A closing run of two spaces or more (a Markdown line break) goes; one space stays. (/ {2,}$/ read each
-  // space of a long run again to its end: time squared.)
-  let end = marked.length;
-  while (end > 0 && marked[end - 1] === ' ') end -= 1;
-  return marked.length - end >= 2 ? marked.slice(0, end) : marked;
+    .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
+      if (as === 'label') return label || keep(href);
+      const [t, to] = linkParts(label, href);
+      if (found) {
+        const url = to || linkParts('', href)[0];
+        // Its label as the line prints it, its marks off too: "[**Bold**](url)" is found as "Bold" (R4-SW-I-04).
+        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: inlineOff(t), url });
+      }
+      if (!to) return t;
+      if (Array.isArray(as)) { as.push(to); return t; }
+      return `${t} (${keep(to)})`;
+    })
+    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, (_, address) => keep(address)), kept)
+    .replace(/ {2,}$/, '');
 }
 /**
  * An address written out in Markdown text: "https://x.com/_a_/b", "www.…", "mailto:…". It ends before
@@ -338,20 +173,16 @@ const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"`\uE001]*[^\s<>()"`.
  * unmark set aside, each written in the text as its index between two U+E001s (a private-use
  * character, never a résumé's), put back here.
  */
-const noSpaceOrEscape = (c) => !isSpace(c) && c !== '\\';
-const inlineOff = (text, kept = []) => {
-  const noCode = String(text)
-    .replace(MD_ADDRESS, (address) => `\uE001${kept.push(address.replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')) - 1}\uE001`)
-    .replace(/`([^`]*)`/g, '$1')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1');
-  // GFM strike-through, the export's for struck text; then italics with * and with _.
-  const struck = emphasisOff(noCode, '~~', null, (before) => noSpaceOrEscape(before));
-  const starred = emphasisOff(struck, '*', (c) => !/[\w*\\]/.test(c), (before, after) => noSpaceOrEscape(before) && !/[\w*]/.test(after ?? ''));
-  return emphasisOff(starred, '_', (c) => !/[\w\\]/.test(c), (before, after) => noSpaceOrEscape(before) && !/\w/.test(after ?? ''))
-    .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
-    .replace(/\uE001(\d+)\uE001/g, (_, i) => kept[i]);
-};
+const inlineOff = (text, kept = []) => String(text)
+  .replace(MD_ADDRESS, (address) => `\uE001${kept.push(address.replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')) - 1}\uE001`)
+  .replace(/`([^`]*)`/g, '$1')
+  .replace(/\*\*(.+?)\*\*/g, '$1')
+  .replace(/__(.+?)__/g, '$1')
+  .replace(/~~(?!\s)(.+?)(?<![\s\\])~~/g, '$1') // GFM strike-through, the export's for struck text
+  .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
+  .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
+  .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
+  .replace(/\uE001(\d+)\uE001/g, (_, i) => kept[i]);
 
 /**
  * A "|" the Markdown escapes ("\|", the export's for one the user typed: "R&D \| Ops"), held as this
@@ -426,75 +257,15 @@ const refKey = (label) => label.trim().replace(/\s+/g, ' ').toLowerCase();
  * `line` with each reference link it defines ("[text][id]", "[text][]", "[text]") as an inline one
  * ("[text](url)"), for unmark to read; a reference with no definition stays as written.
  */
-function refsOff(line, defs) {
-  if (!line.includes('[')) return line;
-  // "[text][id]" and "[text] [id]" ("[text][]" as well): /(!?)\[((?:\\.|[^\]\\])*)\]\s?\[((?:\\.|[^\]\\])*)\]/g
-  const ends = bracketEnds(line);
-  let out = '';
-  let from = 0;
-  let next = 0;
-  for (let at = line.indexOf('[', next); at !== -1; at = line.indexOf('[', next)) {
-    next = at + 1;
-    const close = ends[at + 1];
-    if (close < 0) continue;
-    const second = line[close + 1] === '[' ? close + 1 : isSpace(line[close + 1]) && line[close + 2] === '[' ? close + 2 : -1;
-    const end = second < 0 ? -1 : ends[second + 1];
-    if (end < 0) continue;
-    const bang = at > from && line[at - 1] === '!' ? '!' : '';
-    const text = line.slice(at + 1, close);
-    const id = line.slice(second + 1, end);
+const refsOff = (line, defs) => line
+  .replace(/(!?)\[((?:\\.|[^\]\\])*)\]\s?\[((?:\\.|[^\]\\])*)\]/g, (m, bang, text, id) => {
     const url = defs.get(refKey(id || text));
-    out += line.slice(from, at - bang.length) + (url === undefined ? line.slice(at - bang.length, end + 1) : `${bang}[${text}](${url})`);
-    from = next = end + 1;
-  }
-  const paired = out + line.slice(from);
-  if (!paired.includes('[')) return paired;
-  // "[text]" alone, not before "(", "[" or ":" and not after "]" or "\": /(!?)(?<![\]\\])\[((?:\\.|[^\]\\])+)\](?![([:])/g
-  const endsOf = bracketEnds(paired);
-  out = '';
-  from = 0;
-  next = 0;
-  for (let at = paired.indexOf('[', next); at !== -1; at = paired.indexOf('[', next)) {
-    next = at + 1;
-    const bang = at > from && paired[at - 1] === '!' ? '!' : '';
-    if (!bang && at > 0 && (paired[at - 1] === ']' || paired[at - 1] === '\\')) continue;
-    const close = endsOf[at + 1];
-    if (close < at + 2 || '([:'.includes(paired[close + 1] ?? '\0')) continue;
-    const text = paired.slice(at + 1, close);
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  })
+  .replace(/(!?)(?<![\]\\])\[((?:\\.|[^\]\\])+)\](?![([:])/g, (m, bang, text) => {
     const url = defs.get(refKey(text));
-    out += paired.slice(from, at - bang.length) + (url === undefined ? paired.slice(at - bang.length, close + 1) : `${bang}[${text}](${url})`);
-    from = next = close + 1;
-  }
-  return out + paired.slice(from);
-}
-
-/**
- * An ATX heading, "## Experience ##": [whole, its #s, its text], else null. The same as
- * /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/, which read a long run of spaces after its text again from each of
- * them (time squared). A closing run of #s counts only after a space ("## C#" is the heading "C#", R4-LO-07).
- */
-function atxHeading(line) {
-  let at = 0;
-  while (at < line.length && /\s/.test(line[at])) at += 1;
-  if (at > 3) return null;
-  let hashes = 0;
-  while (line[at + hashes] === '#') hashes += 1;
-  at += hashes;
-  if (hashes < 1 || hashes > 6 || !/\s/.test(line[at] ?? '')) return null;
-  while (/\s/.test(line[at] ?? '')) at += 1;
-  const rest = line.slice(at);
-  const trimmed = rest.trimEnd();
-  let end = trimmed.length;
-  if (trimmed.endsWith('#')) { // a closing run of #s, with a space before it
-    let hash = end;
-    while (hash > 0 && trimmed[hash - 1] === '#') hash -= 1;
-    let gap = hash;
-    while (gap > 0 && /\s/.test(trimmed[gap - 1])) gap -= 1;
-    if (gap < hash) end = gap;
-  }
-  const text = rest.slice(0, end);
-  return /[\u2028\u2029]/.test(text) ? null : [line, '#'.repeat(hashes), text];
-}
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  });
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
@@ -524,7 +295,7 @@ export function markdownLines(md) {
   for (const raw of lines) {
     const line = defs.size ? refsOff(raw, defs) : raw;
     // A closing run of #s only after a space: "## C#" is the heading "C#" (R4-LO-07).
-    const h = atxHeading(line);
+    const h = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h) {
       const level = h[1].length;
       let hint = level === 1 && !named ? 'name' : (level <= 2 ? 'heading' : 'entry');
@@ -582,27 +353,14 @@ const SAME_YEAR = new RegExp(`^(${MONTH})(?=${SEP}(${MONTH}),?\\s+(\\d{4})(?!\\d
 const MONTH_AT = (m) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m.slice(0, 3).toLowerCase());
 const withYear = (t) => t.replace(SAME_YEAR, (first, _, end, year) => `${first} ${MONTH_AT(first) > MONTH_AT(end) ? Number(year) - 1 : year}`);
 
-/**
- * `text` without the opening brackets, stars and underscores at its start and the closing ones at its end:
- * what /^[(*_[]+|[)*_\]]+$/g cut, which read a long closing run again from each of its characters when
- * something else ended the text (time squared in the run).
- */
-function trimMarks(text) {
-  let from = 0;
-  while (from < text.length && '(*_['.includes(text[from])) from += 1;
-  let to = text.length;
-  while (to > from && ')*_]'.includes(text[to - 1])) to -= 1;
-  return text.slice(from, to);
-}
-
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
 export function readDateRange(text) {
-  let t = trimMarks(String(text ?? '').trim()).trim();
+  let t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
   if (!t) return null;
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
   let m = RANGE.exec(withYear(t));
   // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
-  if (t.lastIndexOf('(') > t.lastIndexOf(')')) t = `${t})`; // a "(" with no ")" after it (a pattern read each "(" to the end)
+  if (/\([^)]*$/.test(t)) t = `${t})`;
   // An academic year, "2019–21", "2019-21": the end year's last two digits, after the start year's.
   // "2011-12" is read as December 2011 above (the app's YYYY-MM Date format), so only a hyphen with
   // two digits over 12, or another dash, gets here.
@@ -669,9 +427,6 @@ function bracketDates(text) {
  * others for its issuer (R5-HUNT10-AWARD-UNBRACKETED-YEARS-AS-ISSUER). Else the text as it is.
  */
 function bracketYears(text) {
-  // A line of this kind is a title and its years: a longer one is a paragraph, and testing each of its separators
-  // against the rest of it took time squared (a run of 12 000 characters of commas, half a second).
-  if (text.length > 1000) return text;
   for (const sep of text.matchAll(/\t|\s[-–—|]\s|,\s/g)) {
     const before = text.slice(0, sep.index).trim();
     const after = text.slice(sep.index + sep[0].length).trim();
@@ -1082,17 +837,10 @@ function inlinePair(parts) {
     // company-first section swapped them: the role "Gensler Architects", the company "Senior Engineer".
     if (a && b && ROLE.test(a) && firm) return Object.assign([a, b], { roleLeads: true });
   }
-  // Where the job title's words are, read once: a title is in the text before a comma when one ends by it, and
-  // after it when one starts past it. (Testing each side of each comma took time squared in the commas.)
-  const titles = [...text.matchAll(ROLE_ALL)];
-  const firstEnd = titles.length ? titles[0].index + titles[0][0].length : Infinity;
-  const lastStart = titles.length ? titles[titles.length - 1].index : -1;
-  const firstWord = text.search(/\S/);
-  const lastWord = text.trimEnd().length - 1;
   for (const m of text.matchAll(/,\s+/g)) {
-    const after = m.index + m[0].length;
-    if (firstWord < 0 || firstWord >= m.index || after > lastWord) continue; // one side is empty
-    if ((firstEnd <= m.index) !== (lastStart >= after)) return [text.slice(0, m.index).trim(), text.slice(after).trim()];
+    const a = text.slice(0, m.index).trim();
+    const b = text.slice(m.index + m[0].length).trim();
+    if (a && b && ROLE.test(a) !== ROLE.test(b)) return [a, b];
   }
   return parts;
 }
@@ -1822,26 +1570,6 @@ function skillsOf(lines) {
 
 const LEVEL = /\b(native|bilingual|fluent|proficient|professional|full professional|working|limited|conversational|intermediate|advanced|basic|beginner|elementary|upper[- ]intermediate|mother tongue|[abc][12])\b.*$/i;
 
-/**
- * `text` split at each comma and semicolon that is not inside brackets: that is, not followed by a ")" before any
- * "(" or ")" — what text.split(/[,;](?![^()]*\))/) did, reading to the next bracket from each one (time squared in
- * a run of commas).
- */
-function splitOutsideBrackets(text) {
-  const closes = new Uint8Array(text.length + 1); // 1: the first bracket at or after the index is ")"
-  for (let i = text.length - 1; i >= 0; i -= 1) {
-    const c = text[i];
-    closes[i] = c === ')' ? 1 : c === '(' ? 0 : closes[i + 1];
-  }
-  const parts = [];
-  let from = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    if ((text[i] === ',' || text[i] === ';') && !closes[i + 1]) { parts.push(text.slice(from, i)); from = i + 1; }
-  }
-  parts.push(text.slice(from));
-  return parts;
-}
-
 /** Language lines: "English: Native", "English — Native", "English (Native)", two to a row in a grid. */
 function languagesOf(lines) {
   const items = [];
@@ -1850,9 +1578,8 @@ function languagesOf(lines) {
     let last = null; // the language before on this line
     // Cells: at tabs and | • ·, and at commas and semicolons outside brackets — "English, Spanish,
     // French" is three languages, "English (Native), Spanish (Fluent)" two (R4-IMP-11).
-    const cells = line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).flatMap(splitOutsideBrackets);
-    const filled = cells.map((s) => s.trim()).filter(Boolean);
-    for (const cell of filled) {
+    const cells = line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).flatMap((c) => c.split(/[,;](?![^()]*\))/));
+    for (const cell of cells.map((s) => s.trim()).filter(Boolean)) {
       const m = /^(.+?)\s*(?::|\s[—–-]\s|\()\s*(.+?)\)?$/.exec(cell);
       if (m) { last = itemOf('languages', { language: m[1], proficiency: m[2] }); items.push(last); bare = null; continue; }
       const level = LEVEL.exec(cell);
@@ -1861,7 +1588,7 @@ function languagesOf(lines) {
       if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
       // So does a cell in lower case after a level ("Spanish: Working knowledge, written"): the level's rest.
       // (only the line's last cell: "Native, german, french" are languages).
-      const rest = /^\p{Ll}/u.test(cell) && cell === filled.at(-1);
+      const rest = /^\p{Ll}/u.test(cell) && cell === cells.map((c) => c.trim()).filter(Boolean).at(-1);
       if (last?.proficiency && ((level && level.index === 0) || rest)) { last.proficiency = `${last.proficiency}, ${cell}`; continue; }
       if (level && level.index === 0 && last) { last.proficiency = cell; continue; }
       if (level && level.index > 0) { last = itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }); items.push(last); bare = null; continue; }

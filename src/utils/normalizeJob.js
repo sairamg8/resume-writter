@@ -77,7 +77,29 @@ export function statusId(value) {
  * An element the rich-text editor writes (or a browser's contentEditable, or a paste), or an
  * entity: notes holding one are HTML. Plain text that merely looks like a tag ('<tbd>') is not.
  */
-const HTML_NOTES = /<\/?(p|div|br|ul|ol|li|strong|b|em|i|u|s|strike|del|ins|a|span|font|h[1-6]|blockquote|pre|code|sub|sup|hr)(\s[^>]*)?\/?>|&(amp|lt|gt|quot|nbsp|#\d+|#x[0-9a-f]+);/i;
+const HTML_ENTITY = /&(?:amp|lt|gt|quot|nbsp|#\d+|#x[0-9a-f]+);/i;
+const HTML_TAGS = new Set(['p', 'div', 'br', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del', 'ins', 'a', 'span', 'font',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'sub', 'sup', 'hr']);
+
+/**
+ * Whether `text` holds one of those tags: "<", an optional "/", the name, then ">", "/>" or white space and any
+ * attributes up to a ">". The pattern for it (<\/?(p|div|…)(\s[^>]*)?\/?>) read each "<a " that no ">" followed
+ * to the end of the text: a note of 20 000 of them took 300 ms, 100 000 seven seconds (time squared).
+ */
+function hasHtmlTag(text) {
+  const lastGt = text.lastIndexOf('>');
+  for (let at = text.indexOf('<'); at !== -1 && at < lastGt; at = text.indexOf('<', at + 1)) {
+    const start = text[at + 1] === '/' ? at + 2 : at + 1;
+    let end = start;
+    while (end < text.length && end - start <= 10 && /[A-Za-z0-9]/.test(text[end])) end += 1;
+    if (!HTML_TAGS.has(text.slice(start, end).toLowerCase())) continue;
+    const next = text[end];
+    if (next === '>' || (next === '/' && text[end + 1] === '>') || (next !== undefined && /\s/.test(next) && lastGt > end)) return true;
+  }
+  return false;
+}
+
+const isHtmlNotes = (text) => hasHtmlTag(text) || HTML_ENTITY.test(text);
 
 /**
  * Notes as the rich-text editor's HTML (J-03). The job form saved notes as plain text and the
@@ -88,7 +110,7 @@ const HTML_NOTES = /<\/?(p|div|br|ul|ol|li|strong|b|em|i|u|s|strike|del|ins|a|sp
  */
 export function notesToHtml(notes) {
   if (typeof notes !== 'string') return '';
-  if (!notes.trim() || HTML_NOTES.test(notes)) return notes;
+  if (!notes.trim() || isHtmlNotes(notes)) return notes;
   return plainTextToHtml(notes);
 }
 

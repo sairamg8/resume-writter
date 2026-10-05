@@ -51,7 +51,7 @@ export function InlineEdit({
     if (finished.current) return;
     finished.current = true;
     refocus.current = returnFocus;
-    const next = multiline ? draft.replace(/\s+$/, '') : draft.trim();
+    const next = multiline ? draft.trimEnd() : draft.trim(); // not /\s+$/, which read a long run of white space again from each of its characters
     if (save && next.trim() && next !== value) onCommit?.(next);
     setEditing(false);
   };
