@@ -16,12 +16,19 @@
 //   width          `layoutSideWidth`, % of the paper: the side column's, or the left column's of the
 //                  short sections in Mixed. SIDE_WIDTH_PCT is the range the panel offers and the clamp.
 // Unset — every résumé stored before — is 'two', 'left' and 38 %: the page as it always printed.
+// No migration and no DATA_VERSION step: a résumé that stores none of them prints as it did.
 import { storedNumber } from './spacingNumbers.js';
 
-/** One list per choice, in the order its buttons appear: `val` is what the résumé stores, `label` what the button reads. */
+/** A choice's button: `val` what the résumé stores, `label` what the button reads. */
+const choice = (val, label) => ({ val, label });
+
+/**
+ * One list per choice, in the order its buttons appear. Details is a place on the page of its own —
+ * not Photo → Position's Left / Right, whose list stays photoOptions.js's alone (AUD-25).
+ */
 export const LAYOUT_OPTIONS = {
-  layoutColumns: [{ val: 'two', label: 'Side column' }, { val: 'mixed', label: 'Mixed' }],
-  layoutDetails: [{ val: 'left', label: 'Left' }, { val: 'right', label: 'Right' }, { val: 'top', label: 'Top' }],
+  layoutColumns: [choice('two', 'Side column'), choice('mixed', 'Mixed')],
+  layoutDetails: [choice('left', 'Left'), choice('right', 'Right'), choice('top', 'Top')],
 };
 
 /** What each choice prints when the résumé stores nothing for it — always one of its options. */
@@ -67,6 +74,37 @@ export function sidebarLayout(template, settings) {
     details: columns === 'mixed' ? 'top' : layoutOption('layoutDetails', settings?.layoutDetails),
     widthPct: sideWidthOf(settings?.layoutSideWidth),
   };
+}
+
+/**
+ * The layout a JSON Resume export carries in `meta.columnLayout` (jsonResumeExport.js), as it prints:
+ * { columns, details, width } — or null where it prints nothing of its own: another template, Single ·
+ * ATS-safe, or the default page (Side column, Left, 38 %). JSON Resume has no place for a design, but
+ * the layout decides the page itself, as Single · ATS-safe's `meta.layout` does.
+ */
+export function layoutMeta(template, settings) {
+  if (!sidebarLayout(template, settings)) return null;
+  const meta = {
+    columns: layoutOption('layoutColumns', settings?.layoutColumns),
+    details: layoutOption('layoutDetails', settings?.layoutDetails),
+    width: sideWidthOf(settings?.layoutSideWidth),
+  };
+  const plain = meta.columns === LAYOUT_DEFAULTS.layoutColumns && meta.details === LAYOUT_DEFAULTS.layoutDetails
+    && meta.width === SIDE_WIDTH_PCT.default;
+  return plain ? null : meta;
+}
+
+/**
+ * The settings a file's `meta.columnLayout` (layoutMeta's) brings back (jsonResumeImport.js): each choice
+ * the app offers, the width clamped to SIDE_WIDTH_PCT; anything else, and a meta that is no object, nothing.
+ */
+export function layoutFromMeta(meta) {
+  if (!meta || typeof meta !== 'object') return {};
+  const out = {};
+  if (LAYOUT_OPTIONS.layoutColumns.some((o) => o.val === meta.columns)) out.layoutColumns = meta.columns;
+  if (LAYOUT_OPTIONS.layoutDetails.some((o) => o.val === meta.details)) out.layoutDetails = meta.details;
+  if (storedNumber(meta.width) !== undefined) out.layoutSideWidth = sideWidthOf(meta.width);
+  return out;
 }
 
 /**

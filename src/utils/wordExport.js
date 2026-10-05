@@ -1,5 +1,5 @@
-import { AlignmentType, Document, Footer, Header, Packer, PageNumber, Paragraph, TextRun } from 'docx';
-import { accent2Hex, bulletNumbering, wordMargins, xmlSafe } from '@/utils/wordExportUtils';
+import { AlignmentType, Document, Footer, Header, Packer, PageNumber, Paragraph, Table, TableBorders, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
+import { accent2Hex, bulletNumbering, gapPara, twips, wordMargins, xmlSafe } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
@@ -7,13 +7,14 @@ import { withWordPhoto } from '@/utils/wordExportPhoto';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
-import { templateId } from '@/constants/templates';
+import { inMixedColumns, templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { entryInk } from '@/utils/wordExportLook';
 import { resolveWordFont, wordFontTable } from '@/utils/wordFonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
-import { getDocumentProps } from '@/templates/pdf/shared/PdfPage';
+import { MAIN_PAD_LEFT, SIDE_PAD, getDocumentProps, sideShare } from '@/templates/pdf/shared/PdfPage';
+import { getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 
 export { resolveWordFont };
 
@@ -134,6 +135,47 @@ function buildDocument(children, settings, { pageNumbers = false, template, runn
   });
 }
 
+/** A Mixed row's cell padding on the other cell's side, twips: the PDF's (SIDE_PAD, MAIN_PAD_LEFT). */
+const MIXED_PAD = { left: twips(SIDE_PAD), right: twips(MAIN_PAD_LEFT) };
+
+/**
+ * The Sidebar's Mixed short sections (`sections`, those that print, in their order) as the PDF lays them
+ * out: two to a row, the first in a column the side column's width (Design → Template → Layout → Width,
+ * sideShare) from the left margin, the second in the rest — a borderless table a row, as Grids prints
+ * (gridTable). Each section is laid out at its cell's text width, one entry to a row (sectionLook);
+ * Between Sections (each pair's larger Space after) under every row but the last. [] for none.
+ */
+function mixedRows(sections, accentHex, settings, template) {
+  if (!sections.length) return [];
+  const paper = PAGE_SIZES[pageSizeOf(settings)].twips.width;
+  const side = wordMargins(settings).h;
+  const left = Math.round(paper * sideShare(settings)) - side;
+  const widths = [left, paper - 2 * side - left];
+  const text = [widths[0] - MIXED_PAD.left, widths[1] - MIXED_PAD.right];
+  const out = [];
+  for (let i = 0; i < sections.length; i += 2) {
+    const pair = sections.slice(i, i + 2);
+    out.push(new Table({
+      width: { size: widths[0] + widths[1], type: WidthType.DXA },
+      columnWidths: widths,
+      layout: TableLayoutType.FIXED,
+      borders: TableBorders.NONE,
+      rows: [new TableRow({
+        children: widths.map((w, c) => new TableCell({
+          children: pair[c] ? buildSection(pair[c], accentHex, settings, template, { width: text[c] }) : [new Paragraph({ children: [] })],
+          width: { size: w, type: WidthType.DXA },
+          margins: { marginUnitType: WidthType.DXA, top: 0, bottom: 0, left: c ? MIXED_PAD.right : 0, right: c ? 0 : MIXED_PAD.left },
+        })),
+      })],
+    }));
+    if (i + 2 < sections.length) {
+      const below = Math.max(...pair.map((s) => getEffectiveSpacing(s, resolveTemplateSettings(settings, template)).marginBottom));
+      out.push(...gapPara(below));
+    }
+  }
+  return out;
+}
+
 /** The résumé as a .docx Blob — same sections, entries and hidden fields as the PDF. */
 export async function renderResumeDocx(resume) {
   // The photo as the PDF export draws it: a WebP's copy, a plain URL's picture (R2-126). Its text
@@ -148,10 +190,15 @@ export async function renderResumeDocx(resume) {
   // Layout), but still leads a job with the role (R2-012) and prints its dates in grey and its second
   // field in the accent, as its PDF does (R2-121).
   const own = templateId(template);
-  const printed = sections
-    .map((s) => resolveSection(s, own))
+  const resolved = sections.map((s) => resolveSection(s, own));
+  // The Sidebar's Mixed layout (Design → Template → Layout, R2-147-col): its short sections print after
+  // the others, two to a row (mixedRows). Every other layout prints its sections in their order: Word
+  // has no side column, so Details Left, Right and Top and the column's width print the same page.
+  const inRow = (section) => inMixedColumns(own, section.type, settings);
+  const printed = resolved.filter((s) => !inRow(s))
     .map((section) => ({ section, paras: buildSection(section, accentHex, settings, own) }))
     .filter(({ paras }) => paras.length);
+  const rows = mixedRows(resolved.filter((s) => inRow(s) && buildSection(s, accentHex, settings, own).length), accentHex, settings, own);
   // The header is Classic's, in the Sidebar's Text colour: its PDF resolves the page's settings as the
   // Sidebar's, so an unset Text colour prints the name and contacts in its slate, not Classic's black.
   const headerSettings = effectiveTemplate === template ? settings
@@ -160,9 +207,10 @@ export async function renderResumeDocx(resume) {
     ...buildPersonalSection(personal, headerSettings, effectiveTemplate),
     // Between Sections under every section but the last, as the PDF's: space under the last one
     // could only push a blank page (R2-062).
-    ...printed.flatMap(({ section, paras }, i) => (i < printed.length - 1
+    ...printed.flatMap(({ section, paras }, i) => (i < printed.length - 1 || rows.length
       ? [...paras, ...sectionSpaceAfter(section, settings, own)]
       : paras)),
+    ...rows,
   ];
   const running = { name: personal?.name, color: resolveTemplateSettings(settings, own).textColor };
   return Packer.toBlob(buildDocument(children, settings, { pageNumbers: settings.pageNumbers === true, template: own, running, personal }), false, [await wordFontTable(settings)]);

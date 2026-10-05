@@ -4,6 +4,7 @@ import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/Desi
 import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
 import { titleTrackingPct } from '@/templates/pdf/shared/sectionHeadingLook';
 import { headerTemplateId } from '@/constants/templates';
+import { columnsOf } from '@/constants/layoutOptions';
 import { wordFontStandIns } from '@/utils/wordFonts';
 import { isImeKey } from '@/components/ui/compose';
 
@@ -246,8 +247,9 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
           })()}
         </div>
         {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). Its
-            Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082). */}
-        {headerTemplateId(template, settings) === 'sidebar' && (
+            Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082);
+            nor does Mixed, whose short sections print as the main ones (R2-147-col). */}
+        {headerTemplateId(template, settings) === 'sidebar' && columnsOf(settings) === 'two' && (
           <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
             Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text), spaced by Title Spacing.
           </p>

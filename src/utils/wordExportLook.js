@@ -3,7 +3,7 @@
 // header's frame, the band or rule the résumé's header and the letter's letterhead sit in (R2-137).
 import { BorderStyle, ShadingType, Table, TableBorders, TableCell, TableLayoutType, TableRow, VerticalAlign, WidthType } from 'docx';
 import { accent2Hex, eighths, twips, wordContentTwips, wordMargins } from '@/utils/wordExportUtils';
-import { headerTemplateId, templateId } from '@/constants/templates';
+import { headerTemplateId, inMixedColumns, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { linkLook } from '@/utils/linkStyle';
@@ -99,8 +99,10 @@ const ITALIC_SUBS = ['executive', 'academic'];
  * resolved `s`:
  * - `base`, `entry`, `sub`, `place`, `date`, `link` and `body` — the sizes of its fields,
  *   half-points (entrySizes);
- * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row;
- * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips), or in a grid its cell's;
+ * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row — always in one of the
+ *   Sidebar's Mixed columns, as in the side column (inMixedColumns, R2-147-col);
+ * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips) — `width`, the text's,
+ *   where the section prints in a column of its own (a Mixed column) — or in a grid its cell's;
  * - `line` — Design → Line Height; `bullet` — Design → Lists, the glyph of its bulleted items (R2-147);
  * - `links` — Design → Links' look on its links, on the white page (linkLook, R2-147);
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
@@ -112,13 +114,13 @@ const ITALIC_SUBS = ['executive', 'academic'];
  *   location and an issuer print italic, and Title "Inline" joins the two fields with ", " (R4-DOUT-02);
  * - `ink` — the entries' colours (entryInk).
  */
-export function sectionLook(section, settings, s, template, side) {
+export function sectionLook(section, settings, s, template, side, width = wordContentTwips(settings)) {
   const tid = templateId(template);
-  const grid = gridOf(section, wordContentTwips(settings), side);
+  const grid = gridOf(section, width, side || inMixedColumns(template, section.type, settings));
   return {
     ...entrySizes(section, s, tid, side),
     grid,
-    tab: grid ? grid.cell : wordContentTwips(settings),
+    tab: grid ? grid.cell : width,
     line: s.lineHeightValue,
     bullet: s.bulletStyle,
     links: linkLook(s.linkStyle, s.accentColor),

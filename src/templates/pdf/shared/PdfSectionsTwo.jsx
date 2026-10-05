@@ -202,10 +202,13 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
   // label (T9), two runs a field's gap apart. Rows are spaced by the item gap alone. The proficiency
   // ends at its cell's edge: the right column's (and a single column's) flush with the right margin,
   // in line with the dates (R4-DOUT-14); the cells' 48% widths already leave the gutter between them.
+  // A pair too wide for its cell (a narrow column: the Sidebar's Mixed columns at a small Width,
+  // R2-147-col) puts the proficiency on the line under the language: the two were shrunk to fit and
+  // textkit broke "Portuguese" inside the word. One that fits prints as it always has.
   const pair = centered
-    ? { justifyContent: 'center', gap: pxToPt(8) }
-    : settings?._template === 'compact' ? { justifyContent: 'flex-start', gap: fieldGap(baseSize) }
-    : { justifyContent: 'space-between', gap: fieldGap(baseSize) };
+    ? { justifyContent: 'center', columnGap: pxToPt(8), flexWrap: 'wrap' }
+    : settings?._template === 'compact' ? { justifyContent: 'flex-start', columnGap: fieldGap(baseSize), flexWrap: 'wrap' }
+    : { justifyContent: 'space-between', columnGap: fieldGap(baseSize), flexWrap: 'wrap' };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>

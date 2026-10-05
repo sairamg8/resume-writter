@@ -37,7 +37,8 @@ resume-writter/
 │   │   └── ui/                # the shared UI kit (dialogs, menus, toasts, fields…)
 │   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
 │   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js,
-│   │                          # skillLevels.js (a skill's 1–5 level: scale, bar width, JSON Resume words)…
+│   │                          # skillLevels.js (a skill's 1–5 level: scale, bar width, JSON Resume words),
+│   │                          # layoutOptions.js (the Sidebar's Columns, Details and Width: R2-147-col)…
 │   ├── hooks/
 │   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js, useResumeDesignActions.js
 │   │   ├── usePickCard.js, usePicture.js  # a picker card picked (with Undo); a page picture once on screen

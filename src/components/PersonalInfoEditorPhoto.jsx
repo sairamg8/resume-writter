@@ -5,6 +5,7 @@ import { readImageFile } from '@/utils/imageUpload';
 import { UNLOADABLE_PHOTO, UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
+import { sidebarLayout } from '@/constants/layoutOptions';
 import { useToast } from '@/components/ui/Toast';
 
 /**
@@ -75,7 +76,11 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
   const besideNote = (testId) => (
     <p className="text-[11px] text-gray-400" data-testid={testId}>
       {templateId(template) === 'sidebar'
-        ? 'The Sidebar template prints the photo above your name.'
+        // Design → Template → Layout: on the band across the top (Details Top, Mixed) the photo sits
+        // left of the name, centred on it; in the column, above it (R2-147-col).
+        ? (sidebarLayout('sidebar', s)?.details === 'top'
+          ? 'The Sidebar template prints the photo left of your name, on the band across the top.'
+          : 'The Sidebar template prints the photo above your name.')
         : 'A centered header prints the photo above your name. Align the header left to place the text beside it.'}
     </p>
   );

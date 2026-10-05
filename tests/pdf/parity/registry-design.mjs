@@ -145,6 +145,40 @@ export const DESIGN = {
       return one === (valueOf(r, 'setting.sidebarSingleColumn') === true) ? [] : [`${valueOf(r, 'setting.sidebarSingleColumn')}: Skills at x ${b.x.toFixed(1)}, Experience at ${a.x.toFixed(1)}`];
     }),
   },
+  // Design → Template → Layout's column choices on the Sidebar's two columns (R2-147-col). Columns: Mixed
+  // prints Experience across the page and Education under it from the same margin; the Side column keeps
+  // Education in the column beside it.
+  'setting.layoutColumns': {
+    family: 'template',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.layoutColumns');
+      const [exp, edu] = [heading(r.snap, EXPERIENCE), heading(r.snap, /^education$/i)];
+      if (!exp || !edu) return [`${v}: headings not found`];
+      const mixed = near(exp.x, edu.x, 2) && flow(r.snap, edu) > flow(r.snap, exp);
+      return mixed === (v === 'mixed') ? [] : [`${v}: Education at x ${edu.x.toFixed(1)}, Experience at ${exp.x.toFixed(1)}`];
+    }),
+  },
+  // Details: the side column (Education) right of the main one (Experience) for Right; for Top the contacts
+  // on the band above About Me, the main column's first title; for Left the column left, its contacts under
+  // the name, below About Me's line.
+  'setting.layoutDetails': {
+    family: 'template',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.layoutDetails');
+      const [exp, edu, about, email] = [heading(r.snap, EXPERIENCE), heading(r.snap, /^education$/i), heading(r.snap, /^about me$/i), item(r.snap, PERSONAL.email)];
+      if (!exp || !edu || !about || !email) return [`${v}: a heading or the e-mail not found`];
+      const placed = edu.x > exp.x ? 'right' : flow(r.snap, email) < flow(r.snap, about) ? 'top' : 'left';
+      return placed === v ? [] : [`${v}: prints as ${placed} (Education x ${edu.x.toFixed(1)}, Experience x ${exp.x.toFixed(1)})`];
+    }),
+  },
+  // Width: the side column's share of the paper — the main column, and its Experience title, start further
+  // right; in Mixed (the panel offers it there too) the left one of each row's: Skills, the second of the
+  // first row, starts further right.
+  'setting.layoutSideWidth': {
+    family: 'template',
+    check: ({ runs }) => grows(runs, 'setting.layoutSideWidth', (r) => heading(r.snap, r.state.settings.layoutColumns === 'mixed' ? /^skills$/i : EXPERIENCE)?.x,
+      'the column after the side one: its left edge'),
+  },
   'setting.accentColor': { family: 'colors', check: ({ runs }) => runs.filter((r) => !hasColour(r.snap, valueOf(r, 'setting.accentColor'))).map((r) => `${valueOf(r, 'setting.accentColor')} prints nowhere`) },
   'setting.textColor': {
     family: 'colors',

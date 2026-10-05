@@ -17,7 +17,7 @@ react-pdf component plus a row in the template table.
 | `modern` | `ModernTemplatePDF.jsx` | good |
 | `minimal` | `MinimalTemplatePDF.jsx` | certified |
 | `executive` | `ExecutiveTemplatePDF.jsx` | certified |
-| `sidebar` | `SidebarTemplatePDF.jsx` | risky (two columns); Design → Layout "Single · ATS-safe" prints Classic's page |
+| `sidebar` | `SidebarTemplatePDF.jsx` | risky (two columns, Mixed too); Design → Layout "Single · ATS-safe" prints Classic's page; its column layout below |
 | `timeline` | `TimelineTemplatePDF.jsx` | certified |
 | `banner` | `BannerTemplatePDF.jsx` | good |
 | `academic` | `AcademicTemplatePDF.jsx` | certified |
@@ -39,6 +39,31 @@ settings to a look (`designLook`: plain values, none of NOT_A_LOOK such as the p
 normalizeResume checks a résumé's (numbers in range, colours as '#rrggbb', Name Font and
 Heading Font as text), so a saved design from an imported .json cannot put unchecked values on the
 résumé it is picked for.
+
+### The Sidebar's column layout (R2-147-col)
+
+Design → Template → Layout, on the Sidebar's two columns only (`src/components/DesignPanelLayout.jsx`;
+none in Single · ATS-safe, which wins, nor on another template). One module holds the choices the panel
+offers and the PDF and Word draw: `src/constants/layoutOptions.js` (`LAYOUT_OPTIONS`, `sidebarLayout`).
+
+- **Columns** `layoutColumns`: `two` (Side column) or `mixed` — the details on a band, the main sections
+  across the page, then the short sections (`SIDEBAR_COLUMN_TYPES`) two to a row, the first in a column the
+  side column's width, the second in the rest; each a column of its own, one entry to a row whatever its
+  Grids (`inMixedColumns`: Section Options offers no Grids there, the ATS Check reads no grid).
+- **Details** `layoutDetails` (Side column only): `left` (as always), `right` (the page in `row-reverse`, so
+  the name is still the first text drawn; the running header and page numbers end at the main column's
+  text, their `right` props) or `top` (`src/templates/pdf/shared/PdfSidebarBand.jsx`: photo left of the name,
+  contacts on lines under it, each value whole as in the column, `_sideRoomPt`; the column beneath).
+- **Width** `layoutSideWidth`: % of the paper, 24–45 (`SIDE_WIDTH_PCT`, `sideWidthOf`), `sideShare` in
+  `PdfPage.jsx`; in Mixed the left column's (`_columnWidthPt` sizes a Mixed column's entries).
+
+Unset (every résumé stored before) is Side column, Left, 38 %: the page exactly as it printed. Pagination is
+the Left page's in every layout: a column, or a Mixed column, starts with SPACER and splits on its own (both
+stretch to their row, so the next page keeps each one's place); a Mixed row is led by a mark that keeps ten
+lines of it on its page, so its two sections start side by side. Reset Design Settings returns the default
+page; no section ↺ writes the layout. The cover letter keeps its own letterhead in every layout. Tests:
+`tests/pdf/150-r2-147-col-layout-*`, `tests/unit/layout-options.unit.mjs`,
+`tests/unit/layout-mixed-columns.unit.mjs`; the parity matrix's `template` family measures each control.
 
 ### Cover letter
 
@@ -96,7 +121,11 @@ control repaints it.
 - `wordExportUtils.js`, `wordExportLook.js` — text/html helpers, headings, bullets, colours  
 - `wordExportPhoto.js` — the photo, as the PDF prints it  
 
-Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems. Modern's banner and the
+Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems. Word has no side column: the
+two-column Sidebar prints its sections one after another in their order, so its Details (Left, Right,
+Top) and Width print the same file (the fallback, R2-147-col); its Mixed layout prints the main sections,
+then the short ones two to a row in a borderless table a row (`mixedRows` in `wordExport.js`), the cells
+where the PDF's columns start, each section at its cell's width (`buildSection`'s `width`). Modern's banner and the
 two-column Sidebar's header print on their band, a shaded table (`frameTable` in `wordExportLook.js`);
 Banner's and Banded's headers print on the white page. The letter's letterhead takes the same band or
 rule, and at Right of Name (its default Fields Position) its contacts sit beside the name in a two-cell
@@ -149,6 +178,9 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   "https://" or "www." under it (the PDF prints the label unlinked) writes `basics.url` '' and no profile,
   and the value as typed rides as `websiteText` / `linkedinText` / `githubText` for the import to put
   back, so the label prints again after a round trip (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL).
+  The two-column Sidebar's column layout goes out as `meta.columnLayout` (`{ columns, details, width }`,
+  `layoutMeta`) where it is not the default page, beside Single · ATS-safe's `meta.layout`, and the import
+  brings back what this build offers (`layoutFromMeta`; R2-147-col).
   A skill group's per-skill levels (R2-147) go out as `skills[].level` (Beginner … Expert) when every
   keyword shares one, else as `keywordLevels` (`{ "Go": "Expert" }`); a level is kept per comma-separated
   skill, so each keyword of a skill typed "Python; Go" (keywords are parted by ";" and "•" too) takes that

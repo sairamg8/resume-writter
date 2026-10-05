@@ -176,6 +176,9 @@ test.describe('every design control changes the preview, through the UI', () => 
       // Not the resets' confirm step, nor Add (a custom font, typed). The Layout choice last: Single ·
       // ATS-safe takes the Sidebar's column colours off the panel.
       const range = await tag(page, '[data-pw-root="design"]', '^(Reset|Yes, Reset|Cancel)$|Reset .* to defaults|Add$');
+      // The Sidebar's column choices (R2-147-col) before the Layout's own: Single · ATS-safe takes them off
+      // the panel. Details and Width before Columns: Mixed takes Details off.
+      for (const row of ['layout-details', 'layout-width', 'layout-columns']) await tag(page, `[data-testid="${row}"]`, '^$');
       const layout = await tag(page, '[data-pw-root="layout"]', '^$');
       const { inert, used } = await useEach(page, [range[0], Math.max(range[1], layout[1])]);
       expect(inert, 'controls that changed the résumé but not the preview').toEqual([]);
