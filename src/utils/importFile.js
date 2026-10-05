@@ -760,6 +760,17 @@ async function loadPdfjs() {
   return lib;
 }
 
+const LABEL_LEAD = /[\s|•·]/;
+const LABEL_TAIL = /[\s|•·,.;:!?]/;
+/** `text` without the separators at its start and the separators and punctuation at its end (/^[\s|•·]+|[\s|•·,.;:!?]+$/g, which read a long run again from each of its characters). */
+function trimEdges(text) {
+  let from = 0;
+  let to = text.length;
+  while (from < to && LABEL_LEAD.test(text[from])) from += 1;
+  while (to > from && LABEL_TAIL.test(text[to - 1])) to -= 1;
+  return text.slice(from, to);
+}
+
 /**
  * A page's text items with its links' addresses: the text a Link annotation covers, when it is not
  * the address itself (a contact shown as its Display label, "My profile"), reads as "My profile
@@ -804,7 +815,7 @@ function withLinks(items, links) {
     if (!hits.length) continue;
     hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
     // A box snapped to a word's edge takes the punctuation after the word ("Tidewater,"): not the label's.
-    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·,.;:!?]+$/g, '').replace(/\s+/g, ' ');
+    const label = trimEdges(hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ')).replace(/\s+/g, ' ');
     if (!label) continue;
     // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
     if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
@@ -817,7 +828,8 @@ function withLinks(items, links) {
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
     // Never after the separator past its label: a box a little wider than its letters.
-    const end = last.it.str.slice(0, last.to).replace(/[\s|•·,.;:!?]+$/, '').length;
+    let end = last.to;
+    while (end > 0 && LABEL_TAIL.test(last.it.str[end - 1])) end -= 1;
     inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {
