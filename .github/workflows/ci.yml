@@ -141,7 +141,7 @@ jobs:
           fi
 
   # Fail-first (the failfirst input): for each "sha:tests", on a machine of its own, undo that
-  # commit's changes to src/ (and to a yarn patch and yarn.lock, then reinstall) on this checkout —
+  # commit's changes to src/ and vite.config.js (and to a yarn patch and yarn.lock, then reinstall) on this checkout —
   # its diff reversed, or its parent's files where later work moved the lines — and its tests must
   # fail; restored, they must pass. A test that passes without its fix proves nothing.
   # One machine per check: the input's "sha:tests" pairs become a matrix.
@@ -198,8 +198,8 @@ jobs:
           for pair in $FAILFIRST; do
             sha=${pair%%:*}; files=${pair#*:}; files=${files//,/ }
             if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then echo "::error::$sha is not in this checkout"; status=1; continue; fi
-            src=$(git diff --name-only "$sha^" "$sha" -- src/ .yarn/patches/ yarn.lock)
-            if [ -z "$src" ]; then echo "::error::$sha changes nothing under src/"; status=1; continue; fi
+            src=$(git diff --name-only "$sha^" "$sha" -- src/ .yarn/patches/ yarn.lock vite.config.js)
+            if [ -z "$src" ]; then echo "::error::$sha changes nothing under src/ or in vite.config.js"; status=1; continue; fi
             # A fix in a patched dependency only counts once node_modules is rebuilt from the reverted patch.
             deps=$(printf '%s\n' $src | grep -E '^(\.yarn/patches/|yarn\.lock$)' || true)
             if git diff "$sha^" "$sha" -- $src | git apply -R 2>/dev/null; then how='its diff reversed'
