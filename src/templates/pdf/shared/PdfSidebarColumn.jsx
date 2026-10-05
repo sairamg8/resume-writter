@@ -37,9 +37,9 @@ export { SIDE_COL };
 export const SIDE_PAD_RIGHT = SIDE_PAD;
 
 /**
- * The width the column's text is laid out in, pt: its share of the paper (Design → Layout's width,
- * sideShare) inside its padding. `settings._sideRoomPt` is a width of its own where the sections that
- * print in the column sit somewhere else: the contacts in the top band (PdfSidebarBand.jsx).
+ * The width the column's text is laid out in, pt: its share of the paper (Design → Template → Layout's
+ * width, sideShare) inside its padding. `settings._sideRoomPt` is a width of its own where a value the
+ * column would print sits somewhere else: a contact on the band across the top (PdfSidebarBand.jsx).
  */
 export const sideColumnRoom = (settings) => (Number.isFinite(settings?._sideRoomPt)
   ? settings._sideRoomPt
