@@ -10,14 +10,21 @@
  * so the other tab's adds, edits and deletes are taken too. The same `incoming` when this tab has
  * nothing unsaved. The store makes a new object for every job it changes, so a job is changed
  * here when it is no longer the very object `stored` holds.
+ * `merge(was, mine, theirs)`, when given: a job changed in both tabs since `stored` (`was`) is what it
+ * returns for this tab's version and the other tab's, not this tab's whole — the résumé store passes
+ * mergeResume, so what the other tab changed in a different field is not lost (typing-freeze 5).
  */
-export function keepUnsaved(incoming, current, stored) {
+export function keepUnsaved(incoming, current, stored, merge) {
   const storedById = new Map(stored.map((j) => [j.id, j]));
   const currentIds = new Set(current.map((j) => j.id));
   const mine = new Map(current.filter((j) => storedById.get(j.id) !== j).map((j) => [j.id, j]));
   const deleted = new Set(stored.filter((j) => !currentIds.has(j.id)).map((j) => j.id));
   if (!mine.size && !deleted.size) return incoming;
-  const kept = incoming.filter((j) => !deleted.has(j.id)).map((j) => mine.get(j.id) || j);
+  const kept = incoming.filter((j) => !deleted.has(j.id)).map((j) => {
+    const here = mine.get(j.id);
+    const was = storedById.get(j.id);
+    return here && merge && was && was !== j ? merge(was, here, j) : here || j;
+  });
   const keptIds = new Set(kept.map((j) => j.id));
   return [...kept, ...[...mine.values()].filter((j) => !keptIds.has(j.id))];
 }

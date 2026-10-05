@@ -15,6 +15,74 @@
   to a seed. A version above this build's is stamped down to it and the claim kept in
   `dataVersionAhead` (AUD-26). `tests/unit/knowledge-docs.unit.mjs` fails when this number drifts.
 
+### Two tabs of one résumé (typing-freeze 5)
+
+Every tab keeps its own state and shares only `localStorage` (`cpwtcv_v1`); it hears another tab's save
+through the `storage` event, and also looks at storage right before each of its own writes, because that
+event is still on its way when both tabs type (the write used to overwrite the other tab's save, and the
+event then read this tab's own write back). A tab remembers the raw value it last wrote or took: a value
+that differs is another tab's save, taken in first (`takeSave`, `withOtherTabsSave`); one that equals it is
+not heard twice.
+
+- **Résumés** are taken by id (`keepUnsaved` in `src/utils/unsavedJobs.js`): a résumé this tab did not change
+  is the other tab's; one added here stays; one deleted here stays deleted; the résumé open here stays open.
+- **A résumé changed in both tabs is merged field by field** (`mergeResume`, `src/utils/mergeResume.js`), a
+  three-way merge of `base` (the copy this tab last read from or wrote to storage), `mine` and `theirs`:
+  objects per key; lists of entries (sections, entries) by `id`, where an entry added in either tab stays, one
+  deleted in either stays deleted whatever the other tab did to it, and the order is the one the tab that
+  moved entries gave (the later writer's if both did); lists of words (hidden fields) as sets; a text both
+  tabs changed keeps both changes when they touch different parts of it (compared as the common prefix and
+  suffix of each change against `base`), two insertions at one point in the order of their writers; a leaf
+  both tabs changed to different values, or changes of one text that overlap, go to the later writer (the
+  résumé's `updatedAt`, then its JSON as the tie-break), so that both tabs weigh the same two copies the same
+  way and end on the same résumé. A merge that is neither copy is stamped one past the later `updatedAt`
+  (cloud sync versions a résumé by it). A part nobody changed here keeps its object, so no preview is rebuilt.
+  A copy stamped more than 10 s before the one this tab last read is an old one (a tab that never heard of
+  what was saved since): it is not merged, this tab's résumé stands (read against `base` it would look like an
+  edit that undid what this tab typed after it).
+- **A whole résumé deleted in one tab while the other holds it** follows the cloud sync's rule (an edit made
+  after a deletion wins, R2-029). A copy the other tab only *held* is not an edit: the deletion stands in
+  both tabs and in storage (the résumé is not written back, whether the other tab writes before it has
+  heard the deletion or after), and the id stays in `deletedIds` for the account. A copy it *typed* in
+  since it last read storage is an edit, and the save written second decides: when the editing tab saves
+  after the deleting tab, it takes the deletion in, keeps its résumé, and the résumé is back in both tabs
+  with the typing (and off `deletedIds`); when the deleting tab saves after the editing tab, it keeps the
+  deletion it made and the résumé is gone in both. Either way both tabs end on the same list. This differs
+  from an *entry* (above), which stays deleted whatever the other tab did to it: an entry is a part of a
+  résumé both tabs keep merging, and a deleted one has nowhere to put the edit, while a whole résumé the
+  other tab typed in is one a person was looking at. Signing out follows the same rule for what is kept
+  aside for the account (`stashedFor`): the other tab's deleted résumé is dropped from the stash if this
+  tab only held it, and kept, typing and all, if this tab typed in it. A `deletedInfo` entry of a résumé
+  that came back is left in place; nothing reads it without the id in `deletedIds`.
+- **Why this shape (the decision, typing-freeze 5):** the loss came from two things — a whole-résumé merge that
+  keeps one tab's copy entire, and a write that never looked at storage. A résumé is a tree of small fields
+  that tabs type into one at a time, so a field-level three-way merge keeps what each did without a server or
+  a shared history (a CRDT or operation log would add a dependency and bytes to the start-up path, which has a
+  1,100 kB cap); text is merged by the span each tab changed because a keystroke stream is one such span per
+  save. Where two changes cannot both stand (one text overlapped, one leaf set two ways) one must give way, so
+  both tabs apply the same rule, by the résumé's own `updatedAt`, and end on the same résumé. The jobs, boards
+  and custom-stage stores have neither the save window nor the whole-item merge (they write every change at
+  once, and `keepUnsaved` without a merge only holds what storage refused), but they had the same write that
+  never looked: each now reads storage first and takes in a save whose event has not arrived (`setJobs`,
+  `setBoards`, `addCustomStage` / `removeCustomStage`).
+- **The account changing hands** (sign-out, or another account's sign-in) is decided by which tab did it: a tab
+  remembers the account storage held when it last wrote or took it. When this tab's account differs from that
+  and the other tab's save still carries it, the change is this tab's — the other tab's save is edits on the old
+  account's list, so this tab keeps its own `syncedUid`, `cloudVersions` and list, and keeps the other tab's
+  changes aside for the account it left (the same `stash` as its own unsent work; a résumé both tabs changed is
+  merged with `mergeResume`, one the other tab deleted is not kept unless this tab typed in it, see above) — whether the save is taken at this tab's
+  write or by its storage event. When the other tab changed the account, this tab follows it as before (its
+  unsent work is kept aside, merged with what the other tab's leave already kept for the same résumé).
+- **A write that takes in the other tab's save and fails** (storage full): the merged state is still this
+  tab's to write. It is marked as taken, so the save effect writes nothing for it, only after the write
+  reached storage; after a failure the effect schedules the write again, and the tab's edits stay unsaved
+  against what storage holds, so a later event of the other tab merges with them instead of replacing them.
+- No write ping-pong: a save only taken is not written back, and a tab with nothing unsaved takes the other's
+  copy as it is.
+- Known limit: a read-then-write of `localStorage` is not atomic across tabs (no lock), so two writes inside
+  the same few microseconds can still overwrite each other; the window is the gap between a tab's read and its
+  write, not the save interval.
+
 ### Core API (conceptual)
 
 | Method | Role |
@@ -312,7 +380,8 @@ opens; another tab's save arrives through the `storage` event, and what storage 
 again (`src/utils/unsavedJobs.js`). While no job page is open (no `storage` listener), `snapshot()` first takes
 what storage holds if it changed (`catchUp`, pure: it runs in render), so an Undo toast or a reopened job form
 never writes this tab's old list over another tab's; a value it could not read in full is backed up before the
-next write (`backupRaw`). Signed in, it syncs with the account through `useCollectionSync` (above);
+next write (`backupRaw`); a change made while a page listens also takes in a save whose `storage` event has not
+arrived yet (typing-freeze 5). Signed in, it syncs with the account through `useCollectionSync` (above);
 `jobsNow` / `replaceJobs` are what the sync reads and replaces.
 
 ## Implications for open-source forks

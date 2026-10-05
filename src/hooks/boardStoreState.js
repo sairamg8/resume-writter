@@ -96,6 +96,10 @@ function update(patch) {
 /** Replace the list with `change(boards)`; the same list back is no change: nothing saved. */
 function setBoards(change) {
   if (!initialized) init();
+  // Another tab's save whose storage event is still on its way is taken in first: written over, it was
+  // lost, and the event then made that tab read this tab's list as the other's (typing-freeze 5).
+  const raw = readRaw();
+  if (raw && raw !== lastRaw) takeOtherTabsList();
   const before = snapshot().boards;
   const boards = change(before);
   if (boards === before) return;
