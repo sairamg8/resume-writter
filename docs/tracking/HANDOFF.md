@@ -1,9 +1,20 @@
 # Session Handoff — Resume Here
 
-**2026-10-05 ~11:30 UTC — TYPING-FREEZE HUNT DONE; three fixes + review fixes are on `claude/typing-freeze-fixes` (NOT on master).**
-Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). **Next: read the newest full-gate run on this
-branch's head (dispatched with the final docs commit), fix anything red, then PR it -> master for the owner.** The branch = master + `claude/fix-dev-worker-refresh`
-(`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`, `4692e20a`) + `claude/fix-worker-watchdog` (`7dbf69e9`, `f34a9d0a`); each fix has its own CI proof and a second-agent review.
+**2026-10-05 ~12:00 UTC — TYPING-FREEZE HUNT: FOUR FIXES DONE on `claude/typing-freeze-fixes` (tip `7a57c73b`, GREEN full gate; NOT on master).**
+**Hold (FlowCV status session, 04:xx UTC): master moved to `69fdb98a` and carries its own PDF worker watchdog (pdfBuildTimeoutMs). That session is reconciling `claude/fix-error-185`
+into ONE watchdog on `claude/typing-merge-1005`, gated on CI. Do NOT merge or PR any typing-freeze branch into master, and do NOT delete the fix-*/tmp-* branches; the old ones
+are deleted after the reconciled branch merges. Further typing-freeze commits go on `claude/fix-error-185` (say so to that session).**
+Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). The branch = old master `e1267bc9` + `claude/fix-dev-worker-refresh`
+(`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`, `4692e20a`) + `claude/fix-worker-watchdog` (`7dbf69e9`, `f34a9d0a`) + `claude/fix-error-185` (`375a0ed6`, `7a57c73b`).
+**Gates:** full gate on `7a57c73b` = run 37263604346, all 15 jobs green; its fail-first 37263595117 green. (The gate on `55fdb1b2` and `a0f00a67` was red on ONE test, 113 #2, a late font
+telling the preview six times, fixed by `7a57c73b`.)
+**PENDING at the end of this session:**
+1. Peer reconcile: the FlowCV status session has the tip `a0f00a67` and a promise of the sha `7a57c73b` (the 113 fix); keep whichever pdfBuild.js watchdog it prefers. What must survive:
+   pdfFontLoader.js's bounded first font fetch (`loadInTime`, 10 s, `stalledFaces`, late-face rebuild coalesced in `noteLateFace`), and tests 112/113 adapted (112 asserts my watchdog's
+   `_setPdfWorkerForTest(create, { timeoutMs })` and the 'took more than' message).
+2. Fix 4 (error #185, `375a0ed6`) has NO second-agent review yet (the owner's rule: every fix gets one). Fixes 1-3 each had one and their nits are fixed.
+3. After the reconcile merges: delete `claude/fix-dev-pdf-worker`, `claude/tmp-dev-worker-unfixed`, `claude/tmp-watchdog-unfixed`, the fix-* branches (the status session does it).
+4. Still open from the hunt (below): (5) cross-tab lost edits, (6) ATS regex, plus the lower items.
 - **1. The owner's one-off "Website freeze" was `yarn dev`, not the Website field:** the PDF worker died at load on the dev server ("window is not defined": plugin-react's
   Fast Refresh runtime is imported by every JSX module the worker loads), so every preview build ran on the main thread (0.5-1 s stalls per build, any field).
   Fix: `react({ exclude })` keeps `src/templates/pdf/` out of Fast Refresh (vite.config.js, anchored `PDF_WORKER_JSX`). Dev, same 46-key run: worst stall 1165 -> 284 ms.
@@ -16,7 +27,7 @@ branch's head (dispatched with the final docs commit), fix anything red, then PR
   (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Checked in the real app on the prod bundle with a stand-in worker: stalled CDN -> ready in ~12 s in Noto Sans; a mute worker ->
   alert + Retry at exactly 60.0 s, Retry works. A face that was only slow rebuilds the preview when it lands (`f34a9d0a`, from the second-agent review). CI: `7dbf69e9` fail-first 37260427341 + related tests 37260435645 green; the same tests on the unfixed parent (branch `claude/tmp-watchdog-unfixed`, delete it) fail by hanging, as they should (37260736638); `f34a9d0a` and the final head: newest runs on this branch.
 - **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version of 1, rejected in review: dead-code unit test + wrong-reason fail-first), `claude/tmp-dev-worker-unfixed` and `claude/tmp-watchdog-unfixed` (proof branches).
-- **4. React error #185 (a burst of >=51 keystrokes dropped one): FIXED on `claude/fix-error-185`** — two effects asked React for a state on every keystroke (the store's `setSaving`, the preview's `setStatus`); each now asks only for a change. Real key events: 100 of 100 characters kept. Test 114.
+- **4. React error #185 (a burst of >=51 keystrokes dropped one): FIXED on `claude/fix-error-185` (`375a0ed6`; CI fail-first 37263346725 + related tests 37263357579 green; unreviewed)** — two effects asked React for a state on every keystroke (the store's `setSaving`, the preview's `setStatus`); each now asks only for a change. Real key events: 100 of 100 characters kept. Test 114.
 - **Still open from the hunt** (details in the write-up): (5) two tabs of one résumé typing at
   once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
   richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.
