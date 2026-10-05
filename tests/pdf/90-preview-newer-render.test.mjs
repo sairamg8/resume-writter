@@ -31,7 +31,7 @@ describe('a finished render newer than the one on screen is shown (R2-107)', () 
     } finally { await view.unmount(); }
   });
 
-  it('renders slower than the debounce: each one is shown as it finishes', async () => {
+  it('renders slower than the debounce: each one is shown as it finishes, the next starting as it does', async () => {
     const [v0, v1, v2] = versions(3);
     const { view, set, calls, build, shown, status } = await opened(v0);
     try {
@@ -39,18 +39,21 @@ describe('a finished render newer than the one on screen is shown (R2-107)', () 
       await pause();
       set({ render: build, input: v2 });
       await pause();
-      assert.equal(calls.length, 3, 'v1 and v2 both building');
+      // One build at a time: v2 waits for v1, however long the pause (before, both built at once and the
+      // PDF worker laid them out in turn — see tests/pdf/111-preview-one-build-at-a-time).
+      assert.equal(calls.length, 2, 'v1 building; v2 waits for it');
       calls[1].finish();
       await settle();
       assert.equal(shown(), name(v1), 'v1 is newer than v0: shown while v2 renders');
       assert.equal(status(), 'rendering');
+      assert.equal(calls.length, 3, 'v2 started the moment v1 finished');
       calls[2].finish();
       await settle();
       assert.deepEqual([shown(), status()], [name(v2), 'ready']);
     } finally { await view.unmount(); }
   });
 
-  it('a render that finishes after a newer one is on screen is dropped', async () => {
+  it('a newer render is never started under an older one, so an older cannot land over it', async () => {
     const [v0, v1, v2] = versions(3);
     const { view, set, calls, build, shown, status, pdf } = await opened(v0);
     try {
@@ -58,13 +61,13 @@ describe('a finished render newer than the one on screen is shown (R2-107)', () 
       await pause();
       set({ render: build, input: v2 });
       await pause();
-      calls[2].finish();
-      await settle();
-      assert.deepEqual([shown(), status()], [name(v2), 'ready']);
+      assert.equal(calls.length, 2, 'v2 is not built while v1 is');
       calls[1].finish();
       await settle();
-      assert.deepEqual([shown(), status()], [name(v2), 'ready'], 'the older v1 does not replace v2');
-      assert.ok(pdf.docs.filter((d) => d.name === name(v1)).every((d) => d.destroyed), 'the dropped document is destroyed');
+      calls[2].finish();
+      await settle();
+      assert.deepEqual([shown(), status()], [name(v2), 'ready'], 'v2 is on screen, not v1');
+      assert.ok(pdf.docs.filter((d) => d.name === name(v1)).every((d) => d.destroyed), 'v1\'s document was replaced and destroyed');
     } finally { await view.unmount(); }
   });
 });

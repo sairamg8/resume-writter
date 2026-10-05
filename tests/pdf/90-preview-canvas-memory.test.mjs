@@ -1,12 +1,12 @@
 // A canvas that leaves the screen (a newer render, a zoom repaint, unmount) or never reaches it (a
-// stale or failed render, a zoom repaint overtaken by another zoom or by a render) is shrunk to 0×0
+// failed render, a zoom repaint overtaken by another zoom or by a render) is shrunk to 0×0
 // at once (R2-170), instead of holding its pixels until the garbage collector runs: iOS Safari caps
 // a page's total canvas memory and fails the next paint past it
 // ("Preview failed to render").
 // PdfPreview over fake-dom with a stand-in pdf.js and builds the test finishes (preview-stub.mjs).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setupPreview, teardownPreview, settle, pause, versions, name, opened, size } from './preview-stub.mjs';
+import { setupPreview, teardownPreview, settle, pause, versions, name, opened, size, unmountLeavingPage } from './preview-stub.mjs';
 
 before(setupPreview);
 after(teardownPreview);
@@ -93,31 +93,45 @@ describe('canvases leaving the screen are shrunk to 0×0 (R2-170)', () => {
     assert.deepEqual(shownCanvases.map(size), [[0, 0]]);
   });
 
-  it('a dropped (stale) or failed render: its canvases are 0×0', async () => {
-    const [v0, v1, v2, v3] = versions(4);
+  it('unmounted while a render is painting: its canvases are 0×0 and its document is released', async () => {
+    const [v0, v1] = versions(2);
+    const { view, set, calls, build, pdf } = await opened(v0);
+    set({ render: build, input: v1 });
+    await pause();
+    const go = pdf.holdPaint(name(v1));
+    calls[1].finish(); // v1 is painting when the preview goes away
+    await settle();
+    const restore = await unmountLeavingPage(view);
+    try {
+      go();
+      await settle();
+      const v1Doc = pdf.docs.find((d) => d.name === name(v1));
+      assert.ok(v1Doc?.destroyed, 'the document the unmounted preview opened is released');
+      assert.deepEqual(pdf.canvases.map(size), [[0, 0], [0, 0]], 'v0\'s (on screen at unmount) and v1\'s (painted after) are 0×0');
+    } finally { restore(); }
+  });
+
+  it('a render replaced by a newer one, and a failed render: their canvases are 0×0', async () => {
+    // A stale render dropped after painting (v1 painting while v2 went up) cannot happen any more: builds
+    // do not overlap (tests/pdf/111-preview-one-build-at-a-time), so v2 starts only once v1 is on screen.
+    const [v0, v1, v2] = versions(3);
     const { view, set, calls, build, pdf, onScreen, shown } = await opened(v0);
     try {
       set({ render: build, input: v1 });
       await pause();
+      calls[1].finish();
+      await settle();
+      assert.equal(shown(), name(v1));
+      pdf.failPaint = true;
       set({ render: build, input: v2 });
       await pause();
-      const paintV1 = pdf.holdPaint(name(v1));
-      calls[1].finish(); // v1 is painting when v2 goes up: dropped once its paint ends
-      await settle();
       calls[2].finish();
       await settle();
-      paintV1();
-      await settle();
-      assert.equal(shown(), name(v2));
-      pdf.failPaint = true;
-      set({ render: build, input: v3 });
-      await pause();
-      calls[3].finish();
-      await settle();
+      assert.equal(shown(), name(v1), 'the failed render never went up');
       const live = new Set(onScreen());
       const offScreen = pdf.canvases.filter((c) => !live.has(c));
-      assert.equal(offScreen.length, 3, 'v0, v1 and v3 painted a canvas each');
-      assert.deepEqual(offScreen.map(size), [[0, 0], [0, 0], [0, 0]]);
+      assert.equal(offScreen.length, 2, 'v0 (replaced by v1) and v2 (failed) painted a canvas that is not on screen');
+      assert.deepEqual(offScreen.map(size), [[0, 0], [0, 0]]);
     } finally { await view.unmount(); }
   });
 });

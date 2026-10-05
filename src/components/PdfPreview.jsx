@@ -12,11 +12,15 @@ import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
  * - Re-renders `DEBOUNCE_MS` after the last change to `input` — also before the first page
  *   appears and after a failed build; the previous pages stay on screen (double-buffered) until
  *   the new ones are painted, so typing never flashes blank. Typing that never pauses that long
- *   still re-renders, `MAX_WAIT_MS` after the first change no build has taken up — one build at a
- *   time: while one is on its way, the next waits for it or for a pause.
+ *   still re-renders, `MAX_WAIT_MS` after the first change no build has taken up.
+ * - One build at a time: while one is on its way, the next — always the latest change's — waits
+ *   for it and starts the moment it finishes, whatever pauses in typing came meanwhile. A build
+ *   started per pause queued every stale version behind the running one in the PDF worker, which
+ *   laid each of them out in turn: a 9-page résumé's preview lagged 10-20 s behind typing that
+ *   paused every few keys (R2-142).
  * - A finished render is shown when it is newer than the pages on screen, even while a newer
- *   change is still waiting or building (steady typing would otherwise freeze the preview); only
- *   one older than the pages on screen is dropped.
+ *   change is still waiting (steady typing would otherwise freeze the preview). Builds never
+ *   overlap, so one cannot finish after a newer one is up; the guard that would drop it is defensive.
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
  *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
@@ -137,7 +141,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const shownGen = useRef(0);   // the generation of the pages on screen
   const built = useRef(null); // { input, render, retry } of the last build that started
   const waiting = useRef(null); // when the first change no build has taken up yet arrived
-  const building = useRef(0);   // builds started and not finished
+  const building = useRef(0);   // builds started and not finished: never more than one
+  const queued = useRef(null);  // the latest change's build, waiting for the one on its way to finish
   const wasActive = useRef(active);
   const docRef = useRef(null);
   const mounted = useRef(true);
@@ -167,19 +172,19 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     // otherwise start one full build per keystroke (R2-017). At once: the first build, a Retry, and
     // a preview just shown (nobody is typing into it).
     // Typing that goes on with no pause is built MAX_WAIT_MS after its first change — unless a build
-    // is still on its way: its pages go up first, and the change after it starts the next, so a
-    // build slower than MAX_WAIT_MS never piles up more of them on the main thread.
+    // is still on its way: its pages go up first, and the change after it starts the next (below), so
+    // a build slower than MAX_WAIT_MS never piles up more of them.
     const now = Date.now();
     if (waiting.current === null) waiting.current = now;
     const due = building.current ? DEBOUNCE_MS : Math.max(0, waiting.current + MAX_WAIT_MS - now);
     const retried = last && last.retry !== retry;
     const delay = last && !revealed && !retried ? Math.min(DEBOUNCE_MS, due) : 0;
-    const timer = setTimeout(async () => {
+    const run = async () => {
       waiting.current = null;
       building.current += 1;
       built.current = { input, render, retry };
       let pdf = null;
-      // Unmounted meanwhile (Cover Letter clicked mid-render), or overtaken by newer pages on screen.
+      // Unmounted meanwhile (Cover Letter clicked mid-render). `gen < shownGen` is defensive: builds run one at a time.
       const unwanted = () => !mounted.current || gen < shownGen.current;
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
@@ -208,9 +213,26 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         setStatus('error');
       } finally {
         building.current -= 1;
+        // The change that waited for this build, if any (the latest one's: a newer change took the place
+        // of an older): it builds now, from the input it has, while this build's page text may still be
+        // read (readText drops it if the next pages go up first). Its pages go up over this build's.
+        const next = queued.current;
+        queued.current = null;
+        next?.();
       }
+    };
+    const timer = setTimeout(() => {
+      // One build at a time. A pause in typing while one is on its way used to start another at once:
+      // the PDF worker runs them in turn, so each stale version of a long résumé was laid out before the
+      // latest, and the preview trailed the typing by the sum of them (R2-142). The change waits instead;
+      // a newer change, and the effect's cleanup, replace or drop it.
+      if (building.current) queued.current = run;
+      else run();
     }, delay);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (queued.current === run) queued.current = null;
+    };
   }, [input, render, retry, active]);
 
   // Back online while the pages print in Noto Sans for a font that could not be loaded, in another

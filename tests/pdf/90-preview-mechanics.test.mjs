@@ -1,5 +1,5 @@
 // The preview's mechanics with builds that succeed (R2-165): the typing debounce keeps the pages on
-// screen and builds once per pause; a stale render is dropped; a zoom change repaints the pages
+// screen and builds once per pause; a newer change waits for the build on its way; a zoom change repaints the pages
 // already built, at the new width, without building again (and not while hidden); a failed build
 // shows an alert with its message and a Retry that builds again at once and, when that succeeds,
 // clears the alert. tests/pdf/71-preview-* pin the same debounce and Retry with builds that fail at
@@ -32,8 +32,8 @@ describe('typing debounce, with pages on screen (R2-165)', () => {
   });
 });
 
-describe('a stale render is dropped (R2-165)', () => {
-  it('a render that finishes after a newer one went up does not replace it', async () => {
+describe('a stale render never replaces a newer one (R2-165)', () => {
+  it('a newer change waits for the build on its way, so the older one cannot finish after it', async () => {
     const [v0, v1, v2] = versions(3);
     const { view, set, calls, build, shown, status } = await opened(v0);
     try {
@@ -41,9 +41,10 @@ describe('a stale render is dropped (R2-165)', () => {
       await pause();
       set({ render: build, input: v2 });
       await pause();
-      calls[2].finish();
-      await settle();
+      assert.equal(calls.length, 2, 'v2 is not built while v1 is on its way');
       calls[1].finish();
+      await settle();
+      calls[2].finish();
       await settle();
       assert.deepEqual([shown(), status()], [name(v2), 'ready']);
     } finally { await view.unmount(); }
