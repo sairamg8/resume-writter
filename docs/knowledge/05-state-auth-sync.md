@@ -230,7 +230,11 @@ dropped (and then deleted from the account), or one it just deleted brought back
 cloud's old order (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD). So does what was kept aside at the
 last sign-out: two tabs signing in at once, the other tab's first sync taking it out of the record during
 this one's read no longer brings back a job or project deleted just before that sign-out
-(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). Signing out (or another account signing in) takes
+(R5-HUNT12-SYNC-FIRST-SYNC-STASH-READ-AFTER-CLOUD). A flush asks the list again once the cloud has
+answered its read: a job or project deleted in another tab meanwhile (it reaches this one through the storage event) is
+not written back — the write would also take its id off the account's deletion list, undoing that tab's
+deletion on every device — and its queued deletion goes next; one put back meanwhile (Undo) is still written
+(SL-SYNC-FLUSH-WRITES-DELETED-ITEM, `tests/unit/sync-flush-deleted-meanwhile.unit.mjs`). Signing out (or another account signing in) takes
 the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
 aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
 before. Storage too full to take the record with what was kept aside: the list goes first to make

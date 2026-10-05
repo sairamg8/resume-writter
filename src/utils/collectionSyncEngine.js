@@ -449,6 +449,13 @@ export function createCollectionSync({
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
       const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
       if (!current()) return;
+      // An item deleted here while its copy was being read — another tab's delete, taken through the
+      // storage event: changed() queued its deletion — is not written back. The write would also come
+      // off the account's deletion list (collectionSyncIo.commit), undoing that tab's deletion on
+      // every device (SL-SYNC-FLUSH-WRITES-DELETED-ITEM). The list as it is now; one put back
+      // meanwhile (Undo) is in it, and goes.
+      const here = new Set(store.items().map((x) => x.id));
+      queued = queued.filter((x) => here.has(x.id));
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
       const newer = queued.map((x) => {
         const d = cloudCopy.get(x.id);
