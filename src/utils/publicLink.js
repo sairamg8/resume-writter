@@ -14,6 +14,7 @@ import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 import { entryPrints } from '@/utils/entryPrints';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
+import { withSkillLevels } from '@/utils/skills';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
@@ -98,7 +99,10 @@ export function publicSnapshot(resume) {
     template: resume?.template || 'classic',
     settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
     personal: printedPersonal(withoutHidden(resume?.personal || {})),
-    sections,
+    // A skill group's levels only for the skills its text lists, the ones its bars draw: the editor
+    // keeps the level of a skill renamed or deleted from the text until the résumé is next loaded,
+    // and that key names a skill the PDF no longer prints (R2-147).
+    sections: withSkillLevels({ sections }).sections,
   };
   if (resume?.dataVersion != null) copy.dataVersion = resume.dataVersion;
   // As the cloud sync stores a résumé: a field holding `undefined` is refused by the SDK.
