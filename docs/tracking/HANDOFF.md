@@ -1,5 +1,22 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 ~10:00 UTC — TYPING-FREEZE HUNT DONE; two fixes ready on `claude/typing-freeze-fixes` (NOT on master).**
+Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). The branch = master +
+`claude/fix-dev-worker-refresh` (`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`). **Next: read the full gate on its head (dispatched
+with the docs commit; unread), then PR it -> master for the owner.** Each fix has its own CI proof (below); the batch has not been gated until that run is read.
+- **The owner's one-off "Website freeze" was `yarn dev`, not the Website field:** the PDF worker died at load on the dev server ("window is not defined": plugin-react's
+  Fast Refresh runtime is imported by every JSX module the worker loads), so every preview build ran on the main thread (0.5-1 s stalls per build, any field).
+  Fix: `react({ exclude })` keeps `src/templates/pdf/` out of Fast Refresh (vite.config.js, anchored `PDF_WORKER_JSX`). Dev, same 46-key run: worst stall 1165 -> 284 ms.
+  CI: fail-first 37258868807 green (it now also reverts vite.config.js: ci.yml), unit 37258878675 green. Production never had it.
+- **Preview build backlog (prod):** a pause in typing while a build ran started another, and the PDF worker lays jobs out in turn: 72 keys -> 25 builds, 15 queued, preview
+  21.6 s behind. PdfPreview now holds ONE queued build (the latest change's) behind the running one. Prod bundle, same run: 6 builds, 1 queued, 1.45 s oldest wait, 5.1 s
+  to settle. CI: fail-first 37259106000 green. Four existing preview tests that held two builds in flight were updated to the documented contract (commit messages say why).
+- **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version, rejected in review: dead-code unit test + wrong-reason fail-first) and `claude/tmp-dev-worker-unfixed`.
+- **Still open from the hunt** (details in the write-up): (3) a worker job that never replies (stalled font fetch) kills the preview until reload, no watchdog (R2-142 remainder);
+  (4) React error #185 after >=51 back-to-back input events drops a keystroke (suspect the setSaving effect, useResumeStore.js:163-185); (5) two tabs of one résumé typing at
+  once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
+  richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.
+
 **2026-09-30 ~05:00 UTC — DEPLOYED by the owner's order (no CI wait): master = `fa9c6ba4`** = everything: r4-green (round 11 review fixes:
 dash, sync, jobs), every claude/wf-r5-hunt11-* branch (incl. import, unreviewed), plus the 7 leftovers (JSON Resume bare-scheme label fixed;
 Website typing quadratic paths in contacts.js/richText.js fixed, freeze itself still unreproduced; AUD-09/19/23/25/26 were already fixed,
