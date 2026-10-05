@@ -14,7 +14,7 @@ const N = 100_000;
 
 describe('a multi-line field is left in linear time (typing-freeze 7)', () => {
   it('a multi-line field left with a run of 100 000 spaces in its text is saved in linear time, without its trailing white space', async () => {
-    const { default: InlineEdit } = await loadModule('/src/components/ui/InlineEdit.jsx');
+    const { InlineEdit } = await loadModule('/src/components/ui/InlineEdit.jsx');
     const committed = [];
     const view = mount(InlineEdit, { value: 'old', multiline: true, onCommit: (v) => committed.push(v) });
     try {

@@ -1,6 +1,6 @@
 // Typing-freeze finding 7 (the sweep of what an import reaches): the PDF import read a page's text items with work that grew
 // with the square of the rows: each item looked through every row so far for its line (16 000 rows, eight seconds),
-// each wrapped line rebuilt the paragraph's text to read its last character (a column of 20 000 lines, four), and a link's
+// each wrapped line rebuilt the paragraph's text to read its last character (a column of 40 000 lines, four), and a link's
 // label was trimmed with /^[\s|•·]+|[\s|•·,.;:!?]+$/g, which read a long run of punctuation inside the label again
 // from each of its characters (a label of 100 000 dots, sixteen). A page of 135 000 items also threw a RangeError (its
 // extremes were found with Math.min(...list)), and the import failed. Each is read once now, and a page's lines come out
@@ -28,8 +28,8 @@ test('a page of 16 000 rows is read in linear time', () => {
   assert.ok(ms < LIMIT_MS, `pdfLinesOfPages took ${ms.toFixed(0)} ms`);
 });
 
-test('a column of 20 000 lines that wrap into one paragraph is read in linear time', () => {
-  const { out, ms } = timed(() => pdfLinesOfPages([items(20_000, 1)]));
+test('a column of 40 000 lines that wrap into one paragraph is read in linear time', () => {
+  const { out, ms } = timed(() => pdfLinesOfPages([items(40_000, 1)]));
   assert.ok(out.length >= 1);
   assert.ok(ms < LIMIT_MS, `pdfLinesOfPages took ${ms.toFixed(0)} ms`);
 });
