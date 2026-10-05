@@ -145,6 +145,23 @@ export function trimNonLetters(word) {
   return word.slice(from, to);
 }
 
+/** `text` without its <tags>: what /<[^>]+>/g cut, but a "<" with no ">" after it is not read to the end again each time. */
+export function stripTags(text) {
+  const s = String(text);
+  let out = '';
+  let from = 0;
+  let at = s.indexOf('<');
+  while (at !== -1) {
+    const close = s.indexOf('>', at + 1);
+    if (close === -1) break; // none ahead: no later "<" has one either
+    if (close === at + 1) { at = s.indexOf('<', close); continue; } // "<>" holds nothing: no tag
+    out += s.slice(from, at);
+    from = close + 1;
+    at = s.indexOf('<', from);
+  }
+  return out + s.slice(from);
+}
+
 /**
  * A verb as it is looked up: lowercase letters only, on both sides, so 'Co-authored' is found
  * however it is punctuated (AUD-32).
@@ -243,12 +260,25 @@ export function hasMetric(text) {
     .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '')
     // A fiscal year ("FY2021", "FY21-22", "FY '21") is a date too (R4-LO-15).
-    .replace(/(?<!\p{L})FY\s*['’-]?\s*\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
+    .replace(/(?<!\p{L})FY\s*(?:['’-]\s*)?\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
     // A multiplier or currency written before its number ("x10", "Rs.500", "EUR500k") leaves the number whole.
     .replace(/(?<!\p{L})(?:x|rs\.?|inr|usd|eur|gbp|aud|cad|chf|jpy|cny|sgd)(?=\s?\d)/giu, ' ');
   // Digits glued to letters are part of a name, all of them: the "021" of "FY2021" and the "0" of
   // "v2.0" counted as a number of their own, only the first digit was checked (R4-LO-15).
-  return /(?<!\p{L}[\d.,]*)\d/u.test(noYears) && !/^\d{4}$/.test(clean);
+  return hasFreeDigit(noYears) && !/^\d{4}$/.test(clean);
+}
+
+/**
+ * Whether `text` has a digit that is no part of a name: none after a letter and a run of digits, dots and
+ * commas ("S3", "v2.0", "a1,5"). The same as /(?<!\p{L}[\d.,]*)\d/u, which read back over the whole run
+ * before every digit of it (time squared in a long number after a letter: 'a' and 100 000 digits).
+ */
+function hasFreeDigit(text) {
+  let glued = false; // a letter, then only digits, dots and commas, so far
+  for (const ch of text) {
+    if (ch >= '0' && ch <= '9') { if (!glued) return true; } else if (ch !== '.' && ch !== ',') glued = /\p{L}/u.test(ch);
+  }
+  return false;
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
@@ -293,7 +323,7 @@ export const GOOGLE_XYZ_TEMPLATES = [
  * Analyzes a given bullet point text for action verbs, metrics, and weak phrases.
  */
 export function analyzeBullet(text = '') {
-  const clean = text.replace(/<[^>]+>/g, '').trim();
+  const clean = stripTags(text).trim();
   if (!clean) {
     return {
       clean,
