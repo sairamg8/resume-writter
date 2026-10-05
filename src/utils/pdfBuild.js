@@ -14,6 +14,13 @@ import { downloadBlob } from '@/utils/download';
  * workers) or the worker fails to load, the build runs on the main thread as before — a build
  * already sent to a worker that dies is run there too, so none is lost.
  *
+ * A build that never comes back must not hold every later one behind it: the worker runs its jobs
+ * one at a time, and a font fetch that stalls (a captive portal, a CDN that takes the connection and
+ * never answers) left the preview on "Updating preview…" with Export PDF, 1-Page Fit and the ATS view
+ * dead behind it until the page was reloaded (R2-142). The job the worker is on gets BUILD_TIMEOUT_MS:
+ * past it the worker is stopped, that build fails with a message (the preview offers Retry) and the
+ * builds that waited behind it go to a fresh worker.
+ *
  * Photos are made printable here first (withPrintablePhotos): converting a WebP needs a canvas,
  * which a worker may not have, and the copy is kept for the session on this side.
  */
@@ -25,23 +32,75 @@ const pending = new Map(); // id → { job, resolve, reject }
 let nextId = 0;
 let lastBuild = 0;         // the id of the latest build asked for that reports its font: only it sets the font fallback
 let proven = false;        // a build came back from the worker: from then on its errors are the résumé's
+let liveWorker = null;     // the worker `pending` is waiting on
+// Comfortably past a long résumé on a slow phone, a first CJK font over a poor connection, and the 10 s a
+// stalled font is waited for (pdfFontLoader.js) before the name, heading and script fonts' own waits.
+const BUILD_TIMEOUT_MS = 60_000;
+let buildTimeoutMs = BUILD_TIMEOUT_MS;
+let clock = null;          // { id, timer }: the job the worker is on, and how long it has left
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
 
+const stalledError = () => new Error(`building took more than ${Math.max(1, Math.round(buildTimeoutMs / 1000))} s — a font or an image may not be reachable`);
+
 /** A job run on the main thread, as the worker would run it (pdfWorkerJobs.js). */
-async function runHere({ kind, resume, options }) {
+async function buildHere({ kind, resume, options }) {
   const m = await mainThread();
   if (kind === 'warm') return m.warmPdfExport(resume);
   return kind === 'letter' ? m.renderCoverLetterPdf(resume, options) : m.renderResumePdf(resume, options);
+}
+
+/**
+ * buildHere, with the same time limit as the worker's jobs. There is no thread to stop here: a build
+ * that runs past it is left to finish unheard, and the build that waited for it goes on.
+ */
+function runHere(job) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(stalledError()), buildTimeoutMs);
+    timer.unref?.();
+    buildHere(job).then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+/**
+ * Time the job the worker is on: the oldest pending (it works in the order they were sent). One that
+ * waits behind another is not timed yet — its wait is not its own.
+ */
+function watchHead() {
+  const head = pending.keys().next().value;
+  if (clock && clock.id === head) return;
+  if (clock) clearTimeout(clock.timer);
+  if (head === undefined) { clock = null; return; }
+  const timer = setTimeout(() => stalled(head), buildTimeoutMs);
+  timer.unref?.();
+  clock = { id: head, timer };
+}
+
+/** The worker has been on job `id` too long: stop it, fail that build, and hand the ones behind it to a fresh worker. */
+function stalled(id) {
+  clock = null;
+  const entry = pending.get(id);
+  if (!entry) return;
+  pending.delete(id);
+  const behind = [...pending.values()];
+  pending.clear();
+  const stuck = liveWorker;
+  liveWorker = null;
+  workerPromise = null; // not `broken`: the next job starts a new worker, which can start
+  try { stuck?.terminate?.(); } catch { /* already gone */ }
+  entry.reject(stalledError());
+  for (const { job, resolve, reject } of behind) run(job).then(resolve, reject);
 }
 
 /** The worker stopped (failed to load, or died): run what it held here, and every build from now. */
 function giveUp(worker) {
   broken = true;
   workerPromise = null;
+  liveWorker = null;
   try { worker?.terminate?.(); } catch { /* already gone */ }
   const held = [...pending.values()];
   pending.clear();
+  watchHead();
   for (const { job, resolve, reject } of held) runHere(job).then(resolve, reject);
 }
 
@@ -51,6 +110,7 @@ function onReply({ data }, w) {
   const entry = pending.get(data?.id);
   if (!entry) return;
   pending.delete(data.id);
+  watchHead();
   if (data.error !== undefined) {
     // Before the worker has built anything, its error may be its own — a browser whose workers lack
     // something react-pdf needs — not the résumé's: the build runs here, and if it works here, every
@@ -75,6 +135,7 @@ function worker() {
   if (broken || (typeof Worker === 'undefined' && !createWorker.forTest)) return null;
   if (!workerPromise) {
     workerPromise = createWorker().then((w) => {
+      liveWorker = w;
       w.onmessage = (e) => onReply(e, w);
       w.onerror = (e) => { e?.preventDefault?.(); giveUp(w); };
       w.onmessageerror = () => giveUp(w);
@@ -91,9 +152,11 @@ async function run(job) {
     pending.set(job.id, { job, resolve, reject });
     try {
       w.postMessage(job);
+      watchHead();
     } catch {
       // A résumé the structured clone cannot copy: build it here, as before.
       pending.delete(job.id);
+      watchHead();
       runHere(job).then(resolve, reject);
     }
   });
@@ -138,14 +201,18 @@ export async function exportCoverLetterPdf(resume, filename = 'cover-letter.pdf'
 
 /**
  * For tests: `create()` returns a Worker-like object ({ postMessage, onmessage, onerror, terminate })
- * that stands in for pdfWorker.js; null goes back to the real worker (none in Node).
+ * that stands in for pdfWorker.js; null goes back to the real worker (none in Node). `timeoutMs`
+ * stands in for BUILD_TIMEOUT_MS.
  */
-export function _setPdfWorkerForTest(create) {
+export function _setPdfWorkerForTest(create, { timeoutMs } = {}) {
   for (const { job, resolve, reject } of pending.values()) runHere(job).then(resolve, reject);
   pending.clear();
+  watchHead();
   workerPromise = null;
+  liveWorker = null;
   broken = false;
   proven = false;
+  buildTimeoutMs = timeoutMs ?? BUILD_TIMEOUT_MS;
   createWorker = create
     ? Object.assign(async () => create(), { forTest: true })
     : () => import('./pdfWorker.js?worker').then(({ default: PdfWorker }) => new PdfWorker());
