@@ -82,23 +82,44 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   const latest = useRef(value);
   latest.current = value;
   function onBlur() {
+    // A composition whose compositionend never came (a browser drops it when focus moves, on some
+    // phone keyboards, when the box is re-rendered) is over once the box loses focus: what was typed
+    // is saved now, not held back until a compositionend that will not arrive (typing-freeze 7).
+    if (isComposing.current) { endComposition(); return; }
     if (pending.current && ref.current) adopt(latest.current);
   }
+
+  // The composition is over, whichever event said so: an outside value that waited is taken in, else
+  // what the box holds is saved.
+  function endComposition() {
+    isComposing.current = false;
+    if (pending.current && ref.current) adopt(latest.current);
+    else emit();
+  }
+
+  // The last render's emit, for the unmount below: the box is saved as it was when it goes away
+  // mid-composition, as nothing else will fire for it.
+  const emitLast = useRef(emit);
+  emitLast.current = emit;
+  useEffect(() => {
+    const el = ref.current;
+    return () => {
+      if (isComposing.current && !pending.current && el) emitLast.current(el);
+    };
+  }, []);
 
   // A word composed with an IME (and every word on most Android keyboards) ends before the box loses
   // focus, and emitting then wrote the box's text, typed over the old value, back over an outside
   // value that came meanwhile. The store's newer text is taken in instead; the composed word, typed
   // over text that is no longer there, goes (R5-HUNT3).
   function onCompositionEnd() {
-    isComposing.current = false;
-    if (pending.current && ref.current) adopt(latest.current);
-    else onInput();
+    endComposition();
   }
 
   // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
   // an <img> or a data: URL, whichever way the browser put one in.
-  function emit() {
-    const el = ref.current;
+  function emit(box = ref.current) {
+    const el = box;
     if (el) dropMedia(el);
     const html = el?.innerHTML || '';
     // What the store holds already comes back as no new value, so it is no echo to wait for.
@@ -265,7 +286,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     insertClean(data);
   }
 
-  function onInput() {
+  function onInput(e) {
+    // An input the browser says is outside any composition, while the flag is still set, means the
+    // compositionend was lost: the composition is over (typing-freeze 7).
+    if (isComposing.current && e?.nativeEvent?.isComposing === false) { endComposition(); return; }
     if (!isComposing.current) emit();
   }
 
