@@ -11,6 +11,7 @@
 // collection, getDocsFromServer for unpublishDeleted), so the
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
+import { replaceTags } from '@/utils/tagText';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 import { entryPrints } from '@/utils/entryPrints';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
@@ -114,7 +115,7 @@ export function publicSnapshot(resume) {
   return JSON.parse(JSON.stringify(copy));
 }
 
-const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const plain = (html) => replaceTags(html || '', ' ', true).replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 /**
  * A section as the share panel names it: its title, or for one the user cleared (the PDF prints no
