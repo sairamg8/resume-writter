@@ -107,10 +107,12 @@ describe('the dashboard loads light: the other pages are split from the start-up
     assert.ok(split.length >= 5, `the pages are lazy chunks of the build (${split.length})`);
   });
 
-  it('no start-up chunk is over 500 kB, and all of them are under 1.1 MB together', () => {
+  it('no start-up chunk is over 500 kB, and all of them are under 1.1 MB together', (t) => {
     const sizes = [...out.startup].map((name) => [name, out.chunks.get(name).code.length]);
     assert.deepEqual(sizes.filter(([, n]) => n > 500 * KB).map(([name, n]) => `${name} ${Math.round(n / KB)} kB`), []);
     const total = sizes.reduce((sum, [, n]) => sum + n, 0);
+    // The margin, in every run's log: how close the path is to the cap before a change crosses it.
+    t.diagnostic(`start-up path ${(total / KB).toFixed(1)} kB of the 1,100 kB cap: ${((1100 * KB - total) / KB).toFixed(1)} kB to spare`);
     assert.ok(total < 1100 * KB, `the start-up path is ${Math.round(total / KB)} kB (was 1,443 kB)`);
   });
 });

@@ -9,13 +9,15 @@ const CALLS = ['readShare', 'publish', 'unpublish', 'unpublishResume', 'unpublis
  * Its callers on the start-up path, the Dashboard (unpublish on delete) and the cloud sync (useCloudSync:
  * the copy of a résumé deleted elsewhere), call it only now and then, and the module, with the snapshot
  * builder it carries, kept the start-up path over its 1.1 MB cap (71-startup-chunks). Every call is async
- * in publicIo too, so a caller sees no difference.
+ * in publicIo too, so a caller sees no difference. `loadLink` loads the module (a test hands in one that
+ * fails: tests/pdf/71-startup-public-link-lazy).
  */
-export function lazyPublicIo(fs, cloud) {
+export function lazyPublicIo(fs, cloud, loadLink = () => import('@/utils/publicLink')) {
   let io = null;
-  // A load that failed (offline, a file gone after a deploy) is tried again at the next call.
+  // A load that failed (offline, a file gone after a deploy) fails that call as a refused call does, and is
+  // tried again at the next call.
   const load = () => {
-    io ??= import('@/utils/publicLink').then((m) => m.publicIo(fs, cloud), (e) => { io = null; throw e; });
+    io ??= loadLink().then((m) => m.publicIo(fs, cloud), (e) => { io = null; throw e; });
     return io;
   };
   return Object.fromEntries(CALLS.map((name) => [name, (...args) => load().then((real) => real[name](...args))]));

@@ -2,11 +2,21 @@
 // the Dashboard (unpublish on delete) and the cloud sync (the copy of a résumé deleted elsewhere) held it
 // on the start-up path, which went over its 1.1 MB cap (tests/pdf/71-startup-chunks). lazyPublicIo
 // (src/utils/firebasePublicIo.js) stands in for publicIo with the same calls, each async as publicIo's
-// are: here every one, over the stand-in Firestore, does what publicIo's own does.
+// are: here every one, over the stand-in Firestore, does what publicIo's own does. A load of the module
+// that fails (offline, a file gone after a deploy) fails that call as a refused call does — every caller
+// catches it so — and is not kept: the next call loads it again (review of 38e7b70e: untested). And the
+// module really is lazy: nothing the app's entry imports statically reaches it, so a static import added
+// later (5.65 kB back on a start-up path within a few kB of its cap) fails here, by name, not only as a
+// size in 71-startup-chunks.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { fakeFirestore, resumePath } from './fake-firestore.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 let link;
 let lazy;
@@ -53,5 +63,72 @@ describe('lazyPublicIo: publicIo\'s calls, publicLink.js loaded at the first (R2
     c.fail.read = Object.assign(new Error('unavailable: refused'), { code: 'unavailable' });
     const io = lazy.lazyPublicIo(c.fs, c.db);
     await assert.rejects(io.readPublic('nope'), /refused/);
+  });
+
+  it('a load of publicLink.js that fails fails those calls as a refusal does, is not kept, and the next call loads it again', async () => {
+    const c = cloudWith('resume_a');
+    let loads = 0;
+    let fails = true;
+    const loadLink = () => {
+      loads += 1;
+      return fails ? Promise.reject(new TypeError('Failed to fetch dynamically imported module')) : Promise.resolve(link);
+    };
+    const io = lazy.lazyPublicIo(c.fs, c.db, loadLink);
+    // Two calls while the one load is on its way: both fail, as a Firestore refusal does (a rejected
+    // promise, never a throw), so every caller's own catch takes it.
+    const calls = [io.readShare(UID, 'resume_a'), io.unpublishDeleted(UID, ['resume_a'])];
+    for (const call of calls) await assert.rejects(call, /dynamically imported module/);
+    assert.equal(loads, 1, 'one load for the calls that waited on it');
+    assert.deepEqual(publicDocs(c), [], 'nothing was written');
+
+    fails = false; // back online
+    const a = await io.publish(UID, cv('resume_a'));
+    assert.ok(a?.shareId, 'the next call loads the module again (the failure was not kept) and works');
+    assert.equal(loads, 2);
+    assert.equal((await io.readShare(UID, 'resume_a'))?.shareId, a.shareId);
+    assert.equal(loads, 2, 'a load that worked is kept');
+  });
+});
+
+/**
+ * The app's own modules the entry (index.html's src/main.jsx) reaches through static imports only: the
+ * start-up path, as a build makes it (dynamic import() starts a chunk of its own; 71-startup-chunks walks
+ * the built chunks). Packages are not followed: none imports the app's modules.
+ */
+function startupModules() {
+  const STATIC = /^\s*(?:import|export)\s(?:[^'";]*?\sfrom\s)?\s*['"]([^'"]+)['"]/gm;
+  const resolve = (from, spec) => {
+    const bare = spec.split('?')[0];
+    let base = null;
+    if (bare.startsWith('@/')) base = path.join(ROOT, 'src', bare.slice(2));
+    else if (bare.startsWith('.')) base = path.resolve(path.dirname(from), bare);
+    if (!base) return null;
+    for (const ext of ['', '.js', '.jsx', '.mjs', '/index.js', '/index.jsx']) {
+      if (existsSync(base + ext) && statSync(base + ext).isFile()) return base + ext;
+    }
+    return null;
+  };
+  const seen = new Set();
+  const stack = [path.join(ROOT, 'src/main.jsx')];
+  while (stack.length) {
+    const file = stack.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    if (!/\.(m?js|jsx)$/.test(file)) continue;
+    for (const [, spec] of readFileSync(file, 'utf8').matchAll(STATIC)) {
+      const next = resolve(file, spec);
+      if (next) stack.push(next);
+    }
+  }
+  return new Set([...seen].map((f) => path.relative(ROOT, f).split(path.sep).join('/')));
+}
+
+describe('publicLink.js is off the start-up path (R2-142)', () => {
+  it('no module the entry imports statically reaches it; its callers there do, through lazyPublicIo', () => {
+    const startup = startupModules();
+    assert.ok(startup.has('src/index.css') && startup.has('src/pages/Dashboard.jsx'), 'the walk follows the entry\'s static imports');
+    assert.ok(!startup.has('src/pages/Editor.jsx'), 'and not a dynamic import() (the editor is a lazy page)');
+    assert.ok(startup.has('src/utils/firebasePublicIo.js') && startup.has('src/hooks/useCloudSync.js'), 'its callers are on the start-up path');
+    assert.equal(startup.has('src/utils/publicLink.js'), false, 'publicLink.js is reached by a static import from the start-up path');
   });
 });
