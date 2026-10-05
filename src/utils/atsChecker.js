@@ -395,35 +395,15 @@ function wholeWord(keyword) {
   return new RegExp(`${lead}${esc}${trail}`, 'iu');
 }
 
-const NON_WORD_CHAR = /^[^\p{L}\p{M}\p{N}_+#]$/u;
-/**
- * `word` without its trailing run of characters that are no part of a word. Read by a pattern
- * ending in "+$", each start of a long run was tried to the run's end: time squared in a token of
- * 40 000 dots (typing-freeze 6). Here the run is read once, from its end.
- */
-export function trimTrailingNonWord(word) {
-  let end = word.length;
-  while (end > 0) {
-    let start = end - 1;
-    const low = word.charCodeAt(start);
-    if (start > 0 && low >= 0xDC00 && low <= 0xDFFF) {
-      const high = word.charCodeAt(start - 1);
-      if (high >= 0xD800 && high <= 0xDBFF) start--;
-    }
-    if (!NON_WORD_CHAR.test(word.slice(start, end))) break;
-    end = start;
-  }
-  return word.slice(0, end);
-}
-
 /**
  * The keyword one token of a cleaned job posting reads as (cased as written), or null for none: a
  * stop word, a contraction, an abbreviation or a figure. One rule for extractJobKeywords' count and
  * for the words it reads inside a tech phrase.
  */
 function jobKeywordOf(raw) {
+  let word = raw.trim();
   // Strip trailing periods/commas
-  let word = trimTrailingNonWord(raw.trim());
+  word = word.replace(/[^\p{L}\p{M}\p{N}_+#]+$/u, '');
   // And leading ones, but for the one dot of a name such as ".NET": stripped, it was the keyword
   // "NET", matched by "net revenue" and written into Skills so (R5-HUNT1-ats-jd-dotnet-stripped).
   const lead = word.match(/^[^\p{L}\p{M}\p{N}_+#]+/u)?.[0] || '';
@@ -467,70 +447,14 @@ const FIGURE = new RegExp(`^#?\\d+(?:\\.\\d+)*${FIGURE_UNIT}(?:-\\d+(?:\\.\\d+)*
  * stayed a keyword. "B.Com" and "M.Com" are degrees (Bachelor, Master of Commerce) and stay keywords
  * (review of R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS).
  */
-// Read run by run (blankPostingAddresses): no address spans a space, and a pasted token of 10 000
-// characters cost a second a key when each of its start positions was read to the token's end
-// (typing-freeze 6). Three of the four kinds are a regex here, as ever; the other two are read as
-// below. A host or hashtag is read from its own start only, so these patterns are linear in the run.
-const POSTING_REST = new RegExp([
-  String.raw`(?<![\p{L}\p{N}.])www\.\S*`,
+const POSTING_ADDRESS = new RegExp([
+  String.raw`(?:(?<![\p{L}\p{N}])[a-z][a-z0-9+.-]*:\/\/|(?<![\p{L}\p{N}.])www\.)\S*`,
+  String.raw`\S*[^\s@]@[^\s@]\S*`,
   String.raw`(?<![\p{L}\p{M}\p{N}_.-])(?![bm]\.com(?![\p{L}\p{N}-]|\.[\p{L}\p{N}]))[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.(?:(?:com|org|gov|edu)(?:\.\p{L}{2})?|(?:co|ac)\.\p{L}{2})(?![\p{L}\p{N}])(?:\/\S*)?`,
   String.raw`(?<![\p{L}\p{M}\p{N}_+#])#\p{L}[\p{L}\p{M}\p{N}_-]*`,
 ].join('|'), 'giu');
-/** An e-mail address: an "@" with a character other than a space or "@" on each side, anywhere in the run. */
-const EMAIL_IN_RUN = /[^\s@]@[^\s@]/u;
-/** What a scheme ("https", "git+ssh") is made of; one is such a run, a letter first, then "://". */
-const SCHEME_CHARS = /[a-z0-9+.-]+/giu;
-const SCHEME_START = /(?<![\p{L}\p{N}])[a-z]/iuy;
-
-/**
- * One space-free run of a posting with its addresses and hashtags blanked at their length. The old
- * single pattern tried "\S*[^\s@]@" and a scheme from every position of the run, each read to the
- * run's end: time squared in a long token. An e-mail address anywhere in a run blanks all of it (a
- * match from the run's start reaches its end); a scheme is found from where its "://" is, going
- * back, and a match from it reaches the run's end too. What starts before it is read as before.
- */
-function blankRun(run) {
-  if (EMAIL_IN_RUN.test(run)) return ' '.repeat(run.length);
-  if (!run.includes('://')) return run.replace(POSTING_REST, (m) => ' '.repeat(m.length));
-  const spans = [];
-  for (const m of run.matchAll(SCHEME_CHARS)) {
-    const end = m.index + m[0].length;
-    if (run.startsWith('://', end)) spans.push([m.index, end]);
-  }
-  let out = '';
-  let from = 0;
-  let k = 0;
-  let scheme = -1;
-  let rest = null;
-  while (from < run.length) {
-    // The first scheme start at or after `from`; found again only once a match has passed it.
-    if (scheme < from) {
-      scheme = -1;
-      for (; k < spans.length && scheme < 0; k++) {
-        const [b, e] = spans[k];
-        for (let q = Math.max(from, b); q < e; q++) {
-          SCHEME_START.lastIndex = q;
-          if (SCHEME_START.test(run)) { scheme = q; break; }
-        }
-        if (scheme >= 0) k--;
-      }
-    }
-    if (!rest || rest.index < from) {
-      POSTING_REST.lastIndex = from;
-      rest = POSTING_REST.exec(run);
-      if (!rest) rest = { index: Infinity, 0: '' };
-    }
-    if (scheme >= 0 && scheme <= rest.index) {
-      return out + run.slice(from, scheme) + ' '.repeat(run.length - scheme);
-    }
-    if (rest.index === Infinity) break;
-    out += run.slice(from, rest.index) + ' '.repeat(rest[0].length);
-    from = rest.index + rest[0].length;
-  }
-  return out + run.slice(from);
-}
 /** The text with its addresses and hashtags blanked at their length, so the phrase finds keep their indexes. */
-export const blankPostingAddresses = (text) => text.replace(/\S+/gu, blankRun);
+const blankPostingAddresses = (text) => text.replace(POSTING_ADDRESS, (m) => ' '.repeat(m.length));
 
 /**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
