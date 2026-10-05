@@ -63,14 +63,15 @@ Word Sidebar band.
 
 **Open feature rows** (bug-status-r2/03), with what is left on each:
 - R2-139 (Templates UI suggestions): only accessibility items A7, A8, A11, A13 and A14 are left.
-- R2-142 (performance): PERF-1's WOFF cache is done in Round 4. Left: the perf harness (N1/N2 budgets, Gate A/B),
-  PERF-4 (one commit per keystroke), PERF-5 (pdf.js paint order, canvas reuse) and PERF-6 (Gate B, a worker
-  watchdog).
+- R2-142 (performance): PERF-1's WOFF cache is done in Round 4; the perf harness (N1/N2 budgets, Gate A/B), PERF-5
+  (pdf.js paint order, canvas reuse) and PERF-6 (Gate B, a worker watchdog) landed 2026-10-05 (fail-first proven).
+  Left: PERF-4 (one commit per keystroke), not started.
 - R2-143 (open-source release): only the owner items in section 3 are left.
-- R2-147 (per-section styling): column layout (details top/left/right, mixed columns, widths) and a per-skill level
-  are left.
-- R2-148 (import, localisation, letters): the PDF column and Executive/Timeline items are fixed in Round 4. Left: a
-  résumé deleted on another device keeps its public copy; résumé language and RTL are parked (English only).
+- R2-147 (per-section styling): done 2026-10-05 — column layout (details top/left/right, mixed columns, widths:
+  Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven.
+- R2-148 (import, localisation, letters): the PDF column and Executive/Timeline items are fixed in Round 4; a résumé
+  deleted on another device now takes its public copy down by the account's index of copies (2026-10-05). Résumé
+  language and RTL are parked (English only).
 
 **Bookkeeping, after the deploy:**
 - Rows R2-137 and R2-133 still describe the old Word band; update them from `reports/r4-exp.json`.

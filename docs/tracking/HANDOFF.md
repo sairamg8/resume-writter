@@ -1,5 +1,19 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 — FINAL MERGE of the open features (branch `claude/final-1005` = master `4b8b9018` + `claude/wip-link` + `claude/wip-col`).**
+Master `4b8b9018` (live; full gates 37255448511 and push run 37256579337 GREEN) already carries rounds 11-12 and the dash, editor and
+sync fixes. This branch adds the features that sat in PR #10: PERF-5/6, the perf harness, the per-skill level (R2-147), the public
+copies index (R2-148) and the Sidebar column layout (R2-147-col: Design → Layout → Columns, Details, Width; PDF, Word Mixed, JSON
+Resume `meta.columnLayout`; no DATA_VERSION change). Every behaviour has a fail-first proof on CI (runs 37256321641, 37256541092,
+37258151604, 37259063879). Full gate on this branch's head decides the deploy. Left after it: PERF-4 (one commit per keystroke, not
+started), the owner items (tag v0.1.0, Terms/Privacy against the hosting domain, env vars), deferred accessibility (the new layout
+buttons have no aria-pressed / group labels), and the small leftovers the agents named: import — a multi-word town not in the known list
+("Walnut Creek") goes to Additional Information; tools — "Worked extensively on…" plus a verb chip reads "Spearheaded Worked…";
+editor — a vanity number (1-800-FLOWERS) links to tel:1800; sync — a deletion made in a second tab during the cloud-read round trip can
+be re-sent. Start-up path 1,098 of the 1,100 kB cap (71-startup-chunks): a few kB more fail the gate. Dash round-12 fixes (3) have no
+recorded second-agent review (CI green). Branch clean-up follows this deploy: every branch merged into master is deleted, and the
+throwaway probe test is kept as the tag `archive/wf-r5-hunt10-pdf-probe`.
+
 **2026-10-05 — `claude/wip-link` (= wip-open-features-1005 + review): public link, skill level and perf harness verified.** Public
 link (R2-148): the `users/{uid}/meta/publicCopies` index reviewed (transactions read first, rerun-safe, no rules change) and pinned by
 `tests/pdf/148-*` (failfirst 2be3993b). Skill level (R2-147): 147-* tests proven (failfirst 2be3993b); fixed a public copy publishing
