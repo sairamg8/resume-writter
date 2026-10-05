@@ -1,19 +1,21 @@
 # Session Handoff — Resume Here
 
-**2026-10-05 ~11:00 UTC — WATCHDOG FIXED on `claude/fix-worker-watchdog` (= `claude/typing-freeze-fixes` + one commit; NOT on master).** A PDF worker job that never replies is stopped after 60 s (that build fails with Retry, the jobs behind it go to a fresh worker; the main-thread fallback has the same limit) and a font face's first fetch is waited for 10 s before the font prints in Noto Sans with the usual notice (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Verified in the real app on the prod bundle (details in the hunt write-up, finding 3). CI for it is dispatched with the commit; the full gate on `claude/typing-freeze-fixes` is run 37259450707 (read it; the watchdog branch needs its own gate before a PR). The preview reviewer approved with nits (coverage test for unmount-while-painting, stale wording, a 'three pauses' test title): to do on `claude/fix-preview-build-backlog`.
-
-**2026-10-05 ~10:00 UTC — TYPING-FREEZE HUNT DONE; two fixes ready on `claude/typing-freeze-fixes` (NOT on master).**
-Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). The branch = master +
-`claude/fix-dev-worker-refresh` (`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`). **Next: read the full gate on its head (dispatched
-with the docs commit; unread), then PR it -> master for the owner.** Each fix has its own CI proof (below); the batch has not been gated until that run is read.
-- **The owner's one-off "Website freeze" was `yarn dev`, not the Website field:** the PDF worker died at load on the dev server ("window is not defined": plugin-react's
+**2026-10-05 ~11:30 UTC — TYPING-FREEZE HUNT DONE; three fixes + review fixes are on `claude/typing-freeze-fixes` (NOT on master).**
+Write-up with file:line, numbers and the open list: [TYPING-FREEZE-HUNT-2026-10-05.md](TYPING-FREEZE-HUNT-2026-10-05.md). **Next: read the newest full-gate run on this
+branch's head (dispatched with the final docs commit), fix anything red, then PR it -> master for the owner.** The branch = master + `claude/fix-dev-worker-refresh`
+(`13733061`) + `claude/fix-preview-build-backlog` (`dd572528`, `9782f300`, `4692e20a`) + `claude/fix-worker-watchdog` (`7dbf69e9`); each fix has its own CI proof and a second-agent review.
+- **1. The owner's one-off "Website freeze" was `yarn dev`, not the Website field:** the PDF worker died at load on the dev server ("window is not defined": plugin-react's
   Fast Refresh runtime is imported by every JSX module the worker loads), so every preview build ran on the main thread (0.5-1 s stalls per build, any field).
   Fix: `react({ exclude })` keeps `src/templates/pdf/` out of Fast Refresh (vite.config.js, anchored `PDF_WORKER_JSX`). Dev, same 46-key run: worst stall 1165 -> 284 ms.
   CI: fail-first 37258868807 green (it now also reverts vite.config.js: ci.yml), unit 37258878675 green. Production never had it.
-- **Preview build backlog (prod):** a pause in typing while a build ran started another, and the PDF worker lays jobs out in turn: 72 keys -> 25 builds, 15 queued, preview
+- **2. Preview build backlog (prod):** a pause in typing while a build ran started another, and the PDF worker lays jobs out in turn: 72 keys -> 25 builds, 15 queued, preview
   21.6 s behind. PdfPreview now holds ONE queued build (the latest change's) behind the running one. Prod bundle, same run: 6 builds, 1 queued, 1.45 s oldest wait, 5.1 s
-  to settle. CI: fail-first 37259106000 green. Four existing preview tests that held two builds in flight were updated to the documented contract (commit messages say why).
-- **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version, rejected in review: dead-code unit test + wrong-reason fail-first) and `claude/tmp-dev-worker-unfixed`.
+  to settle. CI: fail-first 37259106000 green. Existing preview tests that held two builds in flight were updated to the documented contract (commit messages say why).
+- **3. Stalled worker watchdog (prod):** a PDF worker job that never replies (a font fetch that stalls) is stopped after 60 s: that build fails with Retry, the jobs behind it go to
+  a fresh worker; the main-thread fallback has the same limit. A font face's first fetch is waited for 10 s, then the font prints in Noto Sans with the usual notice
+  (pdfBuild.js, pdfFontLoader.js; tests 112 and 113). Checked in the real app on the prod bundle with a stand-in worker: stalled CDN -> ready in ~12 s in Noto Sans; a mute worker ->
+  alert + Retry at exactly 60.0 s, Retry works. CI on the commit: fail-first 37260427341, related tests 37260435645 (read them if not in the gate).
+- **Superseded, owner may delete:** `claude/fix-dev-pdf-worker` (first version of 1, rejected in review: dead-code unit test + wrong-reason fail-first) and `claude/tmp-dev-worker-unfixed`.
 - **Still open from the hunt** (details in the write-up): (4) React error #185 after >=51 back-to-back input events drops a keystroke (suspect the setSaving effect, useResumeStore.js:163-185); (5) two tabs of one résumé typing at
   once lose edits even in different fields (whole-résumé merge, useResumeStore.js:71-89); (6) quadratic regex in the ATS job-description box (atsChecker.js:450-457); plus
   richText.js:111 ReDoS on pasted HTML, bulletOptimizer trailing runs, the composition flag, the Sidebar unbreakable-token cost.

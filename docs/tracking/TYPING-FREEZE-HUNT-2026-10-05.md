@@ -2,7 +2,7 @@
 
 Sources: three finder agents (webfreeze = Website field, pipeline = the keystroke pipeline, richtext = rich text and
 other typing surfaces) plus the coordinator's own checks. Their scratch scripts were not kept; the numbers and file:line
-are below. Status: findings 1 and 2 are FIXED on `claude/typing-freeze-fixes` (= `claude/fix-dev-worker-refresh` + `claude/fix-preview-build-backlog`;
+are below. Status: findings 1, 2 and 3 are FIXED on `claude/typing-freeze-fixes` (= `claude/fix-dev-worker-refresh` + `claude/fix-preview-build-backlog` + `claude/fix-worker-watchdog`;
 not merged to master); the rest is OPEN.
 
 ## Verdict
@@ -41,6 +41,8 @@ happens on ANY field, not just Website. It is not a hang, loop or regex in the W
   A pause while a build runs now queues ONE build, of the latest change (a newer change replaces it; hidden or unmounted drops it) and it starts the moment the
   running one finishes. CI: fail-first 37259106000 green. Coordinator's own run on the prod bundle, 12-page Sidebar résumé, 72 keys (2 keys, 420 ms pause, repeat),
   before -> after: jobs posted 25 -> 6, queued at once 15 -> 1, oldest job waited 19.4 s -> 1.45 s, preview settled after the last key 21.6 s -> 5.1 s.
+- The one-build slot is held through pdf.js parse and paint (the `finally`), not only while the worker lays the document out, so the worker idles for the paint of the previous
+  pages (hundreds of ms on 12 pages). Accepted against 21.6 s -> 5.1 s; pipelining the next layout with the paint is possible later.
 - A build that never settles holds back the queued one: on the worker path the FIFO already blocked behind it, and on the main-thread fallback it is new (before, builds there
   ran side by side). The watchdog of finding 3 ends both with an error and Retry.
 - Steps: 9-page Sidebar résumé (21 entries + photo); Personal Info → Website; type 73 chars as 2 quick keys, 420 ms pause, repeat.
