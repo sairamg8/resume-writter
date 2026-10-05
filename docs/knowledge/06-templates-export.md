@@ -66,7 +66,9 @@ In the browser these steps run in a Web Worker (`pdfWorker.js` → `pdfWorkerJob
 never replies is let go by a watchdog (`pdfBuildTimeoutMs`: 20 s, twice that before its first reply, plus
 250 ms per entry): a worker that never answered anything hands its jobs to the main thread, one that had
 built before fails that build with a retryable "took too long" error and its queue goes to a fresh worker;
-what a let-go worker sends late is ignored. Tests inject a fake Worker and a fake clock with
+what a let-go worker sends late is ignored. A clock that rings 5 s or more past its time slept with the page
+(a tab frozen in the background, a phone that put the browser away) and the worker with it, so it starts
+again with the whole budget rather than letting the worker go. Tests inject a fake Worker and a fake clock with
 `_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`).
 
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its

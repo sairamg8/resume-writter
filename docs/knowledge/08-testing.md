@@ -79,7 +79,12 @@ the gate, by `tests/pdf/97-woff-glyf-once.test.mjs`.
 `tests/perf/budget-check.mjs` is the pure part (statistics, limits, the table, the options, the start-up
 graph); `tests/unit/perf-budget-check.unit.mjs` pins it, the budgets' shape, and that the workflow runs the
 job only on a dispatch that sets `perf`. In CI: Actions → ci → Run workflow with `perf` = `node`, `browser`
-or `all`; only that job runs, and its table is on the run's summary.
+or `all`; only that job runs, and its table is on the run's summary. With `browser` or `all` the job then
+runs Gate B, `tests/playwright/perf-gate-b.spec.mjs` (PERF-6: the longest main-thread task and key delay
+while typing on a long résumé, with the PDF worker and with it refused; soft targets of 50 ms), which the
+Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
+The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
+`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/110-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
 
 ## Demo accounts and the owner's private résumé
 

@@ -333,7 +333,8 @@ jobs:
   # Performance budgets (tests/perf/run.mjs, docs/knowledge/08-testing.md): a dispatch with `perf` set, and
   # only then — never part of the gate, since a shared runner's timings say too little to fail a push over.
   # node: the PDF build, one keystroke's build-open-paint, the start-up path's size. browser: Chromium against
-  # a production build, the last key to the pages that show it. all: both. The run exits non-zero when a
+  # a production build, the last key to the pages that show it, then Gate B (perf-gate-b.spec.mjs: long tasks and
+# key delay, the PDF worker against the main thread). all: both. The run exits non-zero when a
   # ceiling in tests/perf/budgets.mjs is missed; its table is on the job's summary.
   perf:
     name: perf (${{ inputs.perf }})
@@ -369,7 +370,17 @@ jobs:
         run: |
           set -o pipefail
           node tests/perf/run.mjs --only="$ONLY" 2>&1 | tee perf.log
+      # Gate B (tests/playwright/perf-gate-b.spec.mjs, PERF-6): the longest main-thread task and key delay while
+      # typing, with the PDF worker and with it refused. A measurement the Playwright gate skips; here it runs.
+      - name: Gate B
+        if: ${{ !cancelled() && contains(steps.groups.outputs.only, 'browser') }}
+        env:
+          PERF_GATE_B: '1'
+        run: |
+          set -o pipefail
+          ./node_modules/.bin/playwright test tests/playwright/perf-gate-b.spec.mjs --reporter=list 2>&1 | tee gate-b.log
       - name: Summary
         if: always()
         run: |
           [ -f perf.log ] && { echo '```'; cat perf.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
+          [ -f gate-b.log ] && { echo '```'; grep -E 'Gate B|passed|failed|Error' gate-b.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
