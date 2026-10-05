@@ -95,7 +95,11 @@ what a let-go worker sends late is ignored. A clock that rings 5 s or more past 
 (a tab frozen in the background, a phone that put the browser away) and the worker with it, so it starts
 again with the whole budget rather than letting the worker go. The main thread's builds (no worker, or the
 jobs a let-go worker held) have the same budget, cold: one past it fails with the same retryable error and runs
-on unheard, so it cannot hold the preview's queued build or an export for good. This is the only watchdog, and
+on unheard, so it cannot hold the preview's queued build or an export for good. The next main-thread build does
+not lay out beside it on the one thread (each slowed the other past its budget): it waits for it — the same
+résumé (Retry) takes its file, another builds once it is done — and one still running 20 s later is taken to be
+hung, so the next starts anyway and no later build waits for it (`tests/pdf/121-main-thread-build-overrun.test.mjs`).
+This is the only watchdog, and
 fonts take room in its budgets, bounded: `pdfFontLoader.js` waits for the CDN `FONT_LOAD_MS` (10 s), one
 deadline shared by every font metadata lookup and every CDN face of a build (bundled Noto Sans faces get the
 whole wait each). A lookup or face whose wait starts with the deadline all but spent (a slow network, a CJK

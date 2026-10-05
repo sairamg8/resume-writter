@@ -29,7 +29,9 @@ import { downloadBlob } from '@/utils/download';
  * The main thread's builds (no worker, or the jobs a let-go worker held) get the same budget, cold: there
  * is no thread to stop, so one past it fails the same retryable way and is left to finish unheard. A
  * build that never settles held the preview's one queued build behind it for good (PdfPreview.jsx: one
- * build at a time) and Export waiting. Fonts take room in these budgets, bounded: a build waits for the
+ * build at a time) and Export waiting. The next main-thread build does not lay out beside one still
+ * running past its budget: it waits for it, and takes its file when it was building the same (Retry),
+ * for one worker budget at most (`overrun`). Fonts take room in these budgets, bounded: a build waits for the
  * CDN — its fonts' metadata and their faces, all together — 10 s (pdfFontLoader.js FONT_LOAD_MS), and a
  * wait that starts as that runs out gets a grace of 1.5 s, but none ends past 13 s (cdnWaitMs); then the
  * font prints in Noto Sans. So a dead CDN leaves the rest of a build at least 7 s of the 20 s.
@@ -91,26 +93,66 @@ async function buildHere({ kind, resume, options }) {
 const tookTooLong = () => Object.assign(new Error('The PDF took too long to build'), { code: 'PDF_BUILD_TIMEOUT' });
 
 /**
- * A job run on the main thread, with the cold budget (it may be the first to load the engine and the
- * fonts here). Past it the build fails, retryable, and runs on unheard: nothing can stop it. A clock that
- * rings ASLEEP_MS or more late was held up by the page itself — asleep, or busy laying this very build
- * out, which is no stall — and starts again.
+ * The main-thread build that ran past its budget and is still running ({ job, done }), or null. Nothing can
+ * stop it, and the preview starts its next build the moment that one fails: the two laid out side by side on
+ * the one thread, each slowing the other, so the next could run past its budget too. The next main-thread
+ * build waits for it instead (runHere): for the same job — Retry, the résumé unchanged — it takes that
+ * build's file when it is done; for another it starts then. One still running OVERRUN_WAIT_MS on is taken
+ * to be hung (waiting for something that never comes, which takes no CPU): the next starts beside it, as
+ * before, and no later build waits for it again.
+ */
+let overrun = null;
+const OVERRUN_WAIT_MS = PDF_WORKER_TIMEOUT_MS;
+
+/** Whether jobs `a` and `b` ask for the same file. */
+const sameJob = (a, b) => a.kind === b.kind
+  && JSON.stringify([a.resume, a.options ?? null]) === JSON.stringify([b.resume, b.options ?? null]);
+
+/**
+ * A job run on the main thread (startHere), after the build still running there past its budget, if any
+ * (`overrun`): that build's file when it was building the same, else a build of its own once it is done.
  */
 function runHere(job) {
+  const ahead = overrun;
+  if (!ahead) return startHere(job);
+  const clock = timers;
+  return new Promise((resolve) => {
+    const timer = clock.set(() => {
+      if (overrun === ahead) overrun = null; // hung, by now: no later build waits for it
+      resolve(null);
+    }, OVERRUN_WAIT_MS);
+    ahead.done.then((out) => resolve(sameJob(ahead.job, job) ? { out } : null), () => resolve(null))
+      .finally(() => clock.clear(timer));
+  }).then((reused) => (reused ? reused.out : startHere(job)));
+}
+
+/**
+ * A job built on the main thread, with the cold budget (it may be the first to load the engine and the
+ * fonts here). Past it the build fails, retryable, and runs on unheard: nothing can stop it, so it is the
+ * `overrun` the next main-thread build waits for. Its file, should it come, never reaches the caller it
+ * failed. A clock that rings ASLEEP_MS or more late was held up by the page itself — asleep, or busy laying
+ * this very build out, which is no stall — and starts again.
+ */
+function startHere(job) {
   const clock = timers; // the one this build started on, whatever a test sets meanwhile
   const now = clock.now || realTimers.now;
+  const built = buildHere(job);
   return new Promise((resolve, reject) => {
     let timer = null;
     const arm = () => {
       const ms = pdfBuildTimeoutMs(job, true);
       const due = now() + ms;
       timer = clock.set(() => {
-        if (now() - due >= ASLEEP_MS) arm();
-        else reject(tookTooLong());
+        if (now() - due >= ASLEEP_MS) { arm(); return; }
+        const entry = { job, done: built };
+        const over = () => { if (overrun === entry) overrun = null; };
+        overrun = entry;
+        built.then(over, over);
+        reject(tookTooLong());
       }, ms);
     };
     arm();
-    buildHere(job).then(resolve, reject).finally(() => clock.clear(timer));
+    built.then(resolve, reject).finally(() => clock.clear(timer));
   });
 }
 
@@ -288,6 +330,7 @@ export async function exportCoverLetterPdf(resume, filename = 'cover-letter.pdf'
 export function _setPdfWorkerForTest(create, { timers: clock } = {}) {
   stopWatch();
   timers = clock || realTimers;
+  overrun = null;
   for (const { job, resolve, reject } of pending.values()) runHere(job).then(resolve, reject);
   pending.clear();
   workerPromise = null;

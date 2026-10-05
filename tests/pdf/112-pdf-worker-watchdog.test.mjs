@@ -197,7 +197,7 @@ describe('a worker that has built goes silent: that build fails and the builds b
 });
 
 describe('the main thread, where there is no worker to stop, has the same budget (R2-142)', () => {
-  it('a build past it fails, retryable, and the next is not held behind it', async () => {
+  it('a build past it fails, retryable, and the next is not held behind it for good', async () => {
     const clock = fakeClock();
     build._setPdfWorkerForTest(null, { timers: clock }); // no Worker in Node: every build is the main thread's
     const failed = outcome(build.buildResumePdf(sample()));
