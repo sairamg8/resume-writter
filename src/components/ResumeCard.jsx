@@ -15,7 +15,22 @@ const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
 
 // The endings Copy (useResumeStore's duplicate) and a sync conflict (cloudSyncLineage) add to a name.
-const COPY_SUFFIX = /(?: \((?:Copy|conflict copy)\))+$/;
+const COPY_ENDINGS = [' (Copy)', ' (conflict copy)'];
+/**
+ * Where `name`'s run of copy endings starts, or -1 for none. They are taken off its end one at a time: the pattern for
+ * it, /(?: \((?:Copy|conflict copy)\))+$/, was tried from each ending of a name with 50 000 of them and some other text
+ * at its end, and read each one's run again (time squared; a name can be any first line of an imported file).
+ */
+function copyEndingAt(name) {
+  let start = -1;
+  for (let end = name.length; end > 0;) {
+    const ending = COPY_ENDINGS.find((e) => name.endsWith(e, end));
+    if (!ending) break;
+    end -= ending.length;
+    start = end;
+  }
+  return start;
+}
 // Three or more of one ending in a row show as one with a count, so pressing Copy on the newest copy
 // again and again never grows the ending across the card (R4-DVIS-28).
 const RUN_AS_COUNT = 3;
@@ -25,10 +40,10 @@ const RUN_AS_COUNT = 3;
  * ending. A run of RUN_AS_COUNT or more of one ending reads ' (Copy ×4)'; the title keeps the full name.
  */
 function splitName(name = '') {
-  const m = COPY_SUFFIX.exec(name);
-  if (!m || m.index === 0) return { base: name, suffix: '' };
+  const at = copyEndingAt(name);
+  if (at <= 0) return { base: name, suffix: '' };
   const runs = [];
-  for (const [, kind] of m[0].matchAll(/ \(([^)]+)\)/g)) {
+  for (const [, kind] of name.slice(at).matchAll(/ \(([^)]+)\)/g)) {
     const last = runs.at(-1);
     if (last?.kind === kind) last.count += 1;
     else runs.push({ kind, count: 1 });
@@ -36,7 +51,7 @@ function splitName(name = '') {
   const suffix = runs
     .map(({ kind, count }) => (count >= RUN_AS_COUNT ? ` (${kind} ×${count})` : ` (${kind})`.repeat(count)))
     .join('');
-  return { base: name.slice(0, m.index), suffix };
+  return { base: name.slice(0, at), suffix };
 }
 
 /**
