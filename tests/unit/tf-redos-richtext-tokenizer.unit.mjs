@@ -71,6 +71,27 @@ test('the same blocks and the same HTML as the old reader on 4000 seeded documen
     const count = 1 + Math.floor(random() * 14);
     for (let i = 0; i < count; i += 1) html += PIECES[Math.floor(random() * PIECES.length)];
     assert.deepEqual(parseRichText(html), before.parseRichText(html), JSON.stringify(html));
-    assert.equal(sanitizeRichText(html), before.sanitizeRichText(html), JSON.stringify(html));
+    const old = before.sanitizeRichText(html);
+    if (hrefBytes(old) > html.length) continue; // more addresses written than the text holds: the size bound applies (tf-redos-richtext-links)
+    assert.equal(sanitizeRichText(html), joined(old), JSON.stringify(html));
   }
 });
+
+// The sanitizer writes a link's address once around each run of runs that share it (tf-redos-richtext-links): the old
+// output with adjacent anchors to one address joined into one is what it writes now (updated from "the old output").
+function joined(html) {
+  let out = '';
+  let open = null;
+  let closed = null;
+  for (const part of html.split(/(<a href="[^"]*">|<\/a>)/)) {
+    if (!part) continue;
+    const tag = /^<a href="([^"]*)">$/.exec(part);
+    if (tag) {
+      if (closed === tag[1] && out.endsWith('</a>')) { out = out.slice(0, -4); open = tag[1]; closed = null; continue; }
+      open = tag[1]; closed = null; out += part;
+    } else if (part === '</a>') { out += part; closed = open; open = null; }
+    else { out += part; closed = null; }
+  }
+  return out;
+}
+const hrefBytes = (html) => [...html.matchAll(/<a href="([^"]*)">/g)].reduce((n, m) => n + m[1].length, 0);
