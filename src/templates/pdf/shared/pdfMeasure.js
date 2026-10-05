@@ -22,21 +22,39 @@ function faces(fontFamily, fontWeight) {
 }
 
 const SPACES = [0x20, 0xa0];
-const pick = (stack, cp) => stack.find((f) => f.hasGlyphForCodePoint?.(cp)) || stack[0];
+// Which face of a stack draws a code point, kept per stack (its first face and the rest, as the
+// list of families gives them): the answer is a lookup in each face's cmap, asked once for every
+// character of every text measured (typing-freeze 7).
+const picked = new WeakMap();
+function pickerFor(stack) {
+  let entry = picked.get(stack[0]);
+  if (!entry || entry.stack.length !== stack.length || entry.stack.some((f, i) => f !== stack[i])) {
+    entry = { stack, faces: new Map() };
+    picked.set(stack[0], entry);
+  }
+  return (cp) => {
+    let face = entry.faces.get(cp);
+    if (face === undefined) {
+      face = stack.find((f) => f.hasGlyphForCodePoint?.(cp)) || stack[0];
+      entry.faces.set(cp, face);
+    }
+    return face;
+  };
+}
 
 /**
  * Does the space at `chars[i]` stay in `face`, the face of the text before it? textkit's patch
  * (R2-010, .yarn/patches/@react-pdf-textkit-*.patch, keepsFontForSpace) keeps a space between two
  * characters of one fallback face — two Hebrew or CJK words — in that face, unless its space is
- * wider than half an em.
+ * wider than half an em. `next[i]` is the first character at or after i that is no space (a run
+ * of spaces is read once, not from each of its spaces).
  */
-function keepsFace(chars, i, face, stack) {
+function keepsFace(chars, i, face, pick, next) {
   const cp = chars[i].codePointAt(0);
   if (!face || !SPACES.includes(cp) || !face.hasGlyphForCodePoint?.(cp)) return false;
   if (face.glyphForCodePoint(cp).advanceWidth > face.unitsPerEm / 2) return false;
-  let j = i + 1;
-  while (j < chars.length && SPACES.includes(chars[j].codePointAt(0))) j += 1;
-  return j < chars.length && pick(stack, chars[j].codePointAt(0)) === face;
+  const j = next[i + 1];
+  return j < chars.length && pick(chars[j].codePointAt(0)) === face;
 }
 
 /**
@@ -50,6 +68,9 @@ export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterS
   const chars = [...String(text ?? '')];
   const stack = faces(fontFamily, fontWeight);
   if (!stack.length) return chars.length * fontSize * 0.62;
+  const pick = pickerFor(stack);
+  const next = new Array(chars.length + 1).fill(chars.length);
+  for (let i = chars.length - 1; i >= 0; i -= 1) next[i] = SPACES.includes(chars[i].codePointAt(0)) ? next[i + 1] : i;
   let width = 0;
   let run = '';
   let face = null;
@@ -58,8 +79,8 @@ export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterS
     run = '';
   };
   chars.forEach((ch, i) => {
-    const next = keepsFace(chars, i, face, stack) ? face : pick(stack, ch.codePointAt(0));
-    if (next !== face) { flush(); face = next; }
+    const nextFace = keepsFace(chars, i, face, pick, next) ? face : pick(ch.codePointAt(0));
+    if (nextFace !== face) { flush(); face = nextFace; }
     run += ch;
   });
   flush();
@@ -191,20 +212,52 @@ export const fitsOnLine = (text, style, maxWidth) => !(maxWidth > 0) || textWidt
 export function breakToFit(style, maxWidth) {
   const registered = Font.getHyphenationCallback() || ((word) => [word]);
   const fits = (s) => textWidth(s, style) <= maxWidth - FIT_SLACK;
+  // react-pdf asks again for a word it has seen (each measure of the same Text), and the answer
+  // depends on nothing but the word.
+  const seen = new Map();
   return (word) => {
-    if (fitsOnLine(word, style, maxWidth)) return registered(word);
-    const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits)));
-    return parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
+    if (seen.has(word)) return seen.get(word);
+    let out;
+    if (fitsOnLine(word, style, maxWidth)) out = registered(word);
+    else {
+      const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits)));
+      out = parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
+    }
+    seen.set(word, out);
+    return out;
   };
 }
 
-/** `part` cut into the longest runs of characters that `fits` (one character at the least). */
-function runsThatFit(part, fits) {
-  const runs = [''];
-  for (const ch of part) {
-    const last = runs.length - 1;
-    if (runs[last] && !fits(runs[last] + ch)) runs.push(ch);
-    else runs[last] += ch;
+/**
+ * `part` cut into the longest runs of characters that `fits` (one character at the least). Each
+ * run's end is found by doubling its length until a prefix no longer fits, then halving between the
+ * last that did and that one — a prefix is never narrower than a shorter one of the same text, so
+ * a run costs a handful of measures of its own length, not one per character (typing-freeze 7: a
+ * 20 000-character token measured every prefix of every run, ~9 s).
+ */
+export function runsThatFit(part, fits) {
+  const chars = [...part];
+  const at = [0]; // at[i]: where character i starts in `part`
+  for (const ch of chars) at.push(at[at.length - 1] + ch.length);
+  const runs = [];
+  let start = 0;
+  while (start < chars.length) {
+    const room = chars.length - start;
+    const fitsLen = (n) => fits(part.slice(at[start], at[start + n]));
+    let good = 1; // a run is one character at the least
+    let bad = 0; // the shortest length known not to fit; 0: none yet
+    while (!bad && good < room) {
+      const probe = Math.min(room, good * 2);
+      if (fitsLen(probe)) good = probe;
+      else bad = probe;
+    }
+    while (bad - good > 1) {
+      const mid = (good + bad) >> 1;
+      if (fitsLen(mid)) good = mid;
+      else bad = mid;
+    }
+    runs.push(part.slice(at[start], at[start + good]));
+    start += good;
   }
   return runs;
 }
