@@ -145,8 +145,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
   and the value as typed rides as `websiteText` / `linkedinText` / `githubText` for the import to put
   back, so the label prints again after a round trip (R5-HUNT11-JSON-RESUME-BARE-SCHEME-URL-WITH-LABEL).
   A skill group's per-skill levels (R2-147) go out as `skills[].level` (Beginner … Expert) when every
-  keyword shares one, else as `keywordLevels` (`{ "Go": "Expert" }`); the import reads `keywordLevels`, then
-  another tool's `level` (a word, a number or a percentage) for every other keyword of the group
+  keyword shares one, else as `keywordLevels` (`{ "Go": "Expert" }`); a level is kept per comma-separated
+  skill, so each keyword of a skill typed "Python; Go" (keywords are parted by ";" and "•" too) takes that
+  skill's level. The import reads `keywordLevels`, then another tool's `level` (a word, a number or a
+  percentage) for every other keyword of the group
 
 ## JSON backup export/import
 
