@@ -110,7 +110,17 @@ export function useAppStore() {
   const [persistError, setPersistError] = useState(null);
   // What the editor's save status reads: a change held until its coalesced write (`saving`), and
   // when the last write reached storage (`savedAt`) — not when the résumé last changed.
-  const [saving, setSaving] = useState(false);
+  const [saving, setSavingState] = useState(false);
+  // What `saving` was last set to. The save effect below runs on every keystroke, and asking for the value
+  // `saving` is already being set to is an update React cannot skip while the first one waits to render:
+  // 50 keys in a burst, with no time to render between them, and React gave up with error #185 and dropped
+  // the next key (R2-142). Only a change is asked for.
+  const savingAsked = useRef(false);
+  function setSaving(next) {
+    if (savingAsked.current === next) return;
+    savingAsked.current = next;
+    setSavingState(next);
+  }
   const [savedAt, setSavedAt] = useState(null);
   // Set when the saved store could not be read in full; the dashboard shows it until dismissed.
   const [recovery, setRecovery] = useState(() => pendingRecovery(STORAGE_KEY));
