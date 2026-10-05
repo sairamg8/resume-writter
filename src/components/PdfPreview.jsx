@@ -139,7 +139,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const [retry, setRetry] = useState(0);
   const generation = useRef(0); // bumped by every change that asks for a build
   const shownGen = useRef(0);   // the generation of the pages on screen
-  const built = useRef(null); // { input, render, retry } of the last build that started
+  const built = useRef(null); // { input, render, retry, gen } of the last build that started
+  const ended = useRef(null);   // { gen, status, error }: how the last build to end did ('ready' once its text is in, or 'error')
   const waiting = useRef(null); // when the first change no build has taken up yet arrived
   const building = useRef(0);   // builds started and not finished: never more than one
   const queued = useRef(null);  // the latest change's build, waiting for the one on its way to finish
@@ -163,8 +164,24 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const revealed = active && !wasActive.current;
     wasActive.current = active;
     const last = built.current;
-    if (last && last.input === input && last.render === render && last.retry === retry) { waiting.current = null; return undefined; }
-    if (!active) { waiting.current = null; setStatus('paused'); return undefined; }
+    if (last && last.input === input && last.render === render && last.retry === retry) {
+      waiting.current = null;
+      // Back to what the last build was asked for: a change undone (Undo, or a value typed back) before
+      // its own build started, or made while hidden and undone. That build speaks for the status again —
+      // how it ended, or, still on its way, 'rendering' until it does. It was left on 'rendering' (or
+      // 'paused') for good, the "Updating preview…" chip up over pages that were current; a change that
+      // waits for a running build (one build at a time) widened that window to the whole build.
+      if (generation.current !== last.gen) {
+        generation.current = last.gen;
+        const done = ended.current?.gen === last.gen ? ended.current : null;
+        setError(done?.error ?? null);
+        setStatus(done ? done.status : 'rendering');
+      }
+      return undefined;
+    }
+    // Hidden: build nothing, only note the preview is behind. The change is a generation of its own, so a
+    // build still on its way, when it ends, neither reports 'ready' over 'paused' nor shows its error.
+    if (!active) { waiting.current = null; generation.current += 1; setStatus('paused'); return undefined; }
     const gen = ++generation.current;
     setStatus('rendering');
     // Every change after the first build has STARTED waits for a pause in typing — not only once a
@@ -182,7 +199,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const run = async () => {
       waiting.current = null;
       building.current += 1;
-      built.current = { input, render, retry };
+      built.current = { input, render, retry, gen };
       let pdf = null;
       // Unmounted meanwhile (Cover Letter clicked mid-render). `gen < shownGen` is defensive: builds run one at a time.
       const unwanted = () => !mounted.current || gen < shownGen.current;
@@ -207,7 +224,9 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         readText(pages, gen);
       } catch (e) {
         release(pdf); // opened, then a page or the paint failed: nothing else holds it
-        if (!mounted.current || gen !== generation.current) return;
+        if (!mounted.current) return;
+        ended.current = { gen, status: 'error', error: e };
+        if (gen !== generation.current) return;
         console.error('Preview render failed:', e);
         setError(e);
         setStatus('error');
@@ -290,6 +309,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const list = await pagesText(pages);
     if (!mounted.current || shownGen.current !== gen) return;
     setTexts({ gen, list });
+    ended.current = { gen, status: 'ready', error: null };
     // Older than the latest change: its pages are up, but the latest build still owns the status.
     if (gen !== generation.current) return;
     setError(null);
