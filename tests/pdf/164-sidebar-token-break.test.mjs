@@ -137,11 +137,11 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     for (const part of parts.slice(0, -1)) assert.ok(textWidth(part, style) <= 145, 'a run fits the box');
   });
 
-  it('lays a 20 000-character token out in about two characters of layout per character, at the real column width', async (t) => {
+  it('lays a 20 000-character token out in a few characters of layout per character, at the real column width', async (t) => {
     if (!(await isOnline())) return t.skip('offline');
     // Review of the first fix: halving still laid out ~5-6 characters per character at a real width
     // (a run is ~30 characters, and each probe is up to twice that). The run's end is now predicted
-    // from per-character advances and confirmed by two layouts. Counted at the font's layout call.
+    // from per-character advances and confirmed by two layouts (plus the token laid out whole twice: is it wider than the box, is each piece). Counted at the font's layout call.
     const r = resume({ template: 'sidebar' });
     const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const { breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
@@ -154,7 +154,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     faces.forEach((f, i) => { f.layout = function counted(run, ...rest) { laid += [...run].length; return reals[i].call(this, run, ...rest); }; });
     try {
       const rand = rng(1640);
-      for (const [name, token, limit] of [['x', 'x'.repeat(20000), 3], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 4]]) {
+      for (const [name, token, limit] of [['x', 'x'.repeat(20000), 5], ['ascii', sample(rand, ALPHABETS.ascii, 20000), 6]]) {
         laid = 0;
         const parts = breakToFit({ fontFamily, fontSize: 9 }, 146)(token).map(String).filter(Boolean);
         assert.equal(parts.join(''), token, `${name}: reads as typed`);
