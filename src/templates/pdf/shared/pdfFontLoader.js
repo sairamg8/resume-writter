@@ -423,12 +423,44 @@ const RETRY_AFTER_MS = 60_000;
 const RETRY_WAIT_MS = 3_000;
 const retryAt = () => (typeof navigator !== 'undefined' && navigator.onLine === false ? 0 : Date.now() + RETRY_AFTER_MS);
 const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(source);
+
+// How long a build waits for a face's FIRST fetch. react-pdf's own fetch has no timeout and keeps the
+// promise it started for good: a captive portal, or a CDN that takes the connection and never answers,
+// held that build — and the worker's every job behind it — until the page was reloaded (R2-142). Past the
+// wait the face counts as not loaded, and its family is replaced by Noto Sans with the font named, as when
+// offline. The fetch itself is left to finish (react-pdf cannot abort it): its data is used by the first
+// build after it arrives.
+const FONT_LOAD_MS = 10_000;
+let fontLoadMs = FONT_LOAD_MS;
+/** For tests: how long a first fetch is waited for; no argument goes back to FONT_LOAD_MS. */
+export const _setFontLoadWaitForTest = (ms) => { fontLoadMs = ms ?? FONT_LOAD_MS; };
+/** Faces whose first fetch ran past the wait, each with when a build may wait for it again (as `borrowed`): until then it counts as not loaded, so a dead network costs the wait once, not on every build. */
+const stalledFaces = new Map();
+
+/** Whether `source` loads within the wait: true loaded, false failed or still on its way. */
+function loadInTime(source) {
+  if (source.data) {
+    // Its data arrived after a build gave up on it: the load that brought it is no longer in the face.
+    source.loadResultPromise ??= Promise.resolve();
+    stalledFaces.delete(source);
+    return Promise.resolve(true);
+  }
+  if (Date.now() < (stalledFaces.get(source) ?? 0)) return Promise.resolve(false);
+  let timer;
+  const stalled = new Promise((resolve) => {
+    timer = setTimeout(() => { stalledFaces.set(source, retryAt()); resolve(false); }, fontLoadMs);
+    timer.unref?.();
+  });
+  return Promise.race([source.load().then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));
+}
+
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
 if (typeof globalThis.addEventListener === 'function') {
   // A face whose fetch is still on its way (Infinity) is left to it: a second one could succeed and
   // the first then fail, marking the face borrowing again though it has its own data.
   globalThis.addEventListener('online', () => {
     for (const [source, at] of borrowed) if (at !== Infinity) borrowed.set(source, 0);
+    stalledFaces.clear(); // back online: a face that stalled is worth waiting for again
   });
 }
 
@@ -493,7 +525,7 @@ export async function prepareFonts(families) {
       await Promise.race([Promise.all(retries.map((a) => a.done)), pause(RETRY_WAIT_MS)]);
       for (const attempt of retries) if (!attempt.settled) attempt.late = true;
     }
-    const loaded = await Promise.all(sources.map((source) => source.load().then(() => true, () => false)));
+    const loaded = await Promise.all(sources.map(loadInTime));
     if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
     // react-pdf would retry it during layout and fail the whole PDF.
