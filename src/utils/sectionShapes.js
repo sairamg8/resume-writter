@@ -40,11 +40,24 @@ function withColumns(settings, type) {
 }
 
 /**
+ * A section's type as the app writes it: a hand-written or other-tool file's 'Experience' or
+ * ' skills ' is Experience or Skills (R5-HUNT12), as a template id is read in any case (R5-5). It was
+ * a custom section's, which draws none of its entries' company, role, dates, degree or skills. A type
+ * the app does not know is kept as it is: a custom section's.
+ */
+function typeAsWritten(type) {
+  if (typeof type !== 'string') return type;
+  const lower = type.trim().toLowerCase();
+  return lower !== type && Object.hasOwn(SECTION_TYPE_DEFAULTS, lower) ? lower : type;
+}
+
+/**
  * `sections` as a list of section objects, each with an id, a title and a list of entry objects that
  * have ids. Ids are unique across the résumé: the first section or entry holding an id keeps it, as
  * every valid id is kept (the cloud sync keys on them); one with none, or a repeat, gets
  * `<section id>_item<n>` (an entry) or `<type>_<n>` (a section), the same on every load, so two
- * devices loading the same file agree. A section with no title gets its type's. The same array when
+ * devices loading the same file agree. A known type in another case is stored in lower case
+ * (typeAsWritten). A section with no title gets its type's. The same array when
  * nothing changes.
  */
 export function withSectionShapes(r) {
@@ -65,14 +78,15 @@ export function withSectionShapes(r) {
   const sections = kept.map((s, i) => {
     // A type is its own only by its own key: one named like an Object member ('toString') is a custom
     // section's, and takes a custom section's title (R2-109).
-    const known = Object.hasOwn(SECTION_TYPE_DEFAULTS, s.type);
-    const id = keptIds[i].section ? s.id : fresh(`${known ? s.type : 'section'}_${i + 1}`);
+    const type = typeAsWritten(s.type);
+    const known = Object.hasOwn(SECTION_TYPE_DEFAULTS, type);
+    const id = keptIds[i].section ? s.id : fresh(`${known ? type : 'section'}_${i + 1}`);
     const items = s.items.map((item, j) => (keptIds[i].items[j] ? item : { ...item, id: fresh(`${id}_item${j + 1}`) }));
-    const title = s.title == null ? (known ? SECTION_TYPE_DEFAULTS[s.type] : SECTION_TYPE_DEFAULTS.custom)(id).title : s.title;
-    const settings = withColumns(s.settings, s.type);
-    const same = id === s.id && title === s.title && settings === s.settings && items.every((item, j) => item === s.items[j]);
+    const title = s.title == null ? (known ? SECTION_TYPE_DEFAULTS[type] : SECTION_TYPE_DEFAULTS.custom)(id).title : s.title;
+    const settings = withColumns(s.settings, type);
+    const same = type === s.type && id === s.id && title === s.title && settings === s.settings && items.every((item, j) => item === s.items[j]);
     if (same) return s;
-    const out = { ...s, id, title, items };
+    const out = { ...s, type, id, title, items };
     if (settings === undefined) delete out.settings;
     else out.settings = settings;
     return out;

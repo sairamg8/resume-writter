@@ -14,7 +14,8 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, template: 'classic', ...extra });
+// A résumé as the store holds one: loaded through normalizeResume, which always gives it settings (R5-HUNT12).
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, template: 'classic', settings: {}, ...extra });
 const USER = { uid: 'u', email: 'someone@example.com' };
 const failure = (code) => Object.assign(new Error(`${code}: refused`), { code });
 const rename = (p, name, updatedAt) => p.change({ resumes: p.store.state.resumes.map((r) => (r.id === 'resume_a' ? { ...r, name, updatedAt } : r)) });

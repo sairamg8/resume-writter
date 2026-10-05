@@ -34,7 +34,8 @@ type Resume = {
   keep?: boolean;             // "Keep as my original" (demo accounts)
   template: 'classic' | 'modern' | 'minimal' | 'executive' | 'sidebar'
           | 'timeline' | 'banner' | 'academic' | 'compact'; // any other id prints as Classic
-  settings: Settings;         // design system; starts from ATS_DEFAULTS
+  settings: Settings;         // design system; starts from ATS_DEFAULTS. Always an object: normalizeResume
+                              // stores none, null, text or a list as {} (the defaults), whatever the version
   personal: Personal;
   sections: Section[];
   coverLetter: CoverLetter;
@@ -61,7 +62,8 @@ A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 
 ```ts
 type Section = {
   id: string;
-  type: SectionType;
+  type: SectionType;          // lower case: normalizeResume stores a file's 'Experience' or ' skills '
+                              // as its id (sectionShapes.js); a type it does not know is a custom section's
   title: string;
   visible?: boolean;
   items: Item[];

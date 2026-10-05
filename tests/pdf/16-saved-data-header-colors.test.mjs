@@ -83,6 +83,8 @@ describe('Name & Title Colors a template switch left unreadable, as older builds
     const current = resume({ template: 'classic', settings: DARK_SEED });
     assert.equal(normalizeResume(current), current, 'this build\'s data (a pick made since): the same object');
     const junk = normalizeResume({ ...saved(resume(), 10), settings: 'junk' });
-    assert.equal(junk.settings, 'junk', 'settings that are not an object are left as they are');
+    // R5-HUNT12-SETTINGS-NOT-OBJECT-CRASHES-NEW-AND-WORD: settings kept as text made /new, Word and the
+    // Header spacing reset throw; they are stored as {} (the defaults the PDF printed), whatever the version.
+    assert.deepEqual(junk.settings, {}, 'settings that are not an object read as none: {}');
   });
 });

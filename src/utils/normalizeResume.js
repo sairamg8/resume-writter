@@ -363,7 +363,18 @@ function withProjectRoles(r) {
 }
 
 /**
- * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
+ * Settings the app can read (R5-HUNT12): a file with none, `"settings": null`, a string or a list
+ * gets `{}`, which prints the defaults, as the PDF printed it. Only the v8 migration used to create
+ * them, so a file stamped 8 or higher kept them missing, and /new's cards and the Word export read
+ * them as an object and failed. Whatever its data version; the same object when they are one.
+ */
+function withSettingsObject(r) {
+  const s = r.settings;
+  return s && typeof s === 'object' && !Array.isArray(s) ? r : { ...r, settings: {} };
+}
+
+/**
+ * `resume` made current: settings that are an object (withSettingsObject), a template the app offers (withKnownTemplate), sections and entries that
  * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
  * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
  * stored as '#rrggbb' (withNormalizedColors), Name Font and Heading Font as text (withFontChoices),
@@ -389,7 +400,7 @@ function withProjectRoles(r) {
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
-  const known = withSectionShapes(withKnownTemplate(resume));
+  const known = withSectionShapes(withKnownTemplate(withSettingsObject(resume)));
   const r = withBulletsInDescription(withSkillNames(withProjectRoles(withProjectUrls(withTextFields(withFontChoices(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);
