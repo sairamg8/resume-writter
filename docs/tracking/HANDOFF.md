@@ -1,5 +1,14 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 — `claude/wip-link` (= wip-open-features-1005 + review): public link, skill level and perf harness verified.** Public
+link (R2-148): the `users/{uid}/meta/publicCopies` index reviewed (transactions read first, rerun-safe, no rules change) and pinned by
+`tests/pdf/148-*` (failfirst 2be3993b). Skill level (R2-147): 147-* tests proven (failfirst 2be3993b); fixed a public copy publishing
+levels of skills deleted from the text (a5aa6647) and JSON Resume dropping the level of a "Python; Go" skill (928d169d). PERF-5/6: tests
+110/126 proven; fixed the watchdog letting a worker go when a frozen tab wakes (7a5f6389). Perf harness green (node 12/12, browser 3/3);
+a `perf=browser|all` dispatch now also runs Gate B (perf-gate-b spec, skipped by the gate). Still red on the branch, column layout's
+(claude/wip-col): dead `PdfSidebarBand.jsx` (dead-code R6-6) and `layoutOptions.js` restating photo options (AUD-25). Start-up path is
+1,098 of the 1,100 kB cap (71-startup-chunks): the next few kB on it fail the gate.
+
 **2026-10-05 — SAVED WIP (not deployed, not gated, nothing run): branch `claude/wip-open-features-1005`, based on master `e1267bc9`.** The
 weekly usage limit (resets 5 Oct 00:30 IST) killed 5 of 7 feature agents mid-run, so the tree holds partial work. Done: PERF-5 (PdfPreview
 paint-before-text + canvas pool, test 110), PERF-6 (pdfBuild.js watchdog, test 126, perf-gate-b spec). Partial/unfinished, edits sit in the
