@@ -60,7 +60,10 @@ const NUMBERED = /^\s*\(?(?:\d{1,2}|[a-z]|[ivx]{1,4})[.)]\s+/i;
 /** A line of dashes, equals or underscores under a heading (the ATS text's rule). */
 const RULE = /^\s*[-=_─━—–]{3,}\s*$/;
 
-const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[ \f\v\r]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
+const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[^\S\t\n]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
+
+/** A line that starts at a tab, has no other, and has a character that is no white space after it (not /^\t[^\t]*\S[^\t]*$/, which tried every split of a long line). */
+const startsAtTab = (text) => text[0] === '\t' && text.indexOf('\t', 1) === -1 && /\S/.test(text);
 
 /** How far a list item is indented, in columns (a tab four): a nested item's is more than its parent's. */
 const indentOf = (text) => {
@@ -84,7 +87,7 @@ function toLines(input) {
     // a degree's or a role's (an indented "⇥University of Porto" is a second field).
     if (l && typeof l === 'object') {
       const lines = String(l.text ?? '').split('\n');
-      const atEnd = (text) => lines[0].includes('\t') && /^\t[^\t]*\S[^\t]*$/.test(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
+      const atEnd = (text) => lines[0].includes('\t') && startsAtTab(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
       return lines.map((text, i) => ({
         text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
         ...(l.fields && !i ? { fields: l.fields } : {}),
