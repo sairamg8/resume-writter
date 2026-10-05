@@ -349,10 +349,16 @@ export function listMarker(marker, style) {
 export const bulletAt = (depth, style) => listMarker(BULLETS[(depth - 1) % BULLETS.length], style);
 
 function toRoman(n) {
+  // A list started at "1e15" took a loop of 10^12 turns (typing-freeze 7a): past what Roman numerals
+  // were ever written for, the digits read better than a run of "m"s too.
+  if (!(n < 100000)) return String(n);
   const table = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
   let out = '';
   let rest = n;
-  for (const [v, s] of table) while (rest >= v) { out += s; rest -= v; }
+  for (const [v, s] of table) {
+    const times = Math.floor(rest / v);
+    if (times > 0) { out += s.repeat(times); rest -= v * times; }
+  }
   return out;
 }
 
