@@ -234,7 +234,12 @@ this one's read no longer brings back a job or project deleted just before that 
 after the read, when it did not before (the other tab's first sync took the kept-aside list meanwhile), reads
 again, once, as a steady-state sync: the cloud copy, the kept-aside list and the list were no longer one view,
 and a job that tab restored from it and then deleted was added here again and sent back to the account
-(SL-SYNC-FIRST-SYNC-STASH-CONSUMED, `tests/unit/sync-first-sync-stash-consumed.unit.mjs`). A flush asks the list again once the cloud has
+(SL-SYNC-FIRST-SYNC-STASH-CONSUMED, `tests/unit/sync-first-sync-stash-consumed.unit.mjs`). A first sync applies its merge to the list as it is once its batch is acknowledged,
+and tells what was changed meanwhile by content, not by object (as the queue's `changed()` does): another tab's save
+re-reads the whole list, and every item, a job the phone had deleted among them, then counted as edited here, was added
+back and sent, taking the phone's deletion off the account's list (SL-SYNC-FIRST-SYNC-SAVED-MEANWHILE,
+`tests/unit/sync-first-sync-saved-meanwhile.unit.mjs`); an item whose content was edited here meanwhile still stays.
+A flush asks the list again once the cloud has
 answered its read: a job or project deleted in another tab meanwhile (it reaches this one through the storage event) is
 not written back — the write would also take its id off the account's deletion list, undoing that tab's
 deletion on every device — and its queued deletion goes next; one put back meanwhile (Undo) is still written

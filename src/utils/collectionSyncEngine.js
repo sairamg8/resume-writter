@@ -345,10 +345,14 @@ export function createCollectionSync({
       }
 
       // Applied to the list as it is now: what was changed while the batch was on its way stays,
-      // and is sent by the queue (the list it compares with is the merged one).
+      // and is sent by the queue (the list it compares with is the merged one). Changed is told by
+      // content, as changed() tells it, not by object: another tab's save re-reads the whole list,
+      // every item a new object, and each item the plan dropped (deleted on another device, not
+      // changed here) then counted as edited here and was added back — written by the next flush,
+      // which took it off the account's deletion list: that deletion undone on every device
+      // (SL-SYNC-FIRST-SYNC-SAVED-MEANWHILE).
       const current = store.items();
-      const before = new Map(own.map((x) => [x.id, x]));
-      const edited = new Map(current.filter((x) => before.get(x.id) !== x).map((x) => [x.id, x]));
+      const edited = new Map(diffLists(own, current).writes.map((x) => [x.id, x]));
       const removed = new Set(own.filter((x) => !current.some((c) => c.id === x.id)).map((x) => x.id));
       const result = plan.merged.filter((x) => !removed.has(x.id)).map((x) => edited.get(x.id) || x);
       const added = [...edited.values()].filter((x) => !result.some((r) => r.id === x.id));
