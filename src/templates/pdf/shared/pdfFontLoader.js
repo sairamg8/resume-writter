@@ -445,8 +445,8 @@ const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(
 // family in turn. The lookups were outside it: up to 8 s each (fontsource.js), in turn, so three such fonts
 // cost ~24 s before any face was asked for, past the PDF worker's 20 s budget (pdfBuild.js pdfBuildTimeoutMs):
 // the build failed "took too long", and Retry on a fresh worker the same way. Fonts do take room in that
-// budget — FONT_LOAD_MS of it at most, half — and the rest is the layout's. The app's own bundled faces (Noto
-// Sans, the last resort) get the whole wait each, whatever the CDN used up.
+// budget — FONT_LOAD_MS and a bounded grace (cdnWaitMs) at most, 13 s — and the rest is the layout's. The
+// app's own bundled faces (Noto Sans, the last resort) get the whole wait each, whatever the CDN used up.
 const FONT_LOAD_MS = 10_000;
 let fontLoadMs = FONT_LOAD_MS;
 /** For tests: how long a first fetch is waited for; no argument goes back to FONT_LOAD_MS. */
@@ -470,6 +470,21 @@ function noteLateFace() {
 const fontDeadline = () => Date.now() + fontLoadMs;
 
 /**
+ * How long a wait for the CDN that starts now may last, in a build whose deadline is `until`: what is left
+ * of it, and never less than a grace (15 % of the wait: 1.5 s) while the build is less than two graces past
+ * it. With nothing left — the deadline spent by earlier steps: a slow network, a CJK face prepared on a weak
+ * phone — a later face or lookup got a 0 ms timer and lost a race it would have won in 100 ms: the font
+ * printed in Noto Sans with a false "could not be loaded" notice, then built again when it landed. The grace
+ * is bounded so it cannot pile up family after family: no wait ends later than 2 graces past the deadline,
+ * 1.3 × FONT_LOAD_MS (13 s) after the build began, which leaves the rest of the build at least 7 s of the PDF
+ * worker's 20 s budget (27 s of the 40 s it has cold), and 250 ms more per entry (pdfBuild.js pdfBuildTimeoutMs).
+ */
+function cdnWaitMs(until, now = Date.now()) {
+  const grace = fontLoadMs * 0.15;
+  return Math.max(0, until - now, Math.min(grace, until + 2 * grace - now));
+}
+
+/**
  * Font `pkg`'s metadata (fetchMetadata), or null when it has not come by `until`, the build's deadline: the
  * font then prints in Noto Sans and is named, as when the CDN has no answer at all. The lookup goes on, and
  * when metadata that was only slow arrives the preview builds again (noteLateFace), as for a slow face. A
@@ -482,7 +497,7 @@ function metadataInTime(pkg, until = fontDeadline()) {
     timer = setTimeout(() => {
       lookup.then((meta) => { if (meta) noteLateFace(); });
       resolve(null);
-    }, Math.max(0, until - Date.now()));
+    }, cdnWaitMs(until));
     timer.unref?.();
   });
   return Promise.race([lookup, late]).finally(() => clearTimeout(timer));
@@ -490,7 +505,7 @@ function metadataInTime(pkg, until = fontDeadline()) {
 
 /**
  * Whether `source` loads in time: true loaded, false failed or still on its way. A CDN face is waited for
- * until `until`, the build's deadline; a bundled one for the whole wait.
+ * until `until`, the build's deadline, or its grace past it (cdnWaitMs); a bundled one for the whole wait.
  */
 function loadInTime(source, until) {
   if (source.data) {
@@ -507,7 +522,7 @@ function loadInTime(source, until) {
       stalledFaces.set(source, retryAt());
       load.then(noteLateFace, () => { /* it failed: the cooldown retries it */ });
       resolve(false);
-    }, String(source.src).startsWith(CDN) ? Math.max(0, until - Date.now()) : fontLoadMs);
+    }, String(source.src).startsWith(CDN) ? cdnWaitMs(until) : fontLoadMs);
     timer.unref?.();
   });
   return Promise.race([load.then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));

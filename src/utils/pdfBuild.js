@@ -30,8 +30,9 @@ import { downloadBlob } from '@/utils/download';
  * is no thread to stop, so one past it fails the same retryable way and is left to finish unheard. A
  * build that never settles held the preview's one queued build behind it for good (PdfPreview.jsx: one
  * build at a time) and Export waiting. Fonts take room in these budgets, bounded: a build waits for the
- * CDN — its fonts' metadata and their faces, all together — 10 s at most (pdfFontLoader.js FONT_LOAD_MS),
- * then prints in Noto Sans, so a dead CDN leaves the layout the other half of the 20 s.
+ * CDN — its fonts' metadata and their faces, all together — 10 s (pdfFontLoader.js FONT_LOAD_MS), and a
+ * wait that starts as that runs out gets a grace of 1.5 s, but none ends past 13 s (cdnWaitMs); then the
+ * font prints in Noto Sans. So a dead CDN leaves the rest of a build at least 7 s of the 20 s.
  *
  * Photos are made printable here first (withPrintablePhotos): converting a WebP needs a canvas,
  * which a worker may not have, and the copy is kept for the session on this side.

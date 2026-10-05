@@ -96,9 +96,12 @@ what a let-go worker sends late is ignored. A clock that rings 5 s or more past 
 again with the whole budget rather than letting the worker go. The main thread's builds (no worker, or the
 jobs a let-go worker held) have the same budget, cold: one past it fails with the same retryable error and runs
 on unheard, so it cannot hold the preview's queued build or an export for good. This is the only watchdog, and
-fonts take room in its budgets, bounded: `pdfFontLoader.js` waits for the CDN `FONT_LOAD_MS` (10 s) at most, one
+fonts take room in its budgets, bounded: `pdfFontLoader.js` waits for the CDN `FONT_LOAD_MS` (10 s), one
 deadline shared by every font metadata lookup and every CDN face of a build (bundled Noto Sans faces get the
-whole wait each), so a dead CDN leaves the layout the other half of the 20 s. Before, the lookups were outside
+whole wait each). A lookup or face whose wait starts with the deadline all but spent (a slow network, a CJK
+face prepared on a weak phone) still gets a grace of 1.5 s — it lost a race it would have won in 100 ms, with a
+false "could not be loaded" notice — but no wait ends more than 3 s past the deadline (`cdnWaitMs`): 13 s at
+most, which leaves the rest of a build at least 7 s of the 20 s (27 s of the 40 s cold). Before, the lookups were outside
 it — up to 8 s each, in turn (`fontsource.js`), ~24 s for a body, Name Font and Heading Font from a CDN that
 answers nothing, and the build failed "took too long", Retry too. Past the deadline a font with no metadata, or
 a face, counts as not loaded (the font prints in Noto Sans with the usual notice); a lookup that timed out is
@@ -109,7 +112,7 @@ keeps it until the next build puts its own in (`landPrepared`), so no build lays
 (`tests/pdf/118-font-late-face-prepared.test.mjs`, `tests/pdf/119-font-metadata-deadline.test.mjs`). Tests inject a fake Worker and a fake clock with
 `_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`,
 `tests/pdf/112-pdf-worker-watchdog.test.mjs`); the font wait with `_setFontLoadWaitForTest(ms)`
-(`tests/pdf/113-font-load-stall.test.mjs`).
+(`tests/pdf/113-font-load-stall.test.mjs`, its grace in `tests/pdf/120-font-wait-grace.test.mjs`).
 
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
 bar in Skills style Bars — the main column of every template and the Sidebar's side column
