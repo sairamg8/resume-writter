@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
-import { Text } from './PdfText';
+import { Text, splitLongText } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
 
@@ -46,9 +46,9 @@ function Runs({ runs, color }) {
     if (href) {
       // Underline adds its line to a struck-through link's, as Word keeps both.
       const deco = look.textDecoration && run.strike ? { textDecoration: 'underline line-through' } : {};
-      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{run.text}</Link>;
+      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{splitLongText(run.text)}</Link>;
     }
-    return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : run.text;
+    return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : splitLongText(run.text);
   });
 }
 

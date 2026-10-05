@@ -14,8 +14,8 @@ function words(n, seed = 1) {
 }
 
 it('diag', async () => {
-  for (const n of [25000, 50000, 100000, 200000]) {
-    const r = resume({ template: 'classic', sections: [experience([{ description: `<p>${words(n)}</p>` }])] });
+  for (const [kind, n] of [['words', 50000], ['words', 100000], ['words', 200000], ['words', 400000], ['cjk', 100000], ['unbroken', 100000]]) {
+    const r = resume({ template: 'classic', sections: [experience([{ description: `<p>${kind === 'words' ? words(n) : kind === 'cjk' ? '山田太郎東京大学'.repeat(n / 8) : 'x'.repeat(n)}</p>` }])] });
     const session = new inspector.Session();
     session.connect();
     await session.post('Profiler.enable');
@@ -33,7 +33,7 @@ it('diag', async () => {
       self.set(key, (self.get(key) || 0) + (dt[i] || 0) / 1000);
     });
     const top = [...self].sort((x, y) => y[1] - x[1]).slice(0, 14).map(([k, v]) => `   ${v.toFixed(0).padStart(7)} ms  ${k}`);
-    console.log(`DIAG n=${n} total=${ms.toFixed(0)} ms\n${top.join('\n')}`);
+    console.log(`DIAG ${kind} n=${n} total=${ms.toFixed(0)} ms\n${top.join('\n')}`);
     session.disconnect();
   }
 });
