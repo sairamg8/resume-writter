@@ -1,5 +1,24 @@
 # Session Handoff — Resume Here
 
+**2026-10-05 — MASTER (LIVE) = `38e7b70e`; the review's follow-ups are on `claude/review-followups-1005` (not merged yet).**
+Master `38e7b70e` carries everything: rounds 11-12, the dash/editor/sync fixes, PR #10's features (PERF-5/6, the perf harness,
+per-skill level R2-147, public copies index R2-148, Sidebar column layout) and the typing-freeze work reconciled into ONE watchdog
+(PERF-6's budgets), the bounded font wait, the one-queued-build preview and the React #185 guard signed out and in. GitHub has a
+single branch, master (plus this one until it merges); archive tags kept: `archive/wf-r5-hunt10-pdf-probe` (throwaway probe test),
+`archive/typing-freeze-session-notes` (the typing-freeze session's pending notes) and the older `archive/*` ones.
+This branch fixes the minor defects an independent review found in `38e7b70e`, each with a fail-first proof on CI:
+(1) a font face that lands after its wait lands prepared, never over the donor it was lent, and is not downloaded again (`4e14c0f7`, tests/pdf/118);
+(2) font metadata lookups share the build's font deadline; a timed-out lookup is not asked again for a minute (`1c7f4345`, 119, unit fontsource-silent-retry) —
+a dead CDN no longer fails every build "took too long"; (3) a CDN wait that starts with the deadline spent gets a bounded grace, no wait past 13 s (`1d25180e`, 120);
+(4) a main-thread build past its budget is not overlapped by the next, and Retry takes its file (`0fc9243f`, 121); (5) the lazy public link's retry path is
+tested and its laziness checked by module name (`bcb1fdc5`), and the JSON Resume export left the start-up path (`503c3343`, 122): 1,092.1 of 1,100 kB,
+7.9 kB to spare (was 4.7); (6) tests 110/111/114 renumbered to 115/116/117, the typing-freeze write-up says what shipped, two comments fixed (`02e27012`).
+**Still open:** the typing-freeze hunt's remaining findings (two tabs typing at once lose edits, the ATS job-description regex, richText/bulletOptimizer
+ReDoS on paste, the composition flag, the Sidebar long-token cost: TYPING-FREEZE-HUNT-2026-10-05.md); PERF-4 (not started); small leftovers (import:
+"Walnut Creek" goes to Additional Information; tools: "Worked extensively on…" + a verb chip; editor: vanity number 1-800-FLOWERS links to tel:1800; sync:
+a second tab's deletion during the cloud read can be re-sent); owner items (tag v0.1.0, Terms/Privacy vs the hosting domain, env vars); deferred
+accessibility (the new layout buttons lack aria-pressed / group labels). **Next:** the coordinator merges this branch once its full gate is green.
+
 **2026-10-05 — TYPING-FREEZE WORK RECONCILED WITH MASTER on `claude/typing-merge-1005` (master `69fdb98a` + `claude/fix-error-185` up to `7a57c73b`; not merged).**
 The hunt's branches (entries below) were cut from old master `e1267bc9`; master has since shipped PERF-5 (PdfPreview) and PERF-6 (its own
 worker watchdog). The merges keep master's code and the hunt's docs; each concern is then ported as one commit with its own fail-first proof:
