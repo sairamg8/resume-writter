@@ -498,8 +498,9 @@ export function pdfPageBlocks(items) {
   const one = [{ items, column: false }];
   const texts = items.filter((it) => typeof it.str === 'string' && it.str.trim());
   if (texts.length < 8) return one;
-  const minX = Math.min(...texts.map((it) => it.x));
-  const maxX = Math.max(...texts.map((it) => it.x + (it.w || 0)));
+  // (Not Math.min(...list): a page of 200 000 text items is more arguments than a call takes.)
+  const minX = texts.reduce((m, it) => Math.min(m, it.x), Infinity);
+  const maxX = texts.reduce((m, it) => Math.max(m, it.x + (it.w || 0)), -Infinity);
   // Candidates: where an item starts, the right column's edge. The one fewest lines cross wins.
   let best = null;
   for (const at of new Set(texts.map((it) => it.x))) {
@@ -525,11 +526,11 @@ export function pdfPageBlocks(items) {
       // Each call has fewer items than the last, both sides holding lines, so this ends.
       const side = (part) => pdfPageBlocks(part).map((b) => ({ items: b.items, column: true }));
       blocks.push(...side(its.filter((it) => it.x < at)), ...side(its.filter((it) => it.x >= at)));
-    } else whole.push(...run.flatMap((r) => r.items));
+    } else for (const r of run) for (const it of r.items) whole.push(it);
     run = [];
   };
   for (const row of rowsOf(texts)) {
-    if (crosses(row)) { endRun(); whole.push(...row.items); } else run.push(row);
+    if (crosses(row)) { endRun(); for (const it of row.items) whole.push(it); } else run.push(row);
   }
   endRun();
   if (whole.length) blocks.push({ items: whole, column: false });
@@ -666,8 +667,8 @@ export function pdfLinesOfPages(pages) {
     const blocks = pdfPageBlocks(withoutPageFurniture(page, index));
     for (const [b, { items, column }] of blocks.entries()) {
       const lines = pdfPageLines(items);
-      const right = Math.max(0, ...lines.map((l) => l.right));
-      const left = Math.min(...lines.map((l) => l.x));
+      const right = lines.reduce((m, l) => Math.max(m, l.right), 0);
+      const left = lines.reduce((m, l) => Math.min(m, l.x), Infinity);
       let prev = null;
       // The list items still open in this block, outermost first: each one's marker x, where its text
       // starts and its middle — for a list item's depth (R4-SW-I-01).
