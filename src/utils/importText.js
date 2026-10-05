@@ -548,7 +548,7 @@ const BARE_TOWN = {
   /** Capitalised words, a town's linking word between, no title's word, no work status, no contact's label. */
   shaped(text) {
     const s = String(text).trim();
-    return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
+    return s.length <= 40 && /^[\p{Lu}][\p{L}.'’\-]*(?:\s+(?:[\p{Lu}][\p{L}.'’\-]*|[dD]['’]\p{Lu}[\p{L}.\-]*|am|an|de|del|der|di|do|da|la|le|les|on|upon|sur|en|of))*$/u.test(s)
       && s.split(/\s+/).length <= 5 && !BARE_LABEL.test(s) && !headingType(s) && !NOT_A_PLACE.test(s);
   },
   /** A town of more words that says it is a place, whether it stands beside a contact or alone. */
@@ -557,7 +557,7 @@ const BARE_TOWN = {
     if (!/\s/.test(s) || !this.shaped(s)) return false;
     const role = ROLE.test(s);
     if (PLACE_END.test(s)) return !role || !ROLE.test(s.replace(PLACE_ROLE_WORD, ' '));
-    return !role && (TOWN_OF_WORDS.test(s) || PLACE_START.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s/u.test(s) || /\s(?:Area|Region)$/u.test(s));
+    return !role && (TOWN_OF_WORDS.test(s) || PLACE_START.test(s) || /\s(?:am|an der|upon|sur|de|del|di|do|da|la|le|les|en)\s|\s[dD]['’]\p{Lu}/u.test(s) || /\s(?:Area|Region)$/u.test(s));
   },
   test(text) {
     const s = String(text).trim();

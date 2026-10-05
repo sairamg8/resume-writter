@@ -18,7 +18,7 @@ const read = (header, rest = exp) => resumeFromText(header + rest);
 const TOWNS = [
   // A place's own word at its end, a place's prefix with one more word, LinkedIn's metros.
   'Walnut Creek', 'Mount Pleasant Heights', 'Rancho Santa Margarita', 'St. Louis Park', 'Mt. Pleasant', 'Spring Hill',
-  'Pleasant Hill', 'Hilton Head Island', 'Santa Rosa', 'Fort Collins', 'Greater Boston', 'Dallas-Fort Worth Metroplex', 'WALNUT CREEK',
+  'Pleasant Hill', 'Hilton Head Island', 'Santa Rosa', 'Fort Collins', 'Greater Boston', 'Dallas-Fort Worth Metroplex', "Coeur d'Alene", "COEUR D'ALENE", 'WALNUT CREEK',
   // A state, a country or a postcode after it, with no comma; a postcode first; a street before it.
   'Walnut Creek CA', 'Walnut Creek CA 94596', 'Austin TX', 'Austin TX 78701', 'Guildford GU1 4AB', 'Austin Texas',
   'Guildford United Kingdom', 'Walnut Creek 94596', 'Walnut Creek - CA', '10115 Berlin', '75008 Paris',
