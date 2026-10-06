@@ -8,6 +8,8 @@ HANDOFF.md). The canvas waits for the owner's approval; only then does the React
 - Live app that was surveyed (master, deployed): https://resume-writter.sairamgudiputi8.workers.dev/#/
 - Earlier mockups, superseded: https://claude.ai/artifact/PuVb9NgZ7dtCkrKNYaQjGF (v1 tabs, rejected), https://claude.ai/artifact/37an14GjzPqGMccs9MyHFz (three directions; direction 2 chosen).
 - Files here: `BRIEF.md` (shared drawing brief + the 2026-10-06 addendum), `AREAS.md` (what each area drew), `tools/` (see below).
+- **REBUILD STARTED (2026-10-06, owner's order): read `PARITY-RULE.md` (UI only, every existing function stays) and `RUN-STATE.md` (the plan's
+  progress, the 3-hours-on / 2-hours-off cadence and the resume point) before anything else. The rebuild works in the worktree `.claude/worktrees/ui-rebuild`.**
 
 ## What the owner decided (in order)
 1. The left sidebar of the editor feels cluttered; a first proposal that only added tabs was rejected.
