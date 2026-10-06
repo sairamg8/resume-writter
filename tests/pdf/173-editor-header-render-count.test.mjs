@@ -12,6 +12,8 @@
 // tab, the layout, the account and the sync), and that a handler the header has held since its first
 // render acts on the LATEST résumé: stable handlers that kept the first render's closure would export the
 // text as it was before the last key.
+// The Personal Info editor is pinned here too, because it needs the same wiring (the router above it):
+// a bullet's keystroke renders nothing of it.
 //
 // How it counts (renders, never time), as tests/pdf/165-perf4-editor-render-count.test.mjs: a React
 // DevTools hook installed before react-dom loads is told of every commit, and the fibers that RENDERED in
@@ -342,6 +344,22 @@ describe('typing one character renders nothing of the editor header (PERF-4)', (
       });
     }
   }
+
+  // The same page, the same router, for the Personal Info editor (tests/pdf/165 mounts the tab without one):
+  // a memoised part is only as still as what is under it, and a router hook or link anywhere in its tree would
+  // wake it at every key however its props were kept.
+  it('a bullet does not render the Personal Info editor, nor a part of it; a key in its own field does', async () => {
+    const PERSONAL = ['PersonalInfoEditor', 'HeaderCustomization', 'PhotoSection'];
+    const t = await openEditor({ jobs: 4, expand: true });
+    try {
+      let w = await t.measure(() => t.typeInEmail());
+      assert.ok(w.rest.includes('PersonalInfoEditor'), `a key in its own field renders it, so the count is live. ${w.report()}`);
+      w = await t.measure(() => t.typeInBullet(1));
+      assert.ok(t.store().activeResume.sections[0].items[1].description.includes(MARK), 'the character reached the store');
+      assert.ok(w.rest.length >= 1, `the bullet rendered its own part. ${w.report()}`);
+      assert.deepEqual(w.rest.filter((name) => PERSONAL.includes(name)), [], `typing in a bullet rendered part of the Personal Info editor. ${w.report()}`);
+    } finally { await t.close(); }
+  });
 
   it('the write that follows the keystroke (Saving…, then Saved) renders nothing of it either', async () => {
     const t = await openEditor({ jobs: 1 });
