@@ -30,6 +30,10 @@ import { createElement, Fragment, useState } from 'react';
 // No Firebase in this test's build, whatever .env holds (the Editor imports the share dialog, whose cloud
 // is the app's own Firestore). Read when setup() starts Vite.
 for (const key of ['VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_APP_ID']) process.env[key] = '';
+// The demo accounts of this test's build (VITE_DEMO_ACCOUNTS): a made-up one, never the owner's. Read when
+// setup() starts Vite.
+const DEMO = { uid: 'u_demo', displayName: 'Demo Person', email: 'demo.person@example.com', photoURL: null };
+process.env.VITE_DEMO_ACCOUNTS = DEMO.email;
 // The Export menu is placed by the kit's useFloating, which cancels its animation frame when the menu
 // closes; Node has none (tests/pdf/78-letter-export-menu does the same).
 globalThis.requestAnimationFrame ??= (fn) => setTimeout(fn, 0);
@@ -158,12 +162,13 @@ function find(node, type) {
 }
 
 /**
- * The editor as the app mounts it, over a saved résumé. `signedIn`: the account is signed in. `expand`:
- * every entry's card opened (a card starts collapsed), so its bullets can be typed in. Returns the page's
+ * The editor as the app mounts it, over a saved résumé. `signedIn`: the account is signed in; `signInAs`:
+ * whom the sign-in button signs in. `expand`: every entry's card opened (a card starts collapsed), so its
+ * bullets can be typed in. Returns the page's
  * parts to read and drive, and `measure(fn)`: `fn`'s commits — which components of the header rendered, which
  * others did, and which of the header's props were not the same value as before.
  */
-async function openEditor({ jobs = 1, signedIn = false, expand = false } = {}) {
+async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs = USER } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Editor } = await loadModule('/src/pages/Editor.jsx');
   const { EditorHeader } = await loadModule('/src/components/EditorHeader.jsx');
@@ -195,7 +200,7 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false } = {}) {
     Object.assign(live, { store, setSyncStatus });
     const auth = {
       user, authLoading: false, cloudAvailable: true,
-      signInWithGoogle: () => setUser(USER),
+      signInWithGoogle: () => setUser(signInAs),
       signOut: () => { live.signOuts.push(at); setUser(null); },
     };
     const sync = { syncStatus, lastSynced: null, isOnline: true, account: null, heldResumes: NO_HELD, readCloudCopies: () => at };
@@ -428,6 +433,18 @@ describe('what the header shows still updates', () => {
       assert.ok(t.buttonLabels().includes('Export PDF'), t.buttonLabels().join(' | '));
       const w = await t.measure(() => t.act(() => t.live.navigate(`/resume/${t.id}?tab=coverletter`)));
       assert.ok(t.buttonLabels().includes('Export Cover Letter PDF'), t.buttonLabels().join(' | '));
+      assert.ok(w.header.includes('ExportDropdown'), w.report());
+    } finally { await t.close(); }
+  });
+
+  it('a demo account\'s Export menu offers Import as my original once it is signed in', async () => {
+    const t = await openEditor({ signInAs: DEMO });
+    try {
+      const offered = () => t.buttonLabels().some((label) => /Import as my original/.test(label));
+      t.call(t.exportButton(), 'onClick'); // opens the menu, signed out
+      assert.equal(offered(), false, t.buttonLabels().join(' | '));
+      const w = await t.measure(() => t.call(t.signInButton(), 'onClick'));
+      assert.equal(offered(), true, t.buttonLabels().join(' | '));
       assert.ok(w.header.includes('ExportDropdown'), w.report());
     } finally { await t.close(); }
   });
