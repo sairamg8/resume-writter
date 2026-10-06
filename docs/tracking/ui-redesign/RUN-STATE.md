@@ -52,4 +52,5 @@ update this file, commit, push `HEAD:claude/wonderful-maxwell-vu8xqw`; (3) go id
 - Now: PLANNING. Step 1: parity audit (7 area auditors + a reviewer each, writes `parity/<area>.md`) and three scouts
   (`parity/_constraints.md`, `_tests.md`, `_ci.md`). Step 2: the plan workflow (3 planners, judges, completeness critic against the
   parity rows, two skeptics) writes `PLAN.md` and `batches/B<n>.md`. Step 3: Batch 1 (the first batch of PLAN.md).
+- Running since 08:00Z: parity audit `wf_25338028-897` (task wdmtim3pl, script `/root/.claude/projects/-home-user-resume-writter--claude-worktrees-ui-rebuild/08ba08c3-89c1-545a-bfa7-bc4ae58a0a66/workflows/scripts/ui-parity-audit-wf_25338028-897.js`) and scouts `wf_d09e4136-527` (task wt3lxuowk, script `.../workflows/scripts/ui-rebuild-scouts-wf_d09e4136-527.js`). Their files land in `docs/tracking/ui-redesign/parity/` (uncommitted until the lead commits them).
 - Open owner calls left after the parity rule: see README "Product calls"; the rule settles most of them (PARITY-RULE.md).
