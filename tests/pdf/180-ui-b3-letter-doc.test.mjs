@@ -5,7 +5,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { prepare, finish, openEditor, loadModule, resume, text, attr } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, loadModule, resume, text, attr } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
 after(finish);
@@ -52,6 +52,8 @@ describe('Export follows the open document', () => {
     const t = await openEditor({ path: '?tab=coverletter' });
     try {
       await t.press('design-button');
+      // The dock's panels may arrive after the press, and the page shows nothing new until they have.
+      await until(() => t.byTid('dock-design'), 'the Design dock opens from the letter');
       assert.equal(t.header().exportMenu.letterTab, false);
       t.call(exportButton(t), 'onClick');
       assert.ok(labels(t).includes('Export PDF'), labels(t).join(' | '));

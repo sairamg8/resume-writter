@@ -5,7 +5,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { prepare, finish, openEditor, text, attr, reactProps, elements } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, text, attr, reactProps, elements } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
 after(finish);
@@ -53,10 +53,11 @@ describe('no Resume | Cover Letter | ATS Check tab strip', () => {
     try {
       const on = (id) => /\bbg-cv-(good|brand)-soft\b/.test(attr(t.byTid(id), 'class'));
       assert.ok(!on('ats-chip') && !on('design-button'));
+      // A dock's panels may arrive after the press: wait for the lit opener, not a count of ticks.
       await t.press('ats-chip');
-      assert.ok(on('ats-chip') && !on('design-button'));
+      await until(() => on('ats-chip') && !on('design-button'), 'the ATS chip is the lit opener');
       await t.press('design-button');
-      assert.ok(!on('ats-chip') && on('design-button'));
+      await until(() => !on('ats-chip') && on('design-button'), 'the Design button is the lit opener');
     } finally { await t.close(); }
   });
 
