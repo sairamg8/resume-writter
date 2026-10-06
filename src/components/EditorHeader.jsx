@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { memo } from 'react';
 import { ArrowLeft, Palette, Pencil, Share2, ShieldCheck } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
@@ -165,7 +164,6 @@ const CHIP = `flex ${CHIP_BOX}`;
  * callback (PERF-4); no router hook, no link.
  */
 export const EditorAtsChip = memo(function EditorAtsChip({ open, onToggleDock }) {
-  useNavigate(); // MUTATION M1 (throwaway): a router hook in a leaf
   return (
     <button
       onClick={() => onToggleDock('ats')}
