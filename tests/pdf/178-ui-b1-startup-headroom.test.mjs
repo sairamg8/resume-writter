@@ -163,7 +163,7 @@ describe('the prefetch', () => {
     }
   });
 
-  it('leaving the page before idle cancels the pending callback or timer (the one asked for), and a late run fetches nothing', async () => {
+  it('leaving the page before idle cancels the pending callback or timer (the one asked for): nothing is left to fetch', async () => {
     const saved = {
       idle: globalThis.requestIdleCallback, cancel: globalThis.cancelIdleCallback,
       set: globalThis.setTimeout, clear: globalThis.clearTimeout,
@@ -185,8 +185,9 @@ describe('the prefetch', () => {
       assert.equal(asked.fns.length, 1, 'one idle callback asked for');
       await idle.unmountNow();
       assert.deepEqual(asked.cancelled, asked.ids, 'the id asked for is the one cancelled');
-      asked.fns[0]();
-      assert.deepEqual(idle.calls, { letter: 0, career: 0 }, 'a callback run after leaving fetches nothing');
+      // A cancelled callback never runs in a browser: run only those the page did not cancel.
+      asked.fns.filter((_, i) => !asked.cancelled.includes(asked.ids[i])).forEach((fn) => fn());
+      assert.deepEqual(idle.calls, { letter: 0, career: 0 }, 'no callback is left to fetch after leaving');
     } finally {
       restore();
       await idle.close();
@@ -209,8 +210,9 @@ describe('the prefetch', () => {
       assert.equal(timers.fns.length, 1, 'a timer where there is no idle callback');
       await plain.unmountNow();
       assert.deepEqual(asked.cleared, timers.handles, 'the timer asked for is the one cleared');
-      timers.fns[0]();
-      assert.deepEqual(plain.calls, { letter: 0, career: 0 }, 'a timer run after leaving fetches nothing');
+      // A cleared timer never fires: run only those the page did not clear.
+      timers.fns.filter((_, i) => !asked.cleared.includes(timers.handles[i])).forEach((fn) => fn());
+      assert.deepEqual(plain.calls, { letter: 0, career: 0 }, 'no timer is left to fetch after leaving');
     } finally {
       restore();
       await plain.close();

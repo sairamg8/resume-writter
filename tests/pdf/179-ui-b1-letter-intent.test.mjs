@@ -99,9 +99,9 @@ for (const [name, target, type] of [['(b) a pointerdown', 'document', 'pointerdo
       await until(page.listening, 'the request is watching');
       page.interact(target, type);
       page.failPicker();
-      await settle();
+      // React throttles the retry that shows a failed lazy piece (about 300 ms): wait for the request to close, not a fixed time.
+      await until(() => !page.listening(), 'the request is closed: nothing listens any more');
       assert.deepEqual(page.made, []);
-      assert.equal(page.listening(), false, 'the request is closed: nothing listens any more');
     } finally { await page.close(); }
   });
 }
