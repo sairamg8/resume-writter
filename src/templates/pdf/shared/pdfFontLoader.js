@@ -256,9 +256,13 @@ async function familyChain(settings, text, until) {
   if (missed) {
     const store = Font.getRegisteredFonts();
     // react-pdf keeps a failed load for good; forget it — the font's and its own subsets' (its
-    // latin-ext …) — so the next build tries them again.
+    // latin-ext …) — so the next build tries them again, whatever the clock says (not by prepareFonts' schedule).
     for (const family of families.filter((f) => !usable.includes(f))) {
-      for (const source of store[family]?.sources || []) if (!source.data) source.loadResultPromise = null;
+      for (const source of store[family]?.sources || []) {
+        if (source.data) continue;
+        source.loadResultPromise = null;
+        borrowed.delete(source);
+      }
     }
     usable = await prepareFonts(['NotoSans', ...usable], until);
   }
@@ -414,9 +418,21 @@ function inflateGlyfOnce(font) {
  * may be fetched again. A bold that failed once (a CDN hiccup) printed as the regular for the rest
  * of the session (R4-LO-17). Failed while the browser is offline, the next build tries it; any other
  * failure waits a minute, or until the browser is back online, so a face the CDN truly lacks is not
- * fetched again on every preview build.
+ * fetched again on every preview build. The faces of a family that only backs another font up — the
+ * chosen font's own latin-ext, a symbol font, a script's Noto font — are here too when none of them
+ * loaded, with no donor and no data: react-pdf keeps a failed load for good, so such a family was left out
+ * of every build for the rest of the session after one dropped connection (R4-PDF-02).
  */
 const borrowed = new Map();
+/**
+ * Faces the CDN lacks: its answer was 404. Every other failure — a dropped connection, a stall, a 429 or a
+ * 5xx — says nothing about the file, and the face is fetched again (`borrowed`). A 404 will not change in a
+ * session, as fetchMetadata keeps a package's 404 (fontsource.js), so such a face is never fetched again
+ * and does not count as borrowing: nothing would fix it (R4-PDF-02).
+ */
+const gone = new Set();
+/** react-pdf's error for a face whose fetch was not ok (FontSource, @react-pdf/font): "Failed to fetch font from <url>: <status> <text>". */
+const isMissingFace = (error) => /^Failed to fetch font from \S+: 404\b/.test(String(error?.message));
 /**
  * Borrowing faces whose own data has arrived — a fetch again (retryBorrowed), or a first fetch that outran
  * its wait (landPrepared) — to be put in by the next prepareFonts, with no await before it is primed.
@@ -508,12 +524,15 @@ function metadataInTime(pkg, until = fontDeadline()) {
  * until `until`, the build's deadline, or its grace past it (cdnWaitMs); a bundled one for the whole wait.
  */
 function loadInTime(source, until) {
-  if (source.data) {
+  if (source.data || fetched.has(source)) {
     // Its data arrived after a build gave up on it: the load that brought it is no longer in the face.
     source.loadResultPromise ??= Promise.resolve();
     stalledFaces.delete(source);
     return Promise.resolve(true);
   }
+  // No data, and either waiting for its next fetch (retryBorrowed) or not on the CDN: react-pdf kept the failure
+  // or the stall of its first fetch for good, and asking it again here would only answer that again.
+  if (borrowed.has(source) || gone.has(source)) return Promise.resolve(false);
   if (Date.now() < (stalledFaces.get(source) ?? 0)) return Promise.resolve(false);
   let timer;
   const load = source.load();
@@ -525,7 +544,11 @@ function loadInTime(source, until) {
     }, String(source.src).startsWith(CDN) ? cdnWaitMs(until) : fontLoadMs);
     timer.unref?.();
   });
-  return Promise.race([load.then(() => true, () => false), stalled]).finally(() => clearTimeout(timer));
+  const done = load.then(() => true, (error) => {
+    if (isMissingFace(error)) gone.add(source);
+    return false;
+  });
+  return Promise.race([done, stalled]).finally(() => clearTimeout(timer));
 }
 
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
@@ -592,9 +615,15 @@ function retryBorrowed(source) {
       fetched.set(source, copy.data);
       if (attempt.late) faceFetched();
     },
-    () => {
+    (error) => {
       attempt.settled = true;
-      if (borrowed.get(source) === Infinity) borrowed.set(source, retryAt());
+      if (borrowed.get(source) !== Infinity) return; // another attempt has settled the face since
+      if (isMissingFace(error)) {
+        gone.add(source);
+        borrowed.delete(source);
+      } else {
+        borrowed.set(source, retryAt());
+      }
     },
   );
   return attempt;
@@ -630,14 +659,35 @@ export async function prepareFonts(families, until = fontDeadline()) {
     const sources = store[family]?.sources || [];
     const retries = sources.filter(retryDue).map(retryBorrowed);
     if (retries.length) {
-      await Promise.race([Promise.all(retries.map((a) => a.done)), pause(RETRY_WAIT_MS)]);
+      // Not longer than the build's deadline leaves: the retries of several families, one after the other, must
+      // not add up to more waiting than the build's one deadline for the CDN (cdnWaitMs).
+      await Promise.race([Promise.all(retries.map((a) => a.done)), pause(Math.min(RETRY_WAIT_MS, cdnWaitMs(until)))]);
       for (const attempt of retries) if (!attempt.settled) attempt.late = true;
     }
     const loaded = await Promise.all(sources.map((source) => loadInTime(source, until)));
-    if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
+    if (!loaded.some(Boolean)) {
+      // Nothing of this family loads: leave it out of the chain. One that only backs another font up is asked for
+      // again, as a borrowing face is: react-pdf keeps a failed load for good, so after one dropped connection the
+      // chosen font's "ł" stayed in Noto Sans's latin-ext, and a ✓ unprinted, until the page was reloaded
+      // (R4-PDF-02). The chosen font's own family is not asked for here: the build that finds it missing forgets
+      // its failure itself (familyChain), and tries it at the next build.
+      if (fallbackFamilies.has(family)) {
+        for (const source of sources) if (!gone.has(source) && !borrowed.has(source)) borrowed.set(source, retryAt());
+      }
+      continue;
+    }
+    // A borrowing face — or a face of a family that failed whole, which borrows nothing — whose own data has
+    // arrived takes it now, with no await before it is primed below.
+    for (const source of sources) {
+      if (!fetched.has(source)) continue;
+      source.data = fetched.get(source);
+      source.loadResultPromise = Promise.resolve(); // not react-pdf's kept failure, which layout would take for a new one
+      fetched.delete(source);
+    }
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
     // react-pdf would retry it during layout and fail the whole PDF. One whose own data landed after
     // its wait ended, while the family's other faces were still waited for, keeps it (landPrepared).
+    // A face the CDN lacks borrows too, and is never asked for again.
     sources.forEach((source, i) => {
       if (loaded[i] || source.data) return;
       const donor = sources
@@ -646,14 +696,8 @@ export async function prepareFonts(families, until = fontDeadline()) {
           || Math.abs(a.fontWeight - source.fontWeight) - Math.abs(b.fontWeight - source.fontWeight))[0];
       source.data = donor.data;
       source.loadResultPromise = Promise.resolve();
-      borrowed.set(source, retryAt());
+      if (!gone.has(source) && !borrowed.has(source)) borrowed.set(source, retryAt());
     });
-    // A borrowing face whose own data has arrived takes it now, with no await before it is primed below.
-    for (const source of sources) {
-      if (!fetched.has(source)) continue;
-      source.data = fetched.get(source);
-      fetched.delete(source);
-    }
     for (const { data: font } of sources) prepareFace(font, family);
     usable.push(family);
   }

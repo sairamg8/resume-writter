@@ -49,8 +49,10 @@ export const buildNote = (blob) => (blob && typeof blob === 'object' ? notes.get
 
 /**
  * Whether a face of a loaded font failed and prints with another face's data for now (a bold that
- * failed prints as the regular; pdfFontLoader.js prepareFonts fetches it again): the preview builds
- * again when the browser is back online (R4-LO-17). Nothing is shown for it.
+ * failed prints as the regular; pdfFontLoader.js prepareFonts fetches it again), or a family that only
+ * backs a font up — its own latin-ext, a symbol font — failed whole and is left out until it is fetched
+ * again: the preview builds again when the browser is back online (R4-LO-17, R4-PDF-02). Nothing is shown
+ * for it.
  */
 export const facesBorrowed = () => borrowing;
 
