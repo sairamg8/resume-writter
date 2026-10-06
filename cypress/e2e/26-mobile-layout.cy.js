@@ -102,7 +102,7 @@ describe('editor on a phone (375 × 812)', () => {
 
   it('the Design dock (the pill) and the ATS dock (the chip) open on the phone as a sheet, full width', () => {
     const fullWidth = (dock) => cy.get(`[data-testid="${dock}"]`).invoke('outerWidth').should('eq', PHONE[0]);
-    cy.openDesign(); // the pill's Design: the bar has no Design button on a phone
+    switchButton('Design').click(); // the pill's Design: the bar's Design button is hidden on a phone
     cy.get('[data-testid="dock-design"]').contains('button', 'Template').should('be.visible');
     fullWidth('dock-design');
     switchButton('Design').should('have.class', LIT);
@@ -115,7 +115,7 @@ describe('editor on a phone (375 × 812)', () => {
   });
 
   it('picking Edit, Preview or a document from a dock lands on that view with the dock closed (MOBI-043)', () => {
-    cy.openDesign();
+    switchButton('Design').click(); // the pill's Design segment (the bar's Design button is hidden on a phone)
     cy.get('[data-testid="dock-design"]').should('exist');
     switchButton('Preview').click();
     cy.get('[data-testid="dock-design"]').should('not.exist');
