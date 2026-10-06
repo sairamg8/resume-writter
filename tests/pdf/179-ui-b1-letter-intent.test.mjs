@@ -1,4 +1,4 @@
-// UI rebuild B1 (hunts B1-H2-15, B1-H3-2-8): a New Cover click abandoned while the picker's chunk was slow could fire
+// UI rebuild B1 (hunts B1-H3-1-2, B1-H3-2-8): a New Cover click abandoned while the picker's chunk was slow could fire
 // much later: the import rejected, the fallback made a stray letter and navigated away from whatever the person
 // had since done. The first fix judged it by a 10 s window, which also dropped the letter of a person who just
 // waited (B1-H3-1-2); it is now judged by what the person did: another click, key or address change since New
@@ -36,6 +36,11 @@ async function dashboard() {
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
   const { loaders, warmed } = _lazyForTest;
+  // The code before this fix judged by a stubbed wall clock (_lazyForTest.clock); the fix has none, so this stays a no-op there.
+  const clock = _lazyForTest.clock ?? { now: () => 0 };
+  const realNow = clock.now;
+  let t = 1_000_000;
+  clock.now = () => t;
   const real = { ...loaders };
   warmed.clear();
   let failPicker;
@@ -61,38 +66,52 @@ async function dashboard() {
     made, failPicker,
     press(label) { view.act(() => reactProps(button(label)).onClick({})); },
     interact(target, type) { view[target].dispatchEvent({ type }); },
+    advance(ms) { t += ms; },
     listening: () => view.document.listeners('pointerdown') > 0,
     async close() {
       await view.unmount();
       Object.assign(loaders, real);
+      clock.now = realNow;
       console.error = savedError;
       delete globalThis.localStorage;
     },
   };
 }
 
-it('an abandoned New Cover (the person clicked elsewhere) makes no letter, and the next New Cover starts a fresh request', async () => {
+it('(a) a wait of 30 s with nothing else done: the failing picker makes exactly one letter from the first source', async () => {
   const page = await dashboard();
   try {
     page.press('New Cover');
     await until(page.listening, 'the request is watching');
-    page.interact('window', 'hashchange');
+    page.advance(30_000); // a stalled chunk: the wait never decides, only what the person did
     page.failPicker();
+    await until(() => page.made.length > 0, 'a letter made');
     await settle();
-    assert.deepEqual(page.made, [], 'no stray letter from the abandoned request');
-    page.press('New Cover');
-    await until(() => page.made.length > 0, 'the fresh request makes its letter');
     assert.deepEqual(page.made, ['resume_b']);
   } finally { await page.close(); }
 });
 
-it('a picker that fails with the person doing nothing else still makes one letter from the first source', async () => {
+for (const [name, target, type] of [['(b) a pointerdown', 'document', 'pointerdown'], ['(b2) a hashchange', 'window', 'hashchange'], ['(c) a keydown', 'document', 'keydown']]) {
+  it(`${name} after New Cover: the failing picker makes no letter and the request closes`, async () => {
+    const page = await dashboard();
+    try {
+      page.press('New Cover');
+      await until(page.listening, 'the request is watching');
+      page.interact(target, type);
+      page.failPicker();
+      await settle();
+      assert.deepEqual(page.made, []);
+      assert.equal(page.listening(), false, 'the request is closed: nothing listens any more');
+    } finally { await page.close(); }
+  });
+}
+
+it('(d) the New Cover click itself does not count: a failure right after it makes the letter', async () => {
   const page = await dashboard();
   try {
     page.press('New Cover');
     page.failPicker();
     await until(() => page.made.length > 0, 'a letter made');
-    await settle();
     assert.deepEqual(page.made, ['resume_b']);
   } finally { await page.close(); }
 });

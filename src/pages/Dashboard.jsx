@@ -23,8 +23,7 @@ const loaders = {
   career: () => import('@/components/CareerHistoryPanel').then((m) => ({ default: m.CareerHistoryPanel })),
 };
 const warmed = new Set();
-const clock = { now: () => Date.now() };
-export const _lazyForTest = { loaders, warmed, clock };
+export const _lazyForTest = { loaders, warmed };
 // One lazy() per piece, made once: a new one at each mount suspends once more, so a remount (Back) lost
 // the loaded piece from its first commit. Keyed by the loader, so a replaced loader gets its own.
 const views = new Map();
@@ -134,12 +133,20 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     open(id);
   }
 
-  // When New Cover was last asked: a picker that fails to arrive long after must not make a letter then.
-  const askedAt = useRef(0);
+  // Whether the person did something else since New Cover was asked: a picker that then fails to arrive
+  // must not make a letter over it (however long it took, it is judged by this, not by the time).
+  const moved = useRef(false);
+  useEffect(() => {
+    if (!letterModalOpen) return undefined;
+    const note = () => { moved.current = true; };
+    const ons = [[document, 'pointerdown', true], [document, 'keydown', true], [window, 'hashchange'], [window, 'popstate']];
+    ons.forEach(([t, e, c]) => t.addEventListener(e, note, c));
+    return () => ons.forEach(([t, e, c]) => t.removeEventListener(e, note, c));
+  }, [letterModalOpen]);
   // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
   // is, or the one picked when there are several; with none, a blank letter.
   function startLetter() {
-    askedAt.current = clock.now();
+    moved.current = false;
     if (letterSourceList.length > 1) { setLetterUsed(true); setLetterModalOpen(true); }
     else newLetter(letterSourceList[0]?.id ?? null);
   }
@@ -431,7 +438,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       {letterUsed && (
         <Lazy
           load="letter"
-          fallback={() => <LetterFallback asked={letterModalOpen} make={() => (clock.now() - askedAt.current > 10000 ? setLetterModalOpen(false) : newLetter(letterSourceList[0]?.id ?? null))} />}
+          fallback={() => <LetterFallback asked={letterModalOpen} make={() => (moved.current ? setLetterModalOpen(false) : newLetter(letterSourceList[0]?.id ?? null))} />}
           isOpen={letterModalOpen}
           sources={letterSourceList}
           onPick={newLetter}
