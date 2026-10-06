@@ -139,6 +139,89 @@ body {
   --color-loz-done-ink: #216e4e;
 }
 
+/* ── Canvas look (docs/tracking/ui-redesign/BRIEF.md): ADDITIVE cv-* tokens ───────────────────
+   Ground, surface, sunken, stage, hairline and field border; the four text inks; the brand blue
+   with its text ink, soft fill and soft border; good, warn and bad, each with a soft fill. Radii:
+   card 14, control 9, chip full. --shadow-pop is for popovers, drawers and modals only (cards
+   have none). --font-cv names Instrument Sans but loads no web font (parked); Tailwind's own
+   --font-sans (Kbd) is not redefined. Used as `bg-cv-ground`, `text-cv-muted`, `rounded-cv-card`. */
+@theme {
+  --color-cv-ground: #f5f6f8;
+  --color-cv-surface: #ffffff;
+  --color-cv-sunken: #eef0f4;
+  --color-cv-stage: #e9ecf1;
+  --color-cv-hairline: #e2e5eb;
+  --color-cv-field: #d5dae3;
+  --color-cv-ink: #151922;
+  --color-cv-body: #2a303c;
+  --color-cv-muted: #4f586a;
+  --color-cv-faint: #6b7385;
+  --color-cv-brand: #2b59ff;
+  --color-cv-brand-text: #1e45d6;
+  --color-cv-brand-soft: #e8eeff;
+  --color-cv-brand-soft-border: #c9d3f5;
+  --color-cv-good: #0b7a55;
+  --color-cv-good-soft: #e1f5ec;
+  --color-cv-warn: #8f5200;
+  --color-cv-warn-soft: #fff0d6;
+  --color-cv-bad: #b3261e;
+  --color-cv-bad-soft: #fde7e5;
+  --radius-cv-card: 14px;
+  --radius-cv-control: 9px;
+  --radius-cv-chip: 9999px;
+  --shadow-pop: 0 4px 8px rgba(20, 30, 50, 0.06), 0 18px 44px rgba(20, 30, 50, 0.2);
+  --font-cv: "Instrument Sans", system-ui, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+
+/* Repeated canvas looks, so a screen writes one short class. In the components layer: a utility on
+   the same element still wins. */
+@layer components {
+  .cv-card {
+    background: var(--color-cv-surface);
+    border: 1px solid var(--color-cv-hairline);
+    border-radius: var(--radius-cv-card);
+  }
+  .cv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.625rem;
+    border-radius: var(--radius-cv-chip);
+    background: var(--color-cv-sunken);
+    color: var(--color-cv-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  .cv-field {
+    background: var(--color-cv-surface);
+    border: 1px solid var(--color-cv-field);
+    border-radius: var(--radius-cv-control);
+    color: var(--color-cv-ink);
+  }
+  .cv-notice-warn {
+    background: var(--color-cv-warn-soft);
+    color: var(--color-cv-warn);
+    border-radius: var(--radius-cv-control);
+  }
+  .cv-notice-bad {
+    background: var(--color-cv-bad-soft);
+    color: var(--color-cv-bad);
+    border-radius: var(--radius-cv-control);
+  }
+  .cv-pill-nav {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-cv-chip);
+    color: var(--color-cv-muted);
+  }
+  .cv-pill-nav[aria-current="page"],
+  .cv-pill-nav[data-active="true"] {
+    background: var(--color-cv-sunken);
+    color: var(--color-cv-ink);
+  }
+}
+
 /* Reduced motion: the workspace shell and every kit layer (Portal) carry data-ui-motion; there,
    animations and transitions finish at once (1 ms, so animationend and transitionend still fire).
    Scoped so the résumé editor keeps its own behaviour. */
