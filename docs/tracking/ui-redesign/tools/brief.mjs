@@ -4,7 +4,8 @@
 //   node docs/tracking/ui-redesign/tools/brief.mjs --all                   write every batch except B1 (the lead keeps B1.md)
 //   node docs/tracking/ui-redesign/tools/brief.mjs --coverage              prove every row of the 7 parity files has exactly one owner
 //   node docs/tracking/ui-redesign/tools/brief.mjs --master-sync <commit>  list parity-file and src changes that arrived from origin/master since <commit>
-//   add --strict to a batch run to exit 2 when the 'tests that go red' check found a test the batch does not list.
+//   a batch run exits 2 (after writing the file) when the 'tests that go red' check found a test the batch does not list, as the plan
+//   requires ('the brief fails'); add --lenient to print the FAIL lines in the brief and exit 0.
 // A brief = the batch spec of plan-work/final.json (as make-batch-spec.mjs prints it) PLUS: every parity row the batch owns (live
 // behaviour, board placement, status, Fix), the rows reached through the file's catch-all rule, DO NOT BUILD AS DRAWN flags, the
 // layout-deltas table, and the 'tests that go red' list. Row parsing and ownership follow batches/coverage-check.mjs (same rules).
@@ -286,7 +287,7 @@ function testsThatGoRed(b) {
 }
 
 // ---------- brief ----------
-function brief(id, strict) {
+function brief(id, lenient) {
   const b = plan.batches.find((x) => x.id === id)
   if (!b) { console.error('no such batch', id, '(known:', plan.batches.map((x) => x.id).join(' ') + ')'); process.exit(1) }
   const { rows } = readRows()
@@ -402,13 +403,13 @@ function brief(id, strict) {
   fs.mkdirSync(path.dirname(out), { recursive: true })
   fs.writeFileSync(out, o.join('\n'))
   console.log(`wrote ${path.relative(ROOT, out)}: ${new Set(mineRows.map(({ r }) => rowKey(r))).size} row IDs, ${flagSeen.size} DO NOT BUILD AS DRAWN, ${deltas.length} layout deltas, ${red.hits.length} test hits (${unlisted.length} FAIL: not in the update list)`)
-  if (strict && unlisted.length) process.exitCode = 2
+  if (!lenient && unlisted.length) { console.error(`${id}: FAIL, ${unlisted.length} test file(s) hit but not in the update list (see the brief)`); process.exitCode = 2 }
 }
 
 const args = process.argv.slice(2)
 const pos = args.filter((a) => !a.startsWith('--'))
 if (args.includes('--coverage')) coverage()
 else if (args.includes('--master-sync')) masterSync(pos[0])
-else if (args.includes('--all')) for (const x of plan.batches) { if (x.id !== 'B1') brief(x.id, args.includes('--strict')) }
-else if (pos[0]) brief(pos[0], args.includes('--strict'))
+else if (args.includes('--all')) for (const x of plan.batches) { if (x.id !== 'B1') brief(x.id, args.includes('--lenient')) }
+else if (pos[0]) brief(pos[0], args.includes('--lenient'))
 else { console.error('usage: brief.mjs <batch id> | --all | --coverage | --master-sync <commit>   (see the header comment)'); process.exit(1) }
