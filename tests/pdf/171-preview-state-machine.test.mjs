@@ -123,15 +123,22 @@ async function walk(seed) {
     if (status === 'error') assert.ok(p.alert(), `an error with no alert: ${where}`);
     if (cur.active) assert.notEqual(status, 'paused', `shown and still 'paused': ${where}`);
 
-    // Whatever the walk left, one more change builds and the preview recovers: no wedged queue.
+    // Whatever the walk left, one more change builds and the preview recovers: no wedged queue. (Shown
+    // again, a pane that was behind builds first, so the builds are settled as they come.)
     if (!cur.active) { cur.active = true; p.set(props()); await settle(); }
     cur.input = fresh();
     p.set(props());
+    let started = false;
+    for (let round = 0; round < 6; round++) {
+      await pause();
+      const open = outstanding();
+      if (!open.length) break;
+      started = true;
+      for (const [, i] of open) settleCall(i, false);
+      await settle();
+    }
+    assert.ok(started, `the next change started no build: ${where}`);
     await pause();
-    const last = outstanding();
-    assert.equal(last.length, 1, `the next change started no build: ${where}`);
-    settleCall(last[0][1], false);
-    await settle();
     assert.deepEqual([p.shown(), p.status()], [name(cur.input), 'ready'], `no recovery: ${where}`);
   } finally { gate.release(); await p.view.unmount(); }
 }
