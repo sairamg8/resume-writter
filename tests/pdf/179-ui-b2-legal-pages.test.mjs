@@ -30,7 +30,8 @@ for (const [name, file] of [['Terms', '/src/pages/TermsPage.jsx'], ['Privacy', '
   describe(`${name} page`, () => {
     it('keeps the live text word for word (title, date, every section, the contact line)', async () => {
       const html = await render(file);
-      const body = html.slice(html.indexOf('<h1'), html.indexOf('border-t border-cv-hairline'));
+      const body = html.slice(html.indexOf('<h1'), html.indexOf('<div class="border-t border-cv-hairline'));
+      assert.ok(body.length > 1000, 'the page body was found');
       assert.equal(flat(body), EXPECTED[name]);
     });
 

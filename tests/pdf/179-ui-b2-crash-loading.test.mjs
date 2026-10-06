@@ -22,14 +22,14 @@ async function crashed(resetKey = 'a') {
     if (box.broken) throw new Error('boom: chunk failed');
     return createElement('p', null, 'the page');
   }
-  const savedLocation = globalThis.location;
   const quiet = console.error;
   console.error = () => {};
-  globalThis.location = { assign: (to) => box.assigned.push(to) };
   const view = mount(({ key }) => createElement(ErrorBoundary, { resetKey: key }, createElement(Child)), { key: resetKey });
+  // The boundary reads window.location, and mount's fake window is the one it sees.
+  view.window.location = { assign: (to) => box.assigned.push(to) };
   return {
     view, box,
-    close: async () => { await view.unmount(); console.error = quiet; globalThis.location = savedLocation; },
+    close: async () => { await view.unmount(); console.error = quiet; },
   };
 }
 
@@ -74,7 +74,7 @@ describe('page loading state', () => {
     const { PageLoading } = await loadModule('/src/AppRoutes.jsx');
     const view = mount(() => createElement(PageLoading), {});
     try {
-      const el = find(view, (e) => e.textContent === 'Loading…');
+      const el = find(view, (e) => e !== view.container && e.textContent === 'Loading…');
       for (const t of ['min-h-screen', 'flex', 'items-center', 'justify-center', 'bg-cv-ground', 'text-cv-faint']) assert.ok(tokens(el).includes(t), `${t}: ${tokens(el).join(' ')}`);
       assert.equal(tokens(el).some((t) => /gray/.test(t)), false, 'no raw grey');
     } finally { await view.unmount(); }
