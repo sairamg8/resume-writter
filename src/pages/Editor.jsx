@@ -166,8 +166,8 @@ export function Editor({ store, auth, sync }) {
     // The notices of the editor (a template switch's Undo, A4).
     <ToastProvider>
     <div className="fixed inset-0 z-20 flex flex-col overflow-hidden bg-cv-ground">
-      {/* The bar: full width, every part a leaf of its own placed by `order` (EditorHeader.jsx): one row from xl, two below it, and on a phone the save chip has a row between them. */}
-      <div data-testid="editor-bar" className="shrink-0 flex items-center max-xl:flex-wrap gap-x-2 gap-y-1.5 px-3 sm:px-4 py-2 bg-cv-surface border-b border-cv-hairline">
+      {/* The bar: full width, every part a leaf of its own placed by `order` (EditorHeader.jsx): one row from xl, two below it, and on a phone the save chip has a row between them. relative z-40: the bar is a layer above the dock (z-30, over the stage below 1100 px) so the Export menu, which hangs over the row, is not drawn under it. */}
+      <div data-testid="editor-bar" className="relative z-40 shrink-0 flex items-center max-xl:flex-wrap gap-x-2 gap-y-1.5 px-3 sm:px-4 py-2 bg-cv-surface border-b border-cv-hairline">
         <EditorHeader
           name={resume.name}
           rename={headerRename}

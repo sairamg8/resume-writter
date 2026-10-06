@@ -9,6 +9,7 @@
 // is a row of its own, so a class moved to another breakpoint fails here. The real browser's geometry is B4's.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { prepare, finish, openEditor, attr, elements, text } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
@@ -112,6 +113,20 @@ describe('the bar at each window width', () => {
       assert.ok(!phone.some((row) => row.includes('left') && row.includes('save')));
       const chip = parts(t).kids.find((kid) => kid.name === 'save');
       assert.ok(!/max-w-\[88px\]/.test(chip.classes), 'a chip that fills its row needs no cap');
+    } finally { await t.close(); }
+  });
+});
+
+describe('the bar above the dock', () => {
+  it('the bar is a layer above the dock, so the Export menu it opens over the row is not under the overlay (below 1100 px, a phone\'s sheet)', async () => {
+    const t = await openEditor();
+    try {
+      const layer = (classes) => Number(classes.split(/\s+/).find((c) => /^z-\d+$/.test(c))?.slice(2) ?? 0);
+      const bar = attr(t.byTid('editor-bar'), 'class');
+      assert.ok(/\brelative\b/.test(bar), 'positioned, so its z-index counts');
+      const dock = fs.readFileSync(new URL('../../src/components/EditorDock.jsx', import.meta.url), 'utf8').match(/max-\[1099px\]:z-(\d+)/);
+      assert.ok(dock, 'the dock\'s overlay layer is in its classes');
+      assert.ok(layer(bar) > Number(dock[1]), `the bar's z-${layer(bar)} is over the dock's z-${dock[1]}`);
     } finally { await t.close(); }
   });
 });
