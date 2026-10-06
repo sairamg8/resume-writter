@@ -33,7 +33,7 @@ it('C-1: a second search key folds no job text again; the first folds each job o
     const one = filterJobs(jobs, { q: 'e' });
     const first = calls;
     calls = 0;
-    const two = filterJobs(jobs, { q: 'en' });
+    const two = filterJobs(jobs, { q: 'eng' });
     assert.ok(first <= N * 3, `the first key folds each job's text once (${first} normalize calls for ${N} jobs)`);
     assert.equal(calls, 0, `the second key folds nothing (${calls} normalize calls)`);
     assert.equal(one.length, N, 'every job has an e (Compañía / Engineer / Diseñador)');

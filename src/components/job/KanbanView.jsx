@@ -11,6 +11,11 @@ import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
 import { formatShortDay } from '@/utils/uiFormat';
 import { isOpen } from '@/utils/jobQuery';
 
+// Constants, not literals in the render: a new options object each time gave DndContext new sensors,
+// and every one of the board's draggable cards rendered again.
+const MOUSE_DRAG = { activationConstraint: { distance: 8 } };
+const TOUCH_DRAG = { activationConstraint: { delay: 200, tolerance: 8 } };
+
 /** Keeps a press on a control inside a card from starting the card's drag (mouse or touch). */
 const stopDrag = { onMouseDown: e => e.stopPropagation(), onTouchStart: e => e.stopPropagation() };
 
@@ -19,7 +24,7 @@ const stopDrag = { onMouseDown: e => e.stopPropagation(), onTouchStart: e => e.s
  * role, where and how much, the notes' first lines as text, and a footer — applied on, the
  * deadline, the tasks done. Presentational, so it doubles as the drag overlay (`overlay`).
  */
-function KanbanCard({ job, onDelete, onMove, overlay = false }) {
+const KanbanCard = memo(function KanbanCard({ job, onDelete, onMove, overlay = false }) {
   const todos = job.todos || [];
   const todoDone = todos.filter(t => t.done).length;
   const allDone = todos.length > 0 && todoDone === todos.length;
@@ -108,7 +113,7 @@ function KanbanCard({ job, onDelete, onMove, overlay = false }) {
       )}
     </div>
   );
-}
+});
 
 // Memoised: a search re-renders the board with the same job objects, and every card (3000 of them)
 // rendered again for nothing. Its handlers come stable from KanbanView.
@@ -165,8 +170,8 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
   // on a card without touch-action: none lost every touch drag to the page's scroll (R2-038), and a
   // swipe must still scroll the columns.
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(MouseSensor, MOUSE_DRAG),
+    useSensor(TouchSensor, TOUCH_DRAG),
   );
   const activeJob = jobs.find(j => j.id === activeId);
   const containerRef = useRef(null);
