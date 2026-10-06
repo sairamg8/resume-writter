@@ -793,6 +793,8 @@ function withLinks(items, links) {
   const out = items.map((it) => ({ ...it }));
   const whole = new Set();
   const inserts = new Map(); // item → [{ at, text }], put in once every link is read
+  // An item's link list is copied once (it may be the caller's), then pushed to: a copy per link made a line of N links cost N².
+  const ownedLinks = new Set();
   const edge = (str, i) => {
     for (let d = 0; d <= 8; d += 1) {
       for (const j of [i - d, i + d]) {
@@ -832,17 +834,30 @@ function withLinks(items, links) {
     // Its label and address, for the rich text (R4-LO-05): on the item its text ends in.
     const kept = hits[hits.length - 1].it;
     const to = text === label ? url : text.slice(label.length + 2, -1);
-    if (/^(?:https?:|mailto:|tel:)/i.test(to)) kept.links = [...(kept.links || []), { label, url: to }];
+    if (/^(?:https?:|mailto:|tel:)/i.test(to)) {
+      if (!kept.links || !ownedLinks.has(kept.links)) { kept.links = [...(kept.links || [])]; ownedLinks.add(kept.links); }
+      kept.links.push({ label, url: to });
+    }
     if (text === label) continue;
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
     // Never after the separator past its label: a box a little wider than its letters.
     let end = last.to;
     while (end > 0 && LABEL_TAIL.test(last.it.str[end - 1])) end -= 1;
-    inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
+    const list = inserts.get(last.it);
+    if (list) list.push({ at: end, text: text.slice(label.length) });
+    else inserts.set(last.it, [{ at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {
-    for (const { at, text } of list.sort((p, q) => q.at - p.at)) it.str = it.str.slice(0, at) + text + it.str.slice(at);
+    // From the last place to the first, the string cut once at each: put in one at a time, N addresses in one item cost N².
+    const parts = [];
+    let rest = it.str.length;
+    for (const { at, text } of list.sort((p, q) => q.at - p.at)) {
+      parts.push(it.str.slice(at, rest), text);
+      rest = at;
+    }
+    parts.push(it.str.slice(0, rest));
+    it.str = parts.reverse().join('');
   }
   return out;
 }

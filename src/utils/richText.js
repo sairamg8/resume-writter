@@ -731,16 +731,34 @@ export function sanitizeRichText(html) {
   const closeLists = (depth) => {
     while (open.length && open[open.length - 1].depth > depth) out += `</li></${open.pop().tag}>`;
   };
-  const runsHtml = (runs) => runs.map((r) => {
-    let t = esc(r.text).replace(/\n/g, '<br>');
-    if (r.strike) t = `<s>${t}</s>`;
-    if (r.underline) t = `<u>${t}</u>`;
-    if (r.italic) t = `<em>${t}</em>`;
-    if (r.bold) t = `<strong>${t}</strong>`;
-    const href = r.href && safeHref(r.href);
-    if (href) t = `<a href="${esc(href)}">${t}</a>`;
-    return t;
-  }).join('');
+  // A link's address is written once around each run of runs that share it, not around every run: a link of 10 000
+  // characters with 1 000 bold and plain words in it wrote 10 MB (typing-freeze 7a). A link a block carries on into
+  // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
+  // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
+  // Runs of one link share its address string, so a run is told from the one before it by a pointer compare.
+  let budget = 16 * `${html}`.length + 4096;
+  const runsHtml = (runs) => {
+    let line = '';
+    let cur = ''; // the address of the anchor that is open
+    let was; // the run's address as typed, before it is checked and escaped
+    for (const r of runs) {
+      let t = esc(r.text).replace(/\n/g, '<br>');
+      if (r.strike) t = `<s>${t}</s>`;
+      if (r.underline) t = `<u>${t}</u>`;
+      if (r.italic) t = `<em>${t}</em>`;
+      if (r.bold) t = `<strong>${t}</strong>`;
+      if (r.href !== was) {
+        const h = esc(safeHref((was = r.href)) || '');
+        if (h !== cur) {
+          if (cur) line += '</a>';
+          budget -= (cur = h.length <= budget ? h : '').length;
+          if (cur) line += `<a href="${cur}">`;
+        }
+      }
+      line += t;
+    }
+    return cur ? `${line}</a>` : line;
+  };
   const alignAttr = (b) => (b.align && b.align !== 'left' ? ` style="text-align: ${b.align};"` : '');
 
   for (const b of blocks) {
@@ -780,33 +798,6 @@ export function sanitizeRichText(html) {
   }
   closeLists(0);
   return out;
-}
-
-/**
- * Whether `html` holds a data: URL's base64 payload inside a tag, as a browser's own paste of a picture stores it:
- * what /<[^>]*\bdata:[^\s"'>,;]*;base64,/i found, reading each "<" with no "data:" after it to the end of the
- * text (time squared in a run of them; typing-freeze 7a). One pass: each "data:" is checked once, against the last
- * "<" and ">" before it.
- */
-export function hasDataUrlInTag(html) {
-  const text = String(html);
-  const found = /\bdata:/gi;
-  let lt = -1; // the last "<" and ">" before `scanned`
-  let gt = -1;
-  let scanned = 0;
-  let runEnd = -1; // the payload run of the last "data:" that was read, which no later "data:" inside it can change
-  for (let m = found.exec(text); m; m = found.exec(text)) {
-    for (; scanned < m.index; scanned += 1) {
-      const c = text.charCodeAt(scanned);
-      if (c === 60) lt = scanned;
-      else if (c === 62) gt = scanned;
-    }
-    if (lt <= gt || m.index < runEnd) continue; // inside no tag, or in a run already read
-    runEnd = m.index + 5;
-    while (runEnd < text.length && !/[\s"'>,;]/.test(text[runEnd])) runEnd += 1;
-    if (text.slice(runEnd, runEnd + 8).toLowerCase() === ';base64,') return true;
-  }
-  return false;
 }
 
 /** Plain text (a paste without HTML) as editor HTML: escaped, one line per <br>. */

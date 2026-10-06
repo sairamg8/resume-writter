@@ -1,0 +1,33 @@
+{
+  "cluster": "1006-a-redos",
+  "branch": "claude/wf-1006-a-redos",
+  "base": "3f579152",
+  "rows": [
+    { "id": "A-1", "outcome": "fixed", "commits": ["7c643818", "85cfea8f", "4d281db1", "9bd8c2f7", "48705225"],
+      "tests": ["tests/unit/tf-redos-richtext-links.unit.mjs", "tests/unit/tf-redos-richtext-tokenizer.unit.mjs", "tests/unit/tf-redos-richtext-nesting.unit.mjs"],
+      "summary": "The sanitizer writes a link's address once around each run of runs that share it (one anchor, not one per run), so a link of 10 000 characters with 1 000 bold and plain runs no longer writes 10 MB. The size budget for a link carried over many blocks is counted in escaped characters (16 x input + 4096); an ordinary document with many long, ampersand-heavy addresses keeps every link (test fails on the parked approach). Output changed on purpose: adjacent anchors to one address are one anchor; the tokenizer and nesting tests now compare against the old output with such anchors joined (tests/fixtures/typing-freeze-reference/joinAnchors.mjs). Fail-first green on 7c643818 (run 37400107806). The later commits only shorten the code and move hasDataUrlInTag to src/utils/dataUrlInTag.js (loaded with the editor) because the start-up path had 0.0 kB spare.",
+      "remaining": "A link carried across so many blocks that its escaped addresses pass 16 x input + 4096 comes out as its text alone. Not an ordinary document; the output must repeat the address in each block." },
+    { "id": "A-2", "outcome": "fixed", "commits": ["9b4c5c56"], "tests": ["tests/unit/tf-redos-pdf-links.unit.mjs"],
+      "summary": "importFile.js withLinks copies an item's link list once and pushes to it, and puts the addresses into an item's text with one cut of the string instead of one new string per address. A line of 40 000 links keeps every address and its time grows linearly (ratio of 10 000 to 40 000 links). Fail-first green (run 37399943503).",
+      "remaining": "" },
+    { "id": "A-3", "outcome": "not-a-bug", "commits": ["dc79d66c"], "tests": ["tests/unit/tf-ats-keywords-repeats.unit.mjs"],
+      "summary": "Does not reproduce at HEAD: 100 shapes (25 tokens incl. https://, e-mail, www., hosts, #tags, ci/cd, machine learning, front end x 4 separators) at 6 000 and 24 000 repeats grow linearly; test is green on CI (run 37399945790 and the broad run 37402327343). No src change. A reviewer's claim that 'ci/cd/ci/cd/...' is quadratic was tried (fix + test) and dropped: its test passed without the fix (failfirst run 37402525703), and in the cleaned text '/' becomes a space so the runs are short.",
+      "remaining": "" },
+    { "id": "A-4", "outcome": "fixed", "commits": ["bbf85ab8"], "tests": ["tests/unit/tf-redos-richtext-data-url.unit.mjs"],
+      "summary": "hasDataUrlInTag is compared with a plain, literal reading of its rule and with the old regex on 40 000 seeded texts: no difference found, test only (green in run 37402327343). The function moved to src/utils/dataUrlInTag.js with no change of behaviour.",
+      "remaining": "" },
+    { "id": "A-5", "outcome": "known-limit", "commits": ["427609b8", "81b37134"], "tests": ["tests/unit/tf-redos-richtext-bounds.unit.mjs", "tests/unit/tf-bracket-years-bound.unit.mjs"],
+      "summary": "Product call: all three bounds stay, each pinned at its edge by a test and ordinary input unchanged. toRoman n >= 100000 prints digits (a numeral for 1e15 needs 10^12 letters: no linear output exists). MARKER_CAP: a Word marker over 257 characters is a bullet, not a number (reading every nested marker's text whole was the quadratic; no real marker is that long). bracketYears: a line over 1000 characters is a paragraph, not a title and its years, and is left as typed (a 12 000-comma line took half a second); tests pin 1000 vs 1001 characters.",
+      "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "Reviewer: 'ci/cd' repeated with separators is quadratic in extractJobKeywords. Tried (044267ab): its test passed without the fix, premise wrong ('/' is cleaned to a space), reverted (7bac6d93).",
+      "Reviewer: a long link address that comes back after inner links or blocks is checked and escaped each time. Tried (e9d65b78): its test passed without the fix, reverted (b795cfff); the cost is bounded by the size budget.",
+      "Own review of the helper's A-1 found its first cut dropped nothing but the start-up path was over its cap; code made shorter and hasDataUrlInTag moved off the start-up path (48705225)."
+    ],
+    "fixedByReviewer": ["A-2 and the A-5 bracketYears test read as correct (equal insert positions keep the old order); no change."]
+  },
+  "baselineFailures": [],
+  "notes": "Start-up path (tests/pdf/71-startup-chunks): master is 1100.0 kB, 0.0 spare; this branch at 48705225 is 1099.8 kB, 0.2 kB to spare (run 37402197749), the move of hasDataUrlInTag to its own module paid for A-1. Related-tests run green on 48705225 (37402327343: tf-redos-*, richText, ats, import, importText, json-resume, contacts, bullet-optimizer, pdf 02/95/104/71). Final head only adds the reverts of two unproven commits and this report, so src equals 48705225. The failfirst of the test-only commits (A-3 test, A-4, A-5) fails by design (no src change). No full gate was run."
+}
