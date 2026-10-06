@@ -751,7 +751,7 @@ describe('what the bar shows still updates', () => {
     try {
       t.call(t.exportButton(), 'onClick'); // opens the menu, on the Resume document
       assert.ok(t.buttonLabels().includes('Export PDF'), t.buttonLabels().join(' | '));
-      const w = await t.measure(() => t.press('doc-switch-letter'));
+      const w = await t.measure(() => t.pressUntil('doc-switch-letter', () => t.openDoc()[0] === 'doc-switch-letter', 'the Cover letter is the open document'));
       assert.deepEqual(t.openDoc(), ['doc-switch-letter']);
       assert.ok(t.buttonLabels().includes('Export Cover Letter PDF'), t.buttonLabels().join(' | '));
       assert.ok(w.names('header').includes('ExportDropdown'), w.report());
@@ -926,7 +926,7 @@ describe('what the alerts, the switch, the chip and the Design button show still
     const t = await openEditor();
     try {
       assert.deepEqual(t.openDoc(), ['doc-switch-resume']);
-      let w = await t.measure(() => t.press('doc-switch-letter'));
+      let w = await t.measure(() => t.pressUntil('doc-switch-letter', () => t.openDoc()[0] === 'doc-switch-letter', 'the Cover letter is the open document'));
       assert.equal(t.modes().doc, 'coverletter');
       assert.deepEqual(t.openDoc(), ['doc-switch-letter']);
       assert.ok(w.count('switch') >= 1 && w.count('modes') >= 1, `the switch rendered for it. ${w.report()}`);
@@ -961,7 +961,7 @@ describe('what the alerts, the switch, the chip and the Design button show still
       await t.pressUntil('doc-switch-letter', () => t.dockOnScreen() === null, 'the dock is closed');
       assert.equal(t.dockOnScreen(), null, 'the dock is closed');
       assert.equal(t.modes().doc, 'coverletter');
-      await t.press('doc-switch-resume');
+      await t.pressUntil('doc-switch-resume', () => t.openDoc()[0] === 'doc-switch-resume', 'the Resume is the open document');
       assert.equal(t.dockOnScreen(), null, 'the Resume switch opens no dock');
       assert.equal(t.modes().doc, 'resume');
     } finally { await t.close(); }
@@ -980,7 +980,7 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await settle();
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a notice came after the picker was made');
       t.act(() => held('coverletter'));
-      await settle();
+      await until(() => t.openDoc()[0] === 'doc-switch-letter', 'the Cover letter is the open document');
       assert.equal(t.modes().doc, 'coverletter');
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a stale picker read the address as it was at the first render, and took the notice off');
     } finally { await t.close(); }
@@ -1018,13 +1018,13 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await t.press('pill-preview');
       assert.equal(t.previewLayout(), 'preview');
       t.act(() => heldDoc('coverletter'));
-      await settle();
+      await until(() => t.openDoc()[0] === 'doc-switch-letter', 'the Cover letter is the open document');
       assert.equal(t.modes().doc, 'coverletter');
       assert.equal(t.previewLayout(), 'editor', 'a stale picker knew a desktop, and left the phone on the preview');
       await t.press('pill-preview');
       assert.equal(t.previewLayout(), 'preview');
       t.act(() => heldDock('ats'));
-      await settle();
+      await until(() => t.dockOnScreen() === 'ats', 'the ATS dock opens');
       assert.equal(t.modes().dock, 'ats');
       assert.equal(t.previewLayout(), 'editor', 'a stale toggle left the phone on the preview, under the dock it opened');
     } finally { await t.close(); }
