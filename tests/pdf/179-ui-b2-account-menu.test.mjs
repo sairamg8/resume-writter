@@ -49,6 +49,21 @@ describe('the avatar menu', () => {
     } finally { await b.view.unmount(); }
   });
 
+  it('is 288 px wide, and 224 px in the editor\'s narrow split panel (hideName) so the panel does not clip its left edge', async () => {
+    const wide = await bar();
+    try {
+      wide.click(wide.by('account-button'));
+      const cls = (wide.by('account-menu').getAttribute('class') ?? '').split(/\s+/);
+      assert.ok(cls.includes('w-72') && !cls.includes('w-56'), `the full menu: ${cls.join(' ')}`);
+    } finally { await wide.view.unmount(); }
+    const narrow = await bar({ hideName: true });
+    try {
+      narrow.click(narrow.by('account-button'));
+      const cls = (narrow.by('account-menu').getAttribute('class') ?? '').split(/\s+/);
+      assert.ok(cls.includes('w-56') && !cls.includes('w-72'), `the narrow-panel menu: ${cls.join(' ')}`);
+    } finally { await narrow.view.unmount(); }
+  });
+
   it('Keyboard shortcuts appears only when onShortcuts is passed, runs it and closes the menu', async () => {
     let calls = 0;
     const b = await bar({ onShortcuts: () => { calls += 1; } });

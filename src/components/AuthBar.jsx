@@ -221,7 +221,7 @@ export default function AuthBar({
         </button>
 
         {menuOpen && (
-          <div data-testid="account-menu" className="cv-card absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw_-_2rem)] p-1.5 shadow-pop">
+          <div data-testid="account-menu" className={`cv-card absolute right-0 top-full mt-2 z-50 ${hideName ? 'w-56' : 'w-72'} max-w-[calc(100vw_-_2rem)] p-1.5 shadow-pop`}>
             <div className="flex items-center gap-3 p-3">
               <Avatar user={user} size="w-10 h-10 text-sm" />
               <div className="min-w-0">
