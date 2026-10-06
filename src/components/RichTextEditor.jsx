@@ -8,10 +8,6 @@ import { hasDataUrlInTag } from '@/utils/dataUrlInTag';
 import { useFieldIds } from '@/hooks/useFieldIds';
 import BulletOptimizerModal from '@/components/BulletOptimizerModal';
 
-/**
- * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
- * sits in, or by `ariaLabel` (for an editor under its own heading).
- */
 // What one paste takes in. A 5.7 MB paste held the page for ~2 s (typing-freeze hunt, C-2); a résumé
 // field never needs more than a few kB. Over the limit the first part is inserted and a line says so.
 export const MAX_PASTE_CHARS = 200000;
@@ -25,6 +21,10 @@ export function cutPaste(text) {
   return t.slice(0, high >= 0xd800 && high <= 0xdbff ? MAX_PASTE_CHARS - 1 : MAX_PASTE_CHARS);
 }
 
+/**
+ * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
+ * sits in, or by `ariaLabel` (for an editor under its own heading).
+ */
 export default function RichTextEditor({ label, ariaLabel, value, onChange, placeholder, rows = 3 }) {
   const ref = useRef(null);
   const ids = useFieldIds(label);
