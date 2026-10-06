@@ -731,16 +731,40 @@ export function sanitizeRichText(html) {
   const closeLists = (depth) => {
     while (open.length && open[open.length - 1].depth > depth) out += `</li></${open.pop().tag}>`;
   };
-  const runsHtml = (runs) => runs.map((r) => {
-    let t = esc(r.text).replace(/\n/g, '<br>');
-    if (r.strike) t = `<s>${t}</s>`;
-    if (r.underline) t = `<u>${t}</u>`;
-    if (r.italic) t = `<em>${t}</em>`;
-    if (r.bold) t = `<strong>${t}</strong>`;
-    const href = r.href && safeHref(r.href);
-    if (href) t = `<a href="${esc(href)}">${t}</a>`;
-    return t;
-  }).join('');
+  // A link's address is written once around each run of runs that share it, not around every run: a link of 10 000
+  // characters with 1 000 bold and plain words in it wrote 10 MB (typing-freeze 7a). A link a block carries on into
+  // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
+  // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
+  // Each address is checked and escaped once however often it comes back.
+  let budget = 16 * String(html ?? '').length + 4096;
+  const written = new Map();
+  const hrefOf = (raw) => {
+    let h = written.get(raw);
+    if (h === undefined) { const safe = raw && safeHref(raw); h = safe ? esc(safe) : ''; written.set(raw, h); }
+    return h;
+  };
+  const runsHtml = (runs) => {
+    let line = '';
+    let group = '';
+    let cur = ''; // the address the group is inside
+    const flush = () => { line += cur ? `<a href="${cur}">${group}</a>` : group; group = ''; };
+    for (const r of runs) {
+      let t = esc(r.text).replace(/\n/g, '<br>');
+      if (r.strike) t = `<s>${t}</s>`;
+      if (r.underline) t = `<u>${t}</u>`;
+      if (r.italic) t = `<em>${t}</em>`;
+      if (r.bold) t = `<strong>${t}</strong>`;
+      const h = hrefOf(r.href);
+      if (h !== cur) {
+        flush();
+        cur = h.length <= budget ? h : '';
+        budget -= cur.length;
+      }
+      group += t;
+    }
+    flush();
+    return line;
+  };
   const alignAttr = (b) => (b.align && b.align !== 'left' ? ` style="text-align: ${b.align};"` : '');
 
   for (const b of blocks) {

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRichText, sanitizeRichText, richTextToPlain, hasRichText } from '../../src/utils/richText.js';
 import * as before from '../fixtures/typing-freeze-reference/richText.mjs';
+import { joinAnchors } from '../fixtures/typing-freeze-reference/joinAnchors.mjs';
 
 const DEPTH = 60_000;
 const LIMIT_MS = 2000;
@@ -66,6 +67,6 @@ test('ordinary Word lists read as before, on 3000 seeded documents', () => {
     const count = 2 + Math.floor(random() * 16);
     for (let i = 0; i < count; i += 1) html += PIECES[Math.floor(random() * PIECES.length)];
     assert.deepEqual(parseRichText(html), before.parseRichText(html), JSON.stringify(html));
-    assert.equal(sanitizeRichText(html), before.sanitizeRichText(html), JSON.stringify(html));
+    assert.equal(sanitizeRichText(html), joinAnchors(before.sanitizeRichText(html)), JSON.stringify(html));
   }
 });

@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRichText, sanitizeRichText, richTextToPlain } from '../../src/utils/richText.js';
 import * as before from '../fixtures/typing-freeze-reference/richText.mjs';
+import { joinAnchors } from '../fixtures/typing-freeze-reference/joinAnchors.mjs';
 
 /** The old reader took 3 to 40 s on each; this one takes a few milliseconds to a hundred. */
 const LIMIT_MS = 1000;
@@ -46,7 +47,7 @@ test('text is kept when a "<" never closes', () => {
 test('a quote inside a tag name opens the attributes, as it always did', () => {
   const table = ['<a"b c" d>x</a>', '<p"x>y</p>', '<a"x" href="http://q.io">link</a>', '<b/ >bold</b>', "<i'a'>it</i>"];
   for (const html of table) {
-    assert.equal(sanitizeRichText(html), before.sanitizeRichText(html), html);
+    assert.equal(sanitizeRichText(html), joinAnchors(before.sanitizeRichText(html)), html);
     assert.deepEqual(parseRichText(html), before.parseRichText(html), html);
   }
 });
@@ -71,6 +72,6 @@ test('the same blocks and the same HTML as the old reader on 4000 seeded documen
     const count = 1 + Math.floor(random() * 14);
     for (let i = 0; i < count; i += 1) html += PIECES[Math.floor(random() * PIECES.length)];
     assert.deepEqual(parseRichText(html), before.parseRichText(html), JSON.stringify(html));
-    assert.equal(sanitizeRichText(html), before.sanitizeRichText(html), JSON.stringify(html));
+    assert.equal(sanitizeRichText(html), joinAnchors(before.sanitizeRichText(html)), JSON.stringify(html));
   }
 });
