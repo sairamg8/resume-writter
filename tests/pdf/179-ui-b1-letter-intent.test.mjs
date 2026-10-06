@@ -36,11 +36,13 @@ async function dashboard() {
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
   const { loaders, warmed } = _lazyForTest;
-  // The code before this fix judged by a stubbed wall clock (_lazyForTest.clock); the fix has none, so this stays a no-op there.
-  const clock = _lazyForTest.clock ?? { now: () => 0 };
-  const realNow = clock.now;
-  let t = 1_000_000;
-  clock.now = () => t;
+  // Time really passes for the page: Date.now and performance.now are skewed by advance(), so a wall-clock guard
+  // of any name would see the wait (the first fix judged by a 10 s window).
+  const realDateNow = Date.now;
+  const realPerfNow = performance.now.bind(performance);
+  let skew = 0;
+  Date.now = () => realDateNow() + skew;
+  performance.now = () => realPerfNow() + skew;
   const real = { ...loaders };
   warmed.clear();
   let failPicker;
@@ -66,12 +68,13 @@ async function dashboard() {
     made, failPicker,
     press(label) { view.act(() => reactProps(button(label)).onClick({})); },
     interact(target, type) { view[target].dispatchEvent({ type }); },
-    advance(ms) { t += ms; },
+    advance(ms) { skew += ms; },
     listening: () => view.document.listeners('pointerdown') > 0,
     async close() {
       await view.unmount();
       Object.assign(loaders, real);
-      clock.now = realNow;
+      Date.now = realDateNow;
+      performance.now = realPerfNow;
       console.error = savedError;
       delete globalThis.localStorage;
     },
@@ -106,12 +109,16 @@ for (const [name, target, type] of [['(b) a pointerdown', 'document', 'pointerdo
   });
 }
 
-it('(d) the New Cover click itself does not count: a failure right after it makes the letter', async () => {
-  const page = await dashboard();
-  try {
-    page.press('New Cover');
-    page.failPicker();
-    await until(() => page.made.length > 0, 'a letter made');
-    assert.deepEqual(page.made, ['resume_b']);
-  } finally { await page.close(); }
-});
+// A browser sends the gesture's own pointerdown (or the Enter keydown) before the click: they must not count.
+for (const [name, type] of [['(d) the New Cover click itself (its pointerdown first)', 'pointerdown'], ['(d2) the New Cover key press itself (its keydown first)', 'keydown']]) {
+  it(`${name} does not count: a failure right after it makes the letter`, async () => {
+    const page = await dashboard();
+    try {
+      page.interact('document', type);
+      page.press('New Cover');
+      page.failPicker();
+      await until(() => page.made.length > 0, 'a letter made');
+      assert.deepEqual(page.made, ['resume_b']);
+    } finally { await page.close(); }
+  });
+}

@@ -78,7 +78,8 @@ it('an abandoned New Cover (the person clicked elsewhere) makes no letter, and t
     await until(page.listening, 'the request is watching');
     page.interact('window', 'hashchange');
     page.failPicker();
-    await settle();
+    // The retry that shows a failed lazy piece is throttled by React (about 300 ms): wait until the request has closed.
+    await until(() => !page.listening(), 'the abandoned request closed');
     assert.deepEqual(page.made, [], 'no stray letter from the abandoned request');
     page.press('New Cover');
     await until(() => page.made.length > 0, 'the fresh request makes its letter');
