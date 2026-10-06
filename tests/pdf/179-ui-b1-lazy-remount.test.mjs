@@ -1,0 +1,58 @@
+// UI rebuild B1 (hunt B1-H2-12/18): the Dashboard made a new React.lazy() at every mount, so a remount (Back)
+// suspended once more and committed the Suspense fallback (null): Career History was absent from the first
+// commit even with its chunk loaded, and a restored scroll offset could be clamped. The piece is made once
+// per loader now, so a remount renders a loaded piece synchronously.
+// The real Dashboard over tests/pdf/fake-dom.mjs, mounted twice.
+import { before, after, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { setup, teardown, loadModule, resume } from './harness.mjs';
+import { elements, mount } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
+import { MemoryStorage } from './resume-tab.mjs';
+
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
+after(teardown);
+
+const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
+async function until(check, what) {
+  for (let i = 0; i < 500; i += 1) {
+    if (check()) return;
+    await new Promise((r) => { setTimeout(r, 10); });
+  }
+  assert.fail(`never: ${what}`);
+}
+const cv = (id, name, updatedAt) => ({ ...resume({ personal: { name: `${name} Person`, title: 'Analyst' } }), id, name, updatedAt });
+
+it('a second mount shows Career History in its first commit, with no waiting', async () => {
+  const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
+  await loadModule('/src/components/NewLetterModal.jsx');
+  await loadModule('/src/components/CareerHistoryPanel.jsx');
+  _lazyForTest.warmed.clear();
+  globalThis.localStorage = new MemoryStorage([]);
+  const noop = () => {};
+  const resumes = [cv('resume_a', 'Older CV', 1000), cv('resume_b', 'Newest CV', 3000)];
+  const store = {
+    appState: { resumes, activeId: 'resume_a' }, persistError: null, recovery: null,
+    duplicateResume: noop, deleteResume: noop, renameResume: noop, createLetter: () => null,
+  };
+  const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: noop, signOut: noop };
+  const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
+  const open = () => mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
+    createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
+  const panel = (view) => [...elements(view.document.body)].some((el) => el.tagName === 'BUTTON' && text(el) === 'Open Job Tracker →');
+  try {
+    const first = open();
+    await until(() => panel(first), 'the panel on the first mount');
+    await first.unmount();
+    const second = open();
+    assert.ok(panel(second), 'the panel is in the first commit of the second mount');
+    await second.unmount();
+  } finally {
+    delete globalThis.localStorage;
+  }
+});

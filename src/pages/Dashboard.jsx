@@ -24,13 +24,24 @@ const loaders = {
 };
 const warmed = new Set();
 export const _lazyForTest = { loaders, warmed };
+// One lazy() per piece, made once: a new one at each mount suspends once more, so a remount (Back) lost
+// the loaded piece from its first commit. Keyed by the loader, so a replaced loader gets its own.
+const views = new Map();
+const viewFor = (key) => {
+  const load = loaders[key];
+  if (views.get(key)?.load === load) return views.get(key).View;
+  // A rejection stays in a lazy() for good: drop it, so the next ask (Try again, a remount) imports again.
+  const View = lazy(() => load().catch((e) => { if (views.get(key)?.View === View) views.delete(key); throw e; }));
+  views.set(key, { load, View });
+  return View;
+};
 /** Fetches a piece ahead of its first use, once: in idle time, or when its button is hovered or focused. */
 const warm = (key) => { if (!warmed.has(key)) { warmed.add(key); loaders[key]().catch(() => {}); } };
 
 /** `load`'s piece, props passed on. A failed load shows `fallback(retry)`; retry imports it again. */
 function Lazy({ load, fallback, ...props }) {
   const [tries, setTries] = useState(0);
-  const View = useMemo(() => lazy(() => loaders[load]()), [load, tries]); // eslint-disable-line react-hooks/exhaustive-deps
+  const View = useMemo(() => viewFor(load), [load, tries]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <ErrorBoundary key={tries} fallback={fallback(() => setTries(tries + 1))}>
       <Suspense fallback={null}><View {...props} /></Suspense>
