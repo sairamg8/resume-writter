@@ -13,16 +13,18 @@ import { parseMonthYear } from './dates.js';
  */
 function asPrinted(item, showDates) {
   const hides = (key) => Array.isArray(item.hiddenFields) && item.hiddenFields.includes(key);
+  const noCompany = hides('company');
+  const noRole = hides('role');
   const noStart = !showDates || hides('startDate');
   const noEnd = !showDates || hides('endDate');
-  if (!hides('company') && !hides('role') && !noStart && !noEnd) return item;
+  if (!(noCompany || noRole || noStart || noEnd)) return item;
   return {
     ...item,
-    company: hides('company') ? '' : item.company,
-    role: hides('role') ? '' : item.role,
+    company: noCompany ? '' : item.company,
+    role: noRole ? '' : item.role,
     startDate: noStart ? '' : item.startDate,
     endDate: noEnd ? '' : item.endDate,
-    current: noEnd ? false : item.current,
+    current: !noEnd && item.current,
   };
 }
 
@@ -78,7 +80,7 @@ export function careerMonths(items, now = new Date()) {
 }
 
 /** A company as compared: trimmed, inner spaces collapsed, any case ("Initech " is "initech"). */
-const companyKey = (name) => String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+const companyKey = (name) => `${name ?? ''}`.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /** How many different companies `items` name (a promotion at one is one); a blank name is none. */
 export function companyCount(items) {
