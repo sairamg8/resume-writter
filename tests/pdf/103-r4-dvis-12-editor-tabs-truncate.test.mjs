@@ -1,10 +1,11 @@
-// R4-DVIS-12: in a narrow split panel (240–360 px wide) the editor's Resume | Cover Letter | ATS Check
-// tabs kept their full no-wrap width — a flex item's min-width is its content — so they spilled past
-// their rounded group and slid under the Design button, which hid ATS Check and part of Cover Letter.
-// From sm up the tabs now share the group's width (flex-1 with sm:min-w-0) and each label is a span that
-// truncates; a phone still keeps each tab and the group whole (min-w-max) and scrolls the row. The fake DOM has no
-// layout, so this pins the classes that make it on the real EditorModeBar, mounted with
-// react-dom/client over tests/pdf/fake-dom.mjs.
+// R4-DVIS-12 (restated for the B3 frame): in a narrow split panel (240–360 px wide) the editor's controls must not
+// spill out of their rounded group and slide under their neighbour. The old Resume | Cover Letter | ATS Check tab strip
+// is gone (B3): the bar now has the document switch (Resume | Cover Letter), then the ATS chip and the Design button.
+// The same intent holds for them: the two switch buttons share the group's width (flex-1 with min-w-0, a flex item's
+// min-width being its content otherwise) and each label is a span that truncates; the group itself shrinks
+// (min-w-0); the ATS chip and the Design button keep their size beside it (shrink-0, no wrap), so the switch gives
+// way and not they. The fake DOM has no layout, so this pins the classes that make it on the real EditorModeBar,
+// mounted with react-dom/client over tests/pdf/fake-dom.mjs.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -14,32 +15,35 @@ before(setup);
 after(teardown);
 
 const tokens = (el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
-const LABELS = ['Resume', 'Cover Letter', 'ATS Check'];
+const byTid = (all, id) => all.find((el) => el.getAttribute('data-testid') === id);
+const SWITCH = [['doc-switch-resume', 'Resume'], ['doc-switch-letter', 'Cover Letter']];
 
-it('each tab shrinks with its group and truncates its label, instead of spilling under the Design button', async () => {
+it('each switch button shares its group and truncates its label; the chip and the Design button keep their size beside it', async () => {
   const { EditorModeBar } = await loadModule('/src/components/EditorHeader.jsx');
-  for (const activeTab of ['resume', 'coverletter', 'ats', 'design']) {
-    const view = mount(EditorModeBar, { activeTab, setActiveTab() {} });
-    try {
-      const all = [...elements(view.container)];
-      for (const label of LABELS) {
-        const tab = all.find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === label);
-        assert.ok(tab, `${activeTab}: the ${label} tab`);
-        assert.ok(tokens(tab).includes('flex-1'), `${label}: the tabs share the group's width`);
-        assert.ok(tokens(tab).includes('sm:min-w-0'), `${label}: without sm:min-w-0 the tab keeps its full no-wrap width and overflows the group`);
-        // On a phone each tab stays whole: a bare min-w-0 there splits a 375 px row into equal thirds,
-        // too narrow for "Cover Letter", which was cut to "Cover Le…" where it used to fit.
-        assert.ok(tokens(tab).includes('min-w-max'), `${label}: a phone keeps the tab at its full width`);
-        assert.ok(!tokens(tab).includes('min-w-0'), `${label}: no min-w-0 below sm, where the row scrolls instead`);
-        const text = [...elements(tab)].find((el) => el.tagName === 'SPAN' && el.textContent === label);
-        assert.ok(text, `${label}: its label is a span that can truncate, not a bare text node`);
-        for (const t of ['min-w-0', 'truncate']) assert.ok(tokens(text).includes(t), `${label}: the label span has ${t}`);
-        const group = tab.parentNode;
-        assert.ok(tokens(group).includes('sm:min-w-0'), 'from sm up the group shrinks with the row');
-        assert.ok(tokens(group).includes('min-w-max'), 'a phone keeps the tabs whole and scrolls the row');
-      }
-      const design = all.find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Design & Customize');
-      assert.ok(design && tokens(design).includes('shrink-0'), 'the Design button keeps its size beside the tabs');
-    } finally { await view.unmount(); }
+  for (const doc of ['resume', 'coverletter']) {
+    for (const dock of [null, 'ats', 'design']) {
+      const view = mount(EditorModeBar, { doc, dock, onPickDoc() {}, onToggleDock() {} });
+      try {
+        const all = [...elements(view.container)];
+        const where = `${doc}, dock ${dock}`;
+        for (const [id, label] of SWITCH) {
+          const button = byTid(all, id);
+          assert.ok(button, `${where}: the ${label} button`);
+          assert.ok(tokens(button).includes('flex-1'), `${where}, ${label}: the two buttons share the group's width`);
+          assert.ok(tokens(button).includes('min-w-0'), `${where}, ${label}: without min-w-0 the button keeps its full no-wrap width and overflows the group`);
+          const text = [...elements(button)].find((el) => el.tagName === 'SPAN' && el.textContent === label);
+          assert.ok(text, `${where}, ${label}: its label is a span that can truncate, not a bare text node`);
+          for (const t of ['min-w-0', 'truncate']) assert.ok(tokens(text).includes(t), `${where}, ${label}: the label span has ${t}`);
+          assert.ok(tokens(button.parentNode).includes('min-w-0'), `${where}: the group shrinks with the row`);
+        }
+        for (const id of ['ats-chip', 'design-button']) {
+          const chip = byTid(all, id);
+          assert.ok(chip, `${where}: ${id}`);
+          assert.ok(tokens(chip).includes('shrink-0'), `${where}, ${id}: keeps its size beside the switch`);
+          assert.ok(tokens(chip).includes('whitespace-nowrap'), `${where}, ${id}: its words stay on one line`);
+          assert.ok(!tokens(chip).includes('min-w-0'), `${where}, ${id}: it does not give way, the switch does`);
+        }
+      } finally { await view.unmount(); }
+    }
   }
 });
