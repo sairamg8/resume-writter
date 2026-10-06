@@ -138,8 +138,10 @@ describe('nothing changes for ordinary text', () => {
       section('custom', [{ title: 'Talks', subtitle: 'Conference', description: `<p>${words(250, 12)}</p>` }]),
     ],
   });
+  /** Items as pdf.js reads them, minus the random six-letter tag pdfkit puts before a subset font's name (a build's own). */
+  const untagged = (items) => items.map((item) => ({ ...item, font: String(item.font).replace(/^[A-Z]{6}\+/, '') }));
   /** What a page prints and where, as pdf.js reads it back. */
-  const printed = (pages) => pages.map((p) => ({ W: p.W, H: p.H, items: p.items, links: p.links, strokes: [...p.strokes].sort(), fills: [...p.fills].sort() }));
+  const printed = (pages) => pages.map((p) => ({ W: p.W, H: p.H, items: untagged(p.items), links: p.links, strokes: [...p.strokes].sort(), fills: [...p.fills].sort() }));
 
   it('every template builds the same pages of a typical résumé with the cut as without it', async () => {
     for (const template of TEMPLATES) {
@@ -175,6 +177,8 @@ describe('a huge plain field prints all of its text, and its first page as it wa
     PdfText._setHugeTextCutForTest?.(null);
     const cut = await read(await render(interests(text)));
     assert.ok(cut.length > 3, `${cut.length} pages`);
-    assert.deepEqual(cut[0].items, whole[0].items, 'page 1');
+    const tag = /^[A-Z]{6}\+/; // pdfkit's random subset tag in front of a font's name differs from build to build
+    const untag = (items) => items.map((item) => ({ ...item, font: String(item.font).replace(tag, '') }));
+    assert.deepEqual(untag(cut[0].items), untag(whole[0].items), 'page 1');
   });
 });
