@@ -17,9 +17,9 @@
  *   layer reads each back as typed;
  * - the harness's own server (the bundled Noto Sans, public/) and data: URLs go through to the real fetch;
  * - anything else FAILS LOUDLY: the fetch rejects naming the URL, the URL is listed in `unexpected`, and
- *   `assertClean()` — which a test runs after each case — throws for it, though the app swallows a failed
- *   font fetch and prints in Noto Sans. A font the app now asks for that is not in PACKAGES, or a face the
- *   metadata does not list, shows up as a red test that names it, not as a quiet fallback.
+ *   `assertClean()` — which a test runs after each case — throws for what that case asked, once, though the
+ *   app swallows a failed font fetch and prints in Noto Sans. A font the app now asks for that is not in
+ *   PACKAGES, or a face the metadata does not list, shows up as a red case that names it, not as a quiet fallback.
  *
  * It also refuses every connection from this process to another machine (net.Socket#connect), and lists it in
  * `refused`: the proof that the test made no network request, by whatever means.
@@ -278,15 +278,16 @@ function connectOptions([first, second]) {
 /**
  * Put the stand-in in place of the CDN: fetch is replaced, and connections beyond this machine are refused.
  * `missing`: package names that answer 404, a name that is no font. Returns what a test asks it:
- * `served` (every CDN URL answered), `unexpected` (URLs it does not know), `refused` (connections beyond
- * this machine), `assertClean()` (throws for the last two), `forget()` (clears them, for a test of that),
- * `restore()`.
+ * `served` (every CDN URL answered), `unexpected` (URLs it does not know) and `refused` (connections beyond
+ * this machine), both for good; `assertClean()` (throws for what was added to those two since it last looked);
+ * `restore()`. Stand-ins nest: a second one, restored first, keeps its own lists.
  */
 export function fakeFontsource({ missing = [] } = {}) {
   const gone = new Set(missing);
   const served = [];
   const unexpected = [];
   const refused = [];
+  const reported = { unexpected: 0, refused: 0 }; // how much of each list assertClean has thrown for
   const realFetch = globalThis.fetch;
   const realConnect = net.Socket.prototype.connect;
 
@@ -318,14 +319,12 @@ export function fakeFontsource({ missing = [] } = {}) {
     refused,
     assertClean() {
       const problems = [
-        ...unexpected.map((url) => `${url} is not served by the stand-in`),
-        ...refused.map((to) => `a connection to ${to}`),
+        ...unexpected.slice(reported.unexpected).map((url) => `${url} is not served by the stand-in`),
+        ...refused.slice(reported.refused).map((to) => `a connection to ${to}`),
       ];
+      reported.unexpected = unexpected.length;
+      reported.refused = refused.length;
       if (problems.length) throw new Error(`the test reached for the network: ${problems.join('; ')}`);
-    },
-    forget() {
-      unexpected.length = 0;
-      refused.length = 0;
     },
     restore() {
       globalThis.fetch = realFetch;

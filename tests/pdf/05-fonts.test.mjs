@@ -126,18 +126,26 @@ describe('the stand-in was all the network these cases used', () => {
     });
   });
 
+  // The two that follow try the stand-in's refusals on a second one, restored at once: the first one's lists
+  // (above) and its hook after each case are not touched by them.
   it('a URL it does not know fails loudly and is listed: a font fetch cannot slip back in unseen', async () => {
-    const face = 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5/files/inter-latin-450-normal.woff'; // no such weight
-    await assert.rejects(fetch(face), /inter-latin-450-normal\.woff is not served by the font CDN stand-in/);
-    await assert.rejects(fetch('https://fonts.example.com/inter.woff'), /fonts\.example\.com\/inter\.woff is not served/);
-    assert.deepEqual(cdn.unexpected, [face, 'https://fonts.example.com/inter.woff']);
-    assert.throws(() => cdn.assertClean(), /reached for the network: .*inter-latin-450-normal\.woff is not served/, 'what the hook after each case turns into a red case');
-    cdn.forget();
+    const probe = fakeFontsource();
+    try {
+      const face = 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5/files/inter-latin-450-normal.woff'; // no such weight
+      await assert.rejects(fetch(face), /inter-latin-450-normal\.woff is not served by the font CDN stand-in/);
+      await assert.rejects(fetch('https://fonts.example.com/inter.woff'), /fonts\.example\.com\/inter\.woff is not served/);
+      assert.deepEqual(probe.unexpected, [face, 'https://fonts.example.com/inter.woff']);
+      assert.throws(() => probe.assertClean(), /reached for the network: .*inter-latin-450-normal\.woff is not served/, 'what the hook after each case turns into a red case');
+      probe.assertClean(); // once: the next case is not failed for it again
+    } finally { probe.restore(); }
   });
 
   it('a connection to another machine is refused and listed', () => {
-    assert.throws(() => net.connect({ host: 'fonts.example.com', port: 443 }), /connection to fonts\.example\.com:443 was refused/);
-    assert.deepEqual(cdn.refused, ['fonts.example.com:443']);
-    cdn.forget();
+    const probe = fakeFontsource();
+    try {
+      assert.throws(() => net.connect({ host: 'fonts.example.com', port: 443 }), /connection to fonts\.example\.com:443 was refused/);
+      assert.deepEqual(probe.refused, ['fonts.example.com:443']);
+      assert.throws(() => probe.assertClean(), /a connection to fonts\.example\.com:443/);
+    } finally { probe.restore(); }
   });
 });
