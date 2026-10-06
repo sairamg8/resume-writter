@@ -83,3 +83,7 @@ Search field; Back up and sync card; Documents save chip; Terms/Privacy entries 
 
 ## Owner calls taken (defaults)
 Nav wording Applications / Documents (as the canvas); search omitted; Keyboard shortcuts entry only when a page passes `onShortcuts`.
+
+## Full gate (GREEN)
+Run 37491778368 on `26f4d0b` (src identical to `d4f7dc8`; two earlier gates on older heads were cancelled for it). Read from the logs: 15 jobs all green (lint, build, suite 1-6, Playwright 1-3, Cypress 1-4). Suite shards 2514, 2009, 1484, 2012, 1820, 2094 tests (11,933 in all; 0 fail; the skipped ones are the suite's own); Playwright 46 + 55 + 25 passed (+ 1 skipped); Cypress 70 + 90 + 71 + 50 = 281 passed; `start-up path 1083.8 kB of the 1,100 kB cap: 16.2 kB to spare`.
+Performance baseline for B3 (run 37491897100, `perf: all`, same code): 17 of 17 budgets met: PDF build Classic 61 ms, large résumé 270 ms; keystroke to painted pages 338 ms; start-up script 1,084 kB / gzip 340 kB (cap 450) / largest chunk 457 kB (cap 500); open the editor to the first pages 1,137 ms; browser last key to the pages 440 ms (443 ms with every entry open); longest main-thread task while typing 0 ms.
