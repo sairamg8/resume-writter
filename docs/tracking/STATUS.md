@@ -67,9 +67,12 @@ Word Sidebar band.
   (pdf.js paint order, canvas reuse) and PERF-6 (Gate B, a worker watchdog) landed 2026-10-05 (fail-first proven).
   PERF-4 (one commit per keystroke) done 2026-10-06: a keystroke in a field renders no component of any untouched entry or
   section (tests/pdf/165, fail-first; the cause was dnd-kit's sensor options built anew at every render). Its follow-ups
-  (the Personal Info editor, the editor header, Board.jsx's and Backlog.jsx's sensors) are fixed on
-  `claude/perf4-followups-1006` (tests/pdf/172, 173, 165; fail-first proven), not on master yet. Left: the PDF build time of
-  a 200,000-character field; EditorAlerts and EditorModeBar still re-render per key.
+  (the Personal Info editor, the editor header, the alerts and mode bar, Board.jsx's and Backlog.jsx's sensors) are done
+  (tests/pdf/165, 172, 173; fail-first proven). Batch b (2026-10-06, `claude/batch-b-1006`, see HANDOFF): PdfPreview has a
+  budget on every pdf.js call (tests/pdf/174), and a plain text field of 200,000 characters builds in linear time (tests/pdf/175;
+  one rich-text paragraph was already fixed by typing-freeze 7b). Left: thousands of short blocks (paragraphs, list items) in ONE
+  field are laid out again for every page by react-pdf (2,000 bullets of 100 characters take 23 s, over the worker's 20 s budget, so
+  Export fails too): a product call (cap the blocks per field) or a yarn patch of @react-pdf/layout.
 - R2-143 (open-source release): only the owner items in section 3 are left.
 - R2-147 (per-section styling): done 2026-10-05 — column layout (details top/left/right, mixed columns, widths:
   Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven. Right-sidebar PDF import done
@@ -91,6 +94,7 @@ watchdog in PdfPreview. Reports: `wf-reports/1006-*.json`.
 - Rows R2-137 and R2-133 still describe the old Word band; update them from `reports/r4-exp.json`.
 - Update R2-142's and R2-148's "Left" notes to what Round 4 fixed.
 - bug-status.md's header still says `cb58695`.
+- R4-PDF-02's row says its donor half is open: R4-LO-17 closed it (HANDOFF, batch b); R4-SW-I-02 is closed by `35f04b10`. The R4 tracker is generated from `docs/tracking/fixes3/reports/`, which the 2026-10-06 batches (`wf-reports/1006-*.json`) are not in: their outcomes are in HANDOFF.
 
 ## 5. Parked by the owner
 
