@@ -67,6 +67,9 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
   const view = mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
     createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
+  // The Career History sidebar is on screen from the first render, so its own boundary asks for its code at
+  // once (React.lazy); only the prefetch's fetches are counted below, so that first ask is set aside.
+  calls.career = 0;
   const all = () => [...elements(view.document.body)];
   return {
     view, calls, all,

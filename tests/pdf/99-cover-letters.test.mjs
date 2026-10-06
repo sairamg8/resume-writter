@@ -94,6 +94,7 @@ async function openApp(resumes, dataVersion = 13) {
   // The picker's code loads when New Cover first opens it (Dashboard.jsx, Lazy): loaded here already, so
   // the page's settle below waits for React's boundary, not for Vite's first transform of the Dialog.
   await loadModule('/src/components/NewLetterModal.jsx');
+  await loadModule('/src/components/CareerHistoryPanel.jsx');
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion, deletedIds: [] })]]);
   const saved = globalThis.confirm;
   globalThis.confirm = () => true;
@@ -343,6 +344,8 @@ describe('the dashboard lists letters as letters (R2-135)', () => {
   it('the career panel beside the lists reads a résumé, not a letter', async () => {
     const app = await openApp([letter('resume_l1', 'Contoso letter', 2000), cv('resume_b', 'Data CV', SAM, 3000)]);
     try {
+      // The panel's code loads apart from the start-up path (Dashboard.jsx, Lazy): wait until it is on screen.
+      for (let i = 0; i < 500 && !text(app.view.container).includes('Sam Rivera'); i += 1) await new Promise((r) => { setTimeout(r, 10); });
       // The store opens the first record, the letter; the panel shows the résumé's person.
       assert.ok(text(app.view.container).includes('Sam Rivera'), 'before: the letter\'s sender, as if a résumé');
       assert.ok(!text(app.view.container).includes('Jordan Avery'));
