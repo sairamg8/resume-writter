@@ -16,11 +16,12 @@
 //   M1 (dock a flex sibling below 1100): in src/components/EditorDock.jsx delete the five max-[1099px]:... utilities
 //      (absolute inset-y-0 right-0 z-30 shadow-xl) from the dock's className and in src/pages/Editor.jsx pass
 //      overlay={false}. At 1024 and 768 the dock is then position: static and the stage is 360 px narrower than with
-//      the dock closed: "overlays below 1100" and "the stage keeps the width it had" go RED (also at 1100-1280 with the
-//      640 px panel). The commit before it is GREEN.
-//   M2 (the wide-panel rule gone): in dockBesideFrom return 1100 only. With the stored 640 px panel at 1100 and 1180 the
-//      dock is beside the stage where the rule says overlay (the position check goes RED, and with no clamp in
-//      usePanelResize the stage is under its 288 px floor).
+//      the dock closed: "overlays below 1100" and "the stage keeps the width it had" go RED. The stored-640 tests are
+//      not what catches this one (they run from 1100 px). The commit before it is GREEN.
+//   M2 (the clamp gone): in src/pages/Editor.jsx call usePanelResize({ dockOpen: false }) (or with no argument). With the
+//      stored 640 px panel and a dock open the panel is drawn at 640 at 1100 / 1180 and the stage is under its floor:
+//      "the panel is drawn at window - 680" (420 / 500) goes RED, and so does the floor check. M1 alone leaves those
+//      green, M2 alone leaves the six-width tests green: each mutation is caught by its own tests.
 import { test, expect } from '@playwright/test';
 import { buildTestState, STORAGE_KEY } from '../helpers.js';
 import { reach } from './pw-helpers.js';
@@ -28,12 +29,11 @@ import { reach } from './pw-helpers.js';
 const PANEL_KEY = 'cpwtcv-panel-width';
 const WIDTHS = [1440, 1280, 1100, 1024, 768, 390];
 const heightOf = (width) => (width < 768 ? 812 : 900);
-// The same numbers as EditorDock.jsx (the dock, the handle, the least the preview keeps beside a docked panel).
+// The least the preview keeps beside a docked panel (EditorDock.jsx), and the stage's floor in expectFrame.
 const DOCK = 360;
-const HANDLE = 4;
 const PREVIEW_FLOOR = 288;
 const STAGE_FLOOR = 240;
-const besideFrom = (panelWidth) => Math.max(1100, panelWidth + HANDLE + DOCK + PREVIEW_FLOOR);
+const BESIDE_FROM = 1100; // the dock is a flex sibling of the stage from this width, an overlay below it
 
 /** Opens the seeded editor at `width` (the stored panel width, when given, is written after the clear). */
 async function visit(page, width, { panel } = {}) {
@@ -116,12 +116,11 @@ function expectFrame(m, what) {
   }
 }
 
-/** With the dock open: it overlays exactly where the rule says, and a dock beside the stage never overlaps a neighbour. */
+/** With the dock open: it overlays below 1100 px and is a flex sibling of the stage from 1100 px, and never overlaps a neighbour. */
 function expectDock(m, closed, what) {
   expect(m.dock, `${what}: the dock is drawn`).not.toBeNull();
-  const panelWidth = m.sidebar && m.vw >= 768 ? m.sidebar.w : 0; // the panel drawn with the dock open (a phone's takes the screen, the rule is moot there)
-  const beside = m.vw >= besideFrom(panelWidth);
-  expect(m.dockPosition, `${what}: ${beside ? 'beside the stage (a flex sibling)' : 'over the stage (overlay)'} at ${m.vw} px with the panel ${panelWidth} px`)
+  const beside = m.vw >= BESIDE_FROM;
+  expect(m.dockPosition, `${what}: ${beside ? 'beside the stage (a flex sibling)' : 'over the stage (overlay)'} at ${m.vw} px`)
     .toBe(beside ? 'static' : 'absolute');
   if (beside) {
     expect(apart(m.dock, m.stage), `${what}: the dock stands clear of the stage`).toBe(true);
@@ -201,15 +200,20 @@ test.describe('the editor frame at six widths', () => {
 });
 
 test.describe('a remembered 640 px panel (localStorage cpwtcv-panel-width) with a dock open', () => {
+  // The panel is drawn no wider than the window less the dock (360) and the stage's floor (320): 1100 - 680, 1180 - 680, 1280 - 680.
+  const DRAWN = { 1100: 420, 1180: 500, 1280: 600 };
   for (const width of [1100, 1180, 1280]) {
     for (const kind of ['design', 'ats']) {
-      test(`${width} px, ${kind} dock: the stage is never under its floor and the dock overlays or sits beside by the width drawn`, async ({ page }) => {
+      test(`${width} px, ${kind} dock: the panel is drawn at ${DRAWN[width]} px, the dock sits beside the stage and the stage keeps its floor`, async ({ page }) => {
         await visit(page, width, { panel: 640 });
         const closed = await settled(page);
         expect(closed.sidebar.w, 'the stored 640 px is drawn with no dock open').toBe(640);
         expectFrame(closed, `${width} px, dock closed`);
         const open = await openDock(page, kind);
         expectFrame(open, `${width} px, ${kind} dock open`);
+        expect(open.sidebar.w, `${width} px: the panel is drawn at window - ${DOCK} - 320 with the dock open`).toBe(Math.min(640, width - DOCK - 320));
+        expect(open.sidebar.w, `${width} px: ... which is ${DRAWN[width]}`).toBe(DRAWN[width]);
+        expect(open.dockPosition, `${width} px: the dock sits beside the stage`).toBe('static');
         expectDock(open, closed, `${width} px, ${kind} dock (stored 640 px)`);
         expect(open.stage.w, `${width} px: the stage floor holds with the dock open`).toBeGreaterThanOrEqual(PREVIEW_FLOOR - 1);
         await closeDock(page, kind);
@@ -221,6 +225,7 @@ test.describe('a remembered 640 px panel (localStorage cpwtcv-panel-width) with 
     }
   }
 });
+
 
 test.describe('the Updating chip, the pill and the dock do not collide', () => {
   /** Watches the page for the Updating chip, keeping its box and the dock's and pill's at the moment it is drawn. */

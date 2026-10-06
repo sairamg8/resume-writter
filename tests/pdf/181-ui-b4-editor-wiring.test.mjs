@@ -30,6 +30,16 @@ describe('the editor panel with a dock open (the Editor calls usePanelResize wit
     } finally { await t.close(); }
   });
 
+  it('the ATS dock holds the panel off the stage the same way (the clamp follows any open dock, not the design one)', async () => {
+    const t = await openEditor({ path: '?dock=ats', panel: 640 });
+    try {
+      resizeTo(t, 1100);
+      assert.equal(panelPx(t), 420, 'window - 360 - 320 with the ATS dock open');
+      await t.press('ats-chip'); // the dock closes
+      assert.equal(panelPx(t), 640, 'the remembered width is drawn without a dock');
+    } finally { await t.close(); }
+  });
+
   it('a wider window gives the width back, and a panel already narrower is left as it is', async () => {
     const t = await openEditor({ path: '?dock=design', panel: 640 });
     try {
