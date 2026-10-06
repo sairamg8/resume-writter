@@ -7,14 +7,14 @@ import { savedDesigns } from '@/constants/templatePresets';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
 import { EditorMobilePill } from '@/components/EditorMobilePill';
-import { EditorDock } from '@/components/EditorDock';
+import { EditorDock, dockBesideFrom } from '@/components/EditorDock';
 import { EditorResumeTab } from '@/components/EditorResumeTab';
 import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { EditorSaveStatus } from '@/components/EditorSaveStatus';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
-import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useIsMobile, useMediaQuery } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
@@ -69,6 +69,8 @@ export function Editor({ store, auth, sync }) {
     resume, letterTab: doc === 'coverletter', authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
   });
   const { panelWidth, separatorProps } = usePanelResize();
+  // The dock sits beside the preview only where the preview keeps its floor next to the (dragged) panel; else it overlays.
+  const dockBeside = useMediaQuery(`(min-width: ${dockBesideFrom(!isMobile && layoutMode === 'split' ? panelWidth : 0)}px)`);
   const importNotice = useImportNotice();
 
   // What the header shows — the name, the rename box, the Export menu's state, the account — does not
@@ -242,7 +244,7 @@ export function Editor({ store, auth, sync }) {
       />
 
       {/* The one dock, right of the preview, mounted only while open. */}
-      {dock && <EditorDock dock={dock} resume={resume} design={design} store={acts} onClose={closeDock} />}
+      {dock && <EditorDock dock={dock} resume={resume} design={design} store={acts} onClose={closeDock} overlay={!dockBeside} />}
       </div>
 
       {canShare && <ShareLinkModal isOpen={shareOpen} resume={resume} uid={auth.user.uid} onClose={() => setShareOpen(false)} />}

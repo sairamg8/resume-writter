@@ -12,12 +12,20 @@ const source = (file) => fs.readFileSync(new URL(`../../src/${file}`, import.met
 const dock = source('components/EditorDock.jsx');
 const editor = source('pages/Editor.jsx');
 
-/** The class string of the first element whose opening tag carries `marker`. */
-function classesOf(marker) {
+/**
+ * The class string of the first element whose opening tag carries `marker`, as a string (`className="..."`) or a template
+ * (`className={`...`}`) whose only expression is `${overlay ? A : B}`: with `overlay` false (the dock beside the preview
+ * above 1100 px; the Editor's `overlay` flag for a wide panel is pinned in 181-ui-b3-hunt-dock-room) it is B.
+ */
+function classesOf(marker, overlay = false) {
   const from = dock.indexOf(marker);
   assert.ok(from >= 0, `${marker} is in EditorDock.jsx`);
   const open = dock.slice(dock.lastIndexOf('<', from), dock.indexOf('>', from));
-  return open.match(/className="([^"]*)"/)[1];
+  const plain = open.match(/className="([^"]*)"/);
+  if (plain) return plain[1];
+  const template = open.match(/className=\{`([^`]*)`\}/);
+  assert.ok(template, `${marker} has a class list`);
+  return template[1].replace(/\$\{overlay \? ('[^']*') : ('[^']*')\}/g, (_all, yes, no) => (overlay ? yes : no).slice(1, -1));
 }
 
 /** The utilities of `classes` in force at window width `width`: unprefixed ones, and the max-md / max-[Npx] / min-[Npx] variants that hold. */

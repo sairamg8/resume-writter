@@ -154,11 +154,11 @@ export function findTid(node, id) {
 
 /**
  * The editor as the app mounts it, over a saved résumé (`extra`: fields to set on it, such as `{ kind: 'letter' }`),
- * opened at `path` (the part after /resume/:id: '' or '?tab=coverletter'). Mounted: the bar whole (the header, the document
+ * opened at `path` (the part after /resume/:id: '' or '?tab=coverletter'), with the panel at `panel` px when given. Mounted: the bar whole (the header, the document
  * switch, the ATS chip, the save chip and the Design button), the alerts, the Résumé tab, the phone's pill and, when open, the dock.
  * Returns what to read and drive, and `measure(fn)`: `fn`'s commits, each as the parts that rendered in it.
  */
-export async function openEditor({ signedIn = false, path = '', extra = {}, toasts = false } = {}) {
+export async function openEditor({ signedIn = false, path = '', extra = {}, toasts = false, panel = null } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Editor } = await loadModule('/src/pages/Editor.jsx');
   const { EditorHeader, EditorAlerts, EditorModeBar, EditorAtsChip, EditorDesignButton } = await loadModule('/src/components/EditorHeader.jsx');
@@ -185,9 +185,11 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
   };
 
   const r = fixture(extra);
-  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })]]);
+  // `panel`: the editor panel's remembered width in px (the one the person dragged it to).
+  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })], ...(panel ? [['cpwtcv-panel-width', String(panel)]] : [])]);
   const live = { store: null, navigate: null, url: '', tree: null, headerProps: [], previewProps: [], saveProps: [], appRenders: 0 };
-  const screen = { desktop: true, listeners: new Set() };
+  // The window: its width, and the listeners of each width query the page asked about (`setWidth` tells them).
+const screen = { width: 1600, listeners: new Map() };
 
   /** The route's component: the Editor page's body, of which the parts under test are mounted. */
   function Page(props) {
@@ -231,15 +233,20 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
       createElement(Route, { path: '/', element: createElement('p', null, 'THE DASHBOARD') }));
   }
 
-  // A desktop window: the fake one has no matchMedia, which the Editor reads as a phone. Every query matches, but
-  // the Editor's own (`(min-width: 768px)`), which follows `screen`.
-  const DESKTOP = '(min-width: 768px)';
+  // A desktop window: the fake one has no matchMedia, which the Editor reads as a phone. The widths the Editor decides by
+  // follow `screen.width`: the phone's (`(min-width: 768px)`) and the dock's (`(min-width: Npx)` from 1100 px); every other
+  // query matches.
+  const widthQuery = (query) => {
+    const m = /^\(min-width:\s*(\d+)px\)$/.exec(query);
+    return m && (Number(m[1]) === 768 || Number(m[1]) >= 1100) ? Number(m[1]) : null;
+  };
+  const matchesAt = (query) => { const from = widthQuery(query); return from === null ? true : screen.width >= from; };
   function Root() {
     window.matchMedia = (query) => ({
-      get matches() { return query === DESKTOP ? screen.desktop : true; },
+      get matches() { return matchesAt(query); },
       media: query,
-      addEventListener(_type, listener) { if (query === DESKTOP) screen.listeners.add(listener); },
-      removeEventListener(_type, listener) { screen.listeners.delete(listener); },
+      addEventListener(_type, listener) { screen.listeners.set(query, (screen.listeners.get(query) ?? new Set()).add(listener)); },
+      removeEventListener(_type, listener) { screen.listeners.get(query)?.delete(listener); },
     });
     return createElement(MemoryRouter, { initialEntries: [`/resume/${r.id}${path}`] }, createElement(App));
   }
@@ -285,9 +292,13 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
     headerCount: () => live.headerProps.length,
     typeInSummary: () => typeInBox(summaryBox()),
     /** The window becomes a phone's: its width query says so to the Editor, as the browser would. */
-    goPhone() {
-      screen.desktop = false;
-      view.act(() => { for (const listener of screen.listeners) listener({ matches: false }); });
+    goPhone() { this.setWidth(390); },
+    /** The window becomes `width` px wide: the Editor's width queries are told, as the browser would. */
+    setWidth(width) {
+      screen.width = width;
+      view.act(() => {
+        for (const [query, listeners] of screen.listeners) for (const listener of [...listeners]) listener({ matches: matchesAt(query) });
+      });
     },
     /**
      * `fn`'s commits (and what runs after it for `wait` ms more), each as the labelled parts that rendered in it:
