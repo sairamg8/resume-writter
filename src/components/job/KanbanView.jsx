@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowRightLeft, Briefcase, CheckSquare, ExternalLink, MapPin, Plus, SearchX, Trash2 } from 'lucide-react';
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors,
@@ -110,7 +110,9 @@ function KanbanCard({ job, onDelete, onMove, overlay = false }) {
   );
 }
 
-function DraggableCard({ job, onNavigate, onDelete, onMove }) {
+// Memoised: a search re-renders the board with the same job objects, and every card (3000 of them)
+// rendered again for nothing. Its handlers come stable from KanbanView.
+const DraggableCard = memo(function DraggableCard({ job, onNavigate, onDelete, onMove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: job.id });
   return (
     <div
@@ -124,7 +126,7 @@ function DraggableCard({ job, onNavigate, onDelete, onMove }) {
       <KanbanCard job={job} onDelete={onDelete} onMove={onMove} />
     </div>
   );
-}
+});
 
 function KanbanColumn({ status, jobs, onNavigate, onDelete, onMove }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
@@ -168,7 +170,12 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
   );
   const activeJob = jobs.find(j => j.id === activeId);
   const containerRef = useRef(null);
-  const move = (id, status) => updateJob(id, { status });
+  // The latest handlers behind functions that never change, so the memoised cards stay as they are.
+  const latest = useRef({});
+  latest.current = { updateJob, onNavigate, onDelete };
+  const move = useCallback((id, status) => latest.current.updateJob(id, { status }), []);
+  const openJob = useCallback((id) => latest.current.onNavigate(id), []);
+  const deleteJob = useCallback((id) => latest.current.onDelete(id), []);
 
   useEffect(() => {
     if (!scrollToStatus) return;
@@ -215,8 +222,8 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
             key={status.id}
             status={status}
             jobs={jobs.filter(j => j.status === status.id)}
-            onNavigate={onNavigate}
-            onDelete={onDelete}
+            onNavigate={openJob}
+            onDelete={deleteJob}
             onMove={move}
           />
         ))}

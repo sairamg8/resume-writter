@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Download, FileSpreadsheet, LayoutDashboard, List, MoreHorizontal, Plus, SquareKanban, Upload } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
@@ -118,7 +118,13 @@ export function JobTracker({ store }) {
     if (removed.length) toast({ title: `${removed.length} job${removed.length === 1 ? '' : 's'} cleared`, action: { label: 'Undo', onClick: () => restoreJobs(removed) } });
   }
 
-  const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
+  // The box follows the keys at once; the list catches up when the browser is free, so a key over
+  // 3000 jobs is not one long task (the first key took ~700 ms).
+  const searched = useDeferredValue(search);
+  const filteredJobs = useMemo(
+    () => filterJobs(jobs, { q: searched, statuses: filterStatus ? [filterStatus] : [] }),
+    [jobs, searched, filterStatus],
+  );
   const counts = jobStats(jobs); // the definitions, tested: src/utils/jobQuery.js
   const stats = [
     { label: 'Total', value: counts.total },
@@ -126,7 +132,7 @@ export function JobTracker({ store }) {
     { label: 'Interviews', value: counts.interviewing },
     { label: 'Offers', value: counts.offers },
   ];
-  const filtering = Boolean(search.trim() || filterStatus);
+  const filtering = Boolean(searched.trim() || filterStatus);
   const open = id => navigate(`/jobs/${id}`);
 
   return (
