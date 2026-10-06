@@ -1,12 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, LayoutGrid } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { ResumeCard } from '@/components/ResumeCard';
-import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
-import NewLetterModal from '@/components/NewLetterModal';
 import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
@@ -15,6 +14,35 @@ import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResumeImport';
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
+
+// The letter picker (with the kit's Dialog) and Career History load apart from the start-up path, so the
+// dashboard paints without them. Not lazyPage: its reload on a failed load would drop a draft, and a
+// piece here is not a page — each has its own boundary and a fallback in this file (Lazy).
+const loaders = {
+  letter: () => import('@/components/NewLetterModal'),
+  career: () => import('@/components/CareerHistoryPanel').then((m) => ({ default: m.CareerHistoryPanel })),
+};
+const warmed = new Set();
+export const _lazyForTest = { loaders, warmed };
+/** Fetches a piece ahead of its first use, once: in idle time, or when its button is hovered or focused. */
+const warm = (key) => { if (!warmed.has(key)) { warmed.add(key); loaders[key]().catch(() => {}); } };
+
+/** `load`'s piece, props passed on. A failed load shows `fallback(retry)`; retry imports it again. */
+function Lazy({ load, fallback, ...props }) {
+  const [tries, setTries] = useState(0);
+  const View = useMemo(() => lazy(() => loaders[load]()), [load, tries]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <ErrorBoundary key={tries} fallback={fallback(() => setTries(tries + 1))}>
+      <Suspense fallback={null}><View {...props} /></Suspense>
+    </ErrorBoundary>
+  );
+}
+
+/** The letter picker's code did not arrive: each New Cover makes the letter from the first résumé, as with one. */
+function LetterFallback({ asked, make }) {
+  useEffect(() => { if (asked) make(); }, [asked]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -37,6 +65,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // to go after 4 or 8 s, before the longer ones (a scanned PDF's steps) could be read.
   const [importError, setImportError] = useState(null);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
+  // The picker's code is asked for when it is first opened (or ahead of that: warm); it then stays mounted for its exit.
+  const [letterUsed, setLetterUsed] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
   // Whether the file being picked is imported as an original (ImportMenu).
@@ -51,6 +81,13 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // The account the list is now (syncedUid), for a read that ends after it signed out.
   const listOwner = useRef(store.appState.syncedUid);
   useEffect(() => { listOwner.current = store.appState.syncedUid; }, [store.appState.syncedUid]);
+  // After the first paint, in idle time (a timer where the browser has no requestIdleCallback).
+  useEffect(() => {
+    const all = () => Object.keys(loaders).forEach(warm);
+    const idle = globalThis.requestIdleCallback;
+    const id = idle ? idle(all) : setTimeout(all, 1500);
+    return () => (idle ? cancelIdleCallback(id) : clearTimeout(id));
+  }, []);
 
   function pickImport(keep) {
     importAsOriginal.current = keep;
@@ -88,7 +125,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
   // is, or the one picked when there are several; with none, a blank letter.
   function startLetter() {
-    if (letterSourceList.length > 1) setLetterModalOpen(true);
+    if (letterSourceList.length > 1) { setLetterUsed(true); setLetterModalOpen(true); }
     else newLetter(letterSourceList[0]?.id ?? null);
   }
 
@@ -216,6 +253,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             </button>
             <button
               onClick={startLetter}
+              onMouseEnter={() => warm('letter')}
+              onFocus={() => warm('letter')}
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
               <MailIcon size={14} /> New Cover
@@ -318,6 +357,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                   {letters.map(r => card(r, openLetter))}
                   <button
                     onClick={startLetter}
+                    onMouseEnter={() => warm('letter')}
+                    onFocus={() => warm('letter')}
                     className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
                   >
                     <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
@@ -333,7 +374,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           {/* Sidebar — career history. Pinned from lg, it is never taller than the window (R4-DVIS-29): a
               long history scrolls inside the panel's timeline, so the panel's end and "Open Job Tracker →"
               stay on screen instead of below the fold until the page's end. */}
-          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]">
+          <div onMouseEnter={() => warm('career')} onFocus={() => warm('career')} className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]">
             <div className="mb-3 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-bold text-gray-700">Career History</h2>
               <button
@@ -343,7 +384,14 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                 Job Tracker →
               </button>
             </div>
-            <CareerHistoryPanel
+            <Lazy
+              load="career"
+              fallback={(retry) => (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <span className="flex-1">Career History could not load. Check your connection.</span>
+                  <button type="button" onClick={retry} className="font-semibold hover:text-red-800 shrink-0">Try again</button>
+                </div>
+              )}
               resumes={resumes}
               activeId={store.appState.activeId}
               showJobTrackerLink={true}
@@ -363,12 +411,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
         </div>
       </div>
 
-      <NewLetterModal
-        isOpen={letterModalOpen}
-        sources={letterSourceList}
-        onPick={newLetter}
-        onClose={() => setLetterModalOpen(false)}
-      />
+      {letterUsed && (
+        <Lazy
+          load="letter"
+          fallback={() => <LetterFallback asked={letterModalOpen} make={() => newLetter(letterSourceList[0]?.id ?? null)} />}
+          isOpen={letterModalOpen}
+          sources={letterSourceList}
+          onPick={newLetter}
+          onClose={() => setLetterModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

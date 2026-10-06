@@ -91,6 +91,9 @@ async function openApp(resumes, dataVersion = 13) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
   const { useOpenResume } = await loadModule('/src/hooks/useOpenResume.js');
+  // The picker's code loads when New Cover first opens it (Dashboard.jsx, Lazy): loaded here already, so
+  // the page's settle below waits for React's boundary, not for Vite's first transform of the Dialog.
+  await loadModule('/src/components/NewLetterModal.jsx');
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion, deletedIds: [] })]]);
   const saved = globalThis.confirm;
   globalThis.confirm = () => true;

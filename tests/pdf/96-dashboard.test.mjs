@@ -60,6 +60,9 @@ async function dashboard(resumes = [], { user = null } = {}) {
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
   const { NewResume } = await loadModule('/src/pages/NewResume.jsx');
   const { useOpenResume } = await loadModule('/src/hooks/useOpenResume.js');
+  // The picker's code loads when New Cover first opens it (Dashboard.jsx, Lazy): loaded here already, so
+  // settle() waits for React's boundary, not for Vite's first transform of the Dialog.
+  await loadModule('/src/components/NewLetterModal.jsx');
   const storage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   globalThis.localStorage = storage;
   const auth = { user, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };

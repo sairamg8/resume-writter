@@ -41,7 +41,13 @@ async function dashboard() {
     return createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
       createElement(Dashboard, { store, auth, sync, publicLinks: null }));
   }
+  // The panel loads apart from the start-up path (Dashboard.jsx, Lazy): loaded here already, then waited
+  // for until React's boundary has shown it, so the assertions below read the real panel.
+  await loadModule('/src/components/CareerHistoryPanel.jsx');
   const view = mount(Page, {});
+  for (let i = 0; i < 500 && ![...elements(view.container)].some((el) => text(el) === 'Open Job Tracker →'); i += 1) {
+    await new Promise((r) => { setTimeout(r, 10); });
+  }
   return {
     view,
     all: () => [...elements(view.container)],
