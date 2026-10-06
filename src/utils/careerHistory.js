@@ -92,9 +92,7 @@ export function entryLabel(months) {
   if (!(months > 0)) return '';
   const yrs = Math.floor(months / 12);
   const mos = months % 12;
-  if (yrs === 0) return `${mos}mo`;
-  if (mos === 0) return `${yrs}yr`;
-  return `${yrs}yr ${mos}mo`;
+  return [yrs && `${yrs}yr`, mos && `${mos}mo`].filter(Boolean).join(' ');
 }
 
 /** The career total: "4 years", "1 year", "5 months", "3 yrs 2 mos", "1 yr 1 mo"; '' when none. */
