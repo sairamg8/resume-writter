@@ -84,5 +84,6 @@ Start-up fallback order (reserve offset, lazy Dashboard parts, cap last): not ne
 - Parked items untouched (PLAN-SUMMARY "Drawn but not in the live app").
 - Accessibility: deferred.
 
-## Full gate
-Run 37473796309 on `a98053e` (code identical to 6633014): see the line appended below when read.
+## Full gate (GREEN)
+Run 37481412359 on `68d791c` (code identical to `8eaf3cd`; the run before it, 37479206849, was cancelled by the lead for this one). Read from the logs: 15 jobs all green (lint, build, suite 1-6, Playwright 1-3, Cypress 1-4). Suite shards: 1593, 1788, 2399, 2242, 1854, 1975 tests (11,851 in all: 11,846 pass, 5 skipped by design, 0 fail); Playwright 46 + 55 + 22 passed (+ 1 skipped); Cypress 70 + 90 + 71 + 50 = 281 passed; 71-startup-chunks: `start-up path 1082.7 kB of the 1,100 kB cap: 17.3 kB to spare`. An earlier full gate (37473796309 on `a98053e`, before the round-3 fixes) was also green.
+Owner calls: all taken at their defaults (see above); none needed an answer. Nothing visible changed except the legacy kit colours (the canvas palette); the owner already has the B1 before/after screenshots from the first session. B2 follows.
