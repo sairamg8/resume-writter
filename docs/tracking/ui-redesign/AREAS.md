@@ -1,4 +1,6 @@
-# The five drawing areas (about 25 artboards still to draw)
+# The five drawing areas (ALL DRAWN 2026-10-06, see README.md; kept as the spec they were drawn from)
+
+Note: "Cover letter tab" / "ATS check tab" below are superseded by README decision 6: no tabs in the editor sidebar; Résumé | Cover letter is a switch in the top bar and the ATS check is a right drawer opened from the ATS chip.
 
 Each is one agent's job (see README.md step 3). Names are the artboard file names (`<Name>.dc.html`); every desktop one is a PAGE 1440 wide
 with the unified top bar (active nav link as noted); phone ones are fixed 390x844 with the bottom tab bar (Documents / Applications /
