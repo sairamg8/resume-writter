@@ -114,8 +114,10 @@ describe('the Classic switch right after another fix in the ATS dock', () => {
       t.act(() => t.store().updateSetting('fontSize', written)); // a write inside the pause: the panel is still drawn from the résumé before it
       tap(t, button);
       assert.equal(t.store().activeResume.template, 'classic', 'the switch happened');
-      await until(() => buttonNamed(t, 'Undo'), 'the "Template: Classic" notice shows its Undo');
-      t.call(buttonNamed(t, 'Undo'), 'onClick');
+      // The notices are drawn in the document's body, outside the page.
+      const undo = () => t.body().find((el) => el.tagName === 'BUTTON' && text(el) === 'Undo');
+      await until(() => undo(), 'the "Template: Classic" notice shows its Undo');
+      t.call(undo(), 'onClick');
       assert.equal(t.store().activeResume.template, 'sidebar', 'Undo brings the template back');
       assert.equal(t.store().activeResume.settings.fontSize, written, `Undo kept the size written before the switch (was ${was}, written ${written})`);
     } finally { await done(t); }
