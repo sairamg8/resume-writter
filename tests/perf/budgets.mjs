@@ -43,4 +43,7 @@ export const BUDGETS = [
   { id: 'browser.firstPreview', group: 'browser', label: 'Browser: open the editor to the first pages', unit: 'ms', max: 20000 },
   { id: 'browser.keystrokeToPreview', group: 'browser', label: 'Browser: last key to the pages showing it', unit: 'ms', max: 3000, target: 600 },
   { id: 'browser.longTask', group: 'browser', label: 'Browser: longest main-thread task while typing', unit: 'ms', max: 600, target: 50 },
+  // The same typing with every entry card open (PERF-4: a keystroke re-rendered every field of every entry).
+  { id: 'browser.keystrokeToPreviewExpanded', group: 'browser', label: 'Browser: last key to the pages, every entry open', unit: 'ms', max: 3000, target: 600 },
+  { id: 'browser.longTaskExpanded', group: 'browser', label: 'Browser: longest main-thread task while typing, every entry open', unit: 'ms', max: 600, target: 50 },
 ];

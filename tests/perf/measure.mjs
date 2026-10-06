@@ -156,26 +156,38 @@ export async function measureBrowser({ dist }) {
     const firstPreview = await until(page, opened, () => !!document.querySelector('[data-preview-status="ready"] canvas'), undefined);
 
     const summary = page.locator('[contenteditable="true"]').filter({ hasText: SUMMARY_MARKER }).first();
-    const lastKeyToPages = [];
-    let longest = 0;
-    for (let round = 0; round < 3; round += 1) {
-      const typed = `perf${round}xk7q9zvw3m5j2pb`;
-      await page.evaluate(() => { window.__perfLongObserver?.takeRecords(); window.__perfLongTasks.length = 0; });
-      await summary.click();
-      await page.keyboard.press('Control+End');
-      await page.keyboard.type(typed, { delay: 150 });
-      const lastKey = Date.now();
-      lastKeyToPages.push(await until(page, lastKey, (text) => !!document.querySelector('#resume-preview')?.textContent.includes(text), typed));
-      const tasks = await page.evaluate(() => {
-        window.__perfLongObserver?.takeRecords().forEach((e) => window.__perfLongTasks.push(e.duration));
-        return window.__perfLongTasks;
-      });
-      longest = Math.max(longest, ...tasks);
-    }
+    /** Three rounds of typing into Summary: the last key to the pages, and the longest task, of each. */
+    const typeRounds = async (tag) => {
+      const lastKeyToPages = [];
+      let longest = 0;
+      for (let round = 0; round < 3; round += 1) {
+        const typed = `${tag}${round}xk7q9zvw3m5j2pb`;
+        await page.evaluate(() => { window.__perfLongObserver?.takeRecords(); window.__perfLongTasks.length = 0; });
+        await summary.click();
+        await page.keyboard.press('Control+End');
+        await page.keyboard.type(typed, { delay: 150 });
+        const lastKey = Date.now();
+        lastKeyToPages.push(await until(page, lastKey, (text) => !!document.querySelector('#resume-preview')?.textContent.includes(text), typed));
+        const tasks = await page.evaluate(() => {
+          window.__perfLongObserver?.takeRecords().forEach((e) => window.__perfLongTasks.push(e.duration));
+          return window.__perfLongTasks;
+        });
+        longest = Math.max(longest, ...tasks);
+      }
+      return { lastKeyToPages, longest };
+    };
+    const collapsed = await typeRounds('perf');
+    // The same typing with every entry card open (PERF-4): a keystroke used to re-render every field of every entry.
+    await page.evaluate(() => {
+      for (const header of document.querySelectorAll('div.cursor-pointer.select-none')) header.click();
+    });
+    const expanded = await typeRounds('open');
     return {
       'browser.firstPreview': { value: firstPreview, detail: 'navigation to the first painted pages, including the PDF worker and the fonts' },
-      'browser.keystrokeToPreview': { value: median(lastKeyToPages), detail: spread(lastKeyToPages) },
-      'browser.longTask': { value: longest, detail: 'the longest of three rounds, from the first key to the pages showing the last' },
+      'browser.keystrokeToPreview': { value: median(collapsed.lastKeyToPages), detail: spread(collapsed.lastKeyToPages) },
+      'browser.longTask': { value: collapsed.longest, detail: 'the longest of three rounds, from the first key to the pages showing the last' },
+      'browser.keystrokeToPreviewExpanded': { value: median(expanded.lastKeyToPages), detail: `every entry open; ${spread(expanded.lastKeyToPages)}` },
+      'browser.longTaskExpanded': { value: expanded.longest, detail: 'every entry open; the longest of three rounds' },
     };
   } finally {
     await browser.close();
