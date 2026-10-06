@@ -91,7 +91,7 @@ it('(a) a wait of 30 s with nothing else done: the failing picker makes exactly 
   } finally { await page.close(); }
 });
 
-for (const [name, target, type] of [['(b) a pointerdown', 'document', 'pointerdown'], ['(b2) a hashchange', 'window', 'hashchange'], ['(c) a keydown', 'document', 'keydown']]) {
+for (const [name, target, type] of [['(b) a pointerdown', 'document', 'pointerdown'], ['(b2) a hashchange', 'window', 'hashchange'], ['(b3) a popstate (the Back button)', 'window', 'popstate'], ['(c) a keydown', 'document', 'keydown']]) {
   it(`${name} after New Cover: the failing picker makes no letter and the request closes`, async () => {
     const page = await dashboard();
     try {
