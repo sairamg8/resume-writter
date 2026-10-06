@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useMemo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Plus, ChevronDown, ChevronUp, GripVertical, Settings2, Eye, EyeOff, MoreHorizontal, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -69,9 +69,6 @@ export const SortableSection = memo(function SortableSection({
   );
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const isHidden = section.visible === false;
-
-  // Kept while the entries are the same ones: see EditorResumeTab's sectionKeys (PERF-4).
-  const itemKeys = useMemo(() => section.items.map(i => i.id), [section.items]);
 
   function handleItemDragEnd(event) {
     const { active, over } = event;
@@ -196,7 +193,7 @@ export const SortableSection = memo(function SortableSection({
       {sectionOpen && (
         <div className="p-3 space-y-2">
           <DndContext sensors={itemSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-            <SortableContext items={itemKeys} strategy={verticalListSortingStrategy}>
+            <SortableContext items={section.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
               {section.items.map(item => (
                 <SectionEntry
                   key={item.id}
