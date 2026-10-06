@@ -39,7 +39,7 @@ it('C-2: the box limits its text, and no line shows while there is room', async 
 
 it('C-2: a full box says so, and an older longer posting is scanned only to the limit', async () => {
   // The keyword sits past the limit: it is not scanned; the one before it is.
-  const posting = `Kubernetes ${'x '.repeat(LIMIT / 2)} Terraform Docker`;
+  const posting = `Kubernetes Kubernetes ${'x '.repeat(LIMIT / 2)} Docker Docker Docker Docker`;
   const p = await panel(posting);
   try {
     assert.ok(p.notice(), 'the line is shown for a box at the limit');
