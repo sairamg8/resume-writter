@@ -33,8 +33,8 @@ const ProjectList     = page(() => import('@/pages/ProjectList'), 'ProjectList')
 const PublicResume    = page(() => import('@/pages/PublicResume'), 'PublicResume');
 
 /** What shows for the moment a page's code is on its way. */
-function PageLoading() {
-  return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
+export function PageLoading() {
+  return <div className="min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint">Loading…</div>;
 }
 
 // The window's offset each history entry was left at (its key and its path, as useScrollMemory files
