@@ -42,7 +42,7 @@ export function careerItems(resume) {
     .filter((s) => s && s.type === 'experience' && s.visible !== false)
     .flatMap((s) => {
       const showDates = s.settings?.showDates !== false;
-      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)).filter((i) => i.company || i.role || i.startDate || i.endDate || i.current) : [];
+      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)).filter((i) => i.company || i.role || i.startDate || i.endDate) : [];
     });
 }
 
@@ -102,8 +102,8 @@ export function totalLabel(months) {
   if (!(months > 0)) return '';
   const yrs = Math.floor(months / 12);
   const mos = months % 12;
-  if (yrs === 0) return plural(mos, 'month', 'months');
-  if (mos === 0) return plural(yrs, 'year', 'years');
+  if (!yrs) return plural(mos, 'month', 'months');
+  if (!mos) return plural(yrs, 'year', 'years');
   return `${plural(yrs, 'yr', 'yrs')} ${plural(mos, 'mo', 'mos')}`;
 }
 
