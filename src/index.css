@@ -114,23 +114,25 @@ body {
    Ink for text (primary, subtle, subtlest), lines, the sunken surface board columns sit on, the
    neutral fills of default buttons and hovered rows, the brand blue, and the three status
    categories' lozenges (to do grey, in progress blue, done green) — each fill with an ink that
-   reads at 4.5:1 or more on it. Used as `text-ink`, `bg-sunken`, `bg-loz-done`, `text-brand`… */
+   reads at 4.5:1 or more on it. Used as `text-ink`, `bg-sunken`, `bg-loz-done`, `text-brand`…
+   The ink, line, sunken, hovered and brand values are the canvas cv-* values above (names, the
+   kit's defaults, heights and radii unchanged): the kit is recoloured at once. */
 @theme {
-  --color-ink: #172b4d;
-  --color-ink-subtle: #44546f;
-  --color-ink-subtlest: #626f86;
-  --color-line: #dcdfe4;
-  --color-line-subtle: #ebecf0;
-  --color-sunken: #f7f8f9;
-  --color-hovered: #f1f2f4;
+  --color-ink: #151922;
+  --color-ink-subtle: #4f586a;
+  --color-ink-subtlest: #6b7385;
+  --color-line: #e2e5eb;
+  --color-line-subtle: #eef0f4;
+  --color-sunken: #eef0f4;
+  --color-hovered: #e9ecf1;
   --color-pressed: #dcdfe4;
   --color-neutral-fill: #091e420f;
   --color-neutral-fill-hover: #091e4224;
-  --color-brand: #0c66e4;
-  --color-brand-hover: #0055cc;
-  --color-brand-pressed: #09326c;
-  --color-brand-subtle: #e9f2ff;
-  --color-brand-subtle-hover: #cce0ff;
+  --color-brand: #2b59ff;
+  --color-brand-hover: #1e45d6;
+  --color-brand-pressed: #1e45d6;
+  --color-brand-subtle: #e8eeff;
+  --color-brand-subtle-hover: #c9d3f5;
   --color-loz-todo: #dcdfe4;
   --color-loz-todo-ink: #44546f;
   --color-loz-progress: #cce0ff;
