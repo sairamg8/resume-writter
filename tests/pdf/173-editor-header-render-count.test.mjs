@@ -749,6 +749,7 @@ describe('what the alerts and the mode bar show still updates', () => {
       assert.match(attr(t.byTitle('Design & Customize'), 'class'), /bg-amber-50/);
       assert.ok(w.modes.includes('EditorModeBar'), w.report());
       t.call(t.byTitle('Design & Customize'), 'onClick');
+      await settle(); // the address changes in the router's own time
       assert.equal(t.modes().activeTab, 'resume', 'the Design button again goes back to the résumé');
       assert.deepEqual(open(), ['Resume']);
     } finally { await t.close(); }
@@ -764,8 +765,10 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await settle();
       assert.equal(t.modes().setActiveTab, held, 'the mode bar was given the same function after the keys');
       t.act(() => t.live.navigate(`/resume/${t.id}`, { state: { importNotice: NOTICE } }));
+      await settle();
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a notice came after the picker was made');
       t.act(() => held('design'));
+      await settle();
       assert.equal(t.modes().activeTab, 'design');
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a stale picker read the address as it was at the first render, and took the notice off');
     } finally { await t.close(); }
@@ -781,6 +784,7 @@ describe('a handler the alerts or the mode bar have held since their first rende
       t.showPreview();
       assert.equal(t.previewLayout(), 'preview');
       t.act(() => held('coverletter'));
+      await settle();
       assert.equal(t.modes().activeTab, 'coverletter');
       assert.equal(t.previewLayout(), 'editor', 'a stale picker knew a desktop, and left the phone on the preview');
     } finally { await t.close(); }
@@ -794,9 +798,11 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await settle();
       assert.equal(t.alerts().onDismissImport, held, 'the alerts were given the same function after the keys');
       t.act(() => t.live.navigate(`/resume/${t.id}?tab=design`, { state: { importNotice: NOTICE } }));
+      await settle();
       assert.equal(t.modes().activeTab, 'design');
       assert.deepEqual(t.alertTexts(), [NOTICE]);
       t.act(() => held());
+      await settle();
       assert.deepEqual(t.alertTexts(), [], 'the notice is gone');
       assert.equal(t.modes().activeTab, 'design', 'a stale Dismiss went to the address of the first render, the Résumé tab');
     } finally { await t.close(); }
