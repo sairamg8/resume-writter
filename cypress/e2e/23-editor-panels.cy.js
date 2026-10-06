@@ -29,8 +29,7 @@ const preview = () => handle().next();
  */
 const zoomIn = () => preview().contains('button', /^\+$/);
 const zoomLabel = () => zoomIn().prev('span');
-const resumeTab = () => cy.contains('button', /^\s*Resume\s*$/);
-/** The editor panel's scroll box, which every tab shows in. */
+/** The editor panel's scroll box, which the Résumé and the Cover Letter show in (the docks have a box of their own). */
 const scrollBox = () => panel().children('.overflow-y-auto');
 
 describe('editor — panels and layout (guards for the Editor split)', () => {
@@ -56,41 +55,55 @@ describe('editor — panels and layout (guards for the Editor split)', () => {
     panel().invoke('outerWidth').should('eq', 320);
   });
 
-  it('Collapse All, a closed Personal Info and an open Add Section picker survive a trip to Design and the letter', () => {
+  it('Personal info stays closed across switch and dock: Collapse All, a closed Personal Info and an open Add Section picker survive the letter and the Design dock', () => {
     cy.contains('button', 'Collapse All').click();
     cy.contains('button', 'Add Section').click();
     cy.contains('button', 'Custom Section').should('exist');
 
-    cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', 'Template').should('exist');
-    cy.contains('button', 'Cover Letter').click();
+    // The dock opens beside the form: the form is untouched while it is open.
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').contains('button', 'Template').should('exist');
+    cy.get('input[placeholder="John Doe"]').should('not.exist');
+    cy.contains('button', 'Custom Section').should('exist');
+    cy.switchTo('letter');
     cy.get('#cover-letter-preview').should('exist');
-    resumeTab().click();
+    cy.get('[data-testid="dock-design"]').should('not.exist'); // picking the letter closes the dock
+    cy.openDesign(); // and the dock opened from the letter lands on the Résumé
+    cy.get('[data-testid="dock-design"]').should('exist');
+    cy.switchTo('letter');
+    cy.switchTo('resume');
 
-    cy.contains('button', 'Expand All').should('be.visible'); // each tab opens at its top (NB-4)
+    cy.contains('button', 'Expand All').should('be.visible'); // the Résumé opens at its top (NB-4)
     cy.get('input[placeholder="John Doe"]').should('not.exist'); // Personal Info still closed
     cy.contains('button', 'Add Experience').should('not.exist'); // sections still collapsed
     cy.contains('button', 'Custom Section').should('exist'); // the picker is still open
   });
 
-  it('each tab opens at its top: Design after a scrolled Résumé, the Résumé after a scrolled Design (NB-4)', () => {
+  it('each scroll box opens at its top: the Cover Letter after a scrolled Résumé, a dock after a scrolled dock (NB-4)', () => {
+    const dockBox = () => cy.get('[data-testid^="dock-"]:not([data-testid="dock-close"])').children('.overflow-y-auto');
     cy.contains('button', 'Add Section').click();
     scrollBox().scrollTo('bottom', { ensureScrollable: false });
     scrollBox().its('0.scrollTop').should('be.gt', 100); // the Résumé really is scrolled down
 
-    cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', 'Template').should('be.visible');
-    scrollBox().its('0.scrollTop').should('eq', 0);
-
-    scrollBox().scrollTo('bottom', { ensureScrollable: false });
+    // A dock has a box of its own: opening it leaves the form where it was.
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').contains('button', 'Template').should('be.visible');
     scrollBox().its('0.scrollTop').should('be.gt', 100);
-    resumeTab().click();
-    cy.contains('button', 'Collapse All').should('be.visible');
-    scrollBox().its('0.scrollTop').should('eq', 0);
+    dockBox().its('0.scrollTop').should('eq', 0);
 
-    scrollBox().scrollTo('bottom', { ensureScrollable: false });
-    cy.contains('button', 'Cover Letter').click();
+    // Another dock replaces it and starts at its top, not at the offset the Design dock was scrolled to.
+    dockBox().scrollTo('bottom', { ensureScrollable: false });
+    dockBox().its('0.scrollTop').should('be.gt', 100);
+    cy.openAts();
+    cy.get('[data-testid="dock-ats"]').should('exist');
+    dockBox().its('0.scrollTop').should('eq', 0);
+
+    // A switch of the document puts the form box back at its top.
+    cy.switchTo('letter');
     cy.get('#cover-letter-preview').should('exist');
+    scrollBox().its('0.scrollTop').should('eq', 0);
+    cy.switchTo('resume');
+    cy.contains('button', 'Collapse All').should('be.visible');
     scrollBox().its('0.scrollTop').should('eq', 0);
   });
 
@@ -98,7 +111,7 @@ describe('editor — panels and layout (guards for the Editor split)', () => {
     zoomIn().click();
     zoomLabel().should('have.text', '125%');
 
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.get('#cover-letter-preview').should('exist');
     zoomLabel().should('have.text', '125%');
 
@@ -108,8 +121,8 @@ describe('editor — panels and layout (guards for the Editor split)', () => {
     cy.get('#cover-letter-preview').should('exist');
   });
 
-  it('the preview footer says when it saved and links Terms and Privacy', () => {
-    cy.contains('span', 'Saved Just now').scrollIntoView().should('be.visible');
+  it('the bar says when it saved and the preview footer links Terms and Privacy', () => {
+    cy.get('[data-testid="editor-bar"]').contains('span', 'Saved Just now').should('be.visible');
     cy.contains('button', /^Terms$/).click();
     cy.location('hash').should('eq', '#/terms');
     cy.go('back');
