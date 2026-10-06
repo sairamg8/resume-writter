@@ -204,19 +204,14 @@ async function openTab() {
   };
 }
 
-// The parts that draw what an entry or a section holds: the cards, their fields and the rich-text box.
-// dnd-kit's own parts (the sortable wrapper and its grip) are woken by its context at every render and
-// are not what this pins: they hold no field.
-const CONTENT = new Set([
-  'ItemCard', 'FieldRow', 'InputField', 'DateField', 'MonthPicker', 'RichTextEditor', 'CurrentBox', 'CurrentDates',
-  'ExperienceItem', 'EducationItem', 'SkillItem', 'ProjectItem', 'CustomItem', 'SectionCustomizer', 'SectionEntry',
-]);
-
-/** No part that draws the content of `labels` (entries, sections) rendered in `w`. */
+/**
+ * Nothing under `labels` (entries, sections) rendered in `w`: no component at all — not the card, not a
+ * field, not dnd-kit's sortable wrapper or the section's header. The whole list is compared, so a
+ * renamed or new component cannot slip past a list of names.
+ */
 function assertUntouched(w, labels, what) {
   for (const label of labels) {
-    const drawn = w.names(label).filter((name) => CONTENT.has(name));
-    assert.deepEqual(drawn, [], `${what}: ${label} re-rendered ${drawn.join(', ')}. Counts: ${w.report()}`);
+    assert.deepEqual(w.names(label), [], `${what}: ${label} re-rendered. Counts: ${w.report()}`);
   }
 }
 
