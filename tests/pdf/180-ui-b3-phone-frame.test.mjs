@@ -6,7 +6,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { prepare, finish, openEditor, attr, elements, text, NAME, MARK } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, sleep, attr, elements, text, NAME, MARK } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
 after(finish);
@@ -14,6 +14,11 @@ after(finish);
 const source = (file) => fs.readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8');
 const has = (t, id) => t.all().some((el) => attr(el, 'data-testid') === id);
 const lit = (t, id) => /\bbg-cv-brand\b/.test(attr(t.byTid(id), 'class'));
+/**
+ * A press, then a wait by what the screen shows (500 x 10 ms, never a fixed tick count): a dock or a document picked
+ * is an address change, which reaches the page as a router transition after the click.
+ */
+const go = async (t, id, done, what) => { await t.press(id); await until(done, what); };
 const phone = async (opts) => { const t = await openEditor(opts); t.goPhone(); await t.press('pill-editor'); return t; };
 
 describe('the Edit | Preview | Design pill', () => {
@@ -48,14 +53,12 @@ describe('the Edit | Preview | Design pill', () => {
   it('Design opens the Design dock as a sheet (full width, over the stage) and lights itself; a second press closes it', async () => {
     const t = await phone();
     try {
-      await t.press('pill-design');
-      assert.ok(has(t, 'dock-design'));
+      await go(t, 'pill-design', () => has(t, 'dock-design'), 'the Design dock opens');
       assert.ok(lit(t, 'pill-design') && !lit(t, 'pill-editor'));
       assert.equal(t.url(), `/resume/${t.id}?dock=design`);
       assert.match(attr(t.byTid('dock-design'), 'class'), /max-md:w-full/);
       assert.match(attr(t.byTid('dock-design'), 'class'), /max-\[1099px\]:absolute/);
-      await t.press('pill-design');
-      assert.ok(!has(t, 'dock-design'));
+      await go(t, 'pill-design', () => !has(t, 'dock-design'), 'the Design dock closes');
       assert.ok(lit(t, 'pill-editor'));
     } finally { await t.close(); }
   });
@@ -63,14 +66,12 @@ describe('the Edit | Preview | Design pill', () => {
   it('Edit and Preview close an open dock', async () => {
     const t = await phone();
     try {
-      await t.press('pill-design');
-      await t.press('pill-editor');
-      assert.ok(!has(t, 'dock-design'));
-      await t.press('pill-design');
-      await t.press('pill-preview');
-      assert.ok(!has(t, 'dock-design'));
+      await go(t, 'pill-design', () => has(t, 'dock-design'), 'the Design dock opens');
+      await go(t, 'pill-editor', () => !has(t, 'dock-design'), 'Edit closes the dock');
+      await go(t, 'pill-design', () => has(t, 'dock-design'), 'the Design dock opens again');
+      await go(t, 'pill-preview', () => !has(t, 'dock-design'), 'Preview closes the dock');
       assert.equal(t.preview().layoutMode, 'preview');
-      assert.equal(t.url(), `/resume/${t.id}`);
+      await until(() => t.url() === `/resume/${t.id}`, 'the address drops ?dock=');
     } finally { await t.close(); }
   });
 
@@ -89,25 +90,22 @@ describe('EDIT-141 (CHANGED): any pick returns the phone to Edit', () => {
     const t = await phone();
     try {
       await t.press('pill-preview');
-      await t.press('doc-switch-letter');
+      await go(t, 'doc-switch-letter', () => t.preview().activeTab === 'coverletter', 'the Cover Letter opens');
       assert.equal(t.preview().layoutMode, 'editor');
-      assert.equal(t.preview().activeTab, 'coverletter');
       await t.press('pill-preview');
-      await t.press('ats-chip');
+      await go(t, 'ats-chip', () => has(t, 'dock-ats'), 'the ATS dock opens');
       assert.equal(t.preview().layoutMode, 'editor');
-      assert.ok(has(t, 'dock-ats'));
       await t.press('pill-preview');
-      await t.press('design-button');
+      await go(t, 'design-button', () => has(t, 'dock-design'), 'the Design dock opens');
       assert.equal(t.preview().layoutMode, 'editor');
-      assert.ok(has(t, 'dock-design'));
     } finally { await t.close(); }
   });
 
   it('negative twin: on a desktop a pick leaves the layout as it was (split)', async () => {
     const t = await openEditor();
     try {
-      await t.press('doc-switch-letter');
-      await t.press('ats-chip');
+      await go(t, 'doc-switch-letter', () => t.preview().activeTab === 'coverletter', 'the Cover Letter opens');
+      await go(t, 'ats-chip', () => has(t, 'dock-ats'), 'the ATS dock opens');
       assert.equal(t.preview().layoutMode, 'split');
     } finally { await t.close(); }
   });
@@ -115,18 +113,18 @@ describe('EDIT-141 (CHANGED): any pick returns the phone to Edit', () => {
   it('a document pick on a phone closes the sheet; on a desktop the Resume pick leaves the dock open', async () => {
     const t = await phone();
     try {
-      await t.press('pill-design');
-      await t.press('doc-switch-resume');
-      assert.ok(!has(t, 'dock-design'));
+      await go(t, 'pill-design', () => has(t, 'dock-design'), 'the Design dock opens');
+      await go(t, 'doc-switch-resume', () => !has(t, 'dock-design'), 'the Resume pick closes the sheet');
       assert.equal(t.preview().activeTab, 'resume');
-      await t.press('pill-design');
-      await t.press('doc-switch-letter');
-      assert.ok(!has(t, 'dock-design'));
-      assert.equal(t.preview().activeTab, 'coverletter');
+      await go(t, 'pill-design', () => has(t, 'dock-design'), 'the Design dock opens again');
+      await go(t, 'doc-switch-letter', () => !has(t, 'dock-design'), 'the Cover Letter pick closes the sheet');
+      await until(() => t.preview().activeTab === 'coverletter', 'the Cover Letter opens');
     } finally { await t.close(); }
     const d = await openEditor({ path: '?dock=design' });
     try {
+      await until(() => has(d, 'dock-design'), 'the dock the address names opens');
       await d.press('doc-switch-resume');
+      await sleep(50);
       assert.ok(has(d, 'dock-design'), 'the desktop keeps it (EDIT-089\'s rule)');
     } finally { await d.close(); }
   });
