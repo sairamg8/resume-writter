@@ -1,0 +1,35 @@
+import { chromium } from '/home/user/resume-writter/node_modules/playwright/index.mjs';
+import { buildTestState, STORAGE_KEY } from '/home/user/resume-writter/tests/helpers.js';
+const BASE = 'https://resume-writter.sairamgudiputi8.workers.dev';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 120)));
+const s0 = buildTestState('classic'); const r = s0.resumes[0]; r.id = 'r_classic'; r.name = 'Senior Engineer résumé'; s0.activeId = 'r_classic';
+await page.addInitScript((a) => { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem(a.key, JSON.stringify(a.state)); sessionStorage.setItem('seeded', '1'); } }, { key: STORAGE_KEY, state: s0 });
+const snap = async (name) => { await page.waitForTimeout(900); await page.screenshot({ path: `live/${name}.png` }); console.log(name, '->', page.url().replace(BASE, '')); };
+const tryDo = async (name, fn) => { try { await fn(); } catch (e) { errs.push(name + ': ' + String(e).slice(0, 110)); } };
+await page.goto(`${BASE}/#/boards`); await page.waitForTimeout(2200);
+await tryDo('open project', async () => { await page.getByText('Personal & Projects').first().click(); await snap('20-board'); });
+const m = page.url().match(/boards\/([^/?#]+)/); const id = m && m[1]; console.log('board id', id);
+for (const [n, p] of [['21-backlog', 'backlog'], ['22-summary', 'summary'], ['23-timeline', 'timeline'], ['24-calendar', 'calendar'], ['25-list', 'list'], ['26-settings', 'settings']]) {
+  await tryDo(n, async () => { await page.goto(`${BASE}/#/boards/${id}/${p}`); await snap(n); });
+}
+await tryDo('issue', async () => { await page.goto(`${BASE}/#/boards/${id}`); await page.waitForTimeout(1500); await page.getByText('Fix the dripping kitchen tap').first().click(); await snap('27-issue'); await page.keyboard.press('Escape'); });
+await tryDo('create', async () => { await page.goto(`${BASE}/#/boards/${id}`); await page.waitForTimeout(1200); await page.getByRole('button', { name: /^Create$/ }).first().click(); await snap('28-create-issue'); await page.keyboard.press('Escape'); });
+await tryDo('job detail', async () => { await page.goto(`${BASE}/#/jobs`); await page.waitForTimeout(1500); await page.getByText('Google').first().click(); await snap('30-job-detail'); });
+await tryDo('job summary', async () => { await page.goto(`${BASE}/#/jobs`); await page.waitForTimeout(1500); await page.getByText('Summary', { exact: true }).first().click(); await snap('31-job-summary'); });
+await tryDo('job list', async () => { await page.goto(`${BASE}/#/jobs`); await page.waitForTimeout(1500); await page.getByText('List', { exact: true }).first().click(); await snap('32-job-list'); });
+await tryDo('dash import', async () => { await page.goto(`${BASE}/#/`); await page.waitForTimeout(1800); await page.getByRole('button', { name: /Import/ }).first().click(); await snap('33-dash-import'); await page.keyboard.press('Escape'); });
+await tryDo('new cover', async () => { await page.goto(`${BASE}/#/`); await page.waitForTimeout(1800); await page.getByRole('button', { name: /New Cover/ }).first().click(); await snap('34-new-cover'); await page.keyboard.press('Escape'); });
+await tryDo('export menu', async () => { await page.goto(`${BASE}/#/resume/r_classic`); await page.waitForTimeout(2500); await page.getByRole('button', { name: /Export/ }).first().click(); await snap('35-export-menu'); await page.keyboard.press('Escape'); });
+await tryDo('gallery', async () => { await page.goto(`${BASE}/#/resume/r_classic?tab=design`); await page.waitForTimeout(2200); await page.getByTestId('browse-templates').click(); await snap('36-gallery'); await page.keyboard.press('Escape'); });
+await tryDo('personal expanded', async () => { await page.goto(`${BASE}/#/resume/r_classic`); await page.waitForTimeout(2200); await page.getByText('Header Customization').first().click(); await snap('37-header-custom'); });
+await tryDo('sections add', async () => { await page.goto(`${BASE}/#/resume/r_classic`); await page.waitForTimeout(2200); await page.getByRole('button', { name: /Add Section/ }).first().click(); await page.evaluate(() => { const el = [...document.querySelectorAll('div')].find(d => d.scrollHeight > d.clientHeight + 50 && getComputedStyle(d).overflowY === 'auto'); if (el) el.scrollTop = el.scrollHeight; }); await snap('38-add-section'); });
+const m2 = await b.newContext({ viewport: { width: 390, height: 844 } }); const mp = await m2.newPage();
+await mp.addInitScript((a) => { localStorage.clear(); localStorage.setItem(a.key, JSON.stringify(a.state)); }, { key: STORAGE_KEY, state: s0 });
+await mp.goto(`${BASE}/#/`); await mp.waitForTimeout(2200); await mp.screenshot({ path: 'live/40-mobile-dash.png' });
+await mp.goto(`${BASE}/#/resume/r_classic`); await mp.waitForTimeout(2800); await mp.screenshot({ path: 'live/41-mobile-editor.png' });
+await mp.goto(`${BASE}/#/jobs`); await mp.waitForTimeout(2200); await mp.screenshot({ path: 'live/42-mobile-jobs.png' });
+console.log('errors', JSON.stringify(errs));
+await b.close();
