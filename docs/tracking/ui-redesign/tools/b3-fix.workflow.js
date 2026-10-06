@@ -56,7 +56,7 @@ const TASKS = [
 
 phase('Fix')
 const results = await pipeline(
-  TASKS,
+  args.only ? TASKS.filter((t) => args.only.includes(t.key)) : TASKS,
   (t) => agent(`${COMMON}\n${t.prompt}\nWhen finished return the schema (commits: the sha of each commit you made, found with git log).`, { label: `fix:${t.key}`, phase: 'Fix', schema: RESULT, effort: 'medium' }),
   (built, t) => agent(REVIEW_PROMPT(`test fixes ${t.key}`, built), { label: `review:${t.key}`, phase: 'Fix', schema: RESULT, effort: 'high' }),
 )
