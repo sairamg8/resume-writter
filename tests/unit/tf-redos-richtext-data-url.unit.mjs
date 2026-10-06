@@ -3,7 +3,7 @@
 // brackets, "data:" in any case, the payload's end characters, ";base64,"), and as the regex it replaced does.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasDataUrlInTag } from '../../src/utils/richText.js';
+import { hasDataUrlInTag } from '../../src/utils/dataUrlInTag.js';
 
 const isWord = (c) => c !== undefined && /[A-Za-z0-9_]/.test(c);
 

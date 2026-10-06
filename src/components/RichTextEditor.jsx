@@ -3,7 +3,8 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Sparkles,
 } from 'lucide-react';
-import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref, hasDataUrlInTag } from '@/utils/richText';
+import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
+import { hasDataUrlInTag } from '@/utils/dataUrlInTag';
 import { useFieldIds } from '@/hooks/useFieldIds';
 import BulletOptimizerModal from '@/components/BulletOptimizerModal';
 
