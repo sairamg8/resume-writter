@@ -11,6 +11,12 @@ import {
 import { SECTION_GROUPS } from '@/constants/resume';
 import PersonalInfoEditor from '@/components/PersonalInfoEditor';
 import { SortableSection } from '@/components/SectionEditor';
+import { useStableActions } from '@/hooks/useStableActions';
+import { useSameList } from '@/hooks/useSameList';
+
+// One options object for the life of the page: useSensor makes a new sensor from a new one, and dnd-kit
+// wakes every sortable under it for a new list of sensors (PERF-4).
+const KEYBOARD_SENSOR = { coordinateGetter: sortableKeyboardCoordinates };
 
 /**
  * The Résumé tab: Collapse/Expand All, Personal Info, the sections (drag to reorder) and Add
@@ -21,9 +27,12 @@ export function EditorResumeTab({
   personalOpen, setPersonalOpen, allExpanded, forceOpenKey, toggleAllSections,
   addSectionOpen, setAddSectionOpen,
 }) {
+  // The store's actions as ones that keep their identity, so the memoised sections are not woken by a keystroke elsewhere.
+  const actions = useStableActions(store);
+  const sectionIds = useSameList(resume.sections.map(s => s.id));
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR)
   );
 
   // Collapse/Expand All reaches the sections there when it was pressed (and every one when the tab
@@ -42,7 +51,7 @@ export function EditorResumeTab({
     const sections = resume.sections;
     const oldIndex = sections.findIndex(s => s.id === active.id);
     const newIndex = sections.findIndex(s => s.id === over.id);
-    if (oldIndex !== -1 && newIndex !== -1) store.updateSections(arrayMove(sections, oldIndex, newIndex));
+    if (oldIndex !== -1 && newIndex !== -1) actions.updateSections(arrayMove(sections, oldIndex, newIndex));
   }
 
   return (
@@ -67,11 +76,11 @@ export function EditorResumeTab({
             <PersonalInfoEditor
               resume={resume}
               personal={resume.personal}
-              updatePersonal={store.updatePersonal}
-              toggleFieldVisibility={store.toggleFieldVisibility}
+              updatePersonal={actions.updatePersonal}
+              toggleFieldVisibility={actions.toggleFieldVisibility}
               settings={resume.settings}
-              updateSetting={store.updateSetting}
-              clearSettings={store.clearSettings}
+              updateSetting={actions.updateSetting}
+              clearSettings={actions.clearSettings}
               template={resume.template}
               coverLetter={resume.coverLetter}
             />
@@ -80,23 +89,23 @@ export function EditorResumeTab({
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
-        <SortableContext items={resume.sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
           {resume.sections.map(section => (
             <SortableSection
               key={section.id}
               section={section}
               template={resume.template}
               settings={resume.settings}
-              updateSection={store.updateSection}
-              updateSectionSettings={store.updateSectionSettings}
-              removeSection={store.removeSection}
-              addItem={store.addItem}
-              updateItem={store.updateItem}
-              removeItem={store.removeItem}
-              reorderItems={store.reorderItems}
-              toggleSectionVisibility={store.toggleSectionVisibility}
-              duplicateSection={store.duplicateSection}
-              duplicateItem={store.duplicateItem}
+              updateSection={actions.updateSection}
+              updateSectionSettings={actions.updateSectionSettings}
+              removeSection={actions.removeSection}
+              addItem={actions.addItem}
+              updateItem={actions.updateItem}
+              removeItem={actions.removeItem}
+              reorderItems={actions.reorderItems}
+              toggleSectionVisibility={actions.toggleSectionVisibility}
+              duplicateSection={actions.duplicateSection}
+              duplicateItem={actions.duplicateItem}
               forceOpen={allExpanded}
               forceOpenKey={forcedIds.has(section.id) ? forceOpenKey : 0}
               justAdded={section.id === addedSectionId}
@@ -120,7 +129,7 @@ export function EditorResumeTab({
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">{group.label}</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {group.types.map(({ type, label }) => (
-                    <button key={type} onClick={() => { setAddedSectionId(store.addSection(type)); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 text-left transition-colors">
+                    <button key={type} onClick={() => { setAddedSectionId(actions.addSection(type)); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 text-left transition-colors">
                       {label}
                     </button>
                   ))}
