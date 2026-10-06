@@ -1,8 +1,8 @@
 # B2 report: Start-up shell (top bar, phone tab bar, account and sync states, Terms/Privacy, loading and crash)
 
-Branch `claude/wonderful-maxwell-vu8xqw`. Base `436457e` (B1 done). Code head `eb83254` (src identical on the head). 58 parity rows owned (SHEL-001..004, 010, 017, 020..032, 089..103, 111/112, 116, 118, 123/124, 132/133, 137, 141; MOBI-002, 010..014, 018, 150, 157; D-01, D-14..16; editor-content NEW-012). The three CHANGED rows (build the live function, not the drawing): SHEL-028 all seven sync states with held items named (179-ui-b2-account-menu); SHEL-092 the contact line keeps the mailto when an address is configured (the existing 79-site-owner) and the plain sentence otherwise (179-ui-b2-legal-pages); MOBI-010 the avatar opens the same menu (name, e-mail, sync line, Sign out) wherever the account shows: Dashboard and the legal pages through the real routes (179-ui-b2-account-menu, 179-ui-b2-legal-routes). The editor and workspace keep their own account mounts (B3, B11).
+Branch `claude/wonderful-maxwell-vu8xqw`. Base `436457e` (B1 done). Code head `d4f7dc8` (src identical on the head `26f4d0b`). 58 parity rows owned (SHEL-001..004, 010, 017, 020..032, 089..103, 111/112, 116, 118, 123/124, 132/133, 137, 141; MOBI-002, 010..014, 018, 150, 157; D-01, D-14..16; editor-content NEW-012). The three CHANGED rows (build the live function, not the drawing): SHEL-028 all seven sync states with held items named (179-ui-b2-account-menu); SHEL-092 the contact line keeps the mailto when an address is configured (the existing 79-site-owner) and the plain sentence otherwise (179-ui-b2-legal-pages); MOBI-010 the avatar opens the same menu (name, e-mail, sync line, Sign out) wherever the account shows: Dashboard and the legal pages through the real routes (179-ui-b2-account-menu, 179-ui-b2-legal-routes). The editor and workspace keep their own account mounts (B3, B11).
 
-## What changed (src: 13 commits, 11 files, +280 / -194)
+## What changed (src: 15 commits, 11 files)
 | commit | change | proof test |
 |---|---|---|
 | 78b0341 | `AppBar` (new): brand link to /, Documents / Applications / Projects nav with the sunken-pill current state, search and account slots | 179-ui-b2-app-bar |
@@ -18,6 +18,8 @@ Branch `claude/wonderful-maxwell-vu8xqw`. Base `436457e` (B1 done). Code head `e
 | a44bbef | hunt H1-2: Terms and Privacy show the signed-in first name like the Dashboard bar (`hideName` is the editor's narrow panel only) | 179-ui-b2-legal-pages |
 | 6699815 | hunt H1-3: the avatar menu is 224 px in the editor's narrow split panel (`hideName`) so the panel cannot clip it | 179-ui-b2-account-menu |
 
+| 9163072 | hunt H1-1: the avatar menu and the sync words close on a press anywhere outside, even on a page element that stops pointerdown (capture phase, as `ui/useDismiss`) | 179-ui-b2-outside-close |
+| 2183a80 | hunt H2-4: the avatar button drops its right padding when the name is not shown (the editor's narrow header keeps room for the résumé name) | 179-ui-b2-account-menu |
 Tests: 7 new files (app-bar, bottom-tab-bar, outside-close, account-menu, held-notice, legal-pages, crash-loading) and 1 more (legal-routes); updated for the new markup with the same intent: 103-r4-dvis-14/26/27, Cypress 01-dashboard and 26-mobile-layout, `ime-enter-guard`; `phone-reach` lists the three tab-bar testids.
 
 ## Fail-first proofs (read from the job logs)
@@ -35,8 +37,11 @@ Tests: 7 new files (app-bar, bottom-tab-bar, outside-close, account-menu, held-n
 | a0291fe | 1 | yes | 37489039266 |
 | a44bbef | 2 | yes | 37489039266 |
 | 6699815 | 1 | yes | 37489039266 |
+| 9163072 | 1 | yes | 37490937152 |
+| 2183a80 | 1 | yes | 37490937152 |
 The first proof run (37486076140) read RED on four new tests with the fix applied (held-notice loaded its modules in a second `before` hook; legal-pages rendered at `/`, so Documents was current): both test-side, fixed in 69deee3 and re-proved. Reviewers had already fixed three other test bugs and one src defect (2c74e8d) before CI.
 Tests-only additions proven by a throwaway mutation (commit `e8a847d`, reverted in `a18116e`; run 37489064270): routes dropping `auth`/`sync` for Terms and Privacy turned red the four legal-routes cases; a footer without the tab-bar clearance turned red the legal-pages clearance case on both pages; nothing else went red.
+A second mutation (`463d49c`, reverted in `26f4d0b`; run 37490963270): the legal routes dropping `sync` turned red the legal-routes sync case on /terms and /privacy (the rest of that file stayed green); the correct code passed 103/103 (run 37490937152).
 
 ## Start-up ledger (tests/pdf/71-startup-chunks, cap 1,100 kB)
 | point | run | start-up path | spare |
@@ -51,8 +56,11 @@ B2 cost +1.1 kB in all (plan: about 4.5 kB): AppBar and BottomTabBar are small, 
 - Playwright `phone-reach`: 14 passed (37486764375). Cypress 9 specs (00-smoke, 01-dashboard, 11-demo-account, 26-mobile-layout, 12-regressions-security, 29-exports-imports, 21-a11y, 07, 08): 75 tests passed.
 - Lessons: the Cypress dispatch input needs paths (`cypress/e2e/<spec>.cy.js`; bare names found no spec); a `before(setup)` plus a second `before` that loads modules left `loadModule` with no server.
 
-## Bug hunt
-Round 1 (`wf_c0de6f2a-874`, 30 agents): 12 reported, 5 confirmed (all minor), all fixed or pinned: hideName on the legal pages, the 288 px menu clipped in a narrow editor panel, routes-to-legal-pages untested, the phone brand name, the footer clearance untested. Round 2 (`wf_15d58d4a-aaf`) and the full gate: see the end of this file.
+## Bug hunt (3 rounds)
+- Round 1 (`wf_c0de6f2a-874`, 30 agents): 12 reported, 5 confirmed (all minor), all fixed or pinned: hideName on the legal pages, the 288 px menu clipped in a narrow editor panel, routes-to-legal-pages untested, the phone brand name, the footer clearance untested.
+- Round 2 (`wf_15d58d4a-aaf`, 16 agents): 6 reported, 3 confirmed (minor), all fixed: the outside-press listener in the capture phase, the sync hand-off to the legal pages untested, the avatar button's padding in the narrow header.
+- Round 3 (`wf_43e17048-e19`, a final sweep of every changed src file): 0 reported: the hunt is DRY.
+- Not confirmed (split or refuted): a press outside the menu also reaching what is under it; the Dashboard's compact vs full sign-in swap not pinned by 103-r4-dvis-26; the tab bar's stacking level over dialogs untested.
 
 ## What still differs from the canvas (honest list)
 - **Search**: no search field (the canvas draws "Search everything"; it is a new capability: parked, D-02).
