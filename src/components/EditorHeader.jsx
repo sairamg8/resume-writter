@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ArrowLeft, Palette, Pencil, Share2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Palette, Pencil, Share2, ShieldCheck, TriangleAlert } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { EditorDocSwitch } from '@/components/EditorDocSwitch';
 import { LayoutToggle } from '@/components/LayoutToggle';
@@ -118,6 +118,11 @@ export const EditorHeader = memo(function EditorHeader({ name, rename, layoutMod
   );
 });
 
+// The canvas banner (States.dc): a soft card under the bar with an icon, the message and a quiet Dismiss. The colours
+// come from the .cv-notice-warn / .cv-notice-bad classes; no `flex` conflict with the row's `empty:hidden` (the row stays a block).
+const ALERT = 'mx-3 sm:mx-4 mt-2 flex items-start gap-3 border px-4 py-2 text-xs';
+const ALERT_BUTTON = 'shrink-0 px-2.5 py-1 rounded-cv-control border border-current/30 font-semibold transition-colors';
+
 /**
  * A failed export or import (dismissable), browser storage that is full, and after a PDF, Word or
  * text import the reminder that it was read best-effort (`importNotice`, dismissable, R2-148).
@@ -130,20 +135,23 @@ export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss,
   return (
     <>
       {importNotice && (
-        <div role="status" className="px-4 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-200 flex items-start gap-2">
-          <span className="flex-1">{importNotice}</span>
-          <button onClick={onDismissImport} className="font-semibold hover:text-amber-950 shrink-0">Dismiss</button>
+        <div role="status" className={`${ALERT} cv-notice-warn border-cv-warn/25`}>
+          <TriangleAlert size={16} className="shrink-0 mt-px" />
+          <span className="flex-1 min-w-0">{importNotice}</span>
+          <button onClick={onDismissImport} className={`${ALERT_BUTTON} hover:bg-cv-surface/60`}>Dismiss</button>
         </div>
       )}
       {exportError && (
-        <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200 flex items-start gap-2">
-          <span className="flex-1">{exportError}</span>
-          <button onClick={onDismiss} className="font-semibold hover:text-red-900 shrink-0">Dismiss</button>
+        <div role="alert" className={`${ALERT} cv-notice-bad border-cv-bad/25`}>
+          <TriangleAlert size={16} className="shrink-0 mt-px" />
+          <span className="flex-1 min-w-0">{exportError}</span>
+          <button onClick={onDismiss} className={`${ALERT_BUTTON} hover:bg-cv-surface/60`}>Dismiss</button>
         </div>
       )}
       {persistError && (
-        <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200">
-          {notSavedMessage('editor', persistError)}
+        <div role="alert" className={`${ALERT} cv-notice-bad border-cv-bad/25`}>
+          <TriangleAlert size={16} className="shrink-0 mt-px" />
+          <span className="flex-1 min-w-0">{notSavedMessage('editor', persistError)}</span>
         </div>
       )}
     </>
