@@ -735,8 +735,10 @@ export function sanitizeRichText(html) {
   // characters with 1 000 bold and plain words in it wrote 10 MB (typing-freeze 7a). A link a block carries on into
   // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
   // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
-  // Runs of one link share its address string, so a run is told from the one before it by a pointer compare.
+  // Runs of one link share its address string, so a run is told from the one before it by a pointer compare, and an
+  // address that comes back (after a block, or an inner link) is checked and escaped once.
   let budget = 16 * `${html}`.length + 4096;
+  const seen = new Map();
   const runsHtml = (runs) => {
     let line = '';
     let cur = ''; // the address of the anchor that is open
@@ -748,7 +750,7 @@ export function sanitizeRichText(html) {
       if (r.italic) t = `<em>${t}</em>`;
       if (r.bold) t = `<strong>${t}</strong>`;
       if (r.href !== was) {
-        const h = esc(safeHref((was = r.href)) || '');
+        const h = seen.get(was = r.href) ?? seen.set(was, esc(safeHref(was) || '')).get(was);
         if (h !== cur) {
           if (cur) line += '</a>';
           budget -= (cur = h.length <= budget ? h : '').length;
