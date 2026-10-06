@@ -15,15 +15,17 @@ import { editorPath, isLetter } from '@/utils/letters';
 const NETWORK_EXPORTS = new Set(['pdf', 'word']);
 
 /**
- * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
- * résumé as Markdown, ATS text, JSON Resume and JSON whichever tab is open — `letterTab` tells the
- * menu to say so on the letter's tab, where it also offers the letter as plain text (R2-131) — and
+ * The editor's Export menu: PDF and Word of the document on screen (résumé or cover letter), the
+ * résumé as Markdown, ATS text, JSON Resume and JSON whichever document is open — `letterTab` (true: the
+ * letter is the open document) tells the menu to say so, where it also offers the letter as plain text (R2-131) — and
  * Import JSON — with the busy state and a visible error message. `keeps`: a
  * demo account, which can import a file as its original (useDemoSeed), as from the dashboard.
  * `account`: the account the list is now (the store's syncedUid): a document picked now is kept for it
  * when the read ends after it signed out (importingFor, R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
  */
-export function useEditorExports({ resume, activeTab, authUser, importResume, navigate, account = null }) {
+export function useEditorExports({ resume, letterTab: letterOpen, activeTab, authUser, importResume, navigate, account = null }) {
+  // The document on screen: the letter when `letterTab` says so (`activeTab: 'coverletter'` is the old way to say it).
+  const letterTab = letterOpen ?? activeTab === 'coverletter';
   const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
   const keeps = isDemoAccount(authUser, DEMO_ACCOUNTS);
@@ -64,7 +66,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     return runExport('pdf', 'PDF export', async () => {
       // Built where the preview is built (pdfBuild.js): the same file, off the main thread.
       const { exportResumePdf, exportCoverLetterPdf } = await import('@/utils/pdfBuild');
-      if (activeTab === 'coverletter') {
+      if (letterTab) {
         await exportCoverLetterPdf(resume, `${filename}_cover_letter.pdf`);
       } else {
         await exportResumePdf(resume, `${filename}.pdf`);
@@ -76,7 +78,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     const filename = buildExportFilename(resume);
     return runExport('word', 'Word export', async () => {
       const { exportToWord, exportCoverLetterToWord } = await import('@/utils/wordExport');
-      if (activeTab === 'coverletter') {
+      if (letterTab) {
         await exportCoverLetterToWord(resume, `${filename}_cover_letter.docx`);
       } else {
         await exportToWord(resume, `${filename}.docx`);
@@ -163,7 +165,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   return {
-    exporting, importing, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
+    exporting, importing, exportError, setExportError, keeps, letterTab,
     handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON, handleImportFile,
   };
 }

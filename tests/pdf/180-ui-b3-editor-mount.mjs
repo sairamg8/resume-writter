@@ -59,6 +59,7 @@ globalThis.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
 const harness = await import('./harness.mjs');
 const fakeDom = await import('./fake-dom.mjs');
 const { MemoryStorage, settle } = await import('./resume-tab.mjs');
+const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
 const router = await import('react-router-dom');
 const { setup, teardown, loadModule, resume, section, experience } = harness;
 const { mount, elements, reactProps, withInnerHtml } = fakeDom;
@@ -78,6 +79,7 @@ export const attr = (el, name) => el.getAttribute(name) ?? '';
 let build;
 /** The `before` of a test file: the harness, innerHTML, and a PDF worker that answers at once (the warm-up is not what is tested). */
 export async function prepare() {
+  patchFakeDom();
   await setup();
   withInnerHtml();
   build = await loadModule('/src/utils/pdfBuild.js');
@@ -143,16 +145,30 @@ export function find(node, type) {
  * bar (the document switch with the ATS chip and the Design button), the save chip, the Résumé tab and, when open, the dock.
  * Returns what to read and drive, and `measure(fn)`: `fn`'s commits, each as the parts that rendered in it.
  */
-export async function openEditor({ signedIn = false, path = '', extra = {} } = {}) {
+export async function openEditor({ signedIn = false, path = '', extra = {}, toasts = false } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Editor } = await loadModule('/src/pages/Editor.jsx');
-  const { EditorHeader, EditorAlerts, EditorModeBar } = await loadModule('/src/components/EditorHeader.jsx');
+  const { EditorHeader, EditorAlerts, EditorModeBar, EditorAtsChip, EditorDesignButton } = await loadModule('/src/components/EditorHeader.jsx');
+  const { EditorDocSwitch } = await loadModule('/src/components/EditorDocSwitch.jsx');
+  const { EditorDock } = await loadModule('/src/components/EditorDock.jsx');
+  const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');
+  const { default: AtsCheckerPanel } = await loadModule('/src/components/AtsCheckerPanel.jsx');
+  const { TemplateGallery } = await loadModule('/src/components/TemplateGallery.jsx');
+  const { ToastProvider, useToast } = await loadModule('/src/components/ui/Toast.jsx');
   const { EditorTabContent } = await loadModule('/src/components/EditorTabContent.jsx');
   const { EditorPreviewPane } = await loadModule('/src/components/EditorPreviewPane.jsx');
   const { EditorSaveStatus } = await loadModule('/src/components/EditorSaveStatus.jsx');
   probe.parts = [
     ['header', EditorHeader], ['alerts', EditorAlerts], ['modes', EditorModeBar], ['save', EditorSaveStatus],
+    ['switch', EditorDocSwitch], ['chip', EditorAtsChip], ['designButton', EditorDesignButton],
+    ['dock', EditorDock], ['designPanel', DesignPanel], ['atsPanel', AtsCheckerPanel],
   ];
+  // The ATS panel keeps the pasted posting for the session.
+  const sessionMap = new Map();
+  globalThis.sessionStorage = {
+    get length() { return sessionMap.size; }, key: (i) => [...sessionMap.keys()][i] ?? null,
+    getItem: (k) => (sessionMap.has(k) ? sessionMap.get(k) : null), setItem: (k, v) => sessionMap.set(k, String(v)), removeItem: (k) => sessionMap.delete(k),
+  };
 
   const r = fixture(extra);
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })]]);
@@ -174,12 +190,17 @@ export async function openEditor({ signedIn = false, path = '', extra = {} } = {
     assert.ok(header && alerts && modes && tab && preview, 'the Editor renders its header, alerts, mode bar, tab area and preview pane');
     const save = preview.props.saveStatus;
     assert.ok(save && save.type === EditorSaveStatus, 'the Editor gives the preview its save chip');
+    const dock = find(tree, EditorDock);
     live.tree = tree;
+    live.gallery = find(tree, TemplateGallery)?.props;
+    live.dockProps = dock?.props ?? null;
     live.headerProps.push(header.props);
     live.previewProps.push(preview.props);
     live.saveProps.push(save.props);
-    return createElement(Fragment, null, header, alerts, modes, save, tab.props.activeTab === 'resume' ? tab : null);
+    const parts = createElement(Fragment, null, header, alerts, modes, save, tab.props.activeTab === 'resume' ? tab : null, dock);
+    return toasts ? createElement(ToastProvider, null, createElement(ToastProbe), parts) : parts;
   }
+  function ToastProbe() { live.toast = useToast().toast; return null; }
 
   /** App.jsx: the store, the account and the sync, below which the routes are, new objects at every render. */
   function App() {
@@ -230,8 +251,15 @@ export async function openEditor({ signedIn = false, path = '', extra = {} } = {
   };
 
   return {
-    live, id: r.id, all, byTid, call,
+    live, id: r.id, all, byTid, call, body: () => [...elements(view.document.body)],
     act: (fn) => view.act(fn),
+    /** A click on the control with this testid, and the renders and the address change it sets off. */
+    async press(id) {
+      const el = byTid(id);
+      assert.ok(el, `no control with the testid ${id}`);
+      call(el, 'onClick');
+      await settle();
+    },
     store: () => live.store,
     url: () => live.url,
     header: () => live.headerProps.at(-1),
@@ -276,6 +304,7 @@ export async function openEditor({ signedIn = false, path = '', extra = {} } = {
     async close() {
       await view.unmount();
       delete globalThis.localStorage;
+      delete globalThis.sessionStorage;
     },
   };
 }

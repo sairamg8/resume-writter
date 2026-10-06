@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PenLine, Eye } from 'lucide-react';
 
-import DesignPanel from '@/components/DesignPanel';
 import { TemplateGallery } from '@/components/TemplateGallery';
 import { ToastProvider } from '@/components/ui/Toast';
 import { savedDesigns } from '@/constants/templatePresets';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
-import AtsCheckerPanel from '@/components/AtsCheckerPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
+import { EditorDock } from '@/components/EditorDock';
 import { EditorResumeTab } from '@/components/EditorResumeTab';
 import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
@@ -18,11 +17,21 @@ import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
-import { useEditorTab, EDITOR_DOCKS } from '@/hooks/useEditorTab';
+import { useEditorTab } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
 import { useStableActions } from '@/hooks/useStableActions';
 import { useStableObject } from '@/hooks/useStableObject';
 import ShareLinkModal, { firebasePublicIo } from '@/components/ShareLinkModal';
+
+/**
+ * `value` as the same object it was while it holds the same things (compared as JSON): the saved designs are
+ * made again at every render, and a memoised part given a new array renders for nothing.
+ */
+function useKept(value) {
+  const kept = useRef(value);
+  if (kept.current !== value && JSON.stringify(kept.current) !== JSON.stringify(value)) kept.current = value;
+  return kept.current;
+}
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -33,16 +42,11 @@ export function Editor({ store, auth, sync }) {
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
-  // The address names a document and a dock; the tab strip (until the dock replaces it) shows one of the two at a time.
+  // The address names the open document ('resume' | 'coverletter', ?tab=) and the open dock (null | 'design' | 'ats',
+  // ?dock=): the editor panel is the document's content only, the dock sits right of the preview. The preview and
+  // Export follow the document; Design and ATS belong to the résumé, so a dock opened from the letter switches to it.
   const { doc, dock, setDoc, setDock } = useEditorTab();
-  const activeTab = dock ?? doc;
-  function setActiveTab(next) {
-    const value = typeof next === 'function' ? next(activeTab) : next;
-    if (EDITOR_DOCKS.includes(value)) setDock(value);
-    else if (value === 'resume' && dock) setDock(null);
-    else setDoc(value);
-  }
-  // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
+  // What is open on the Résumé document lives here, so it survives a trip to the letter or a dock.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const rename = useRename(resume, (name) => store.renameResume(resume.id, name));
@@ -51,18 +55,18 @@ export function Editor({ store, auth, sync }) {
   const [forceOpenKey, setForceOpenKey] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [shareOpen, setShareOpen] = useState(false);
-  // Design → Template open or collapsed, kept here so a trip to another tab keeps it (A12), and the
+  // Design → Template open or collapsed, kept here so closing the dock keeps it (A12), and the
   // template gallery (A2).
   const [templateOpen, setTemplateOpen] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  // The designs the user saved, from every résumé that holds one (B4), and the store's look actions.
+  // The designs the user saved, from every résumé that holds one (B4), and the store's look actions (the gallery's).
   const designs = savedDesigns(store.appState.resumes);
   const lookActions = {
     setTemplate: store.setTemplate, updateSetting: store.updateSetting, applyDesign: store.applyDesign, restoreDesign: store.restoreDesign,
   };
 
   const exportMenu = useEditorExports({
-    resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
+    resume, letterTab: doc === 'coverletter', authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
   });
   const { panelWidth, separatorProps } = usePanelResize();
   const importNotice = useImportNotice();
@@ -78,6 +82,18 @@ export function Editor({ store, auth, sync }) {
   const headerSync = useStableObject(sync);
   const goBack = useCallback(() => navigate('/'), [navigate]);
   const openShare = useCallback(() => setShareOpen(true), []);
+  const openGallery = useCallback(() => setGalleryOpen(true), []);
+
+  // What the dock is given must keep its identity while its values do, or its memoised panels render at every key
+  // (PERF-4): the store's actions as functions that call the latest ones (a stale one would write into the
+  // résumé as it was), the saved designs (a new array at every render) and the Template state, in one object.
+  const acts = useStableActions(store);
+  const keptDesigns = useKept(designs);
+  const design = useMemo(() => ({
+    setTemplate: acts.setTemplate, updateSetting: acts.updateSetting, applyDesign: acts.applyDesign, restoreDesign: acts.restoreDesign,
+    resetSettings: acts.resetSettings, clearSettings: acts.clearSettings, saveDesign: acts.saveDesign, deleteDesign: acts.deleteDesign,
+    designs: keptDesigns, templateOpen, onTemplateOpenChange: setTemplateOpen, onBrowseTemplates: openGallery,
+  }), [acts, keptDesigns, templateOpen, openGallery]);
 
   function toggleAllSections() {
     const next = !allExpanded;
@@ -86,22 +102,30 @@ export function Editor({ store, auth, sync }) {
     setForceOpenKey(k => k + 1);
   }
 
-  function handleModeTabChange(tab) {
-    setActiveTab(tab);
-    if (isMobile) {
-      setMobileTab('editor');
-    }
+  // A pick of a document or a dock on a phone also sets the Edit | Preview pill to Edit, so the picked panel shows
+  // and the phone is never left on the preview (MOBI-043).
+  function pickDoc(next) {
+    setDoc(next);
+    if (isMobile) setMobileTab('editor');
   }
 
-  // The alerts and the mode bar show a message and the open tab, which a keystroke in the résumé does not change,
-  // but their handlers are new functions at every render, each closed over what that render had: the import
-  // notice's Dismiss over the address it was read from (a stale one would send the editor back to the tab it had
-  // then), the tab picker over the address and the window's width (a stale one would drop the notice, and leave a
+  // The chip and the Design button toggle their dock: a second press closes it, whichever document is open.
+  function toggleDock(name) {
+    setDock((prev) => (prev === name ? null : name));
+    if (isMobile) setMobileTab('editor');
+  }
+
+  // The alerts and the mode bar show a message and the open document and dock, which a keystroke in the résumé does
+  // not change, but their handlers are new functions at every render, each closed over what that render had: the
+  // import notice's Dismiss over the address it was read from (a stale one would send the editor back to the view it
+  // had then), the pickers over the address and the window's width (a stale one would drop the notice, and leave a
   // phone on the preview). Kept as they are, calling the latest ones, neither is rendered at every key (PERF-4).
-  const { dismissExportError, dismissImport, pickTab } = useStableActions({
+  const { dismissExportError, dismissImport, pickTab, toggleDock: onToggleDock, closeDock } = useStableActions({
     dismissExportError: () => exportMenu.setExportError(null),
     dismissImport: importNotice.dismiss,
-    pickTab: handleModeTabChange,
+    pickTab: pickDoc,
+    toggleDock,
+    closeDock: () => setDock(null),
   });
 
   // Warm react-pdf fonts + template chunk so Export PDF feels instant — where PDFs are built, the
@@ -153,10 +177,10 @@ export function Editor({ store, auth, sync }) {
           onBack={goBack}
         />
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={dismissExportError} persistError={store.persistReason} importNotice={importNotice.notice} onDismissImport={dismissImport} />
-        <EditorModeBar activeTab={activeTab} setActiveTab={pickTab} />
+        <EditorModeBar doc={doc} dock={dock} onPickDoc={pickTab} onToggleDock={onToggleDock} />
 
-        <EditorTabContent activeTab={activeTab}>
-          {activeTab === 'resume' && (
+        <EditorTabContent activeTab={doc}>
+          {doc === 'resume' && (
             <EditorResumeTab
               resume={resume}
               store={store}
@@ -170,32 +194,9 @@ export function Editor({ store, auth, sync }) {
             />
           )}
 
-          {activeTab === 'design' && (
-            <div className="px-4 py-4">
-              <DesignPanel
-                resume={resume}
-                {...lookActions}
-                resetSettings={store.resetSettings}
-                clearSettings={store.clearSettings}
-                designs={designs}
-                saveDesign={store.saveDesign}
-                deleteDesign={store.deleteDesign}
-                onBrowseTemplates={() => setGalleryOpen(true)}
-                templateOpen={templateOpen}
-                onTemplateOpenChange={setTemplateOpen}
-              />
-            </div>
-          )}
-
-          {activeTab === 'coverletter' && (
+          {doc === 'coverletter' && (
             <div className="px-4 py-4">
               <CoverLetterPanel resume={resume} coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} updateSetting={store.updateSetting} clearSettings={store.clearSettings} />
-            </div>
-          )}
-
-          {activeTab === 'ats' && (
-            <div className="px-4 py-4">
-              <AtsCheckerPanel resume={resume} store={store} />
             </div>
           )}
         </EditorTabContent>
@@ -213,7 +214,7 @@ export function Editor({ store, auth, sync }) {
 
       <EditorPreviewPane
         resume={resume}
-        activeTab={activeTab}
+        activeTab={doc}
         layoutMode={isMobile ? (mobileTab === 'preview' ? 'preview' : 'editor') : layoutMode}
         setLayoutMode={setLayoutMode}
         previewZoom={previewZoom}
@@ -221,6 +222,9 @@ export function Editor({ store, auth, sync }) {
         saveStatus={saveChip}
         isMobile={isMobile}
       />
+
+      {/* The one dock, right of the preview, mounted only while open. */}
+      {dock && <EditorDock dock={dock} resume={resume} design={design} store={acts} onClose={closeDock} />}
 
       {canShare && <ShareLinkModal isOpen={shareOpen} resume={resume} uid={auth.user.uid} onClose={() => setShareOpen(false)} />}
 

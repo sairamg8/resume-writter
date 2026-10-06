@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { User, ArrowLeft, Mail as MailIcon, Palette, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Palette, ShieldCheck } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
+import { EditorDocSwitch } from '@/components/EditorDocSwitch';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { ExportDropdown } from '@/components/ExportDropdown';
 import { notSavedMessage } from '@/utils/storageBackup';
@@ -105,49 +106,54 @@ export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss,
   );
 });
 
+const CHIP = 'flex items-center gap-1.5 shrink-0 py-2 px-2.5 rounded-cv-control border text-xs font-semibold transition-colors whitespace-nowrap';
+
 /**
- * Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé).
- * From sm up the tabs share the group's width (flex-1, sm:min-w-0) and their labels truncate: in a
- * narrow split panel (240–360 px) they kept their full width, spilled past the group and slid
- * under the Design button. A phone keeps each tab whole (min-w-max on the tab and the group) and
- * scrolls the row instead: with min-w-0 there, equal thirds of a 375 px row cut "Cover Letter".
- * Memoised over the open tab and a `setActiveTab` that keeps its identity (the Editor's): a keystroke
- * renders none of it (PERF-4). No router hook, for the header's reason.
+ * The ATS chip: opens the ATS dock, or closes it (`open`: it is the dock that is open). A label, no score:
+ * the scan runs only inside the dock. A memo leaf of a boolean and `onToggleDock(dock)`, the Editor's stable
+ * callback (PERF-4); no router hook, no link.
  */
-export const EditorModeBar = memo(function EditorModeBar({ activeTab, setActiveTab }) {
+export const EditorAtsChip = memo(function EditorAtsChip({ open, onToggleDock }) {
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-3 border-b border-gray-200 bg-gray-50/60 overflow-x-auto no-scrollbar">
-      <div className="flex gap-1 flex-1 min-w-max sm:min-w-0 bg-white border border-gray-200 rounded-xl p-1">
-        <button
-          onClick={() => setActiveTab('resume')}
-          data-testid="doc-switch-resume"
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <User size={13} className="shrink-0" /> <span className="min-w-0 truncate">Resume</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('coverletter')}
-          data-testid="doc-switch-letter"
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <MailIcon size={13} className="shrink-0" /> <span className="min-w-0 truncate">Cover Letter</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ats')}
-          data-testid="ats-open"
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <ShieldCheck size={13} className="shrink-0" /> <span className="min-w-0 truncate">ATS Check</span>
-        </button>
-      </div>
-      <button
-        onClick={() => setActiveTab(prev => (prev === 'design' ? 'resume' : 'design'))}
-        title="Design & Customize"
-        data-testid="design-open"
-        className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : 'border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
-      >
-        <Palette size={15} />
-      </button>
+    <button
+      onClick={() => onToggleDock('ats')}
+      data-testid="ats-chip"
+      className={`${CHIP} ${open ? 'bg-cv-good-soft border-cv-good text-cv-good' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+    >
+      <ShieldCheck size={13} className="shrink-0" /> <span>ATS check</span>
+    </button>
+  );
+});
+
+/**
+ * The Design button: opens the Design dock, or closes it. It is the résumé's, so from the letter it opens
+ * over the Résumé. Named in words (the title is the hover hint; a touch screen has none). A memo leaf, as the chip.
+ */
+export const EditorDesignButton = memo(function EditorDesignButton({ open, onToggleDock }) {
+  return (
+    <button
+      onClick={() => onToggleDock('design')}
+      title="Design & Customize"
+      data-testid="design-button"
+      className={`${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+    >
+      <Palette size={13} className="shrink-0" /> <span>Design</span>
+    </button>
+  );
+});
+
+/**
+ * The row that switches what the editor shows: the document switch (Resume | Cover Letter), the ATS chip and
+ * the Design button, which open the right dock (`dock`: null, 'design' or 'ats'; one at a time).
+ * Memoised over the open document and dock and the Editor's stable callbacks (`onPickDoc(doc)`,
+ * `onToggleDock(dock)`): a keystroke renders none of it (PERF-4). No router hook, for the header's reason.
+ */
+export const EditorModeBar = memo(function EditorModeBar({ doc, dock, onPickDoc, onToggleDock }) {
+  return (
+    <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 border-b border-cv-hairline bg-cv-ground overflow-x-auto no-scrollbar">
+      <EditorDocSwitch doc={doc} onPick={onPickDoc} />
+      <EditorAtsChip open={dock === 'ats'} onToggleDock={onToggleDock} />
+      <EditorDesignButton open={dock === 'design'} onToggleDock={onToggleDock} />
     </div>
   );
 });
