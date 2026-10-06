@@ -1,6 +1,6 @@
 // R4-DVIS-27: from 640 px up, signed out, the Dashboard's toolbar put a 30 px "Sign in with Google"
 // button with 12 px text (AuthBar's full button: px-3 py-1.5 text-xs) beside 38 px buttons with 14 px
-// text (Import, Job Tracker, Projects, New Cover: py-1.5 sm:py-2, text-xs sm:text-sm). AuthBar's full
+// text (Import, New Cover: py-1.5 sm:py-2, text-xs sm:text-sm; B2 made Job Tracker and Projects the bar's nav links). AuthBar's full
 // button, which only the Dashboard's toolbar shows (from md up), is now sized as they are; the compact
 // icon button of the phone header, the editor and the workspace top bar is unchanged. The fake DOM
 // has no layout, so this pins the classes on the real Dashboard, mounted with react-dom/client over
@@ -31,12 +31,12 @@ it('signed out, the Dashboard toolbar\'s Sign in with Google is sized as the but
     createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
   try {
     const buttons = [...elements(view.container)].filter((el) => el.tagName === 'BUTTON');
-    const jobTracker = buttons.find((el) => text(el) === 'Job Tracker');
-    assert.ok(jobTracker, 'the toolbar\'s Job Tracker button');
-    for (const t of TOOLBAR_SIZE) assert.ok(tokens(jobTracker).includes(t), `Job Tracker has ${t}: the size the sign-in button must match`);
+    const jobTracker = buttons.find((el) => text(el) === 'New Cover');
+    assert.ok(jobTracker, 'the toolbar\'s New Cover button');
+    for (const t of TOOLBAR_SIZE) assert.ok(tokens(jobTracker).includes(t), `New Cover has ${t}: the size the sign-in button must match`);
     const signIn = buttons.find((el) => text(el) === 'Sign in with Google');
     assert.ok(signIn, 'the toolbar\'s full Sign in with Google button');
-    for (const t of TOOLBAR_SIZE) assert.ok(tokens(signIn).includes(t), `Sign in with Google has ${t}, as Job Tracker: ${tokens(signIn).join(' ')}`);
+    for (const t of TOOLBAR_SIZE) assert.ok(tokens(signIn).includes(t), `Sign in with Google has ${t}, as New Cover: ${tokens(signIn).join(' ')}`);
     // The phone header's icon-only button (AuthBar compact) stays as it was.
     const compact = buttons.find((el) => el.getAttribute('aria-label') === 'Sign in with Google' && !text(el));
     assert.ok(compact, 'the compact icon button of the phone header');

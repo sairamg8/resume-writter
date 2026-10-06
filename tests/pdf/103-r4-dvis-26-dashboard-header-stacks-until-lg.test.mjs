@@ -1,12 +1,12 @@
-// R4-DVIS-26: from md (768 px) the Dashboard's header put its actions in one row beside the logo, but
-// those actions (Import, Job Tracker, Projects, New Cover, New Resume, a divider and the full sign-in)
-// are ~800 px wide and a tablet has ~610 px beside the logo, so up to ~985 px they wrapped into two
-// ragged, left-aligned rows with New Resume and the sign-in under Import. The header now stacks until lg,
-// as on a phone: the logo with the compact sign-in on top, the five actions in one row under it; from
-// lg (1024 px, where they fit beside the logo) it is the row it was. The fake DOM has no layout, so this
-// pins the breakpoint classes on the real Dashboard, mounted with react-dom/client over
-// tests/pdf/fake-dom.mjs, signed out with no résumés; cypress/e2e/26-mobile-layout.cy.js checks the
-// phone header's actions are in reach.
+// R4-DVIS-26: the Dashboard's actions (~800 px with the sign-in) wrapped into two ragged rows beside the
+// logo on a tablet, so the compact (icon-only) sign-in sat beside the logo until lg and the full one came
+// from lg. B2 (UI rebuild): the header is the shared AppBar (src/components/AppBar.jsx): the brand, the
+// three areas (below md the phone tab bar replaces them) and the account at the right, the compact
+// sign-in shown until lg and the full one from lg; the page's actions (Import, New Cover, New Resume) are
+// one row under the bar, and "Job Tracker" and "Projects" are the bar's nav links, same destinations. The
+// fake DOM has no layout, so this pins the breakpoint classes on the real Dashboard, mounted with
+// react-dom/client over tests/pdf/fake-dom.mjs, signed out with no résumés; cypress/e2e/26-mobile-layout.cy.js
+// checks the phone header's actions are in reach.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -46,35 +46,49 @@ async function dashboard() {
   };
 }
 
-it('the Dashboard\'s header stacks until lg, and is one row beside the logo from lg', async () => {
+it('the header is the AppBar: the compact sign-in shows until lg, the full one from lg, the actions are one row under the bar', async () => {
   const page = await dashboard();
   try {
     const all = page.all();
+    const header = all.find((el) => el.getAttribute('data-testid') === 'app-bar');
+    assert.ok(header, 'the app bar');
     const newResume = all.find((el) => el.tagName === 'BUTTON' && text(el) === 'New Resume');
-    assert.ok(newResume, 'the header\'s New Resume');
-    const header = all.find((el) => tokens(el).includes('max-w-7xl') && tokens(el).includes('justify-between') && el.contains(newResume));
-    assert.ok(header, 'the header row');
-    for (const t of ['flex-col', 'lg:flex-row', 'items-stretch', 'lg:items-center']) assert.ok(tokens(header).includes(t), `the header has ${t}: ${tokens(header).join(' ')}`);
-    for (const t of ['md:flex-row', 'md:items-center']) assert.ok(!tokens(header).includes(t), `no ${t}: on a tablet the actions wrapped into two rows beside the logo`);
+    assert.ok(newResume && header.contains(newResume), 'New Resume is in the header, under the bar row');
+    const [bar, actionsBox] = header.childNodes;
+    assert.ok(!bar.contains(newResume) && actionsBox.contains(newResume), 'the actions are a second row, not squeezed beside the logo');
+    const row = actionsBox.childNodes[0];
+    assert.ok(tokens(row).includes('flex-wrap'), 'the row wraps rather than overflows');
 
-    const [brand, actions] = header.childNodes;
-    assert.ok(actions.contains(newResume), 'the actions are the header\'s second part');
-    assert.ok(tokens(brand).includes('lg:w-auto') && !tokens(brand).includes('md:w-auto'), `the logo row spans the header until lg: ${tokens(brand).join(' ')}`);
-    assert.ok(tokens(brand).includes('shrink-0'), 'the logo is never squeezed by the actions beside it');
-
-    // The compact sign-in is beside the logo until lg; the full one ends the actions' row from lg.
-    const compact = brand.childNodes.at(-1);
-    assert.ok(tokens(compact).includes('lg:hidden') && !tokens(compact).includes('md:hidden'), `the compact sign-in shows until lg: ${tokens(compact).join(' ')}`);
+    // The compact sign-in shows until lg; the full one from lg.
+    const wrappers = [...elements(bar)].filter((el) => tokens(el).includes('lg:hidden') || tokens(el).includes('lg:block'));
+    const compact = wrappers.find((el) => tokens(el).includes('lg:hidden'));
+    assert.ok(compact && !tokens(compact).includes('md:hidden'), 'the compact sign-in shows until lg');
     assert.ok(hasSignIn(compact), 'the compact sign-in');
-    const full = actions.childNodes.at(-1);
-    assert.ok(tokens(full).includes('hidden') && tokens(full).includes('lg:block') && !tokens(full).includes('md:block'), `the full sign-in shows from lg: ${tokens(full).join(' ')}`);
+    const full = wrappers.find((el) => tokens(el).includes('lg:block'));
+    assert.ok(full && tokens(full).includes('hidden') && !tokens(full).includes('md:block'), `the full sign-in shows from lg: ${full && tokens(full).join(' ')}`);
     assert.ok(hasSignIn(full), 'the full sign-in');
-    const divider = actions.childNodes.find((el) => tokens(el).includes('w-px'));
-    assert.ok(divider, 'the divider before the full sign-in');
-    assert.ok(tokens(divider).includes('lg:block') && !tokens(divider).includes('md:block'), 'the divider shows from lg, with the full sign-in');
 
-    for (const label of ['Import', 'Job Tracker', 'Projects', 'New Cover', 'New Resume']) {
-      assert.ok(actions.childNodes.some((el) => el.tagName === 'BUTTON' && text(el) === label), `${label} is in the actions' row`);
+    for (const label of ['Import', 'New Cover', 'New Resume']) {
+      assert.ok([...elements(row)].some((el) => el.tagName === 'BUTTON' && text(el) === label), `${label} is in the actions' row`);
     }
+    // Job Tracker and Projects are the bar's nav links now, not buttons in the row.
+    for (const label of ['Job Tracker', 'Projects']) {
+      assert.ok(![...elements(row)].some((el) => text(el) === label), `${label} is not in the actions' row`);
+    }
+    const links = [...elements(bar)].filter((el) => el.tagName === 'A' && /^app-bar-nav-/.test(el.getAttribute('data-testid') ?? ''));
+    assert.deepEqual(links.map((a) => [text(a), a.getAttribute('href')]), [['Documents', '/'], ['Applications', '/jobs'], ['Projects', '/boards']]);
+  } finally { await page.close(); }
+});
+
+it('the Dashboard mounts the phone tab bar and keeps room under the page for it', async () => {
+  const page = await dashboard();
+  try {
+    const all = page.all();
+    const tabs = all.find((el) => el.getAttribute('data-testid') === 'bottom-tab-bar');
+    assert.ok(tabs, 'the bottom tab bar');
+    const root = page.view.container.childNodes[0];
+    assert.ok(root.contains(tabs));
+    assert.ok(tokens(root).includes('pb-20') && tokens(root).includes('md:pb-0'), `the page leaves 80 px under it on a phone: ${tokens(root).join(' ')}`);
+    assert.ok(all.some((el) => el.getAttribute('data-testid') === 'bottom-tab-applications'), 'its Applications tab');
   } finally { await page.close(); }
 });

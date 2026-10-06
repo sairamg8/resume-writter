@@ -214,8 +214,8 @@ describe('dashboard — with résumés', () => {
     cy.store().its('resumes').should('have.length', 3);
   });
 
-  it('header and footer links reach the job tracker, terms and privacy pages', () => {
-    cy.contains('button', 'Job Tracker').click();
+  it('header nav and footer links reach the job tracker, terms and privacy pages', () => {
+    cy.get('[data-testid="app-bar-nav-applications"]').click();
     cy.location('hash').should('eq', '#/jobs');
     cy.go('back');
     cy.contains('button', 'Terms').click();

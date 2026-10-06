@@ -1,10 +1,9 @@
-// R4-DVIS-14: the Dashboard called /boards "Boards" (a Columns2 icon) while the sidebar, the top bar's
-// menu and the page's own title all call it "Projects", and its brand was a blue FileText square with a
-// 20 px "CPWT-CV" where the workspace's top bar shows the brand-blue "CV" square and a 15 px name. The
-// Dashboard's button now reads "Projects" (the sidebar's LayoutGrid icon) and still opens /boards, and
-// its mark is the top bar's. The fake DOM has no layout, so this pins the text and classes on the real
-// Dashboard, mounted with react-dom/client over tests/pdf/fake-dom.mjs; cypress/e2e/26-mobile-layout.cy.js
-// checks the renamed button is in reach on a phone.
+// R4-DVIS-14: the Dashboard called /boards "Boards" while the sidebar, the top bar's menu and the page's own
+// title all call it "Projects", and its brand was a blue FileText square. B2 (UI rebuild): the Dashboard's
+// header is the shared AppBar, so "Projects" is a nav link (still to /boards) and the brand is a link to "/"
+// with the canvas CV mark (cv-* classes). The fake DOM has no layout, so this pins the text and classes on
+// the real Dashboard, mounted with react-dom/client over tests/pdf/fake-dom.mjs; cypress/e2e/26-mobile-layout.cy.js
+// checks the phone's Projects tab is in reach.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -47,29 +46,34 @@ async function dashboard() {
   };
 }
 
-it('the Dashboard calls /boards "Projects", as the sidebar and the top bar do, and the button still opens it', async () => {
+it('the Dashboard calls /boards "Projects", as the sidebar and the top bar do, and the nav link still opens it', async () => {
   const page = await dashboard();
   try {
-    const buttons = page.all().filter((el) => el.tagName === 'BUTTON');
-    assert.ok(!buttons.some((el) => text(el) === 'Boards'), 'no "Boards" button: the workspace calls them projects');
-    const projects = buttons.find((el) => text(el) === 'Projects');
-    assert.ok(projects, 'a "Projects" button in the Dashboard\'s header');
-    page.view.act(() => reactProps(projects).onClick({ preventDefault() {}, stopPropagation() {} }));
+    const all = page.all();
+    assert.ok(!all.some((el) => (el.tagName === 'BUTTON' || el.tagName === 'A') && text(el) === 'Boards'), 'no "Boards" entry: the workspace calls them projects');
+    const projects = all.find((el) => el.getAttribute('data-testid') === 'app-bar-nav-projects');
+    assert.ok(projects, 'a "Projects" link in the Dashboard\'s bar');
+    assert.equal(projects.tagName, 'A');
+    assert.equal(text(projects), 'Projects');
+    page.view.act(() => reactProps(projects).onClick({ button: 0, preventDefault() {}, stopPropagation() {} }));
     assert.equal(page.where(), '/boards', 'Projects opens the projects list');
   } finally { await page.close(); }
 });
 
-it('the Dashboard\'s brand is the top bar\'s mark: the brand-blue "CV" square and the 15 px name', async () => {
+it('the Dashboard\'s brand is the bar\'s link to "/": the brand-blue "CV" mark and the name', async () => {
   const page = await dashboard();
   try {
     const all = page.all();
     const mark = all.find((el) => el.tagName === 'SPAN' && text(el) === 'CV');
     assert.ok(mark, 'the "CV" mark');
-    for (const t of ['size-7', 'rounded-md', 'bg-brand', 'text-white']) assert.ok(tokens(mark).includes(t), `the mark has ${t}, as the TopBar's`);
+    for (const t of ['bg-cv-brand', 'rounded-cv-control', 'text-white']) assert.ok(tokens(mark).includes(t), `the mark has ${t}`);
     const name = all.find((el) => el.tagName === 'SPAN' && text(el) === 'CPWT-CV');
     assert.ok(name, 'the name beside the mark');
-    for (const t of ['text-[15px]', 'font-semibold', 'text-ink']) assert.ok(tokens(name).includes(t), `the name has ${t}, as the TopBar's`);
-    assert.ok(!tokens(name).includes('text-xl'), 'not the old 20 px name');
+    assert.ok(tokens(name).includes('font-bold'), 'the name is bold');
+    const brand = mark.parentNode;
+    assert.equal(brand.tagName, 'A', 'the brand is a link');
+    assert.equal(brand.getAttribute('href'), '/');
+    assert.ok(brand.contains(name), 'the mark and the name are one link');
     const old = all.filter((el) => tokens(el).includes('bg-blue-600') && tokens(el).includes('w-8'));
     assert.deepEqual(old, [], 'no old blue FileText square');
   } finally { await page.close(); }
