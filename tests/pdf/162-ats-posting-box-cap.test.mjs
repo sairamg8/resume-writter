@@ -24,7 +24,8 @@ const LIMIT = 200000;
 async function panel(stored) {
   globalThis.sessionStorage = memory(stored === undefined ? {} : { 'cpwtcv_ats_jd:r1': JSON.stringify(stored) });
   const { default: AtsCheckerPanel } = await loadModule('/src/components/AtsCheckerPanel.jsx');
-  const view = mount(() => createElement(AtsCheckerPanel, { resume: makePerson(), store }), {});
+  const person = makePerson();
+  const view = mount(() => createElement(AtsCheckerPanel, { resume: person, store }), {});
   const all = () => [...elements(view.container)];
   return { view, box: () => all().find((el) => el.tagName === 'TEXTAREA'), notice: () => all().find((el) => el.getAttribute('data-testid') === 'jd-capped'), missing: () => all().filter((el) => el.getAttribute('title') === 'Click to add to Skills').map((el) => el.textContent.trim()) };
 }
