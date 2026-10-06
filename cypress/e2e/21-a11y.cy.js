@@ -77,7 +77,7 @@ const PAGES = {
   },
   'editor, Design tab with every section open (Sidebar, custom fonts)'() {
     const state = richState('sidebar');
-    visitWith(`/#/resume/${state.activeId}?tab=design`, { state, fonts: ['Nunito'] });
+    visitWith(`/#/resume/${state.activeId}?dock=design`, { state, fonts: ['Nunito'] });
     ['Colors', 'Typography', 'Spacing', 'Section Headings'].forEach((title) => cy.contains('button', new RegExp(`^${title}$`)).click());
     cy.contains('Sidebar Background').should('exist');
     cy.contains('span', 'Between Sections').should('exist');
