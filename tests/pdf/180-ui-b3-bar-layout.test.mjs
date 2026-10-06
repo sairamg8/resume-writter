@@ -82,6 +82,8 @@ describe('the bar at each window width', () => {
   it('a phone (390 px): the header with the name and the account, the save chip on its own row, then the switch and the ATS button; Design is the pill\'s', async () => {
     const t = await openEditor({ signedIn: true });
     try {
+      // The Design button is hidden by the Editor's phone flag (the pill's own), so the window is made a phone's first (H2-14).
+      t.goPhone();
       for (const width of [360, 390, 767]) {
         assert.deepEqual(rows(t, width), [['left', 'right'], ['save'], ['switch', 'ats']], `${width} px`);
       }
@@ -109,6 +111,7 @@ describe('the bar at each window width', () => {
   it('the name is never in a row with the save chip on a phone, and the chip keeps its words (no 88 px cap)', async () => {
     const t = await openEditor();
     try {
+      t.goPhone();
       const phone = rows(t, 390);
       assert.ok(!phone.some((row) => row.includes('left') && row.includes('save')));
       const chip = parts(t).kids.find((kid) => kid.name === 'save');

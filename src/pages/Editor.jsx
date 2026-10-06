@@ -180,7 +180,7 @@ export function Editor({ store, auth, sync }) {
           onShare={canShare ? openShare : undefined}
           onBack={goBack}
         />
-        <EditorModeBar doc={doc} dock={dock} onPickDoc={pickTab} onToggleDock={onToggleDock} />
+        <EditorModeBar doc={doc} dock={dock} onPickDoc={pickTab} onToggleDock={onToggleDock} isMobile={isMobile} />
         <div className="order-7 max-md:order-3 max-md:basis-full xl:order-40 shrink min-w-0 truncate text-[11px] md:text-xs text-cv-faint">{saveChip}</div>
         <div className="hidden md:block xl:hidden order-4 basis-full h-0" />
       </div>

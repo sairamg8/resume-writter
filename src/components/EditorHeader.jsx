@@ -175,14 +175,17 @@ export const EditorAtsChip = memo(function EditorAtsChip({ open, onToggleDock })
 /**
  * The Design button: opens the Design dock, or closes it. It is the résumé's, so from the letter it opens
  * over the Résumé. Named in words (the title is the hover hint; a touch screen has none). A memo leaf, as the chip.
+ * `isMobile`: the phone's pill has Design, so the button is hidden. It is the Editor's own flag (a width in px), not
+ * a `max-md` class: that one is in rem, so with a larger text size in the browser the pill and the button could
+ * both be absent between 768 px and the rem width.
  */
-export const EditorDesignButton = memo(function EditorDesignButton({ open, onToggleDock }) {
+export const EditorDesignButton = memo(function EditorDesignButton({ open, onToggleDock, isMobile = false }) {
   return (
     <button
       onClick={() => onToggleDock('design')}
       title="Design & Customize"
       data-testid="design-button"
-      className={`order-8 xl:order-50 max-md:hidden ${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+      className={`order-8 xl:order-50 ${isMobile ? 'hidden' : ''} ${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
     >
       <Palette size={13} className="shrink-0" /> <span>Design</span>
     </button>
@@ -196,12 +199,12 @@ export const EditorDesignButton = memo(function EditorDesignButton({ open, onTog
  * Memoised over the open document and dock and the Editor's stable callbacks (`onPickDoc(doc)`,
  * `onToggleDock(dock)`): a keystroke renders none of it (PERF-4). No router hook, for the header's reason.
  */
-export const EditorModeBar = memo(function EditorModeBar({ doc, dock, onPickDoc, onToggleDock }) {
+export const EditorModeBar = memo(function EditorModeBar({ doc, dock, onPickDoc, onToggleDock, isMobile = false }) {
   return (
     <>
       <EditorDocSwitch doc={doc} onPick={onPickDoc} />
       <EditorAtsChip open={dock === 'ats'} onToggleDock={onToggleDock} />
-      <EditorDesignButton open={dock === 'design'} onToggleDock={onToggleDock} />
+      <EditorDesignButton open={dock === 'design'} onToggleDock={onToggleDock} isMobile={isMobile} />
     </>
   );
 });

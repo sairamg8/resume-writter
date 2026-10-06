@@ -169,9 +169,10 @@ describe('the phone layout classes', () => {
   it('the switch and the ATS button are 44 px, the Design button is the pill\'s, the bar wraps to two rows', async () => {
     const t = await phone();
     try {
-      assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /max-md:min-h-\[44px\]/);
-      assert.match(attr(t.byTid('ats-chip'), 'class'), /max-md:min-h-\[44px\]/);
-      assert.match(attr(t.byTid('design-button'), 'class'), /max-md:hidden/);
+      // The 44 px is on the buttons, which are what a finger taps (the frame around them is 2 px of padding: H1-7).
+      for (const id of ['doc-switch-resume', 'doc-switch-letter', 'ats-chip']) assert.match(attr(t.byTid(id), 'class'), /max-md:min-h-\[44px\]/, id);
+      // Hidden by the Editor's own phone flag, the one that draws the pill (not by a rem breakpoint: H2-14).
+      assert.match(attr(t.byTid('design-button'), 'class'), /(^|\s)hidden(\s|$)/);
       assert.match(attr(t.byTid('editor-bar'), 'class'), /max-xl:flex-wrap/);
       assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /order-5 xl:order-20/, 'under the header on a phone, in the bar on a desktop (the rows are pinned in 180-ui-b3-bar-layout)');
     } finally { await t.close(); }
