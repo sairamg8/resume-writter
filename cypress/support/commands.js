@@ -1,5 +1,4 @@
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
-import { REACH } from './selectors.js';
 
 /** Visit `url` with localStorage replaced by `state` (or emptied when state is null). */
 Cypress.Commands.add('seedAndVisit', (url, state) => {
@@ -57,13 +56,33 @@ Cypress.Commands.addQuery('jobStore', function jobStore() {
 });
 
 /**
+ * The editor bar's controls by testid (B3 frame): the ATS chip and the Design button open and close the one
+ * right dock, the switch is two buttons. On a phone (below 768 px) the bar's Design button is not drawn: the
+ * Edit | Preview | Design pill carries Design, and the ATS chip stays in the bar. The ids of the old tab strip
+ * (design-open, ats-open) are gone.
+ */
+const BAR = {
+  design: '[data-testid="design-button"]',
+  ats: '[data-testid="ats-chip"]',
+  resume: '[data-testid="doc-switch-resume"]',
+  letter: '[data-testid="doc-switch-letter"]',
+};
+const PILL_DESIGN = '[data-testid="pill-design"]';
+
+/** True when the editor is in its phone layout (useIsMobile(768): below 768 px). Read when the command runs. */
+const onPhone = () => Cypress.config('viewportWidth') < 768;
+
+/**
  * THE one place that reaches an editor control: 'design' | 'ats' | 'resume' | 'letter' | 'export'.
  * openDesign, openAts, switchTo and openExportMenu all go through it, so a redesign that moves these
- * controls (a tab bar into a menu, say) changes only this body.
+ * controls changes only this body. Design and ATS are TOGGLES of the dock (a second call closes it); opening
+ * one from the letter lands on the Résumé, and picking the letter closes an open dock.
  */
-const reach = (control) => (control === 'export'
-  ? cy.contains('button', 'Export').click()
-  : cy.get(REACH[control]).click());
+const reach = (control) => {
+  if (control === 'export') return cy.contains('button', 'Export').click();
+  if (control === 'design' && onPhone()) return cy.get(PILL_DESIGN).click();
+  return cy.get(BAR[control]).click();
+};
 
 Cypress.Commands.add('openDesign', () => reach('design'));
 Cypress.Commands.add('openAts', () => reach('ats'));

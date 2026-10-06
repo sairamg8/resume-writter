@@ -9,10 +9,25 @@ export const TID = {
   entryTitle: 'entry-title',
   resumeCard: 'resume-card',
   resumeCardRename: 'resume-card-rename',
-  designOpen: 'design-open',
+  // The editor frame (B3): the tab strip's design-open and ats-open became the bar's Design button and ATS chip,
+  // which toggle the one right dock; the phone's Design is the pill's. designOpen and atsOpen name them still.
+  designOpen: 'design-button',
+  designButton: 'design-button',
   docSwitchResume: 'doc-switch-resume',
   docSwitchLetter: 'doc-switch-letter',
-  atsOpen: 'ats-open',
+  atsOpen: 'ats-chip',
+  atsChip: 'ats-chip',
+  editorBar: 'editor-bar',
+  editorSidebar: 'editor-sidebar',
+  dockDesign: 'dock-design',
+  dockAts: 'dock-ats',
+  dockClose: 'dock-close',
+  shareButton: 'share-button',
+  saveStatus: 'save-status',
+  pill: 'editor-pill',
+  pillEditor: 'pill-editor',
+  pillPreview: 'pill-preview',
+  pillDesign: 'pill-design',
 };
 
 /** The testid attribute selector, as a CSS string (Cypress, Playwright). */

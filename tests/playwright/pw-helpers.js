@@ -52,19 +52,23 @@ export async function exportPdf(page, label = 'Export PDF') {
 }
 
 /**
- * Opens Design & Customize panel in the editor.
+ * Opens the Design dock (the Design button of the editor bar; the pill's Design on a phone) and waits for
+ * its panel. A toggle: call it once per open.
  */
 export async function openDesignPanel(page) {
   await reach(page, 'design');
-  await page.waitForSelector('text=Template', { timeout: 10_000 });
+  await page.waitForSelector('[data-testid="dock-design"] >> text=Template', { timeout: 10_000 });
 }
 
+// The bar's controls (B3 frame): the ATS chip and the Design button toggle the one right dock, the switch is
+// two buttons. Below 768 px the Design button is not drawn: the Edit | Preview | Design pill carries it.
 const REACH = {
-  design: '[data-testid="design-open"]',
-  ats: '[data-testid="ats-open"]',
+  design: '[data-testid="design-button"]',
+  ats: '[data-testid="ats-chip"]',
   resume: '[data-testid="doc-switch-resume"]',
   letter: '[data-testid="doc-switch-letter"]',
 };
+const PILL_DESIGN = '[data-testid="pill-design"]';
 
 /**
  * THE one place that reaches an editor control: 'design' | 'ats' | 'resume' | 'letter' | 'export'.
@@ -72,6 +76,7 @@ const REACH = {
  */
 export async function reach(page, control) {
   if (control === 'export') await page.locator('button:has-text("Export")').first().click();
+  else if (control === 'design' && (page.viewportSize()?.width ?? 1280) < 768) await page.locator(PILL_DESIGN).click();
   else await page.locator(REACH[control]).click();
 }
 
