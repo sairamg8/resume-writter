@@ -26,6 +26,8 @@ export function EditorResumeTab({
   resume, store,
   personalOpen, setPersonalOpen, allExpanded, forceOpenKey, toggleAllSections,
   addSectionOpen, setAddSectionOpen,
+  // Personal Info's open view (Details | Header | Photo), the Editor's state; the editor's own default shows all.
+  personalView, onPersonalViewChange,
 }) {
   // The store's actions as ones that keep their identity, so the memoised sections are not woken by a keystroke elsewhere.
   const actions = useStableActions(store);

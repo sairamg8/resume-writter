@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PenLine, Eye } from 'lucide-react';
 
-import DesignPanel from '@/components/DesignPanel';
 import { TemplateGallery } from '@/components/TemplateGallery';
 import { ToastProvider } from '@/components/ui/Toast';
 import { savedDesigns } from '@/constants/templatePresets';
-import CoverLetterPanel from '@/components/CoverLetterPanel';
-import AtsCheckerPanel from '@/components/AtsCheckerPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
 import { EditorResumeTab } from '@/components/EditorResumeTab';
 import { EditorTabContent } from '@/components/EditorTabContent';
+import { EditorDesignTab } from '@/components/EditorDesignTab';
+import { EditorLetterTab } from '@/components/EditorLetterTab';
+import { EditorAtsTab } from '@/components/EditorAtsTab';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
@@ -34,6 +34,13 @@ export function Editor({ store, auth, sync }) {
   const [activeTab, setActiveTab] = useEditorTab();
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
+  // Each tab's open view (its content apart from its settings), kept here for the same reason: Personal
+  // Info's Details | Header | Photo, Design's Template | Style | Layout | Details, the letter's
+  // Letter | Letterhead and the ATS check's Checks | Job match | Parser view.
+  const [personalView, setPersonalView] = useState('details');
+  const [designGroup, setDesignGroup] = useState('template');
+  const [letterView, setLetterView] = useState('letter');
+  const [atsView, setAtsView] = useState('checks');
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const rename = useRename(resume, (name) => store.renameResume(resume.id, name));
   const [layoutMode, setLayoutMode] = useState('split');
@@ -141,36 +148,45 @@ export function Editor({ store, auth, sync }) {
               toggleAllSections={toggleAllSections}
               addSectionOpen={addSectionOpen}
               setAddSectionOpen={setAddSectionOpen}
+              personalView={personalView}
+              onPersonalViewChange={setPersonalView}
             />
           )}
 
           {activeTab === 'design' && (
-            <div className="px-4 py-4">
-              <DesignPanel
-                resume={resume}
-                {...lookActions}
-                resetSettings={store.resetSettings}
-                clearSettings={store.clearSettings}
-                designs={designs}
-                saveDesign={store.saveDesign}
-                deleteDesign={store.deleteDesign}
-                onBrowseTemplates={() => setGalleryOpen(true)}
-                templateOpen={templateOpen}
-                onTemplateOpenChange={setTemplateOpen}
-              />
-            </div>
+            <EditorDesignTab
+              group={designGroup}
+              onGroupChange={setDesignGroup}
+              resume={resume}
+              {...lookActions}
+              resetSettings={store.resetSettings}
+              clearSettings={store.clearSettings}
+              designs={designs}
+              saveDesign={store.saveDesign}
+              deleteDesign={store.deleteDesign}
+              onBrowseTemplates={() => setGalleryOpen(true)}
+              templateOpen={templateOpen}
+              onTemplateOpenChange={setTemplateOpen}
+            />
           )}
 
           {activeTab === 'coverletter' && (
-            <div className="px-4 py-4">
-              <CoverLetterPanel resume={resume} coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} updateSetting={store.updateSetting} clearSettings={store.clearSettings} />
-            </div>
+            <EditorLetterTab
+              view={letterView}
+              onViewChange={setLetterView}
+              resume={resume}
+              coverLetter={resume.coverLetter}
+              personal={resume.personal}
+              settings={resume.settings}
+              template={resume.template}
+              updateCoverLetter={store.updateCoverLetter}
+              updateSetting={store.updateSetting}
+              clearSettings={store.clearSettings}
+            />
           )}
 
           {activeTab === 'ats' && (
-            <div className="px-4 py-4">
-              <AtsCheckerPanel resume={resume} store={store} />
-            </div>
+            <EditorAtsTab view={atsView} onViewChange={setAtsView} resume={resume} store={store} />
           )}
         </EditorTabContent>
       </div>

@@ -101,43 +101,44 @@ export function EditorAlerts({ exportError, onDismiss, persistError, importNotic
   );
 }
 
+const MODE_TABS = [
+  { id: 'resume', label: 'Resume', icon: User, on: 'text-blue-600', bar: 'after:bg-blue-600' },
+  { id: 'design', label: 'Design', title: 'Design & Customize', icon: Palette, on: 'text-amber-600', bar: 'after:bg-amber-500' },
+  { id: 'coverletter', label: 'Cover Letter', icon: MailIcon, on: 'text-violet-600', bar: 'after:bg-violet-600' },
+  { id: 'ats', label: 'ATS Check', icon: ShieldCheck, on: 'text-emerald-600', bar: 'after:bg-emerald-600' },
+];
+
 /**
- * Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé).
- * From sm up the tabs share the group's width (flex-1, sm:min-w-0) and their labels truncate: in a
- * narrow split panel (240–360 px) they kept their full width, spilled past the group and slid
- * under the Design button. A phone keeps each tab whole (min-w-max on the tab and the group) and
- * scrolls the row instead: with min-w-0 there, equal thirds of a 375 px row cut "Cover Letter".
+ * The editor panel's four tabs, side by side and all labelled: Resume | Design | Cover Letter | ATS Check.
+ * Design is a tab like the others (it was an unlabelled palette button that toggled back to the Résumé),
+ * so the global look and the three working views read as peers. Each tab is an icon over its label and
+ * shares the row's width equally (flex-1, min-w-0): at the panel's default 360 px the longest label,
+ * "Cover Letter", fits whole, where three side-by-side pills cut it to "Cover …"; in a panel dragged to
+ * 240 px a label truncates inside its own tab rather than spilling under its neighbour (R4-DVIS-12). A
+ * phone's 375 px holds all four, so the row no longer scrolls. The open tab is marked by its accent colour
+ * and an underline — one calm cue instead of a filled block in a different colour per tab.
  */
 export function EditorModeBar({ activeTab, setActiveTab }) {
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-3 border-b border-gray-200 bg-gray-50/60 overflow-x-auto no-scrollbar">
-      <div className="flex gap-1 flex-1 min-w-max sm:min-w-0 bg-white border border-gray-200 rounded-xl p-1">
-        <button
-          onClick={() => setActiveTab('resume')}
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <User size={13} className="shrink-0" /> <span className="min-w-0 truncate">Resume</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('coverletter')}
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <MailIcon size={13} className="shrink-0" /> <span className="min-w-0 truncate">Cover Letter</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ats')}
-          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          <ShieldCheck size={13} className="shrink-0" /> <span className="min-w-0 truncate">ATS Check</span>
-        </button>
-      </div>
-      <button
-        onClick={() => setActiveTab(prev => (prev === 'design' ? 'resume' : 'design'))}
-        title="Design & Customize"
-        className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : 'border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
-      >
-        <Palette size={15} />
-      </button>
+    <div role="tablist" aria-label="Editor" className="flex items-stretch px-1.5 sm:px-2 border-b border-gray-200 bg-white">
+      {MODE_TABS.map(({ id, label, title, icon: Icon, on, bar }) => {
+        const selected = activeTab === id;
+        return (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={selected}
+            title={title}
+            onClick={() => setActiveTab(id)}
+            className={`relative flex-1 min-w-0 flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 px-1 text-[11px] font-semibold whitespace-nowrap transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors ${
+              selected ? `${on} ${bar}` : 'text-gray-500 hover:text-gray-800 after:bg-transparent hover:after:bg-gray-200'
+            }`}
+          >
+            <Icon size={16} className="shrink-0" />
+            <span className="max-w-full truncate">{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
