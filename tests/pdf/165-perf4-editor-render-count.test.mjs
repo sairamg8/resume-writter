@@ -67,7 +67,7 @@ function installRenderProbe() {
     onCommitFiberRoot(_id, root) {
       if (!probe.on || !probe.ids) return;
       // Labelled now: a fiber's `return` and flags are rewritten by the next commit.
-      probe.commits.push(rendered(root).map(labelsOf));
+      probe.commits.push(rendered(root).map((f) => ({ labels: labelsOf(f), name: f.type?.displayName || f.type?.name || f.type?.render?.name || f.type?.type?.name || `tag${f.tag}` })));
     },
   };
   return probe;
@@ -185,10 +185,16 @@ async function openTab() {
         probe.on = false;
       }
       const tally = new Map();
+      const names = new Map(); // label -> the components of it that rendered, to say what woke it
       for (const commit of probe.commits) {
-        for (const label of new Set(commit.flatMap((labels) => [...labels]))) tally.set(label, (tally.get(label) ?? 0) + 1);
+        for (const label of new Set(commit.flatMap(({ labels }) => [...labels]))) tally.set(label, (tally.get(label) ?? 0) + 1);
+        for (const { labels, name } of commit) for (const label of labels) names.set(label, new Set(names.get(label)).add(name));
       }
-      return { commits: probe.commits.length, count: (label) => tally.get(label) ?? 0, report: () => JSON.stringify([...tally]) };
+      return {
+        commits: probe.commits.length,
+        count: (label) => tally.get(label) ?? 0,
+        report: () => JSON.stringify([...tally]) + ' Rendered: ' + JSON.stringify([...names].map(([l, n]) => [l, [...n].join('/')])),
+      };
     },
     async close() {
       await view.unmount();
