@@ -1,8 +1,10 @@
 # B4 report: Editor frame B (stage toolbar, preview states, alert cards, panel clamp, phone notices, browser geometry proof)
 
-Branch `claude/wonderful-maxwell-vu8xqw`. Base `8056a8ea` (B3 done). UI only: every live function stays (PARITY-RULE). Owned parity rows: editor-content, editor-design-templates and mobile rows listed in `batches/B4.md`; the drawn-but-not-live items are PARKED (below).
+**STATUS: NOT DONE. Code and hunt are finished and proven; the final full gate (run 37535123642 on `a1040d1c`) was dispatched but NOT READ when work stopped at the owner's order. B4 is done only when that gate is green.**
 
-## What changed (src: 10 commits, 8 files)
+Branch `claude/wonderful-maxwell-vu8xqw`. Base `8056a8ea` (B3 done). Code head `a1040d1c` (src identical to `2d12594b`; later commits are docs). UI only: every live function stays (PARITY-RULE). Owned parity rows: editor-content, editor-design-templates and mobile rows listed in `batches/B4.md`; the drawn-but-not-live items are PARKED (below).
+
+## What changed (src: 11 commits, 8 files)
 | commit | change | proof test |
 |---|---|---|
 | ca6d5e9f | alert strips (import notice with Dismiss, export / import error, red Not saved with the live full / blocked texts) as soft amber and red cards with an icon (`cv-notice-warn`, `cv-notice-bad`); the live texts and the PERF-4 memo contract of `EditorAlerts` stay | 181-ui-b4-editor-alerts |
@@ -13,6 +15,7 @@ Branch `claude/wonderful-maxwell-vu8xqw`. Base `8056a8ea` (B3 done). UI only: ev
 | 2b064c2a | hunt: a press on the handle that changes nothing (a click, a drag at the dock's limit, an arrow at the limit) remembers nothing; a drag is held to the limit | 181-ui-b4-hunt-resize |
 | e08899bb | hunt: the Updating chip leaves the corner only where the dock sits BESIDE the stage (from 1100 px); the notice lift's media query is the exact complement of the pill's (`not (min-width: 768px)`) | 181-ui-b4-preview-states, editor-wiring |
 | 3025f8c1 | hunt: a gap below the alert cards (`pb-2 empty:hidden`); the stage toolbar bleeds to the preview box edges | 181-ui-b4-hunt-layout |
+| 2d12594b | hunt round 2: the card messages (import notice, export / import error, Not saved, Preview failed) break long words (`break-words`: a file name with no spaces ran under Dismiss on a phone); the resize handle is `z-20` above the `z-10` sticky stage toolbar (its widened hit area lay under the toolbar's strip); the toolbar keeps only `sticky top-0` (a `left-0` could not act: see Known limits) | 181-ui-b4-hunt-layout, 181-ui-b4-editor-wiring |
 | 97c69316 | hunt round 2: an arrow step past the dock's limit remembers the width it DREW, not the one it asked for (closing the dock then drew a width never seen) | 181-ui-b4-hunt-resize |
 
 Files: EditorHeader.jsx (EditorAlerts), EditorPreviewPane.jsx, LayoutToggle.jsx, PdfPreview.jsx (state markup only), FontFallbackNotice.jsx, usePanelResize.js, Editor.jsx (7 lines), index.css (two unlayered rules). Tests added: 181-ui-b4-{stage-toolbar, preview-states, editor-alerts, editor-wiring, hunt-resize, hunt-layout}.test.mjs and `tests/playwright/ui-b4-editor-layout.spec.mjs` (19 tests: six widths 1440, 1280, 1100, 1024, 768, 390 with and without a dock; a stored 640 px panel at 1100 / 1180 / 1280 with each dock, asserted at 420 / 500 / 600 px; the Updating chip against the dock and the pill; the 390 px dock fills the screen).
@@ -24,6 +27,7 @@ Files: EditorHeader.jsx (EditorAlerts), EditorPreviewPane.jsx, LayoutToggle.jsx,
 | e08899bb | 181-ui-b4-preview-states, 181-ui-b4-editor-wiring | # fail 2 | yes | 37532085891 |
 | 3025f8c1 | 181-ui-b4-hunt-layout | # fail 2 | yes | 37532085891 |
 | 97c69316 | 181-ui-b4-hunt-resize | # fail 1 | yes | 37533486479 |
+| 2d12594b | 181-ui-b4-hunt-layout, 181-ui-b4-editor-wiring | # fail 3 | yes | 37534569429 (its tests job and the geometry spec, 19 of 19, green) |
 The earlier build commits were proven in runs 37528143027 (red, read and fixed) and 37528612848 (green).
 
 ### Geometry spec, mutation pair (throwaway commits, reverted at once; src after each revert identical, checked with git diff)
@@ -31,6 +35,7 @@ The earlier build commits were proven in runs 37528143027 (red, read and fixed) 
 |---|---|---|---|
 | M1: the dock is a flex sibling below 1100 px (the five `max-[1099px]:` utilities removed, `overlay={false}`) | f34bf825 / 04275d9b | 37532126208 | the 1024, 768 and 390 px frame tests (dock `static` where it must overlay; the stage 44 px at 768; the sidebar 30 px at 390) and "390 px: the dock is the whole screen"; the six stored-640 tests stay green (they run from 1100 px) |
 | M2: the clamp off (`usePanelResize({ dockOpen: false })`) | d781dce3 / cbd8dbb4 | 37532195382 | all six stored-640 browser tests (panel 640 where 420 / 500 / 600 is required) and 3 of the 5 cases of 181-ui-b4-editor-wiring; the six-width tests stay green |
+| M3: the Updating chip above the dock (`z-50` on the chip span) | c33ef9b1 / a1040d1c | 37535078126 | NOT READ when work stopped (expected: the chip tests at 1024 and 768 px red, because the dock is no longer on top at the chip's centre) |
 The two chip tests at 1024 and 768 px were red in both runs and in the first proof run: not the mutations' doing but a real mismatch of mine (below), fixed in `d39ccd83`.
 
 ## Proof runs read RED, fixed without weakening
@@ -38,12 +43,19 @@ The two chip tests at 1024 and 768 px were red in both runs and in the first pro
 - Run 37532085891: the chip tests at 1024 and 768 px. After e08899bb the chip stays in the corner below 1100 px, where the overlay dock (z-30) is drawn on top of it (as on a phone); the spec compared rectangles. The spec now asks what is on top at the chip's centre (the dock's own content) below 1100 px and keeps "clear of the dock" from 1100 px (`d39ccd83`, run 37532938197 green). The CSS comment says so.
 
 ## Start-up ledger (tests/pdf/71-startup-chunks, cap 1,100 kB)
-See "Full gate" below. B4 imports nothing new from a start-up file (the editor chunk is lazy); the 71 test passed in runs 37532085891 and 37532938197.
+| point | run | start-up path | spare |
+|---|---|---|---|
+| B3 final | 37525795158 | 1083.8 kB | 16.2 kB |
+| B4, perf run (head 19d6201b, src identical to 97c69316) | 37534281527 | 1,084 kB (gzipped 340 kB, largest chunk 457 kB) | about 16 kB |
+B4 imports nothing new from a start-up file (the editor chunk is lazy). The 71 test passed in runs 37532085891, 37532938197 and 37534569429. The exact line of the final head is in the final gate (not read).
+
+## Performance (run 37534281527, `perf: all`, head 19d6201b, src identical to 97c69316)
+PASS, 17 of 17 budgets met (CI ceilings): PDF build Classic 1 page median 46.8-62 ms, large résumé 198-251 ms, keystroke edit to painted pages 269 ms (build 198, open 27, paint 43), browser last key to the pages 408 ms (404 ms with every entry open), longest main-thread task while typing 0 ms. Gate B (information): PDF worker 0 long tasks; main thread 3, longest 110 ms. B3's run was 482-587 ms for the last key on a different runner; the PDF build code is untouched by B4, so this is runner variance, not a gain from B4.
 
 ## Bug hunt
 - Round 1 (`wf_` of the build-time hunt, 3 lenses: functions, render cost and layout, tests): 9 confirmed, all fixed or restated: the panel clamp applied below 1100 px (c2d513be); a click / a drag past the limit / an arrow at the limit rewrote the remembered width (2b064c2a); the chip scope and the toast media (e08899bb); no gap under the alert cards and a toolbar that did not bleed (3025f8c1); the geometry spec's weak expectations (explicit 420 / 500 / 600 and a separate red for each mutation); the ATS-dock case of the clamp (181-ui-b4-editor-wiring).
 - Round 2 (`wf_6ee2360d-690`): confirmed by both skeptics: an arrow step past the limit stored the asked width (97c69316). Refuted: the chip findings (the spec was already fixed in d39ccd83 when the skeptics read it); the Editor re-rendering on every resize while a dock is open (one skeptic: the children are memo and a resize event fires at most once a frame; not a defect); the zoom state not covered by a node test (pre-existing, covered by Cypress 23).
-- FILL IN: later rounds until dry.
+- Round 3 (`wf_3d683b43-dd8`, the round-2 fixes plus a fresh sweep of the whole B4 diff): 2 reported, 0 confirmed: the hunt is DRY. Not confirmed: End remembering 640 while the drawn width stays (the design: Home and End always remember, tested in 181-ui-b4-hunt-resize); a class-pinned z-index test (strengthened anyway in `e31fe372`: the handle's z-index is compared with the toolbar's and kept under the dock's z-30).
 
 ## What still differs from the canvas (honest list)
 - **Stage caption**: the canvas draws "1 page · A4" and zoom values 76 / 86 / 90 (default 90 %); live: "Résumé · A4" and 25 % steps from 100 % (PARKED: NEW-008, NEW-011).
@@ -57,6 +69,7 @@ See "Full gate" below. B4 imports nothing new from a start-up file (the editor c
 ## Known limits / not proven
 - The geometry spec runs in Chromium at six widths; no real phone and no WebKit / Firefox.
 - A skeptic confirmed the Editor re-renders on every resize event while a dock is open (the memo children skip it, a resize fires once a frame); it is not a wrong result, and the snapshot could be the drawn width instead of the raw viewport if this ever shows in a profile.
+- The stage toolbar sticks to the TOP only. At 150 % zoom, scrolled sideways, the zoom buttons scroll away with the page (as the toolbar did before B4); a sideways stick needs the toolbar narrower than its parent and was not built.
 - Accessibility is deferred (no aria / focus / contrast work; nothing added, nothing removed).
 
 ## Parked (untouched)
@@ -66,4 +79,4 @@ See "Full gate" below. B4 imports nothing new from a start-up file (the editor c
 None needed an answer. `ci.yml` unchanged. No master push, no deploy.
 
 ## Full gate
-FILL IN after the gate: run id, head, the 15 jobs, counts read, the start-up line, the perf run.
+**NOT READ.** Run 37535123642 was dispatched on `a1040d1c` (no inputs: lint, build, suite 1-6, Playwright 1-3, Cypress 1-4) and was still queued when work stopped at the owner's order (21:38Z). Earlier gates were cancelled on purpose because the source changed after them (37534278003 on 19d6201b, 37535008227 on 2d12594b). To finish B4: read 37535123642 (every job; suite counts; the 71 start-up line; Playwright 3/3; Cypress 4/4) and the M3 run 37535078126, fill the two lines above, then send the owner's summary with the screenshots (`shots/b4-pair-1..4`, built at `cbd8dbb4`; the later source changes are class tweaks with no visible change on those screens). If a job is red: read it, fix without weakening, prove with failfirst, and re-gate.
