@@ -28,7 +28,7 @@ export default function AppBar({ account, search, active, children }) {
         </Link>
         <nav className="hidden md:flex gap-1">
           {TABS.map(([id, to, label]) => (
-            <Link key={id} to={to} data-testid={`app-bar-nav-${id}`} className="cv-pill-nav text-sm font-medium" aria-current={now === id ? 'page' : undefined}>{label}</Link>
+            <Link key={id} to={to} data-testid={`app-bar-nav-${id}`} className="cv-pill-nav text-sm" aria-current={now === id ? 'page' : undefined}>{label}</Link>
           ))}
         </nav>
         <div className="flex-1 min-w-0" />

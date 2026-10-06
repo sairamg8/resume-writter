@@ -217,6 +217,7 @@ body {
     padding: 0.375rem 0.75rem;
     border-radius: var(--radius-cv-chip);
     color: var(--color-cv-muted);
+    font-weight: 500;
   }
   .cv-pill-nav[aria-current="page"],
   .cv-pill-nav[data-active="true"] {

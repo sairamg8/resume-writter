@@ -8,6 +8,7 @@
 // they are given and there is no search when none is passed, and children make a second row.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createElement } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -104,6 +105,18 @@ describe('AppBar: the current area follows the address', () => {
     assert.equal(activeTab('/jobsearch'), null, 'a path that only starts with /jobs is not Applications');
     assert.equal(activeTab('/boardsX'), null);
     assert.equal(activeTab('/r/share1'), null, 'the public page belongs to none');
+  });
+});
+
+describe('AppBar: the current pill is heavier', () => {
+  it('the nav links leave the weight to .cv-pill-nav (a font-medium utility would beat its heavier current rule)', async () => {
+    const b = await bar('/jobs');
+    try {
+      for (const id of NAV) assert.ok(!tokens(b.nav(id)).includes('font-medium'), `${id} sets no weight of its own`);
+    } finally { await b.view.unmount(); }
+    const css = fs.readFileSync(new URL('../../src/index.css', import.meta.url), 'utf8');
+    assert.match(css, /\.cv-pill-nav\s*\{[^}]*font-weight:\s*500/, 'the resting weight');
+    assert.match(css, /\.cv-pill-nav\[aria-current="page"\][^{]*\{[^}]*font-weight:\s*600/, 'the current weight');
   });
 });
 
