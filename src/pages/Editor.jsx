@@ -245,7 +245,7 @@ export function Editor({ store, auth, sync }) {
       />
 
       {/* The one dock, right of the preview, mounted only while open. */}
-      {dock && <EditorDock dock={dock} resume={resume} design={design} store={acts} onClose={closeDock} overlay={false} />}
+      {dock && <EditorDock dock={dock} resume={resume} design={design} store={acts} onClose={closeDock} overlay={!dockBeside} />}
       </div>
 
       {canShare && <ShareLinkModal isOpen={shareOpen} resume={resume} uid={auth.user.uid} onClose={() => setShareOpen(false)} />}

@@ -42,7 +42,7 @@ export function EditorDock({ dock, resume, design, store, onClose, overlay = fal
   return (
     <aside
       data-testid={`dock-${dock}`}
-      className={`shrink-0 w-[360px] max-w-full h-full min-h-0 flex flex-col bg-cv-surface border-l border-cv-hairline max-md:w-full${overlay ? ' absolute inset-y-0 right-0 z-30 shadow-xl' : ''}`}
+      className={`shrink-0 w-[360px] max-w-full h-full min-h-0 flex flex-col bg-cv-surface border-l border-cv-hairline max-md:w-full max-[1099px]:absolute max-[1099px]:inset-y-0 max-[1099px]:right-0 max-[1099px]:z-30 max-[1099px]:shadow-xl${overlay ? ' absolute inset-y-0 right-0 z-30 shadow-xl' : ''}`}
     >
       <div className="shrink-0 h-12 px-4 flex items-center justify-between gap-2 border-b border-cv-hairline">
         <h2 className="text-sm font-semibold text-cv-ink truncate">{TITLES[dock]}</h2>
