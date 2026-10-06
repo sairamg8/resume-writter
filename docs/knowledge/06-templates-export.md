@@ -235,7 +235,7 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   tabs, wrapped lines joined, a Link annotation's address after a label it covers), a `.docx` by
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
-  a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
+  a label, a HYPERLINK field's too; a list item's level, from its own numbering, else from its paragraph style's in `word/styles.xml`, R4-SW-I-02), Markdown through `markdownLines` (`#` name,
   `##` headings, `###` entries (their date line theirs past a blank line, R5-HUNT10; an undated one's role or degree line over its date line too, a place there its location, R5-HUNT11, and its role and place a line each over it, R5-HUNT12), a deeper heading under an entry a grouped role; a link as "label
   (address)", a reference-style one ("[label][id]" with its "[id]: address" line) too; an indented list
   item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
