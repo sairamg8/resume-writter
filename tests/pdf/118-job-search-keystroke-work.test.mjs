@@ -69,3 +69,34 @@ it('C-1: a search re-renders only the cards that appear, not the whole board', a
     await view.unmount();
   }
 });
+
+it('C-1: a new day draws the memoised cards again, so a deadline pill never keeps yesterday\'s state', async () => {
+  const { KanbanView } = await loadModule('/src/components/job/KanbanView.jsx');
+  const dom = await import('./fake-dom.mjs');
+  const jobs = makeJobs().slice(0, 20);
+  const RealDate = globalThis.Date;
+  const at = (iso) => {
+    globalThis.Date = class extends RealDate {
+      constructor(...a) { super(...(a.length ? a : [iso])); }
+      static now() { return new RealDate(iso).getTime(); }
+    };
+  };
+  try {
+    at('2026-10-06T10:00:00');
+    reads = 0;
+    const view = dom.mount(KanbanView, { jobs, updateJob() {}, onNavigate() {}, onDelete() {} });
+    try {
+      assert.ok(reads >= 20, 'first render draws every card');
+      reads = 0;
+      view.update({ jobs, updateJob() {}, onNavigate() {}, onDelete() {} });
+      assert.equal(reads, 0, 'the same day: no card draws again');
+      at('2026-10-07T00:05:00'); // past midnight
+      view.update({ jobs, updateJob() {}, onNavigate() {}, onDelete() {} });
+      assert.equal(reads, 20, `a new day: every card draws again (${reads})`);
+    } finally {
+      await view.unmount();
+    }
+  } finally {
+    globalThis.Date = RealDate;
+  }
+});

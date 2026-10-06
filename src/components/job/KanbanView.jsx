@@ -10,6 +10,7 @@ import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
 import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
 import { formatShortDay } from '@/utils/uiFormat';
 import { isOpen } from '@/utils/jobQuery';
+import { todayLocalISO } from '@/utils/dates';
 
 // Constants, not literals in the render: a new options object each time gave DndContext new sensors,
 // and every one of the board's draggable cards rendered again.
@@ -117,7 +118,7 @@ const KanbanCard = memo(function KanbanCard({ job, onDelete, onMove, overlay = f
 
 // Memoised: a search re-renders the board with the same job objects, and every card (3000 of them)
 // rendered again for nothing. Its handlers come stable from KanbanView.
-const DraggableCard = memo(function DraggableCard({ job, onNavigate, onDelete, onMove }) {
+const DraggableCard = memo(function DraggableCard({ job, day, onNavigate, onDelete, onMove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: job.id });
   return (
     <div
@@ -128,12 +129,12 @@ const DraggableCard = memo(function DraggableCard({ job, onNavigate, onDelete, o
       onKeyDown={e => openOnKey(e, () => onNavigate(job.id))}
       className={cx('group/card cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand', isDragging && 'opacity-30')}
     >
-      <KanbanCard job={job} onDelete={onDelete} onMove={onMove} />
+      <KanbanCard job={job} day={day} onDelete={onDelete} onMove={onMove} />
     </div>
   );
 });
 
-function KanbanColumn({ status, jobs, onNavigate, onDelete, onMove }) {
+function KanbanColumn({ status, jobs, day, onNavigate, onDelete, onMove }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
@@ -148,7 +149,7 @@ function KanbanColumn({ status, jobs, onNavigate, onDelete, onMove }) {
         className={cx('flex min-h-32 flex-1 flex-col gap-1 rounded-b-md px-1 pb-1 transition-colors', isOver && 'bg-brand-subtle/70')}
       >
         {jobs.map(job => (
-          <DraggableCard key={job.id} job={job} onNavigate={onNavigate} onDelete={onDelete} onMove={onMove} />
+          <DraggableCard key={job.id} job={job} day={day} onNavigate={onNavigate} onDelete={onDelete} onMove={onMove} />
         ))}
         {jobs.length === 0 && <p className="px-2 py-3 text-center text-[12px] text-ink-subtlest">Drop a job here</p>}
       </div>
@@ -178,6 +179,9 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
   // The latest handlers behind functions that never change, so the memoised cards stay as they are.
   const latest = useRef({});
   latest.current = { updateJob, onNavigate, onDelete };
+  // Today's date, handed to every card: a card's deadline pill reads the clock, and a memoised card
+  // would keep yesterday's 'due today' past midnight. A new day is a new prop, so the cards draw again.
+  const today = todayLocalISO();
   const move = useCallback((id, status) => latest.current.updateJob(id, { status }), []);
   const openJob = useCallback((id) => latest.current.onNavigate(id), []);
   const deleteJob = useCallback((id) => latest.current.onDelete(id), []);
@@ -227,6 +231,7 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
             key={status.id}
             status={status}
             jobs={jobs.filter(j => j.status === status.id)}
+            day={today}
             onNavigate={openJob}
             onDelete={deleteJob}
             onMove={move}
