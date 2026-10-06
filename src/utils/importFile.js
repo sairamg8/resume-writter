@@ -523,13 +523,22 @@ export function pdfPageBlocks(items) {
   let run = [];
   const endRun = () => {
     if (run.length && isTwoColumns(run, at)) {
+      // Nothing above this run: the columns start the page.
+      const atTop = !blocks.length && !whole.length;
       if (whole.length) blocks.push({ items: whole, column: false });
       whole = [];
       const its = run.flatMap((r) => r.items);
       // Either side may be columns of its own (a third column beside the second): split it again.
       // Each call has fewer items than the last, both sides holding lines, so this ends.
       const side = (part) => pdfPageBlocks(part).map((b) => ({ items: b.items, column: true }));
-      blocks.push(...side(its.filter((it) => it.x < at)), ...side(its.filter((it) => it.x >= at)));
+      const left = its.filter((it) => it.x < at);
+      const right = its.filter((it) => it.x >= at);
+      // The Sidebar with its details on the right (Design → Layout → Details): its name, set far larger
+      // than any heading or entry, heads the right column, and a page is read from its name. Read
+      // the right column first then, else the main column's summary came before the name and the résumé
+      // was named after its first line.
+      const tallest = (part) => part.reduce((m, it) => Math.max(m, heightOf(it)), 0);
+      blocks.push(...(atTop && tallest(right) >= tallest(left) * 1.3 ? [...side(right), ...side(left)] : [...side(left), ...side(right)]));
     } else for (const r of run) for (const it of r.items) whole.push(it);
     run = [];
   };
