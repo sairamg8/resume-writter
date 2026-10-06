@@ -18,6 +18,10 @@ Helpers the PDF and unit suites share:
 - `tests/pdf/fake-dom.mjs`, `tests/unit/ui-dom-harness.mjs` — just enough DOM for react-dom to mount
   a component in Node
 - `tests/pdf/fake-firestore.mjs` — an in-memory Firestore for the cloud-sync tests
+- `tests/pdf/fake-fontsource.mjs` — a stand-in for Fontsource's CDN (jsDelivr) for a test that prints in a web
+  font: `fakeFontsource()` answers the metadata and faces of the picker fonts, Gelasio, Bebas Neue and the symbol
+  fonts (real WOFF bytes from the bundled Noto Sans, named per face), fails loudly on any URL it does not know and
+  refuses every connection beyond this machine, so `05-fonts` cannot fail on a slow CDN
 - `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics (a test can wrap its
   `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
