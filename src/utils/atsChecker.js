@@ -1498,3 +1498,18 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   return results;
 }
+
+/**
+ * How much of a pasted job posting is kept and scanned. A real posting is 5-20 kB; a 5.7 MB paste
+ * held the page for seconds on every change (typing-freeze hunt, C-2), the scan being linear in it.
+ */
+export const MAX_POSTING_CHARS = 200000;
+
+/** `text` cut to MAX_POSTING_CHARS (not through a surrogate pair), and whether it was cut. */
+export function capPosting(text) {
+  const t = String(text ?? '');
+  if (t.length <= MAX_POSTING_CHARS) return { text: t, capped: false };
+  const code = t.charCodeAt(MAX_POSTING_CHARS - 1);
+  const end = code >= 0xd800 && code <= 0xdbff ? MAX_POSTING_CHARS - 1 : MAX_POSTING_CHARS;
+  return { text: t.slice(0, end), capped: true };
+}

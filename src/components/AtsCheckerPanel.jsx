@@ -6,6 +6,8 @@ import {
 import {
   analyzeAtsScore,
   matchResumeWithJob,
+  capPosting,
+  MAX_POSTING_CHARS,
   atsHeadingLabel,
   entriesInOneColumn,
   jobTitleFirst,
@@ -111,6 +113,7 @@ function AtsCheck({ resume, store }) {
   // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
   // the box and its results, which is the loop the scanner is for (R4-CL-03).
   const [jobDescription, setJobDescription] = useSessionState(`cpwtcv_ats_jd:${resume?.id ?? ''}`, '', isText);
+  const [postingCapped, setPostingCapped] = useState(false);
   // Copy Text's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copiedText, setCopiedText] = useState(null);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
@@ -446,10 +449,20 @@ function AtsCheck({ resume, store }) {
         <textarea
           rows={3}
           value={jobDescription}
-          onChange={e => setJobDescription(e.target.value)}
+          onChange={e => {
+            const { text, capped } = capPosting(e.target.value);
+            setPostingCapped(capped);
+            setJobDescription(text);
+          }}
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
           className="w-full text-xs pointer-coarse:text-base p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
+
+        {postingCapped && (
+          <p className="text-xs text-amber-700" data-testid="jd-capped">
+            Only the first {MAX_POSTING_CHARS.toLocaleString('en-US')} characters of this posting are kept and scanned.
+          </p>
+        )}
 
         {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
             match to show: without this line the box took the text and nothing happened (R4-DUX-24). */}
