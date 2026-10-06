@@ -94,6 +94,24 @@ describe('a press on the handle with a dock open keeps the remembered width unle
     } finally { await view.unmount(); }
   });
 
+  it('an arrow that steps past the limit remembers the limit it drew, so closing the dock draws what was seen (hunt R1)', async () => {
+    const store = memoryStorage({ [KEY]: '500' });
+    const { view, now, key } = await probe(1200, true); // 1200 - 680: the dock allows 520
+    try {
+      assert.equal(now().panelWidth, 500);
+      key('ArrowRight');
+      assert.equal(now().panelWidth, 516);
+      assert.equal(store.get(KEY), '516');
+      key('ArrowRight'); // asks for 532, draws 520
+      assert.equal(now().panelWidth, 520);
+      assert.equal(store.get(KEY), '520', 'the width drawn, not the 532 asked for');
+      key('ArrowRight');
+      assert.equal(store.get(KEY), '520');
+      view.update({ open: false });
+      assert.equal(now().panelWidth, 520, 'the dock closed: the panel is as wide as it was seen, no 12 px jump');
+    } finally { await view.unmount(); }
+  });
+
   it('with no dock a click remembers nothing either, and a key or a drag still does as before', async () => {
     const store = memoryStorage({});
     const { view, now, down, fire, key } = await probe(1280, false);

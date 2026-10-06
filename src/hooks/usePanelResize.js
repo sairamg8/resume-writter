@@ -127,8 +127,15 @@ export function usePanelResize({ dockOpen = false } = {}) {
     if (next === undefined) return;
     e.preventDefault();
     const width = clamp(next);
-    // An arrow that would change nothing on screen (at the dock's limit) remembers nothing; Home and End always do.
-    if (e.key.startsWith('Arrow') && appliedWidth(width, dockOpen, viewport) === panelWidth) return;
+    if (e.key.startsWith('Arrow')) {
+      // An arrow remembers the width it drew: one that would change nothing on screen (at the dock's limit) remembers nothing, and a
+      // step past the limit stores the limit, not the width it asked for (closing the dock would draw one never seen). Home and End always remember theirs.
+      const shown = appliedWidth(width, dockOpen, viewport);
+      if (shown === panelWidth) return;
+      setPanelWidth(shown);
+      remember(shown);
+      return;
+    }
     setPanelWidth(width);
     remember(width);
   }
