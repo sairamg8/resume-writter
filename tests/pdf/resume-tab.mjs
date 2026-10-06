@@ -96,7 +96,9 @@ export async function resumeTab(r) {
     card(title) {
       const box = titleBoxes().find((el) => el.value === title);
       assert.ok(box, `no section titled "${title}": the tab shows ${tab.titles().join(' | ')}`);
-      return all().find((el) => el.tagName === 'DIV' && tidOf(el).startsWith(TID.sectionCardPrefix) && el.contains(box)); // the card holding the title box
+      const card = all().find((el) => el.tagName === 'DIV' && tidOf(el).startsWith(TID.sectionCardPrefix) && el.contains(box)); // the card holding the title box
+      assert.ok(card, `the section "${title}" has no ${TID.sectionCardPrefix}<id> card around its title box`);
+      return card;
     },
     titles: () => titleBoxes().map((el) => el.value),
     entries: (card) => all(card).filter((el) => tidOf(el) === TID.entryTitle).map(text),
