@@ -88,12 +88,23 @@ describe('the panel is held off the stage\'s floor while a dock is open (the res
     } finally { await view.unmount(); }
   });
 
-  it('never under the panel\'s own 240 px floor, and a width already narrower is left as it is', async () => {
+  it('below 1100 px the dock lies over the stage, so the panel is not narrowed (the stage keeps its width as the dock opens)', async () => {
+    memoryStorage({ [KEY]: '640' });
+    for (const width of [768, 1024, 1099]) {
+      const { view, now } = await hook(width, true);
+      try { assert.equal(now().panelWidth, 640, `${width} px: the remembered width, whole`); } finally { await view.unmount(); }
+    }
+    const beside = await hook(1100, true);
+    try { assert.equal(beside.now().panelWidth, 420, 'from 1100 px the dock sits beside the stage'); } finally { await beside.view.unmount(); }
+  });
+
+  it('a width already narrower than the room is left as it is, and never under the panel\'s own 240 px floor', async () => {
     memoryStorage({ [KEY]: '300' });
-    const narrow = await hook(768, true);
-    try { assert.equal(narrow.now().panelWidth, 240); } finally { await narrow.view.unmount(); }
     const wide = await hook(1280, true);
     try { assert.equal(wide.now().panelWidth, 300); } finally { await wide.view.unmount(); }
+    memoryStorage({ [KEY]: '240' });
+    const least = await hook(1100, true);
+    try { assert.equal(least.now().panelWidth, 240); } finally { await least.view.unmount(); }
   });
 
   it('a key moves the width drawn, and remembers it', async () => {

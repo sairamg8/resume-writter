@@ -9,6 +9,8 @@ const KEY_STEP = 16;
 // shown no wider than the window less these while a dock is open, whatever width is remembered.
 const DOCK_PX = 360;
 const STAGE_FLOOR_PX = 320;
+// Below this width the dock lies OVER the stage (EditorDock's max-[1099px] classes), it does not narrow it: nothing to hold off.
+const DOCK_BESIDE_FROM_PX = 1100;
 const clamp = (w) => Math.min(MAX, Math.max(MIN, w));
 
 // The window's width, read at every render while a dock is open (a store the resize event reports to), so the very
@@ -38,9 +40,9 @@ function remember(width) {
   try { localStorage.setItem(KEY, String(width)); } catch { /* storage full or blocked: this visit only */ }
 }
 
-/** The width the panel is drawn at: the remembered one, kept off the stage's floor while a dock is open (never under 240). */
+/** The width the panel is drawn at: the remembered one, kept off the stage's floor while a dock beside the stage is open (never under 240). */
 function appliedWidth(width, dockOpen, viewport) {
-  if (!dockOpen || !Number.isFinite(viewport)) return width;
+  if (!dockOpen || !Number.isFinite(viewport) || viewport < DOCK_BESIDE_FROM_PX) return width;
   return Math.min(width, Math.max(MIN, viewport - DOCK_PX - STAGE_FLOOR_PX));
 }
 
