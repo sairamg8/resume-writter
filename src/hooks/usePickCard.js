@@ -12,8 +12,16 @@ import { useToast } from '@/components/ui/Toast';
  * colours and entry layouts print per template. The card the résumé is on already is no switch (R2-087).
  * Without restoreDesign (the tests' spies) there is no Undo, and outside a ToastProvider no notice.
  */
-export function usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign }) {
+export function usePickCard(resume, actions) {
   const { toast } = useToast();
+  return pickCard(resume, actions, toast);
+}
+
+/**
+ * The same, not a hook: for a button that must act on the latest résumé at the click, not the one its panel was last drawn
+ * with (the ATS dock draws after a pause: AtsCheckerPanel's Classic switch). `toast` is the notices' (useToast().toast).
+ */
+export function pickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign }, toast) {
   const settings = resume.settings || {};
   const current = templateId(resume.template);
   const activePreset = presetOf(settings, current)?.id || '';

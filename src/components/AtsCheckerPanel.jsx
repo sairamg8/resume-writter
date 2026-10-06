@@ -23,7 +23,7 @@ import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 import { AtsParserView } from '@/components/AtsParserView';
 import { useSessionState } from '@/hooks/useSessionState';
-import { usePickCard } from '@/hooks/usePickCard';
+import { pickCard } from '@/hooks/usePickCard';
 import { useToast } from '@/components/ui/Toast';
 
 /**
@@ -129,8 +129,7 @@ function AtsCheck({ resume, store, getLatest }) {
     layout: false,
   });
 
-  // The Classic switch is Design → Template's pick (usePickCard), so it raises the same notice with Undo.
-  const { pick } = usePickCard(resume || {}, store || {});
+  // The Classic switch is Design → Template's pick (pickCard, as usePickCard), so it raises the same notice with Undo.
 
   // The report reads the résumé alone; only the job match reads the posting. Each key typed in the
   // box redid the whole report with it, and now redoes the match (typing-freeze 6).
@@ -228,7 +227,8 @@ function AtsCheck({ resume, store, getLatest }) {
    */
   function handleSwitchToClassic() {
     if (!store?.setTemplate) return;
-    pick({ engine: ATS_FALLBACK_TEMPLATE, preset: '', label: templateLabel(ATS_FALLBACK_TEMPLATE) });
+    // From the latest résumé: the notice's Undo puts back what was there at the click, not what was drawn a moment before.
+    pickCard(current() || {}, store, toast).pick({ engine: ATS_FALLBACK_TEMPLATE, preset: '', label: templateLabel(ATS_FALLBACK_TEMPLATE) });
   }
 
   /**
