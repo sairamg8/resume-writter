@@ -46,7 +46,7 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
       className={`${shown ? 'flex-1 min-w-0 min-h-0 h-full' : 'hidden'} overflow-auto bg-cv-stage flex flex-col items-center pt-4 sm:pt-8 px-2 sm:px-4 pb-24 md:pb-8`}
       style={{ overscrollBehavior: 'contain' }}
     >
-      <div data-testid="stage-toolbar" className="sticky top-0 z-10 -mt-4 sm:-mt-8 pt-4 sm:pt-8 mb-3 sm:mb-4 w-full bg-cv-stage flex flex-wrap items-center justify-between gap-x-3 gap-y-2 shrink-0">
+      <div data-testid="stage-toolbar" className="sticky top-0 left-0 z-10 -mt-4 sm:-mt-8 pt-4 sm:pt-8 mb-3 sm:mb-4 self-stretch -mx-2 sm:-mx-4 px-2 sm:px-4 bg-cv-stage flex flex-wrap items-center justify-between gap-x-3 gap-y-2 shrink-0">
         <div className="inline-flex items-center h-8 px-1 rounded-cv-control bg-cv-surface border border-cv-hairline text-[13px] font-semibold text-cv-muted">
           <button data-testid="zoom-out" onClick={() => setPreviewZoom(z => stepZoom(z, -1))} disabled={previewZoom <= 0.5} className="w-6 text-base leading-none hover:text-cv-ink disabled:opacity-30">−</button>
           <span data-testid="zoom-level" className="min-w-11 text-center text-cv-ink select-none">{Math.round(previewZoom * 100)}%</span>

@@ -188,7 +188,7 @@ export function Editor({ store, auth, sync }) {
         <div className="hidden md:block xl:hidden order-4 basis-full h-0" />
       </div>
       {/* The alerts sit between the bar and the content row, full width: an export error must show in the preview-only layout too (the sidebar is hidden there, and that is where the Export menu is). */}
-      <div data-testid="editor-alerts" className="shrink-0 empty:hidden">
+      <div data-testid="editor-alerts" className="shrink-0 pb-2 empty:hidden">
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={dismissExportError} persistError={store.persistReason} importNotice={importNotice.notice} onDismissImport={dismissImport} />
       </div>
       <div className="relative flex-1 min-h-0 flex overflow-hidden">
