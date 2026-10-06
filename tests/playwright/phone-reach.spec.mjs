@@ -76,7 +76,7 @@ async function openDashboard(page) {
  * APPEND here: a later batch lists the testids it adds (or moves behind a menu: `open` taps the opener).
  */
 const SURFACES = [
-  { name: 'dashboard', open: openDashboard, testids: ['resume-card', 'resume-card-rename'] },
+  { name: 'dashboard', open: openDashboard, testids: ['resume-card', 'resume-card-rename', 'bottom-tab-documents', 'bottom-tab-applications', 'bottom-tab-projects'] }, // B2: the nav moves to the phone tab bar (the top bar's nav is hidden below md)
   {
     name: 'editor',
     open: openEditor,
