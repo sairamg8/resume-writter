@@ -12,6 +12,7 @@ import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHe
 import { EditorResumeTab } from '@/components/EditorResumeTab';
 import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
+import { EditorSaveStatus } from '@/components/EditorSaveStatus';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -112,6 +113,10 @@ export function Editor({ store, auth, sync }) {
   if (!resume) return null;
   // Share a public link (R2-148): a résumé, not a letter, of a signed-in account, on a site with a cloud.
   const canShare = Boolean(firebasePublicIo && auth?.user?.uid && resume.kind !== 'letter');
+  // The save chip: an element of its own, three primitives straight from the store, never through EditorHeader
+  // (a keystroke changes `saving` and `savedAt`, which would wake the header and its Export menu). The preview's
+  // footer shows it for now; the bar will take it.
+  const saveChip = <EditorSaveStatus persistError={Boolean(store.persistError)} saving={store.saving} savedAt={store.savedAt} />;
 
   return (
     /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
@@ -119,6 +124,7 @@ export function Editor({ store, auth, sync }) {
     <ToastProvider>
     <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
+        data-testid="editor-sidebar"
         className={`${
           isMobile
             ? (mobileTab === 'editor' ? 'flex-1 min-w-0 flex flex-col' : 'hidden')
@@ -204,9 +210,7 @@ export function Editor({ store, auth, sync }) {
         setLayoutMode={setLayoutMode}
         previewZoom={previewZoom}
         setPreviewZoom={setPreviewZoom}
-        persistError={store.persistError}
-        saving={store.saving}
-        savedAt={store.savedAt}
+        saveStatus={saveChip}
         isMobile={isMobile}
       />
 
