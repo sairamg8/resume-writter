@@ -240,13 +240,17 @@ test.describe('the Updating chip, the pill and the dock do not collide', () => {
       const chip = document.querySelector('[data-testid="preview-updating"]');
       if (!chip) return;
       const dock = document.querySelector('[data-testid="dock-design"], [data-testid="dock-ats"]');
-      window.__chips.push({ chip: rect(chip), dock: rect(dock), pill: rect(document.querySelector('[data-testid="editor-pill"]')) });
+      // `covered`: what is on top at the chip's centre is the dock's own content (the chip is behind the dock, so it is not drawn over it).
+      const at = rect(chip) && dock ? document.elementFromPoint((rect(chip).l + rect(chip).r) / 2, (rect(chip).t + rect(chip).b) / 2) : null;
+      window.__chips.push({ chip: rect(chip), dock: rect(dock), pill: rect(document.querySelector('[data-testid="editor-pill"]')), covered: Boolean(at && dock.contains(at)) });
     }).observe(document.body, { childList: true, subtree: true });
   });
   const chips = (page) => page.evaluate(() => window.__chips);
 
+  // From 1100 px the dock is beside the stage and the chip stands left of it. Below 1100 the dock lies over the stage and the chip,
+  // a fixed element with no z-index, is behind it (as on a phone): it is never drawn over the dock, and it is not shifted onto the panel.
   for (const width of [1440, 1100, 1024, 768]) {
-    test(`${width} px, dock open: an edit shows the chip clear of the dock`, async ({ page }) => {
+    test(`${width} px, dock open: an edit shows the chip ${width >= 1100 ? 'clear of' : 'behind'} the dock`, async ({ page }) => {
       await visit(page, width);
       await openDock(page, 'design');
       await watchChip(page);
@@ -254,7 +258,8 @@ test.describe('the Updating chip, the pill and the dock do not collide', () => {
       await expect.poll(async () => (await chips(page)).length, { timeout: 15_000, message: 'the Updating chip showed while the edit rebuilt' }).toBeGreaterThan(0);
       for (const seen of await chips(page)) {
         expect(seen.dock, 'the dock is open while the chip shows').not.toBeNull();
-        expect(apart(seen.chip, seen.dock), `${width} px: the chip (${JSON.stringify(seen.chip)}) is not over the dock (${JSON.stringify(seen.dock)})`).toBe(true);
+        if (width >= 1100) expect(apart(seen.chip, seen.dock), `${width} px: the chip (${JSON.stringify(seen.chip)}) is left of the dock (${JSON.stringify(seen.dock)})`).toBe(true);
+        else expect(seen.covered, `${width} px: the dock is on top where the chip is (the chip ${JSON.stringify(seen.chip)} is behind the dock ${JSON.stringify(seen.dock)})`).toBe(true);
       }
     });
   }

@@ -245,8 +245,8 @@ body {
 
 /* The "Updating preview…" chip (PdfPreview, class cv-preview-chip) is fixed to the window's bottom right; with a dock
    beside the stage (from 1100 px: 360 px, the editor's right edge) it sits left of the dock, so it never rides over it.
-   Below 1100 px the dock lies OVER the stage, and the chip stays at the corner, clear of the editor panel. Outside a
-   layer: it outranks the chip's right-4 utility. */
+   Below 1100 px the dock lies OVER the stage: the chip stays at the corner, behind the dock (z-30) as on a phone, and is not
+   moved onto the editor panel. Outside a layer: it outranks the chip's right-4 utility. */
 @media (min-width: 1100px) {
   body:has([data-testid="dock-design"], [data-testid="dock-ats"]) .cv-preview-chip {
     right: calc(360px + 1rem);
