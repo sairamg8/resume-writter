@@ -102,12 +102,12 @@ export const EditorAccount = memo(function EditorAccount({ auth, sync, hideName 
 export const EditorHeader = memo(function EditorHeader({ name, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false, onShare, onBack }) {
   return (
     <>
-      <div className="order-1 md:order-10 flex-1 min-w-0 flex items-center gap-1.5">
+      <div className="order-1 xl:order-10 flex-1 min-w-0 flex items-center gap-1.5">
         <EditorBackName name={name} rename={rename} onBack={onBack} />
         {/* In split and preview modes the preview toolbar carries the toggle; only editor-only needs one here (desktop only). */}
         {layoutMode === 'editor' && !isMobile && <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />}
       </div>
-      <div className="order-3 md:order-60 shrink-0 flex items-center gap-1.5">
+      <div className="order-2 xl:order-60 shrink-0 flex items-center gap-1.5">
         <EditorExportMenu exportMenu={exportMenu} onShare={isMobile ? onShare : undefined} />
         {!isMobile && onShare && <EditorShareButton onShare={onShare} />}
         <div className="w-px h-4 bg-cv-hairline self-center hidden sm:block" />
@@ -150,7 +150,9 @@ export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss,
   );
 });
 
-// `order`: where the leaf sits in the bar (Editor.jsx): the phone's second row is the switch and the 44 px ATS button.
+// `order`: where the leaf sits in the bar (Editor.jsx). From xl (1280 px) the bar is one row; below it the bar wraps
+// to two (the header's two ends, then the switch, the ATS button, the save chip and Design), and on a phone the save
+// chip has a row of its own between them, so the name keeps the room it needs.
 const CHIP = 'flex items-center justify-center gap-1.5 shrink-0 py-2 px-2.5 max-md:min-h-[44px] max-md:px-3 rounded-cv-control border text-xs font-semibold transition-colors whitespace-nowrap';
 
 /**
@@ -163,7 +165,7 @@ export const EditorAtsChip = memo(function EditorAtsChip({ open, onToggleDock })
     <button
       onClick={() => onToggleDock('ats')}
       data-testid="ats-chip"
-      className={`order-6 md:order-30 ${CHIP} ${open ? 'bg-cv-good-soft border-cv-good text-cv-good' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+      className={`order-6 xl:order-30 ${CHIP} ${open ? 'bg-cv-good-soft border-cv-good text-cv-good' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
     >
       <ShieldCheck size={13} className="shrink-0" /> <span>ATS check</span>
     </button>
@@ -180,7 +182,7 @@ export const EditorDesignButton = memo(function EditorDesignButton({ open, onTog
       onClick={() => onToggleDock('design')}
       title="Design & Customize"
       data-testid="design-button"
-      className={`order-7 md:order-50 max-md:hidden ${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+      className={`order-8 xl:order-50 max-md:hidden ${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
     >
       <Palette size={13} className="shrink-0" /> <span>Design</span>
     </button>

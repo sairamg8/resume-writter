@@ -166,8 +166,8 @@ export function Editor({ store, auth, sync }) {
     // The notices of the editor (a template switch's Undo, A4).
     <ToastProvider>
     <div className="fixed inset-0 z-20 flex flex-col overflow-hidden bg-cv-ground">
-      {/* The bar: full width, every part a leaf of its own placed by `order` (EditorHeader.jsx); on a phone two rows. */}
-      <div data-testid="editor-bar" className="shrink-0 flex items-center max-md:flex-wrap gap-x-2 gap-y-2 px-3 sm:px-4 py-2 bg-cv-surface border-b border-cv-hairline">
+      {/* The bar: full width, every part a leaf of its own placed by `order` (EditorHeader.jsx): one row from xl, two below it, and on a phone the save chip has a row between them. */}
+      <div data-testid="editor-bar" className="shrink-0 flex items-center max-xl:flex-wrap gap-x-2 gap-y-1.5 px-3 sm:px-4 py-2 bg-cv-surface border-b border-cv-hairline">
         <EditorHeader
           name={resume.name}
           rename={headerRename}
@@ -181,8 +181,8 @@ export function Editor({ store, auth, sync }) {
           onBack={goBack}
         />
         <EditorModeBar doc={doc} dock={dock} onPickDoc={pickTab} onToggleDock={onToggleDock} />
-        <div className="order-2 md:order-40 shrink min-w-0 max-md:max-w-[88px] truncate text-[11px] md:text-xs text-cv-faint">{saveChip}</div>
-        <div className="md:hidden order-4 basis-full h-0" />
+        <div className="order-7 max-md:order-3 max-md:basis-full xl:order-40 shrink min-w-0 truncate text-[11px] md:text-xs text-cv-faint">{saveChip}</div>
+        <div className="hidden md:block xl:hidden order-4 basis-full h-0" />
       </div>
       <div className="relative flex-1 min-h-0 flex overflow-hidden">
       <div

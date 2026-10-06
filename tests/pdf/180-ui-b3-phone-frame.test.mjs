@@ -172,8 +172,8 @@ describe('the phone layout classes', () => {
       assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /max-md:min-h-\[44px\]/);
       assert.match(attr(t.byTid('ats-chip'), 'class'), /max-md:min-h-\[44px\]/);
       assert.match(attr(t.byTid('design-button'), 'class'), /max-md:hidden/);
-      assert.match(attr(t.byTid('editor-bar'), 'class'), /max-md:flex-wrap/);
-      assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /order-5 md:order-20/, 'under the header on a phone, in the bar on a desktop');
+      assert.match(attr(t.byTid('editor-bar'), 'class'), /max-xl:flex-wrap/);
+      assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /order-5 xl:order-20/, 'under the header on a phone, in the bar on a desktop (the rows are pinned in 180-ui-b3-bar-layout)');
     } finally { await t.close(); }
   });
 
