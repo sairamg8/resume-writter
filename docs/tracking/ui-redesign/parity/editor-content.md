@@ -1,0 +1,266 @@
+# Parity table: editor shell and content editing (key `editor-content`)
+
+Audited 2026-10-06 from SOURCE (src/) against the canvas version 1791271695-af84. Rule: `../PARITY-RULE.md` (UI only; every live function stays).
+Canvas boards read: Editor, EditorSection, EditorPersonal, Paper (the area's own), plus MobileEdit, MobilePreview, EditorLetter, States, ShellMenus, Main for the places a function moved to.
+Other areas own, and are NOT audited here: the Design drawer contents, Cover letter panel, ATS panel, Download menu contents, Share modal, Template gallery, Bullet Optimizer popover. Their entry points in this area's chrome ARE rows below.
+
+Status key: SAME (same place, same look; SAME also marks an invisible behaviour that the canvas does not need to draw and the build must keep), RESTYLED (same function, new look or new wording), MOVED (same function, new place, still reachable and drawn there), CHANGED (the drawing alters what it does or hides part of it), MISSING (not drawn at all). A MISSING/CHANGED row's "Fix" is the UI-only change; for a MISSING row the Fix also names the nearest drawn home.
+
+Board short names: Editor = Editor.dc.html (top bar + 360 px sidebar + stage + right Design drawer); EdSection = EditorSection.dc.html (Section style popover); EdPersonal = EditorPersonal.dc.html (Personal info card open); MobEdit / MobPrev = MobileEdit / MobilePreview.
+
+## 1. PARITY TABLE
+
+### 1a. Top bar and alerts
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-001 | Back to dashboard | Arrow button, title "Back to dashboard", always `navigate('/')` (not history back). src/components/EditorHeader.jsx:23, src/pages/Editor.jsx:70 | Editor top bar: left arrow link (aria "Back to documents") | RESTYLED | Keep it a plain go-to-Documents (not history back). |
+| EDIT-002 | Résumé name | Name as a text button (title "Rename resume"), truncates. EditorHeader.jsx:41-45 | Editor: 15 px name + pencil icon, left of the save chip | RESTYLED | n/a |
+| EDIT-003 | Rename in place | Click opens an input (autofocus, aria "Résumé name"); Enter/blur commits, Escape cancels, IME-safe, trimmed, empty or unchanged name is no edit, box closes if another résumé replaces this one, 16 px on touch. EditorHeader.jsx:27-40, src/hooks/useRename.js:23-58 | Pencil icon implies it; the editing state is not drawn | RESTYLED | Build the edit state with all useRename rules unchanged (tests 89-rename-fresh-name, r5hunt11). |
+| EDIT-004 | Save status | Text under the preview: "Saving…" while a write is held, "Saved Xm ago" (30 s tick) after a write, "Auto-saved to your browser" before the first write, red "Not saved" on a failed write. src/components/EditorPreviewPane.jsx:20-31, src/hooks/useResumeStore.js:154-168,255-260 | Editor/EdSection/EdPersonal top bar: grey check + "Saved" (MobEdit: "Saved" under the name). States has the Saved / Saving… chips | MOVED | Keep all four states and the "Saved 2m ago" time text (only "Saved" is drawn); add the red "Not saved" state; keep the 30 s tick. |
+| EDIT-005 | "Not saved" banner (storage full / blocked) | Red role=alert bar above the tabs: full = "Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos."; blocked = "Not saved: this browser is blocking site storage. Export JSON to keep a copy." EditorHeader.jsx:99-103, src/utils/storageBackup.js:45-57 | States.dc "Storage full" banner: new title and advice ("Delete a document you no longer need, or sign in..."), an "Open Documents" link; no "blocked" variant; not placed on any editor board | CHANGED | Use the live two messages (full / blocked) in the new banner style, above the stage/sidebar; do not add the new advice or link (PARK, section 2). |
+| EDIT-006 | Import notice banner | Amber role=status bar with Dismiss: "read best-effort" notice after a PDF/Word/text import, kept in route state until dismissed (survives tab picks). EditorHeader.jsx:87-92, src/hooks/useImportNotice.js:7-17 | Not drawn | MISSING | Draw an amber notice strip with Dismiss above the editor body (Editor, under the top bar). |
+| EDIT-007 | Export / import error banner | Red role=alert bar with Dismiss: "<PDF export> failed (...)" with connection advice, "Import failed ...", "Could not parse file ...". EditorHeader.jsx:93-98, src/hooks/useEditorExports.js:37-48,126-130 | Not drawn | MISSING | Same strip style as EDIT-006 in red; keep the exact messages and Dismiss. |
+| EDIT-008 | Résumé tab | First of three tabs in the mode bar; also the default when ?tab= is unknown. EditorHeader.jsx:121-126 | Top-bar two-way switch "Résumé" (role=group "Document") | MOVED | n/a (owner decision 6). |
+| EDIT-009 | Cover Letter tab | Second tab; swaps the sidebar to the letter panel and the preview to the letter PDF. EditorHeader.jsx:127-132, src/pages/Editor.jsx:176-180, EditorPreviewPane.jsx:70-71 | Top-bar switch "Cover letter" (EditorLetter board) | MOVED | n/a |
+| EDIT-010 | ATS Check tab | Third tab opening AtsCheckerPanel in the sidebar. EditorHeader.jsx:133-138, Editor.jsx:182-186 | Green "ATS 82" chip in the top bar linking to EditorAts (right drawer) | MOVED | n/a (decision 6). The score number on the chip is new, see section 2. |
+| EDIT-011 | Design tab / palette toggle | Palette button toggles Design and back to Résumé (title "Design & Customize"). EditorHeader.jsx:140-146 | "Design" button in the stage toolbar (right of "1 page · A4"); opens the right Design drawer | MOVED | The drawer needs its own close (click Design again or a close control), as the live button toggles back. |
+| EDIT-012 | ?tab= deep link | Open tab lives in the address: `resume`, `design`, `coverletter`, `ats`; unknown value becomes Résumé and leaves the URL; picking a tab replaces (no history entry) and keeps route state. Dashboard "Cover letter" links use ?tab=coverletter. src/hooks/useEditorTab.js:5-37 | Not drawn (links go to separate boards) | SAME | Keep: map `coverletter` to the switch, `design` to the open Design drawer, `ats` to the open ATS drawer. |
+| EDIT-013 | Scroll reset on tab change | The shared scroll box returns to top when the tab changes, not on edits. src/components/EditorTabContent.jsx:10-15 | Not drawn | SAME | Keep for Résumé/Cover letter swap (sidebar scroll to top on switch). |
+| EDIT-014 | Share a public link | Menu item in Export menu, only for a signed-in account, on a cloud-enabled build, and not for a standalone letter document. Opens ShareLinkModal. src/pages/Editor.jsx:113-114,138, ExportDropdown.jsx:158-165 | Top-bar "Share" ghost button, always drawn (also on EditorLetter, MobPrev as icon) | MOVED | Keep the same visibility rule (hide when signed out / no cloud / letter-kind document). Not drawn on MobEdit header: see EDIT-026. |
+| EDIT-015 | Export menu trigger and busy states | "Export" button with chevron; shows "..." while exporting and "Reading…" while a document import is read; disabled meanwhile. ExportDropdown.jsx:42-56 (items: another area) | Split button "Download PDF" + chevron "More formats" (EditorLetter: "Download letter PDF") | MOVED | Keep the disabled/busy label states ("..." / "Reading…") on the split button. Menu items, demo-only "Import as my original", and letter wording are the EditorDownload parity file's. |
+| EDIT-016 | Account avatar | Avatar (photo or initial) + first name (name hidden in the split panel); button opens the menu. src/components/AuthBar.jsx:155-176 | Round "AJ" avatar, no menu drawn on editor boards | RESTYLED | Show the photo when the account has one. |
+| EDIT-017 | Account menu | Name, e-mail, Sign out. AuthBar.jsx:178-197 | ShellMenus avatar menu (name, e-mail, sync line, Keyboard shortcuts, Sign out) | RESTYLED | Same two live items stay (Sign out). "Keyboard shortcuts" is the shell's, see section 2. |
+| EDIT-018 | Signed-out Sign in | Compact Google button ("Sign in with Google", "Signing in…" disabled), failure popover with Dismiss (blocked popup, unauthorized domain). AuthBar.jsx:127-153 | Editor boards show only the avatar; ShellMenus draws a Sign in button in the shell bar and a "Not now" card | MISSING | Draw the signed-out state of the editor top bar (Google button + error popover). |
+| EDIT-019 | Cloud sync dot | Cloud icon with tooltip (hover/focus/tap): Offline, Cannot reach your account, Syncing…, Synced <time>, Sync error, Stopped (names the held large-photo résumés, "saved in this browser"), Sync is off; hidden when signed out. AuthBar.jsx:41-123 | States: four chips (Saved, Saving…, Offline, Sync paused); ShellMenus: "Cloud sync on, saved 1 min ago" | CHANGED | Seven states fold into four: keep "stopped with the held résumé's name / large photo" and "Sync is off" and "Sync error" wording as distinct states or text; keep it visible in the editor bar, not only in the avatar menu. |
+| EDIT-020 | Account bar loading / no-cloud | Pulsing placeholder while auth loads; nothing at all when the build has no cloud. AuthBar.jsx:121-125 | Not drawn | SAME | Keep. |
+
+### 1b. Layout, phone, footer
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-021 | Layout toggle (Editor only / Split view / Preview only) | Three icon buttons in the preview toolbar (and in the header while Editor-only); hiding is display:none, never unmount; hidden preview builds nothing. src/components/LayoutToggle.jsx, Editor.jsx:40,121-127,190, EditorPreviewPane.jsx:51-56,40 | Not drawn: sidebar and stage are always side by side | MISSING | Add a small 3-way view control to the stage toolbar (next to zoom), same three modes; Editor-only must hide the stage, Preview-only the sidebar. |
+| EDIT-022 | Resizable sidebar | Drag handle between panel and preview (title "Drag to resize panel"); 240-640 px, default 360; remembered in localStorage `cpwtcv-panel-width`; pointer capture, touch; keyboard: arrows 16 px, Home/End; role=separator. src/hooks/usePanelResize.js:5-117, Editor.jsx:190-198 | Sidebar fixed at 360 px, no handle | MISSING | Draw a 4 px drag handle on the sidebar/stage seam; same range, key and keyboard. |
+| EDIT-023 | Phone Edit / Preview switch | Floating dark pill "Edit / Preview" below 768 px; Edit hides the preview (not even built), Preview hides the form. Editor.jsx:33,216-241, useMediaQuery | MobEdit/MobPrev: floating pill "Edit / Preview / Design" | RESTYLED | Design is a third segment (the drawer). Keep the 768 px breakpoint and not-built-while-hidden. |
+| EDIT-024 | Phone tab row | Résumé / Cover Letter / ATS / Design row under the header, horizontally scrollable on a phone. EditorHeader.jsx:117-148 | MobEdit: "Résumé / Cover letter" 44 px segmented group under the header; ATS as a chip button in the header | RESTYLED | n/a |
+| EDIT-025 | Preview zoom on a phone | −/+ buttons stay on a phone (only the layout toggle is hidden). EditorPreviewPane.jsx:51-65 | MobPrev: text "1 page · A4 · pinch to zoom", no −/+ | CHANGED | Keep the −/+ stepper (or add pinch in addition, PARK the gesture). |
+| EDIT-026 | Phone: export, share, import reachability | The Export menu (all formats, Share, Import) is in the header on every size. Editor.jsx:129-140 | MobEdit header: ATS chip + one "Download PDF" icon; MobPrev header: ATS chip + Share icon, big "Download PDF" button; no formats menu, no Import | CHANGED | Give both phone boards the "More formats" chevron or an overflow that opens the same menu (Word, Markdown, ATS text, JSON Resume, Backup, Import, Share). |
+| EDIT-027 | Terms and Privacy links | "Terms" and "Privacy" buttons in the preview footer (to /terms, /privacy). EditorPreviewPane.jsx:76-81 | Not drawn on any editor board; Legal board exists but no board links to it | MISSING | Put Terms / Privacy in the avatar menu or a quiet footer under the stage. |
+
+### 1c. Stage (preview)
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-028 | Preview = the exported PDF | PdfPreview builds the same react-pdf document as Export PDF in the worker and paints every page with pdf.js; pages stack in a scrolling column with a gap, fit to the column (never wider than the page), 28 looks. src/components/PdfPreview.jsx:1-40,240-539, EditorPreviewPane.jsx:70-74 | Editor/EdSection: `Paper` HTML stand-in (4 layouts, 2 fonts) inside a fixed 714x1011 frame, overflow hidden, ONE page | RESTYLED | Build keeps PdfPreview (real PDF, all pages, scroll). Paper is a drawing aid, not a spec (UNKNOWNS). Frame must scroll for multi-page résumés. |
+| EDIT-029 | Cover-letter preview | On the letter tab the same pane shows the letter PDF (own key). EditorPreviewPane.jsx:70-71 | EditorLetter: `Letter` stand-in, caption "Cover letter · 1 page · A4" | RESTYLED | n/a |
+| EDIT-030 | Zoom −/+ | Steps 25 % between 50 % and 150 %, buttons disable at the ends, label shows the percent; 100 % = fit. EditorPreviewPane.jsx:61-65 | Rounded stepper "−  90%  +" (Editor shows 76 %, EdPersonal 86 %) | RESTYLED | Keep 50-150 % / 25 step / disabled ends and 100 % default; drawn 76/86/90 % values are mock-ups. |
+| EDIT-031 | Zoom persists | Zoom state lives in the Editor: survives Résumé/letter/Design swaps and view-mode trips. Editor.jsx:43, tests cypress 23 | Not drawn | SAME | Keep. |
+| EDIT-032 | Caption | "RÉSUMÉ · A4" or "COVER LETTER · US Letter", from the page size the PDF prints (A4 default). EditorPreviewPane.jsx:57-59, src/constants/pageSize.js:13-32 | "1 page · A4" | RESTYLED | Keep US Letter naming. Page count is new, see section 2. |
+| EDIT-033 | "Rendering preview…" placeholder | White page-shaped box with the text until the first pages paint. PdfPreview.jsx:501-508 | Not drawn | MISSING | Draw the loading page (same ratio as the page size). |
+| EDIT-034 | "Updating preview…" chip | Pill fixed bottom-right while rebuilding over visible pages; above the phone pill. PdfPreview.jsx:526-530 | Not drawn | MISSING | Draw a small status pill on the stage. |
+| EDIT-035 | Preview failed + Retry | Red alert "Preview failed to render (<message>)." with Retry; also the 20 s watchdog and offline recovery. PdfPreview.jsx:494-499 | Not drawn | MISSING | Draw the error card with a Retry button. |
+| EDIT-036 | Rebuild cadence | Rebuild 350 ms after the last change (max 1200 ms during steady typing), one build at a time, previous pages stay until new ones paint (double-buffer), hidden preview builds nothing and catches up when shown. PdfPreview.jsx:42-47,279-383 | n/a | SAME | Keep (tests 71-preview-*, 90-*, 111, 171). |
+| EDIT-037 | Rebuild when the web comes back | A build that used a fallback font, a borrowed face or lacked a photo is repeated when back online / when the face arrives. PdfPreview.jsx:385-397 | n/a | SAME | Keep. |
+| EDIT-038 | Font fallback notice | Amber note above the preview: "<font> could not be loaded - the PDF uses Noto Sans until you are back online." src/components/FontFallbackNotice.jsx:7-17 | Not drawn | MISSING | Draw the note at the top of the stage. |
+| EDIT-039 | Hidden stage keeps state | Editor-only mode hides, never unmounts, the preview. EditorPreviewPane.jsx:40,47 | n/a | SAME | Keep with EDIT-021. |
+
+### 1d. Sidebar: structure, sections, entries
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-040 | Collapse All / Expand All | Button top-right of the Résumé tab; toggles every section and Personal Info; a section added later opens. src/components/EditorResumeTab.jsx:65-72,44-49, Editor.jsx:73-78 | Not drawn (MobEdit has a per-card chevron only) | MISSING | Add a quiet "Collapse all / Expand all" text button above the first card. |
+| EDIT-041 | Personal Info card toggle | Header row "Personal Info" with chevron; open by default; open state survives a trip to Design/letter. EditorResumeTab.jsx:74-96, Editor.jsx:37 | Card "Personal info" with summary line "Alex Johnson · Full Stack Engineer" and chevron (collapsed on Editor, open on EdPersonal) | RESTYLED | Keep default-open for a new session (drawn closed); the summary line is new, harmless. |
+| EDIT-042 | Reorder sections by drag | dnd-kit: pointer + keyboard (Space, arrows), closestCenter; drop off the list leaves order; Personal Info does not move. EditorResumeTab.jsx:39-61,98-122, SectionEditor.jsx:151-153 | Six-dot grip at the left of every section card | RESTYLED | Keep keyboard sensor and the "dropped off list = unchanged" rule. |
+| EDIT-043 | Section title (rename) | The title is an editable text input in the card header (aria "Section title"), struck through when hidden. SectionEditor.jsx:155-161 | Title drawn as plain text (e.g. "Experience") | MISSING | Make the title click-to-edit in the card header (or a Title field at the top of Section style). |
+| EDIT-044 | Section show / hide | Eye button (title Hide/Show section from resume); hidden section: "Hidden" badge, strikethrough title, 60 % opacity, hidden from preview and exports. SectionEditor.jsx:162-171,149-150 | Eye button per card (aria "Section visible") | RESTYLED | Draw the hidden state (badge or struck title, dim). |
+| EDIT-045 | Section options panel open/close | "⋯" menu first item "Customize layout" / "Hide options" toggles an inline panel under the header. SectionEditor.jsx:141,195-197 | Sliders icon "Section style" on the card header opens the popover (EdSection) | MOVED | n/a (see 1f). |
+| EDIT-046 | Reset style | "⋯" menu: resets grids, title style, order, spacing at once, toast "Section style reset" (+ section title) with Undo for 8 s; Undo only while the section still holds the reset settings. SectionEditor.jsx:105-129,142 | EdSection popover footer "Reset style" (amber text) | MOVED | The Undo toast must remain (States draws a generic Undo toast style). |
+| EDIT-047 | Duplicate section | "⋯" menu "Duplicate section": deep copy right after the original, fresh ids. SectionEditor.jsx:143, src/hooks/useResumeSectionActions.js:89-99 | Not drawn | MISSING | Add to a section overflow (⋯) menu on the card header. |
+| EDIT-048 | Delete section | "⋯" menu "Delete section" (red): confirm "Delete the "<title>" section and its N entries?". SectionEditor.jsx:131-135,145 | Not drawn (States draws a confirm dialog for résumés) | MISSING | Same ⋯ menu; use the States confirm dialog. |
+| EDIT-049 | Section collapse | Chevron collapses the body; Collapse All forces it; open by default. SectionEditor.jsx:61-66,187-192 | Chevron up/down on each card; entries collapsed rows | RESTYLED | n/a |
+| EDIT-050 | Reorder entries by drag | Grip left of each entry (appears on hover, always on touch/focus), pointer + keyboard Space/arrows, title "Drag, or press Space then the arrow keys, to reorder"; per-section DndContext. src/components/SectionEditorShared.jsx:179-200, SectionEditor.jsx:79-85,201-216 | No grip on entry rows (Editor, MobEdit) | MISSING | Add a grip to each entry row (visible on hover/focus/touch). |
+| EDIT-051 | Entry card expand | Header row (label = role/company, institution/degree, name, etc., or "New Entry"), click toggles; closed by default. SectionEditorShared.jsx:141-175 | Entry rows: company bold + "role · dates" + chevron; one entry shown open | RESTYLED | Keep "New Entry" fallback label. |
+| EDIT-052 | Entry show / hide | Eye in the entry header (title Hide/Show entry); hidden entry struck through, 60 % dim; Languages/Interests rows have it inline. SectionEditorShared.jsx:151-159, SectionEditorLeafItems.jsx:107-113 | Not drawn | MISSING | Add eye to the entry row. |
+| EDIT-053 | Duplicate entry | Copy button (aria "Duplicate entry"); copy right after, fresh id. SectionEditorShared.jsx:160-164, useResumeSectionActions.js:76-86 | Not drawn | MISSING | Add to the entry row / overflow. |
+| EDIT-054 | Delete entry | Trash (aria "Delete entry"); asks "Delete this entry?" unless the entry is untouched (nothing but starting values). SectionEditor.jsx:44-47,236-254, SectionEditorShared.jsx:165-167 | Not drawn | MISSING | Add to the entry row; keep the untouched-skips-confirm rule. |
+| EDIT-055 | Add entry | Blue text button at the foot of each section, per-type label: Add Experience / Education / Skill Group / Project / Language / Certification / Award / Volunteering / Reference / Interest / Entry. SectionEditor.jsx:217-222, SectionEditorLeafItems.jsx:216-221 | "+ Add job" (Experience only) | RESTYLED | Draw per-type labels for the other sections (names are the live ones). |
+| EDIT-056 | New entry opens itself | The entry just added (or the first entry of a just-added section) opens once; no old blank entry opens. SectionEditor.jsx:90-103 | n/a | SAME | Keep (tests 99-new-entry-open, 100-r4-lo-20). |
+| EDIT-057 | Add Section row | Dashed row "Add Section" with chevron; toggles the picker; open state survives Design/letter swaps. EditorResumeTab.jsx:124-131, Editor.jsx:38 | Dashed "Add section" row at the bottom of the list | RESTYLED | n/a |
+| EDIT-058 | Section type picker | Two groups: Core (Work Experience, Education, Skills, Projects) and More (Languages, Certifications, Awards & Honors, Volunteering, References, Interests, Custom Section), two-column grid; a pick adds and closes. EditorResumeTab.jsx:132-147, src/constants/resume.js:1-23 | Picker not drawn | MISSING | Draw the open state with all 11 types (Core / More groups). |
+| EDIT-059 | Added section behaviour | Appended at the end in its template's own grid (Compact etc.); first entry opens. useResumeSectionActions.js:36-45, EditorResumeTab.jsx:50-51,139 | n/a | SAME | Keep. |
+
+### 1e. Entry forms and rich text
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-060 | Experience: Company and Job Title | Two text inputs, placeholders "Company Name" / "Software Engineer". SectionEditorEntryItems.jsx:49-54 | Editor open entry: "Role" and "Company" text inputs | RESTYLED | "Job Title" is renamed Role; keep order-independent data keys. |
+| EDIT-061 | Experience: Location | Text input "Location" ("City, State"). EntryItems.jsx:55-57 | Not drawn (Editor open entry) | MISSING | Add a Location field to the entry. |
+| EDIT-062 | Start / End dates | Month + Year selects (years 15 ahead to 49 back, unusual stored years kept), clear X; imported formats (05/2023, 2019-05) read; a period or "Present" text shows as a text box; End disabled and blanked while current. src/components/SectionEditorShared.jsx:29-118, EntryItems.jsx:59-66 | "From" and "To" plain text inputs (To greyed "Present") | CHANGED | Keep the month/year pickers (and the text fallback); From/To may rename the labels only. |
+| EDIT-063 | Current flag | Checkbox "Currently working here" (Education "Currently studying here", Project "Ongoing project", Volunteering "Currently volunteering here"); keeps the End date entered. EntryItems.jsx:10-17,67,84,99,113 | Not drawn (only a greyed "Present" in To) | MISSING | Add the checkbox under the dates. |
+| EDIT-064 | Per-field hide (eye) in an entry | Eye beside Company, Job Title, Location, Start, End, Description (Experience) and Title/Skills (Skills): hides that field from every export; shown dimmed. SectionEditorShared.jsx:120-139, EntryItems.jsx:43-71, LeafItems.jsx:11-27 | Not drawn | MISSING | Add a small eye beside each field label (EdPersonal already draws this pattern for contact fields). |
+| EDIT-065 | Experience description | Rich-text editor (toolbar, STAR Optimizer), placeholder "Use bullet points for achievements...", min 5 rows. EntryItems.jsx:68-70 | "Highlights" box of static bullets, no toolbar | CHANGED | Keep the rich-text editor (EDIT-077..083) under the label Highlights/Description. |
+| EDIT-066 | Education entry | Institution, Degree, Field of Study, Location, Start/End + current, GPA (optional), rich Description. EntryItems.jsx:75-89 | Education card collapsed, "1" | MISSING | Draw the open Education entry. |
+| EDIT-067 | Skills entry | Title / Category and Skills / Details (each with an eye). LeafItems.jsx:8-27 | Skills card collapsed, "3" | MISSING | Draw the open Skills entry. |
+| EDIT-068 | Skill levels | One "Level of <skill>" select per skill the text names (Not set + levels), shown when the group has skills; drawn by the Bars style; dims with the field's eye. LeafItems.jsx:28-50 | Not drawn | MISSING | Draw under Skills / Details. |
+| EDIT-069 | Projects entry | Project Name, URL (optional), Technologies, Start/End + Ongoing, rich Description. EntryItems.jsx:91-103 | Projects card collapsed | MISSING | Draw the open entry. |
+| EDIT-070 | Languages row | One-line row: Language input + Proficiency select (Not set, Native, Fluent, Professional, Intermediate, Basic, plus any unusual stored value), eye, duplicate, delete. LeafItems.jsx:68-120 | Languages card collapsed, "2" | MISSING | Draw the open row. |
+| EDIT-071 | Certifications entry | Name, Issuing Organization, Issue Date, Expiry Date, Credential ID, Link URL, Link label (only once a URL exists). LeafItems.jsx:122-141 | Not drawn | MISSING | Draw the open entry. |
+| EDIT-072 | Awards entry | Award Title, Issuing Organization, Date, rich Description (optional). LeafItems.jsx:143-154 | Not drawn | MISSING | Draw the open entry. |
+| EDIT-073 | Volunteering entry | Organization, Role, Location, Start/End + current, rich Description. EntryItems.jsx:105-117 | Not drawn | MISSING | Draw the open entry. |
+| EDIT-074 | References entry | Name, Job Title, Company, Relationship, Email, Phone. LeafItems.jsx:156-171 | Not drawn | MISSING | Draw the open entry. |
+| EDIT-075 | Interests row | One-line row: Interests input, eye, duplicate, delete. LeafItems.jsx:173-200 | Not drawn | MISSING | Draw the row. |
+| EDIT-076 | Custom section entry | Title, Subtitle, Date / Period (text or picker), Location, rich Description. EntryItems.jsx:119-134 | Not drawn | MISSING | Draw the open entry. |
+| EDIT-077 | Rich text: Bold, Italic, Underline | Toolbar buttons and Ctrl+B / Ctrl+I / Ctrl+U (titles say so), `execCommand`. src/components/RichTextEditor.jsx:335-337 | No toolbar on Highlights or Summary | MISSING | Draw a compact toolbar that appears with the focused field. |
+| EDIT-078 | Rich text: lists | Bullet list and numbered list buttons. RichTextEditor.jsx:342-343 | Not drawn (bullets are static text) | MISSING | Same toolbar. |
+| EDIT-079 | Rich text: link | Insert link: prompt for URL, only web / e-mail / phone accepted else alert "That is not a web, e-mail or phone link." RichTextEditor.jsx:154-163,348 | Not drawn | MISSING | Same toolbar. |
+| EDIT-080 | Rich text: alignment | Left, center, right, justify. RichTextEditor.jsx:353-356 | Not drawn | MISSING | Same toolbar. |
+| EDIT-081 | STAR Optimizer button | Amber "STAR Optimizer" at the end of every rich-text toolbar; opens BulletOptimizerModal on the selection / current bullet; Apply replaces it. RichTextEditor.jsx:358-370,191-265 | EditorImprove (another area) draws an "Improve" popover on a focused highlight; EdPersonal draws an "Improve" button on Summary | MOVED | Entry point must exist on every rich-text field, including Summary (EDIT-104); the popover is the EditorImprove parity file's. |
+| EDIT-082 | Paste and drop cleaning, caps | Paste/drop reduced to supported markup (no images, colours, fonts); over 200 000 characters or 1 500 blocks is cut with an amber status line; drag inside the field moves text. RichTextEditor.jsx:14-23,165-183,267-314,397-403 | n/a | SAME | Keep; the amber "The pasted text was cut..." line sits under the field. |
+| EDIT-083 | Value sync and IME | Own echo detection, outside values (import, other tab, cloud) adopted at once or on blur, composition-safe saving. RichTextEditor.jsx:49-146 | n/a | SAME | Keep (tests 163-*, r5hunt3, 162-redos). |
+
+### 1f. Personal info card
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-084 | Photo upload | Round dashed 56 px target (click) and hidden file input `image/*`; scaled by readImageFile to a size budget; failure shows an alert. src/components/PersonalInfoEditorPhoto.jsx:41-50,117-131 | EdPersonal: round "AJ" circle + "Upload photo" button | RESTYLED | n/a |
+| EDIT-085 | Photo status chip and print warnings | "Added" (blue) or "Not printed" (amber) chip in the Photo header; text when a WebP/GIF/URL photo cannot be drawn. PersonalInfoEditorPhoto.jsx:93-97,134-138 | Not drawn | MISSING | Draw the chip and the amber line. |
+| EDIT-086 | Photo eye | Hide/Show photo (also in the cover letter); only when a photo exists. PersonalInfoEditorPhoto.jsx:100-109 | Eye "Shown on résumé" beside Upload photo | RESTYLED | n/a |
+| EDIT-087 | Remove photo + Undo | "Remove photo" (red text); toast "Photo removed" with Undo for 8 s; Undo only while the same résumé has no photo; dismissed when another résumé opens. PersonalInfoEditorPhoto.jsx:56-71,139-141 | "Remove photo" text button | RESTYLED | Keep the Undo toast. |
+| EDIT-088 | Photo Shape | Circle / Rounded / Square chips. PersonalInfoEditorPhoto.jsx:145-148, src/constants/photoOptions.js:13 | Header look: "Photo shape" Circle / Rounded / Square | MOVED | n/a |
+| EDIT-089 | Photo Size | Small / Medium / Large. PersonalInfoEditorPhoto.jsx:150-153 | Not drawn | MISSING | Under Header look (or "More header options"). |
+| EDIT-090 | Photo Border | None / Thin / Accent. PersonalInfoEditorPhoto.jsx:155-158 | Not drawn | MISSING | Same. |
+| EDIT-091 | Photo Height | Square / Tall / Portrait; hidden while the shape is a circle. PersonalInfoEditorPhoto.jsx:160-166 | Not drawn | MISSING | Same; keep the circle rule. |
+| EDIT-092 | Photo Text Position | Top / Center / Bottom; a note replaces it for the Sidebar template or a centred header. PersonalInfoEditorPhoto.jsx:73-86,168-171 | Not drawn | MISSING | Same; keep the conditional note. |
+| EDIT-093 | Photo Position | Left / Right of the name, same condition. PersonalInfoEditorPhoto.jsx:173-177 | Not drawn | MISSING | Same. |
+| EDIT-094 | Photo Tone | Color / Grayscale. PersonalInfoEditorPhoto.jsx:179-183 | Not drawn | MISSING | Same. |
+| EDIT-095 | Full name | Text input, always printed (no eye), placeholder "John Doe". PersonalInfoEditor.jsx:27,197-205 | "Full name" input | RESTYLED | n/a |
+| EDIT-096 | Job title | Text input, always printed (no eye). PersonalInfoEditor.jsx:28 | "Job title" input | RESTYLED | n/a |
+| EDIT-097 | Email with eye | Input plus eye "Show/Hide on resume"; hidden field is greyed. PersonalInfoEditor.jsx:187-205,15-16 | "Email" input + eye "Shown on résumé" | RESTYLED | n/a |
+| EDIT-098 | Phone with eye | Same. PersonalInfoEditor.jsx:17 | "Phone" + eye | RESTYLED | n/a |
+| EDIT-099 | Location with eye | Same. PersonalInfoEditor.jsx:18 | "Location" + eye | RESTYLED | n/a |
+| EDIT-100 | Website, LinkedIn, GitHub with eyes | Three fixed link fields with eyes. PersonalInfoEditor.jsx:19-21,29 | "Links" group with Website, LinkedIn, GitHub rows + eye each | RESTYLED | n/a |
+| EDIT-101 | Link display label and URL | Once a link field has a value, two extra inputs: "Display label (optional)" and "Link URL (e.g. https://...)". PersonalInfoEditor.jsx:206-213 | Not drawn | MISSING | Draw as a second line under each link row (or an expand arrow on the row). |
+| EDIT-102 | Per-field icon controls | Under each contact field when the template draws icons: the current icon, "Choose Icon", "Upload"/"Replace", "Clear"; labelled "Resume icon" or "Cover letter icon"; amber line when a custom icon cannot be printed. PersonalInfoEditor.jsx:32-89,97-98 | Not drawn | MISSING | Under "Header look" (Contacts shown as) or per link row; keep the condition (only when the template draws icons). |
+| EDIT-103 | Header icon library modal | Opened by "Choose Icon": search, Recommended / Styles / All tabs, packs, upload, reset. src/components/HeaderIconPickerModal.jsx:29-276 | Not drawn | MISSING | Entry point is EDIT-102; the modal itself is a canvas gap for the extras area. |
+| EDIT-104 | Professional summary | Rich-text editor (toolbar incl. STAR Optimizer), eye "Show/Hide summary", placeholder "Brief professional summary...", 4 rows. PersonalInfoEditor.jsx:231-243 | Plain `textarea` (3 rows) + "Improve" button + eye | CHANGED | Keep the rich-text editor; "Improve" is the live STAR Optimizer button under another name (same function, keep, see section 2). |
+| EDIT-105 | Header section toggle | "Header Customization" disclosure, closed by default. PersonalInfoEditorHeader.jsx:106-109 | "Header look" disclosure (open in EdPersonal) | RESTYLED | n/a |
+| EDIT-106 | Text alignment | Left / Center preset cards with mini previews. PersonalInfoEditorHeader.jsx:116-121 | "Alignment" Left / Center with mini previews | RESTYLED | n/a |
+| EDIT-107 | Name and title layout | Stack / Inline. PersonalInfoEditorHeader.jsx:123-129 | Not drawn | MISSING | Add under "More header options". |
+| EDIT-108 | Header bottom border | Eye toggle plus Thickness stepper 1-12 pt (typed box, Enter/blur commits). PersonalInfoEditorHeader.jsx:63-80,131-152 | Not drawn | MISSING | Same. |
+| EDIT-109 | Contact layout | Single / Justify / 2 Grid. PersonalInfoEditorHeader.jsx:155-161 | Not drawn | MISSING | Same. |
+| EDIT-110 | Contact style | Icon / Bullet / Bar chips. PersonalInfoEditorHeader.jsx:162-167 | "Contacts shown as" Icons / Dots / Bars | RESTYLED | "Bullet" renamed "Dots"; keep the stored values. |
+| EDIT-111 | Icon set and size | When the style draws icons: five icon-set chips plus Icon size − / + (px). PersonalInfoEditorHeader.jsx:170-190 | Not drawn | MISSING | Under "Contacts shown as" when Icons is picked. |
+| EDIT-112 | Template-dependent header controls | Sidebar template and banner templates replace the controls with an explanation note naming the templates they apply to. PersonalInfoEditorHeader.jsx:193-214 | Not drawn | MISSING | Keep the notes where a control does not apply. |
+| EDIT-113 | Header spacing | Per-gap steppers (− value px +, typed), per-row reset, group Reset, note when the job title is empty. src/components/HeaderSpacingControls.jsx:21-97, PersonalInfoEditorHeader.jsx:217-227 | Not drawn | MISSING | Under "More header options". |
+
+### 1g. Section style (EdSection popover vs SectionCustomizer)
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix if CHANGED/MISSING |
+|---|---|---|---|---|---|
+| EDIT-114 | Alignment | Left / Center (icons); not offered for the Sidebar's side column. src/components/SectionEditorCustomizer.jsx:72-86 | "Alignment" Left / Center | RESTYLED | Keep the side-column exception. |
+| EDIT-115 | Spacing (Rows for Skills) | Tight / Normal / Spacious. SectionEditorCustomizer.jsx:88-93 | "Spacing" Tight / Normal / Roomy | RESTYLED | "Spacious" renamed "Roomy"; stored value `relaxed` unchanged; label "Rows" for Skills. |
+| EDIT-116 | Grids | 1 / 2 columns (not for Interests, side column, Mixed column). SectionEditorCustomizer.jsx:62,101-110 | "Columns" 1 / 2 | RESTYLED | n/a |
+| EDIT-117 | Skills grids 3 and 4 | Skills offers 1-4. SectionEditorCustomizer.jsx:106-108 | Only 1 / 2 | MISSING | Offer 1-4 when the section is Skills. |
+| EDIT-118 | Title layout | Stacked / Inline / Side by side for Experience, Education, Volunteering, Custom. SectionEditorCustomizer.jsx:152-159 | "Entry title" Stacked / Inline | CHANGED | Add the third option "Side by side". |
+| EDIT-119 | Order (Experience) | Co. / Role vs Role / Co. SectionEditorCustomizer.jsx:143-150 | Not drawn | MISSING | Add to the popover for Experience. |
+| EDIT-120 | Skills style | Inline / Stacked / Bullet / Tags / Bars. SectionEditorCustomizer.jsx:114-119 | Not drawn | MISSING | Add to the popover for Skills. |
+| EDIT-121 | Skills separator | Colon / Dash / Pipe, only for Inline and Bullet. SectionEditorCustomizer.jsx:121-128 | Not drawn | MISSING | Same, same condition. |
+| EDIT-122 | Languages level | Text / Dots / Bar. SectionEditorCustomizer.jsx:134-141 | Not drawn | MISSING | Add to the popover for Languages. |
+| EDIT-123 | Show dates | Toggle; not for Skills, Languages, References, Interests. SectionEditorCustomizer.jsx:61,161-163 | "Show dates" toggle | RESTYLED | n/a |
+| EDIT-124 | Show location | Toggle for Experience, Education, Volunteering. SectionEditorCustomizer.jsx:60,165-167 | "Show location" toggle | RESTYLED | n/a |
+| EDIT-125 | Group roles by company | Toggle (Experience). SectionEditorCustomizer.jsx:171-173 | "Group roles by company" toggle (off) | RESTYLED | n/a |
+| EDIT-126 | Spacing override | Before / After / Item gap number boxes, 0-80 px, empty = template's, per-box reset arrow. SectionEditorCustomizer.jsx:175-214, src/constants/spacingNumbers.js:46 | Not drawn | MISSING | Add as a "More spacing" disclosure at the foot of the popover. |
+| EDIT-127 | Template conditions | Sidebar side column: only Spacing + a note; Sidebar Mixed: a note and no Grids. SectionEditorCustomizer.jsx:51-59,72-76,95-99 | Not drawn | MISSING | Keep both explanatory notes and the hiding rules. |
+
+### 1h. Invisible behaviours a user relies on
+
+| ID | Live function | Live behaviour (src) | New design | Status | Fix |
+|---|---|---|---|---|---|
+| EDIT-128 | Autosave | Edits written to localStorage coalesced: 300 ms after the last change, at most every 2 s while typing; flushed on pagehide, beforeunload, tab hidden; `saving` / `savedAt` / `persistError` feed the status. src/hooks/useResumeStore.js:24-28,233-301 | n/a | SAME | Keep. |
+| EDIT-129 | Storage and backups | Key `cpwtcv_v1`; a full store frees old backups before refusing; unreadable store is backed up and the Documents page says so. useResumeStore.js:23,35-66,244-246 | n/a | SAME | Keep. |
+| EDIT-130 | Cross-tab merge | Another tab's save is merged field by field (mergeResume), deletions and the open résumé kept, account changes handled. useResumeStore.js:68-147,303-321 | n/a | SAME | Keep. |
+| EDIT-131 | Cloud sync | Signed-in résumés sync via useCloudSync (App.jsx:11); a résumé over 1 MB is held and named. src/App.jsx:11, AuthBar.jsx:7-14 | n/a | SAME | Keep (status wording: EDIT-019). |
+| EDIT-132 | Same-value edits are not edits | An unchanged field or setting: no new updatedAt, no write, no preview build. useResumeStore.js:337-351,452-483 | n/a | SAME | Keep. |
+| EDIT-133 | Open-résumé rules | /resume/:id opens that résumé; unknown or deleted id goes to Documents; a late import never hijacks the open one. src/hooks/useOpenResume.js:16-28, AppRoutes.jsx:106 | n/a | SAME | Keep. |
+| EDIT-134 | Warm PDF build | On open and on template/font change the PDF engine and fonts are preloaded. Editor.jsx:98-110 | n/a | SAME | Keep. |
+| EDIT-135 | Undo / redo | There is NO app-level undo/redo and no Ctrl+Z handler. Only: native undo inside a field, and Undo toasts (photo removed, section style reset, template switch). SectionEditor.jsx:122-127, PersonalInfoEditorPhoto.jsx:60-70 | None drawn | SAME | Do not add one; keep the three toast Undos. |
+| EDIT-136 | Keyboard | Only: Space + arrows to reorder sections/entries; panel handle arrows/Home/End; Enter/Escape in the rename box; Enter/Escape in typed number boxes; Ctrl+B/I/U in rich text. No editor-wide shortcuts or help dialog. | Avatar menu (ShellMenus) lists "Keyboard shortcuts ?" | SAME | Keep all; nothing editor-specific to add. |
+| EDIT-137 | Touch text size | Every input, select and rich-text box is 16 px on coarse pointers so iOS does not zoom. e.g. SectionEditorShared.jsx:23, EditorHeader.jsx:39 | MobEdit inputs 16 px, 44 px high | SAME | Keep. |
+| EDIT-138 | Open states kept across swaps | Personal open, Add Section open, Collapse All, preview zoom live in the Editor and survive Design / letter trips. Editor.jsx:36-47 | n/a | SAME | Keep across Résumé / Cover letter switch and drawers. |
+| EDIT-139 | Letter-kind documents | A standalone letter opens on its cover-letter tab, shows the letter preview, hides Share. src/utils/letters.js (editorPath), Editor.jsx:114 | EditorLetter | SAME | Keep. |
+| EDIT-140 | Editor notices layer | ToastProvider wraps the editor (Undo notices). Editor.jsx:119,244 | States toast | SAME | Keep. |
+
+## 2. DRAWN BUT NOT IN THE LIVE APP
+
+| ID | What the canvas draws | Where | Recommended handling |
+|---|---|---|---|
+| NEW-001 | Page count "1 page" in the stage caption (live shows no visible count; only `data-preview-pages` and per-page labels). | Editor, EdSection, EdPersonal, EditorLetter caption | PARK (new capability). The build may show it for free from the existing page count, owner decides. |
+| NEW-002 | Score number on the top-bar chip "ATS 82" (live computes the score only inside the ATS panel). | Editor top bar, MobEdit | The chip as the ATS entry is decision 6. The live number on it is NEW: PARK until the owner decides (needs the score computed on every change). |
+| NEW-003 | Entry count next to a section title ("Experience 2"). | Editor, EdSection, MobEdit cards | PARK (cosmetic; cheap, owner decides). |
+| NEW-004 | "Add link" under Links (custom extra links). Live has exactly Website, LinkedIn, GitHub. | EdPersonal | PARK (new capability). |
+| NEW-005 | "Improve" button on the Summary field. | EdPersonal | NOT new: the live Summary is a rich-text editor whose toolbar already has the "STAR Optimizer" button (RichTextEditor.jsx:358-370). Same function under another name: KEEP as that button (EDIT-081, EDIT-104). |
+| NEW-006 | "Done" button and "Experience only" scope chip on the Section style popover. | EdSection | Same function as the live "Hide options" toggle; chrome only. Allowed (not a capability). |
+| NEW-007 | Section style popover as a floating card (live: inline panel under the header). | EdSection | Same function; MOVED (EDIT-045). |
+| NEW-008 | Zoom values 76 % / 86 % / 90 % (not 25 % steps) and a 90 % default. | Editor, EdPersonal, EdSection | Live wins: 25 % steps, 100 % = fit. |
+| NEW-009 | Storage-full banner wording and "Open Documents" link. | States | PARK; live copy wins (EDIT-005). |
+| NEW-010 | "Pinch to zoom" on the phone preview, full-width "Download PDF" button under it. | MobPrev | Pinch: PARK. The button is the same function as Export PDF, allowed. |
+| NEW-011 | Third phone pill segment "Design". | MobEdit, MobPrev | Same function as the live Design tab (EDIT-011); allowed. |
+| NEW-012 | Avatar-menu line "Cloud sync on, saved 1 min ago" and "Keyboard shortcuts ?". | ShellMenus | Sync line: same function as the sync dot (EDIT-019). Shortcuts dialog is the shell's (TopBar.jsx); the editor has no shortcuts of its own (EDIT-136). |
+| NEW-013 | Wording changes: Job Title to "Role", Start/End Date to "From"/"To", Description to "Highlights", Spacious to "Roomy", Grids to "Columns", Title to "Entry title", Bullet to "Dots", Photo "Shape" shown inside Header look. | Editor, EdSection, EdPersonal | Same functions under new names (RESTYLED rows). Stored values do not change. |
+| NEW-014 | Paper's layout / font / heading / accent options (single, banner, center, side; sans, serif; rule, plain, caps; 5 accents). | Paper | Drawing aid only; not controls. The live looks are the 28 templates. |
+| NEW-015 | Entry rows in the Editor drawn without hide/duplicate/delete/grip, and the Design drawer's "Reset design / Changes save as you go". | Editor | Not new functions; omissions are rows EDIT-050..054; the drawer is the Design area's. |
+
+## 3. TESTS THAT PIN THIS AREA'S CURRENT UI
+
+Node suites mount the real components over `tests/pdf/fake-dom.mjs` or render to static markup; expect red wherever the new chrome renames a button, class or structure.
+
+- tests/pdf/173-editor-header-render-count.test.mjs: EditorHeader, EditorAlerts, EditorModeBar are memoised and a keystroke renders none of them; header shows name, rename box, Export state, tab, layout, account; handlers act on the latest résumé.
+- tests/pdf/103-r4-dvis-12-editor-tabs-truncate.test.mjs: EditorModeBar tab classes (flex-1 sm:min-w-0 truncate; min-w-max on phone). Dies with the tab bar (decision 6).
+- tests/pdf/32-editor-tab-scroll.test.mjs: EditorTabContent scrolls to top on a tab change, not on an edit; Collapse/Expand at tab start.
+- tests/pdf/103-r4-dph-31-pill-clears-tab-bottom.test.mjs: EditorTabContent `max-md:pb-16` and EditorPreviewPane `pb-24 md:pb-8` classes under the phone pill.
+- tests/pdf/89-save-status.test.mjs: SaveStatus text "Saving…" / "Saved …" with the real store and `saving`/`savedAt`.
+- tests/pdf/29-page-size-preview-caption.test.mjs: caption text "Résumé · A4" / "Cover Letter · US Letter" from pageSizeOf.
+- tests/pdf/92-font-fallback-notice.test.mjs: FontFallbackNotice text and `data-font-fallback` in the preview pane.
+- tests/pdf/71-preview-hidden-builds.test.mjs, 71-preview-typing-debounce, 90-preview-*, 97-preview-steady-typing, 111-preview-one-build-at-a-time, 112, 115, 116, 170, 171, 174, 101-r4-lo-17/18, 103-r4-dph-40-updating-chip-above-pill: PdfPreview state machine, status attributes, "Updating preview…" chip, hidden pane builds nothing.
+- tests/pdf/89-rename-fresh-name.test.mjs, r5hunt11-rename-other-resume.test.mjs: useRename draft and close-on-other-résumé rules.
+- tests/pdf/89-editor-tab-link.test.mjs, 105-r5-hunt2-tab-keeps-import-notice.test.mjs: useEditorTab `?tab=` parsing, replace-not-push, route state kept.
+- tests/pdf/99-import-ui.test.mjs: import notice in EditorAlerts, Dismiss, useEditorExports.
+- tests/pdf/52-editor-route.test.mjs: useOpenResume redirects to Documents when the id is gone.
+- tests/pdf/103-r4-dvis-31-editor-account-name.test.mjs: AuthBar `hideName` (sm:sr-only) in the split panel header.
+- tests/pdf/165-perf4-editor-render-count.test.mjs, 172-board-sensors-stable.test.mjs, resume-tab.mjs (helper): render counts per keystroke over the real EditorResumeTab and store.
+- tests/pdf/88-new-section-open.test.mjs, 99-new-entry-open, 100-r4-lo-20-only-new-entry-opens: Add Section opens the first entry; only the new entry opens.
+- tests/pdf/88-entry-keyboard-reorder.test.mjs: entry grips are tabbable, aria "Reorder entry", visible on focus.
+- tests/pdf/88-duplicate.test.mjs: Duplicate entry button (aria "Duplicate entry") and "Duplicate section" menu item, fresh ids.
+- tests/pdf/99-remove-untouched-entry.test.mjs: Delete entry asks `confirm('Delete this entry?')` unless untouched.
+- tests/pdf/102-r4-dux-16-reset-style-undo.test.mjs: "Reset style" menu item, toast "Section style reset" with Undo.
+- tests/pdf/103-r4-dph-24-section-menu-unclipped.test.mjs: section ⋯ menu in a body portal with Customize layout, Reset style, Duplicate section, Delete section.
+- tests/pdf/10-section-options.test.mjs, 103-r4-dph-29-section-options, 103-r4-dvis-30-section-options, 51-section-spacing-override, 72-sidebar-single-title-order, 147-skill-level-editor, 150-r2-147-col-layout-panel: SectionCustomizer rows (Alignment, Spacing, Grids, Style, Separator, Level, Order, Title, toggles, Spacing Override boxes) by label text.
+- tests/pdf/103-r4-dph-23-language-row-buttons.test.mjs, 99-language-proficiency-select, 103-r4-dph-27/28, 103-r4-dvis-21: Language row, Proficiency select, dates stack, 16 px touch text, `@sm` grid by card width.
+- tests/pdf/30-date-editor.test.mjs, 88-month-picker, 96-month-picker, 99-custom-date-period, 102-r4-dux-26-current-keeps-end-date, 88-present-entries: month/year selects, period text fallback, "Currently ..." checkbox.
+- tests/pdf/97-object-member-editor.test.mjs, 96-section-structure, 80-import-section-shapes, 14-ids: SortableSection and entry cards for odd section types.
+- tests/pdf/103-r4-dvis-23-optimizer-not-faded.test.mjs, 57-optimizer-statement, r5hunt7-*, r5hunt8-*, 104-r5-opt-sw-wt-02-*, 99-rich-text-*, 163-*, 176-rich-text-block-cap, 162-redos-editor-adopt: RichTextEditor toolbar, STAR Optimizer dialog in a portal, statement ranges, paste/drop, caps, adopt rules.
+- tests/pdf/103-r4-dph-29-personal-info.test.mjs, 80-panel-stored-values, 103-r4-dvis-30-personal-info, 31-contact-fields, r5hunt10-hidden-fields-list: PersonalInfoEditor fields, eyes, label/URL boxes, 16 px touch text.
+- tests/pdf/09-contact-icons, 39-contact-icons-webp, 91-icon-picker-modal, 104-r5-dlg-icon-picker-dialog, 102-r4-dux-29-icon-upload-not-image: per-field icon controls ("Choose Icon", Upload/Replace, Clear), picker dialog.
+- tests/pdf/80-photo-url, 16-saved-data-photos, 83-letter-signature-photo, 105-r5-hunt2-late-upload, 80-upload-budget-sections, tests/unit/r4dux-27-photo-remove-undo.unit.mjs, photo-options.unit.mjs: PhotoSection chips, "Added"/"Not printed", Remove photo Undo toast.
+- tests/pdf/45..50 header-*-gap, 92-header-spacing-rows, 27-header-spacing, 73-typed-number-fields, 99-header-border-width-box: HeaderCustomization and header spacing steppers (aria "Header border thickness (pt)", spinbutton names).
+- tests/unit/panel-resize-storage.unit.mjs, panel-resize-separator.unit.mjs, tests/pdf/104-r5-panels-colors-narrow, 103-r4-dvis-35-narrow-design-panel: usePanelResize key, clamp, role=separator and keys.
+- tests/pdf/parity/walker.mjs, panels.mjs, 40-structure.test.mjs: parity walker mounts PersonalInfoEditor and SectionCustomizer and walks every control; structure drags end in updateSections / reorderItems.
+- cypress/e2e/02-editor.cy.js: personal fields, eye toggles, rename, Add Section, entries, hide/delete, Collapse All / Expand All, tabs swap, layout toggle, zoom 25 % steps 50-150, back arrow, unknown id, ?tab=, name visible at default width.
+- cypress/e2e/23-editor-panels.cy.js: panel drag 240-640 and reload memory, Collapse All and Add Section state survive tab trips, scroll reset, zoom persistence, footer "Saved ... Terms Privacy".
+- cypress/e2e/26-mobile-layout.cy.js: phone Edit | Preview pill, preview not built on Edit, Design and ATS tabs full width, 768 px breakpoint.
+- cypress/e2e/08-regressions-editor.cy.js (import in editor, export failures), 07-regressions-store.cy.js (M3 full storage "Not saved"), 03-export, 29-exports-imports: banners and Export menu text.
+- cypress/e2e/16-headers, 14-contacts, 17-section-options, 24-image-uploads, 25-date-format, 10-regressions-dates, 28-writing-helpers: header controls, per-field icons, Section Options rows, uploads, date pickers, STAR optimizer through the real editor. Helpers in cypress/support/commands.js (`visitEditor`, `preview`, `openExportMenu`, `exportPdf('Export PDF')`) select by `#resume-preview`, `div.bg-white.shadow-2xl`, button text "Export".
+- tests/playwright/parity-ui-controls.spec.mjs, picker.spec.mjs, pw-helpers.js (openDesignPanel), parity-preview-download.spec.mjs, preview-pixels.js: real-editor control walk, Design opening, preview pixels and downloaded PDF.
+
+## 4. UNKNOWNS
+
+1. "More header options" row on EdPersonal is drawn collapsed with no contents. Whether it is meant to hold EDIT-089..094, 102, 107..109, 111, 113 is not decidable from the canvas; this table assumes it is the home for them.
+2. Whether an overflow (⋯) on the section card exists in the new design: only the sliders "Section style" button and the eye are drawn, so Duplicate, Delete and the title edit (EDIT-043, 047, 048) have no drawn home.
+3. Whether the drawn entry row (Editor, MobEdit) is the whole entry form or only the Experience example; the other ten section types have no open state at all.
+4. Where Terms / Privacy are reached from (the Legal board has no entry link on any board read).
+5. The signed-out state of the editor top bar: ShellMenus shows the shell bar's Sign in, not the editor's.
+6. Whether the "ATS 82" chip number is to be computed live (EDIT-010 / NEW-002); the live ATS score is computed only in the panel.
+7. Whether the Design button's drawer closes by the same button (the live toggle) or a separate close; the drawer's own close is not drawn.
+8. `Paper` is an HTML stand-in with four layouts: it cannot show the 28 real looks, multi-page output, photo, or the Sidebar template; the real PDF preview is what the build uses. Board proportions (714 x 1011 frame at 90 %) are mock-ups.
+9. Whether the editor-only / preview-only layout modes (EDIT-021) are intended to be dropped by the redesign. Parity rule says keep; the drawn stage/sidebar split has no place for them.
+10. Not read in source because owned by other areas: ExportDropdown menu items, ShareLinkModal, TemplateGallery, DesignPanel*, CoverLetterPanel*, AtsCheckerPanel, BulletOptimizerModal internals.
