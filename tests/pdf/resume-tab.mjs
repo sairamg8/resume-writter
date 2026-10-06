@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { TID, tidOf } from './ui-selectors.mjs';
 
 const KEY = 'cpwtcv_v1';
 
@@ -76,7 +77,7 @@ export async function resumeTab(r) {
   const view = mount(Tab, {});
   await settle();
   const all = (within = view.container) => [...elements(within)];
-  const titleBoxes = () => all().filter((el) => el.tagName === 'INPUT' && el.getAttribute('aria-label') === 'Section title');
+  const titleBoxes = () => all().filter((el) => tidOf(el) === TID.sectionTitle);
   const tab = {
     view,
     storage,
@@ -95,10 +96,10 @@ export async function resumeTab(r) {
     card(title) {
       const box = titleBoxes().find((el) => el.value === title);
       assert.ok(box, `no section titled "${title}": the tab shows ${tab.titles().join(' | ')}`);
-      return box.parentNode.parentNode; // title box → header row → the section's card
+      return all().find((el) => el.tagName === 'DIV' && tidOf(el).startsWith(TID.sectionCardPrefix) && el.contains(box)); // the card holding the title box
     },
     titles: () => titleBoxes().map((el) => el.value),
-    entries: (card) => all(card).filter((el) => el.tagName === 'SPAN' && /\btruncate\b/.test(el.className)).map(text),
+    entries: (card) => all(card).filter((el) => tidOf(el) === TID.entryTitle).map(text),
     drop(el, active, over) {
       const onDragEnd = dragEndOf(view, el);
       view.act(() => onDragEnd({ active: { id: active }, over: over == null ? null : { id: over } }));

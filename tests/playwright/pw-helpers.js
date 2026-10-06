@@ -55,9 +55,24 @@ export async function exportPdf(page, label = 'Export PDF') {
  * Opens Design & Customize panel in the editor.
  */
 export async function openDesignPanel(page) {
-  const designBtn = page.locator('button[title="Design & Customize"]');
-  await designBtn.click();
+  await reach(page, 'design');
   await page.waitForSelector('text=Template', { timeout: 10_000 });
+}
+
+const REACH = {
+  design: '[data-testid="design-open"]',
+  ats: '[data-testid="ats-open"]',
+  resume: '[data-testid="doc-switch-resume"]',
+  letter: '[data-testid="doc-switch-letter"]',
+};
+
+/**
+ * THE one place that reaches an editor control: 'design' | 'ats' | 'resume' | 'letter' | 'export'.
+ * openDesignPanel goes through it, so a redesign that moves these controls changes only this body.
+ */
+export async function reach(page, control) {
+  if (control === 'export') await page.locator('button:has-text("Export")').first().click();
+  else await page.locator(REACH[control]).click();
 }
 
 export { findRun, findRuns };

@@ -76,6 +76,7 @@ function installRenderProbe() {
 const probe = installRenderProbe();
 const { setup, teardown, loadModule, resume, section, experience } = await import('./harness.mjs');
 const { mount, elements, reactProps, withInnerHtml } = await import('./fake-dom.mjs');
+const { TID, tidOf } = await import('./ui-selectors.mjs');
 const { MemoryStorage, settle } = await import('./resume-tab.mjs');
 
 before(async () => { await setup(); withInnerHtml(); });
@@ -130,8 +131,8 @@ async function openTab() {
   const all = () => [...elements(view.container)];
   const attr = (el, name) => el.getAttribute(name) ?? '';
 
-  // Open every entry (a card starts collapsed): the headers carry `cursor-pointer select-none`.
-  const headers = all().filter((el) => el.tagName === 'DIV' && /cursor-pointer select-none/.test(attr(el, 'class')));
+  // Open every entry (a card starts collapsed): the headers carry the entry-header testid.
+  const headers = all().filter((el) => tidOf(el) === TID.entryHeader);
   assert.equal(headers.length, 6, 'one header per entry: four jobs, the education, the skills');
   view.act(() => {
     for (const el of headers) reactProps(el).onClick({ preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el });

@@ -270,6 +270,21 @@ export function reactProps(el) {
   return key ? el[key] : undefined;
 }
 
+const ROLE_OF_TAG = { BUTTON: 'button', A: 'link', SELECT: 'combobox', TEXTAREA: 'textbox', H1: 'heading', H2: 'heading', H3: 'heading', UL: 'list', LI: 'listitem' };
+const ROLE_OF_INPUT = { checkbox: 'checkbox', radio: 'radio', button: 'button', submit: 'button', range: 'slider' };
+const roleOf = (el) => el.getAttribute('role')
+  ?? (el.tagName === 'INPUT' ? (ROLE_OF_INPUT[el.getAttribute('type')] ?? 'textbox') : ROLE_OF_TAG[el.tagName]);
+const nameOf = (el) => el.getAttribute('aria-label') ?? el.getAttribute('title') ?? el.textContent.replace(/\s+/g, ' ').trim();
+
+/**
+ * The elements under `container` with ARIA role `role` (its role attribute, else the tag's own) and, when
+ * `name` is given, that accessible name (aria-label, else title, else the text; a RegExp matches).
+ */
+export function byRole(container, role, name) {
+  return [...elements(container)].filter((el) => roleOf(el) === role
+    && (name === undefined || (name instanceof RegExp ? name.test(nameOf(el)) : nameOf(el) === name)));
+}
+
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 const NAMED_REFS = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 const decodeRefs = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name) => {

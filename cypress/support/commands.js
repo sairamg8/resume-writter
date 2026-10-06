@@ -1,4 +1,5 @@
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
+import { REACH } from './selectors.js';
 
 /** Visit `url` with localStorage replaced by `state` (or emptied when state is null). */
 Cypress.Commands.add('seedAndVisit', (url, state) => {
@@ -55,9 +56,22 @@ Cypress.Commands.addQuery('jobStore', function jobStore() {
   return () => JSON.parse(cy.state('window').localStorage.getItem('cpwtcv_jobs_v1') || 'null');
 });
 
-Cypress.Commands.add('openExportMenu', () => {
-  cy.contains('button', 'Export').click();
+/**
+ * THE one place that reaches an editor control: 'design' | 'ats' | 'resume' | 'letter' | 'export'.
+ * openDesign, openAts, switchTo and openExportMenu all go through it, so a redesign that moves these
+ * controls (a tab bar into a menu, say) changes only this body.
+ */
+const reach = (control) => (control === 'export'
+  ? cy.contains('button', 'Export').click()
+  : cy.get(REACH[control]).click());
+
+Cypress.Commands.add('openDesign', () => reach('design'));
+Cypress.Commands.add('openAts', () => reach('ats'));
+Cypress.Commands.add('switchTo', (doc) => {
+  expect(['resume', 'letter'], 'switchTo takes resume or letter').to.include(doc);
+  return reach(doc);
 });
+Cypress.Commands.add('openExportMenu', () => reach('export'));
 
 /** Click an export menu entry and resolve with the downloaded file's path. */
 Cypress.Commands.add('exportFile', (label, ext) => {
