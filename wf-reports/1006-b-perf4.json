@@ -1,0 +1,26 @@
+{
+  "cluster": "1006-b-perf4",
+  "branch": "claude/wf-1006-b-perf4",
+  "base": "3f579152",
+  "rows": [
+    {
+      "id": "PERF-4",
+      "outcome": "partial",
+      "commits": ["4b1aea05", "e474f13c", "48642a3d", "3ca5eb40", "4f62e063", "18cf1e49"],
+      "tests": ["tests/pdf/165-perf4-editor-render-count.test.mjs", "tests/perf/measure.mjs", "tests/perf/budgets.mjs"],
+      "summary": "Typing one character in an entry's bullet, the summary or a personal-info field no longer re-renders the other entries' cards and fields or any other section's entries: SectionEntry is memoised, SortableSection is memoised, and the editor's tab gets the store's actions through useStableActions (stable identity, latest call). Per-key work no longer grows with the number of expanded entries' fields. B-1: tests/pdf/165 counts rendered components through a React DevTools hook (render counts, no time); fail-first proved on CI for 4b1aea05 and 48642a3d (runs 37401172513 and 37401342739); the render test, 71-startup-chunks and 49 related editor/store/preview tests are green at the final head (37401345259).",
+      "remaining": "Each section's own shell (title box, Menu, icons) and every entry's drag wrapper and grip still re-render on a keystroke: dnd-kit's contexts wake every useSortable consumer, and memoising the ids lists given to SortableContext (5ae6bcba, reverted in 4f62e063) was not enough (a bullet keystroke rebuilds section.items, so the list changes) and no test needed it. Fix, if wanted: keep the previous ids array while the ids are equal (ref + equality), and add SortableSection to the test's allowlist. PersonalInfoEditor and EditorHeader still take the whole resume and re-render on every key (constant cost). The store itself was left alone (its actions are still new functions per render)."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Reviewer: the memoised ids lists (5ae6bcba) still hand SortableContext a new array on a bullet keystroke, so section shells and entry wrappers still re-render; 5ae6bcba was therefore half effective and the render test passed without it (CI failfirst on it: the test did not fail) - reverted in 4f62e063.",
+      "Reviewer: the render test ignores SortableSection and SortableItemWrapper (name allowlist CONTENT), so it does not pin memo on SortableSection; a renamed card component would escape the allowlist silently.",
+      "Reviewer: three tests (09-contact-icons, 39-contact-icons-webp, 88-new-section-open) mount EditorResumeTab with a Proxy store; useStableActions copies Object.keys, which is empty, so those mounts have no Duplicate controls and a future click through them would throw. They pass."
+    ],
+    "fixedByReviewer": [],
+    "coordinatorReviewOfAgent": "The agent's test (a27f433e) needed three fixes of mine: its first form asserted dnd-kit's wrappers did not render (3ca5eb40 narrowed it to content components), its store-identity test pinned the store (replaced by a useStableActions test), and its failure message now names the components that rendered (f4ec5170). The perf scenario commit (18cf1e49) holds: same budgets, collapsed metrics unchanged."
+  },
+  "baselineFailures": [],
+  "notes": "FIRST attempt put the stable actions in src/hooks/useResumeStore.js (useCallback + useMemo); it pushed the start-up path over the 1,100 kB cap (71-startup-chunks: 1100.0 kB, -0.0 to spare; master passes), so the stabilising moved to the editor-only src/hooks/useStableActions.js and the store file is as on master. The start-up path has no margin worth counting on: any addition to the store or App path is likely to cross the cap. B-3 numbers (perf=browser, CI ubuntu-latest, single runs, noisy): master 3f579152: first pages 1,329 ms, last key to the pages 514 ms (min 476, max 542), longest task 96 ms; Gate B worker 0 long tasks, main thread 3 long tasks max 174 ms, key delay 25 ms. Branch 3ca5eb40 (same src as the final head): first pages 1,340 ms, last key 529 ms (min 475, max 615), longest task 0 ms; every entry open: last key 496 ms, longest task 0 ms (no baseline for this scenario: it did not exist on master); Gate B worker 0 long tasks, main thread 3 long tasks max 183 ms, key delay 21 ms. Honest reading: the browser harness (end-to-end last key to the pages, dominated by the PDF build in the worker) shows no gain in latency, and its 96 ms against 0 ms longest task is within what one run each can show; Gate B's main-thread run is unchanged. The scenario with every entry open is added to tests/perf (browser.keystrokeToPreviewExpanded, browser.longTaskExpanded, ceilings equal to the collapsed ones) but has no before number; the 4-job fixture is small, so the per-key saving the hunt measured with 7-9 expanded pages (14-20 ms against 9 ms) is below this harness's noise. Not run: the full gate (the coordinator runs it), Playwright/Cypress editor specs. Accessibility noted, not touched: none seen. Proxy-store tests above are the one behaviour change in test code paths."
+}
