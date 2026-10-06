@@ -32,6 +32,9 @@ export function EditorResumeTab({
   // after Collapse All, hiding its entry and its Add button (R2-113).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const forcedIds = useMemo(() => new Set(resume.sections.map(s => s.id)), [forceOpenKey, resume.id]);
+  // The sections' ids as one list kept while they are the same: SortableContext re-renders every
+  // sortable under it when the list it is given is a new one, as `map` makes on each keystroke (PERF-4).
+  const sectionKeys = useMemo(() => resume.sections.map(s => s.id), [resume.sections]);
   // The section just added from Add Section: its first entry opens, as an entry Add makes does (R4-LO-20).
   const [addedSectionId, setAddedSectionId] = useState(null);
 
@@ -80,7 +83,7 @@ export function EditorResumeTab({
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
-        <SortableContext items={resume.sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={sectionKeys} strategy={verticalListSortingStrategy}>
           {resume.sections.map(section => (
             <SortableSection
               key={section.id}
