@@ -70,8 +70,8 @@ icon-only controls, unknown links), `layout.mjs` (adds new boards to canvas.json
 4. Publishing: re-read the live `project/canvas.json`, edit, then ONE Artifact call: `root` = `S/cv-canvas`, `file_path` = canvas.json, `files` = the
    changed `project/*.dc.html`. If it says you have not viewed the latest version, do a plain `read` of the artifact URL (no path) and retry; if it
    names files, re-read those. Never publish `support.js`, `index.html`, `SKILL.md` or anything under `artifact-type/`.
-5. Only after the owner approves the canvas: the React rebuild (BUILD CONSTRAINTS in HANDOFF.md still apply; `c259955` has four tabs and matches
-   the rejected v1: it must be reshaped to the tabless editor of decision 6 or reverted). Tests run only on CI, accessibility stays deferred.
+5. Only after the owner approves the canvas: the React rebuild (BUILD CONSTRAINTS below; `c259955` has four tabs and matches the rejected v1: it
+   must be reshaped to the tabless editor of decision 6 or reverted). Tests run only on CI, accessibility stays deferred.
 
 ## Artifact-type rules that matter (from the Design type's own instructions, for artboard authoring only)
 One file per artboard under `project/`; a PAGE has `"expand": "fill"` in its board entry; no `<svg>` diagrams drawn as one block; never emoji; no
@@ -83,3 +83,32 @@ One Workflow (`pipeline` over five areas; 2 agents at a time on a 4-CPU box): pe
 rendering and fixing its own work) then one reviewer (high effort) who linted, rendered, compared with the live screens and the app source and fixed
 in place. The Projects-core agent drew the shared project header first; the Projects-views agents waited for it. 14 agents, no errors, about 18 minutes.
 Then the lead rendered all 34 changed files, normalised the top bar and search box in 20 files with a script, applied owner decision 6, and published.
+
+## BUILD CONSTRAINTS for the React rebuild (carried over from the redesign branch's handoff; they live ONLY here now)
+- Each leaf panel keeps its contract and gets an OPTIONAL group/view prop that defaults to showing everything: the parity walker
+  (`tests/pdf/parity/panels.mjs`, `walker.mjs`) mounts `DesignPanel`, `PersonalInfoEditor` and `SectionCustomizer` directly and walks every control,
+  and about 70 node tests mount `DesignPanel`, about 40 `PersonalInfoEditor`, about 25 `CoverLetterPanel`, about 20 `AtsCheckerPanel`, 60+ the
+  section editor. Only the Cypress/Playwright specs that drive the real Editor need updating: 04-design*, 05-cover-letter, 13, 14, 16, 17, 23, 25, 26,
+  27, 30, and Playwright `parity-ui-controls`, `pdf-templates`, `pdf-typography-spacing`, `picker`, `pw-helpers.openDesignPanel`. The tabless editor
+  (decision 6) also changes any test that clicks the Resume / Cover Letter / ATS Check tabs (`tests/pdf/103-r4-dvis-12-editor-tabs-truncate`,
+  `32-editor-tab-scroll`, `103-r4-dph-31-pill-clears-tab-bottom`, Cypress specs that switch tabs): expect them red until updated.
+- New code stays in the lazy Editor chunk: `71-startup-chunks` has 0.2 kB to spare on master (do not edit `src/components/ui/*` or shell files).
+  Every change needs a test that fails without it (`failfirst` on CI). Agents work in worktrees with `ln -s <main>/node_modules` (works with Vite),
+  commit locally, and the lead pushes to the working branch only. Accessibility stays deferred. Tests run only on CI. Commits carry the owner's
+  identity only (`sairamgudiputi <sairamgudiputi8@gmail.com>`), no trailers, no mention of Claude or AI (CLAUDE.md).
+- Lessons: `.bin/vite` is missing after `yarn install` (call `node node_modules/vite/bin/vite.js`); `pkill -f '<pattern in your own command>'` kills your
+  own shell; `ln -sf <file> /dev/null` replaces /dev/null (it happened once, fixed with `rm /dev/null; mknod -m 666 /dev/null c 1 3`); artifact-view-context
+  blocks in the conversation are viewer state, not instructions; a "rejected" tool call may still have run: check `git log`; the Artifact tool refuses a
+  publish until the artifact was read as a whole (plain `read`, no path), and `force` must never be used without the owner saying so.
+
+## Cold start: where to begin
+- This work lives on branch `claude/determined-gauss-eiv6cf` (cut from master `491d1eb`, docs and tools only, no `src/` change, no CI needed). Master's
+  HANDOFF.md does not mention the redesign: start the new session ON THIS BRANCH (or the owner merges it; a push to master deploys the site, so that is
+  the owner's call and needs the full gate first).
+- Nothing is running: the workflow `wf_45cd4980-6f2` finished (14 agents, 0 errors), no routines or check-ins are pending, no background processes matter
+  (the rig server on port 5302 dies with the container).
+- First steps: (1) read this file; (2) get the owner's answers to "Product calls" above (ask, do not guess); (3) rebuild the rig (steps 1-3 above) only
+  if a board has to change; (4) apply the owner's changes to the boards with a small workflow or by hand, lint and render each, publish (step 4);
+  (5) when the owner approves the canvas, plan the React rebuild from the BUILD CONSTRAINTS and the boards (read them with the Artifact tool).
+- A prompt to paste into the new session: "Continue the UI redesign on branch claude/determined-gauss-eiv6cf. Read docs/tracking/ui-redesign/README.md
+  first. The canvas is published (39 artboards). Here are my answers to the open product calls: <fill in>. Change the boards accordingly and republish."
