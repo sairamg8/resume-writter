@@ -125,7 +125,8 @@ async function stage({ layout = 'split', phone = false, onLegal, r = resume({ pe
     const [mode, setMode] = useState(layout);
     const [zoom, setZoom] = useState(1);
     const shownMode = p.phone ? (mode === 'preview' ? 'preview' : 'editor') : mode;
-    return createElement(MemoryRouter, null,
+    // useTransitions: false, as the B2 tests mount it: an address change then reaches the page inside the press, not after it.
+    return createElement(MemoryRouter, { useTransitions: false },
       createElement(Where),
       createElement(EditorPreviewPane, { resume: p.r, activeTab: p.tab, layoutMode: shownMode, setLayoutMode: setMode, previewZoom: zoom, setPreviewZoom: setZoom, isMobile: p.phone, onLegal }));
   };
