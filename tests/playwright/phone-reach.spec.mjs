@@ -36,8 +36,8 @@ async function visit(page, state, hash) {
  * Throws unless the first element with data-testid `id` can be tapped on this phone: it is on the page,
  * painted, inside the screen's width, and the tap's hit target is it (a trial tap: nothing is clicked).
  */
-async function reachable(page, id) {
-  const control = page.getByTestId(id).first();
+async function reachable(page, id, locate) {
+  const control = (locate ? locate(page) : page.getByTestId(id)).first();
   await control.waitFor({ state: 'attached', timeout: 15_000 });
   await control.scrollIntoViewIfNeeded();
   const painted = await control.evaluate((el) => {
@@ -71,8 +71,16 @@ async function openDashboard(page) {
   await page.getByTestId('resume-card').first().waitFor({ timeout: 20_000 });
 }
 
+/** The Export menu of the editor bar, opened by a tap: the entries are one menu away, and reachable there. */
+async function openEditorExportMenu(page) {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Export' }).first().tap();
+  await page.getByRole('button', { name: /^Import as a new résumé/ }).waitFor({ timeout: 10_000 });
+}
+
 /**
- * Per surface: how to open it, and the testids that must be reachable by tap there.
+ * Per surface: how to open it, and what must be reachable by tap there: a data-testid, or { name, locate }
+ * for a control that has none (its locator).
  * APPEND here: a later batch lists the testids it adds (or moves behind a menu: `open` taps the opener).
  */
 const SURFACES = [
@@ -80,7 +88,24 @@ const SURFACES = [
   {
     name: 'editor',
     open: openEditor,
-    testids: ['doc-switch-resume', 'doc-switch-letter', 'ats-open', 'design-open', 'section-title-input', 'entry-header'],
+    // B3 frame: the switch (two buttons), the 44 px ATS chip, the pill's Edit | Preview | Design entries (Design is the pill's
+    // on a phone: the bar's Design button is not drawn), the bar's own controls (Export, Rename, Back, the save chip), the form.
+    testids: [
+      'doc-switch-resume', 'doc-switch-letter', 'ats-chip', 'pill-editor', 'pill-preview', 'pill-design', 'save-status',
+      { name: 'the Export button', locate: (page) => page.locator('[data-testid="editor-bar"]').getByRole('button', { name: 'Export' }) },
+      { name: 'Rename resume', locate: (page) => page.locator('[data-testid="editor-bar"] button[title="Rename resume"]') },
+      { name: 'Back to dashboard', locate: (page) => page.locator('[data-testid="editor-bar"] button[title="Back to dashboard"]') },
+      'section-title-input', 'entry-header',
+    ],
+  },
+  {
+    // The overflow of the phone's bar: the Export menu holds the formats and Import (Share joins it for a signed-in account).
+    name: 'editor export menu',
+    open: openEditorExportMenu,
+    testids: [
+      { name: 'Export PDF', locate: (page) => page.getByRole('button', { name: 'Export PDF', exact: true }) },
+      { name: 'Import as a new résumé', locate: (page) => page.getByRole('button', { name: /^Import as a new résumé/ }) },
+    ],
   },
 ];
 
@@ -90,11 +115,12 @@ for (const surface of SURFACES) {
       await surface.open(page);
       await assertTouchMode(page);
     });
-    for (const id of surface.testids) {
-      test(`${id} is reachable by tap alone`, async ({ page }) => {
+    for (const entry of surface.testids) {
+      const { name, locate } = typeof entry === 'string' ? { name: entry } : entry;
+      test(`${name} is reachable by tap alone`, async ({ page }) => {
         await surface.open(page);
         await assertTouchMode(page);
-        await reachable(page, id);
+        await reachable(page, name, locate);
       });
     }
   });
