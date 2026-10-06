@@ -1,0 +1,207 @@
+diff --git a/tests/pdf/105-r5-hunt2-tab-keeps-import-notice.test.mjs b/tests/pdf/105-r5-hunt2-tab-keeps-import-notice.test.mjs
+index fc2e744d..2981f595 100644
+--- a/tests/pdf/105-r5-hunt2-tab-keeps-import-notice.test.mjs
++++ b/tests/pdf/105-r5-hunt2-tab-keeps-import-notice.test.mjs
+@@ -1,9 +1,9 @@
+ // R5-HUNT2-IMPORT-NOTICE-LOST-ON-TAB-SWITCH: an import opens the editor with a notice ("Imported from
+ // your file as best we could read it…", or "This is a new résumé" after Import JSON) kept in the
+-// address's state (useImportNotice), until the user presses Dismiss. Picking another tab (Design,
+-// Cover Letter, ATS Check) replaced ?tab= with no state, so the notice went at the first click. A
+-// picked tab now keeps the state, as useUrlState does. useEditorTab and useImportNotice in a
+-// MemoryRouter over tests/pdf/fake-dom.mjs, as in 89-editor-tab-link.
++// address's state (useImportNotice), until the user presses Dismiss. Picking another view (the Design or
++// ATS dock, the Cover Letter) replaced the address with no state, so the notice went at the first click. A
++// picked view now keeps the state, as useUrlState does, and so does the rewrite of an old ?tab=design link.
++// useEditorTab and useImportNotice in a MemoryRouter over tests/pdf/fake-dom.mjs, as in 89-editor-tab-link.
+ import { before, after, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { createElement } from 'react';
+@@ -21,10 +21,10 @@ async function openAt(entry) {
+   const { MemoryRouter, Routes, Route, useLocation } = await import('react-router-dom');
+   let current = null;
+   function Page() {
+-    const [tab, setTab] = useEditorTab();
++    const { doc, dock, setDoc, setDock } = useEditorTab();
+     const { notice, dismiss } = useImportNotice();
+     const loc = useLocation();
+-    current = { tab, setTab, notice, dismiss, url: `${loc.pathname}${loc.search}` };
++    current = { doc, dock, setDoc, setDock, notice, dismiss, url: `${loc.pathname}${loc.search}` };
+     return null;
+   }
+   const view = mount(() => createElement(MemoryRouter, { initialEntries: [entry] },
+@@ -33,35 +33,48 @@ async function openAt(entry) {
+   await settle();
+   return {
+     now: () => current,
+-    async pick(t) { view.act(() => current.setTab(t)); await settle(); },
++    async setDoc(d) { view.act(() => current.setDoc(d)); await settle(); },
++    async setDock(d) { view.act(() => current.setDock(d)); await settle(); },
+     async dismiss() { view.act(() => current.dismiss()); await settle(); },
+     close: () => view.unmount(),
+   };
+ }
+ 
+-it("an import's notice stays over every tab picked, until Dismiss", async () => {
++it("an import's notice stays over every view picked, until Dismiss", async () => {
+   const page = await openAt({ pathname: '/resume/r1', state: { importNotice: NOTICE } });
+   try {
+     assert.equal(page.now().notice, NOTICE, 'the editor opens with the notice');
+-    await page.pick('design');
+-    assert.equal(page.now().url, '/resume/r1?tab=design');
+-    assert.equal(page.now().notice, NOTICE, 'before: gone at the first tab picked');
+-    await page.pick('ats');
+-    await page.pick('resume');
++    await page.setDock('design');
++    assert.equal(page.now().url, '/resume/r1?dock=design');
++    assert.equal(page.now().notice, NOTICE, 'before: gone at the first view picked');
++    await page.setDock('ats');
++    await page.setDock(null);
+     assert.equal(page.now().url, '/resume/r1');
+-    assert.equal(page.now().notice, NOTICE, 'still there back on the Résumé tab');
++    assert.equal(page.now().notice, NOTICE, 'still there with the dock closed');
++    await page.setDoc('coverletter');
++    assert.equal(page.now().url, '/resume/r1?tab=coverletter');
++    assert.equal(page.now().notice, NOTICE, 'and over the Cover Letter');
+     await page.dismiss();
+     assert.equal(page.now().notice, null, 'Dismiss takes it away');
+-    await page.pick('coverletter');
+-    assert.equal(page.now().notice, null, 'and a tab picked after does not bring it back');
++    await page.setDoc('resume');
++    assert.equal(page.now().notice, null, 'and a view picked after does not bring it back');
+   } finally { await page.close(); }
+ });
+ 
+-it('a letter import, opened on ?tab=coverletter, keeps its notice when another tab is picked', async () => {
++it('a letter import, opened on ?tab=coverletter, keeps its notice when a dock is opened', async () => {
+   const page = await openAt({ pathname: '/resume/r1', search: '?tab=coverletter', state: { importNotice: NOTICE } });
+   try {
+-    assert.equal(page.now().tab, 'coverletter');
+-    await page.pick('design');
++    assert.equal(page.now().doc, 'coverletter');
++    await page.setDock('design');
++    assert.equal(page.now().dock, 'design');
+     assert.equal(page.now().notice, NOTICE);
+   } finally { await page.close(); }
+ });
++
++it('an import opened on an old ?tab=design link keeps its notice as the link is rewritten to ?dock=design', async () => {
++  const page = await openAt({ pathname: '/resume/r1', search: '?tab=design', state: { importNotice: NOTICE } });
++  try {
++    assert.equal(page.now().url, '/resume/r1?dock=design', 'the old link was rewritten');
++    assert.equal(page.now().notice, NOTICE, 'the rewrite took the notice off the address\'s state');
++  } finally { await page.close(); }
++});
+diff --git a/tests/pdf/89-editor-tab-link.test.mjs b/tests/pdf/89-editor-tab-link.test.mjs
+index d259242e..8e6317a0 100644
+--- a/tests/pdf/89-editor-tab-link.test.mjs
++++ b/tests/pdf/89-editor-tab-link.test.mjs
+@@ -1,8 +1,9 @@
+-// The editor's ?tab= deep link (R2-076): an unknown value was taken as the open tab, so
+-// #/resume/<id>?tab=foo showed a blank panel under the tab bar; and a tab picked afterwards never
+-// reached the address, so a reload reopened the tab the link named. Now the tab is read from the
+-// address and checked (anything else is the Résumé tab), and picking a tab replaces ?tab= in the
+-// address (no new history entry per click). useEditorTab in a MemoryRouter over tests/pdf/fake-dom.mjs.
++// The editor's address deep link (R2-076; B3: ?tab=resume|coverletter is the document, ?dock=design|ats the dock):
++// an unknown value was taken as the open tab, so #/resume/<id>?tab=foo showed a blank panel; and a view picked
++// afterwards never reached the address, so a reload reopened the one the link named. Now the address is read
++// and checked (anything else is the Résumé with no dock, and leaves the address), the old ?tab=design and
++// ?tab=ats links still open their dock (and are rewritten to ?dock=), and picking a document or a dock replaces
++// the address (no new history entry per click). useEditorTab in a MemoryRouter over tests/pdf/fake-dom.mjs.
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { createElement } from 'react';
+@@ -17,9 +18,9 @@ async function openAt(path) {
+   const { MemoryRouter, Routes, Route, useLocation, useNavigationType } = await import('react-router-dom');
+   let current = null;
+   function Page() {
+-    const [tab, setTab] = useEditorTab();
++    const view = useEditorTab();
+     const loc = useLocation();
+-    current = { tab, setTab, url: `${loc.pathname}${loc.search}`, how: useNavigationType() };
++    current = { ...view, url: `${loc.pathname}${loc.search}`, how: useNavigationType() };
+     return null;
+   }
+   const view = mount(() => createElement(MemoryRouter, { initialEntries: [path] },
+@@ -27,35 +28,68 @@ async function openAt(path) {
+   // The router commits a navigation from an effect: let it run.
+   const settle = async () => { for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); } };
+   await settle();
+-  return { now: () => current, async pick(t) { view.act(() => current.setTab(t)); await settle(); }, close: () => view.unmount() };
++  return {
++    now: () => current,
++    async setDoc(d) { view.act(() => current.setDoc(d)); await settle(); },
++    async setDock(d) { view.act(() => current.setDock(d)); await settle(); },
++    close: () => view.unmount(),
++  };
+ }
+ 
+-describe('the editor’s ?tab= (R2-076)', () => {
+-  it('an unknown tab opens the Résumé tab, and the address says so', async () => {
++describe('the editor’s ?tab= and ?dock= (R2-076)', () => {
++  it('an unknown tab opens the Résumé with no dock, and the address says so', async () => {
+     const page = await openAt('/resume/r1?tab=foo');
+     try {
+-      assert.equal(page.now().tab, 'resume', 'before: "foo" — a blank panel under the tab bar');
++      assert.equal(page.now().doc, 'resume', 'before: "foo" — a blank panel');
++      assert.equal(page.now().dock, null);
+       assert.equal(page.now().url, '/resume/r1');
+     } finally { await page.close(); }
+   });
+ 
+-  it('each known tab opens from the link', async () => {
+-    for (const tab of ['resume', 'design', 'coverletter', 'ats']) {
+-      const page = await openAt(`/resume/r1?tab=${tab}`);
+-      try { assert.equal(page.now().tab, tab); } finally { await page.close(); }
++  it('an unknown dock is dropped the same way', async () => {
++    const page = await openAt('/resume/r1?dock=foo');
++    try {
++      assert.deepEqual([page.now().doc, page.now().dock, page.now().url], ['resume', null, '/resume/r1']);
++    } finally { await page.close(); }
++  });
++
++  it('each known document and dock opens from the link, and the old ?tab=design and ?tab=ats open their dock', async () => {
++    const cases = [
++      ['?tab=resume', 'resume', null],
++      ['?tab=coverletter', 'coverletter', null],
++      ['?dock=design', 'resume', 'design'],
++      ['?dock=ats', 'resume', 'ats'],
++      ['?tab=design', 'resume', 'design'],
++      ['?tab=ats', 'resume', 'ats'],
++    ];
++    for (const [search, doc, dock] of cases) {
++      const page = await openAt(`/resume/r1${search}`);
++      try { assert.deepEqual([page.now().doc, page.now().dock], [doc, dock], search); } finally { await page.close(); }
+     }
+   });
+ 
+-  it('a picked tab is kept in the address, replacing it, so a reload reopens it', async () => {
++  it('an old ?tab=design link is rewritten to ?dock=design, replacing the entry', async () => {
++    const page = await openAt('/resume/r1?tab=design');
++    try {
++      assert.equal(page.now().url, '/resume/r1?dock=design', 'before: the old link stayed in the address');
++      assert.equal(page.now().how, 'REPLACE');
++    } finally { await page.close(); }
++  });
++
++  it('a picked document or dock is kept in the address, replacing it, so a reload reopens it', async () => {
+     const page = await openAt('/resume/r1?tab=coverletter');
+     try {
+-      await page.pick('design');
+-      assert.equal(page.now().tab, 'design');
+-      assert.equal(page.now().url, '/resume/r1?tab=design', 'before: still ?tab=coverletter');
++      await page.setDock('design');
++      assert.deepEqual([page.now().doc, page.now().dock], ['resume', 'design'], 'a dock is the résumé\'s: opened from the letter it shows the Résumé');
++      assert.equal(page.now().url, '/resume/r1?dock=design', 'before: still ?tab=coverletter');
+       assert.equal(page.now().how, 'REPLACE');
+-      await page.pick((prev) => (prev === 'design' ? 'resume' : 'design')); // the Design button's toggle
+-      assert.equal(page.now().tab, 'resume');
++      await page.setDock((prev) => (prev === 'design' ? null : 'design')); // the Design button's toggle
++      assert.deepEqual([page.now().doc, page.now().dock], ['resume', null]);
+       assert.equal(page.now().url, '/resume/r1');
++      await page.setDoc('coverletter');
++      assert.deepEqual([page.now().doc, page.now().dock], ['coverletter', null]);
++      assert.equal(page.now().url, '/resume/r1?tab=coverletter');
++      assert.equal(page.now().how, 'REPLACE');
+     } finally { await page.close(); }
+   });
+ });
