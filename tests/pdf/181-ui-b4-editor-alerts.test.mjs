@@ -82,32 +82,48 @@ describe('the alert strips: canvas look over the live texts', () => {
   });
 });
 
+// The harness mounts the Editor's bar, the alerts, the tab area, the pill and the dock (not the row's wrapper div):
+// the cards on screen are the alert / status elements that carry a cv-notice class (the toast stack is a status too).
+const cardsOf = (t) => t.all().filter((el) => ['alert', 'status'].includes(attr(el, 'role')) && classes(el).some((c) => c.startsWith('cv-notice')));
+const kindOf = (el) => classes(el).find((c) => c.startsWith('cv-notice'));
+/** Whether the Editor's tree (as written) has an element with this title. */
+function hasTitle(node, title) {
+  if (Array.isArray(node)) return node.some((child) => hasTitle(child, title));
+  if (!node || typeof node !== 'object' || !node.props) return false;
+  return node.props.title === title || hasTitle(node.props.children, title);
+}
+
 describe('in the editor', () => {
-  it('an import notice and an export error show in the row and Dismiss clears each; a keystroke renders the alerts zero times', async () => {
+  it('an import notice and an export error show and Dismiss clears each; a keystroke renders the alerts zero times', async () => {
     const t = await openEditor();
     try {
+      assert.equal(cardsOf(t).length, 0, 'no card to start with');
       t.act(() => t.live.navigate(`/resume/${t.id}`, { state: { importNotice: NOTICE } }));
-      await until(() => strips(t.byTid('editor-alerts')).length === 1, 'the notice shows');
+      await until(() => cardsOf(t).length === 1, 'the notice shows');
+      assert.ok(text(cardsOf(t)[0]).includes(NOTICE));
       t.act(() => t.header().exportMenu.setExportError(PDF_ERROR));
-      await until(() => strips(t.byTid('editor-alerts')).length === 2, 'the error shows');
-      const row = t.byTid('editor-alerts');
-      assert.deepEqual(strips(row).map((el) => classes(el).find((c) => c.startsWith('cv-notice'))), ['cv-notice-warn', 'cv-notice-bad']);
+      await until(() => cardsOf(t).length === 2, 'the error shows');
+      assert.deepEqual(cardsOf(t).map(kindOf), ['cv-notice-warn', 'cv-notice-bad']);
       const w = await t.measure(() => t.typeInSummary());
       assert.equal(w.count('alerts'), 0, `a keystroke renders the alerts. ${w.report()}`);
-      t.call(dismissOf(strips(t.byTid('editor-alerts'))[1]), 'onClick');
-      await until(() => strips(t.byTid('editor-alerts')).length === 1, 'the error is dismissed');
-      t.call(dismissOf(strips(t.byTid('editor-alerts'))[0]), 'onClick');
-      await until(() => strips(t.byTid('editor-alerts')).length === 0, 'the notice is dismissed');
+      t.call(dismissOf(cardsOf(t)[1]), 'onClick');
+      await until(() => cardsOf(t).length === 1, 'the error is dismissed');
+      assert.deepEqual(cardsOf(t).map(kindOf), ['cv-notice-warn']);
+      t.call(dismissOf(cardsOf(t)[0]), 'onClick');
+      await until(() => cardsOf(t).length === 0, 'the notice is dismissed');
     } finally { await t.close(); }
   });
 
-  it('on a phone the strips stay in their row, and there is no resize handle and no layout toggle', async () => {
+  it('on a phone the card shows, and there is no resize handle (there is one on a desktop)', async () => {
     const t = await openEditor();
     try {
+      assert.ok(hasTitle(t.live.tree, 'Drag to resize panel'), 'a desktop in split view has the handle');
       t.goPhone();
+      await until(() => !hasTitle(t.live.tree, 'Drag to resize panel'), 'the handle goes on a phone');
       t.act(() => t.header().exportMenu.setExportError(PDF_ERROR));
-      await until(() => strips(t.byTid('editor-alerts')).length === 1, 'the error shows on a phone');
-      assert.ok(!t.all().some((el) => attr(el, 'title') === 'Drag to resize panel'), 'no handle');
+      await until(() => cardsOf(t).length === 1, 'the error shows on a phone');
+      assert.equal(kindOf(cardsOf(t)[0]), 'cv-notice-bad');
+      assert.ok(text(cardsOf(t)[0]).includes(PDF_ERROR));
     } finally { await t.close(); }
   });
 });
