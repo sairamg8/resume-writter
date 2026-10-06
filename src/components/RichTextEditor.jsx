@@ -12,11 +12,25 @@ import BulletOptimizerModal from '@/components/BulletOptimizerModal';
  * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
  * sits in, or by `ariaLabel` (for an editor under its own heading).
  */
+// What one paste takes in. A 5.7 MB paste held the page for ~2 s (typing-freeze hunt, C-2); a résumé
+// field never needs more than a few kB. Over the limit the first part is inserted and a line says so.
+export const MAX_PASTE_CHARS = 200000;
+const MAX_PASTE_HTML = MAX_PASTE_CHARS * 4;
+
+/** The first MAX_PASTE_CHARS characters of `text`, not cut through a surrogate pair. */
+export function cutPaste(text) {
+  const t = String(text ?? '');
+  if (t.length <= MAX_PASTE_CHARS) return t;
+  const high = t.charCodeAt(MAX_PASTE_CHARS - 1);
+  return t.slice(0, high >= 0xd800 && high <= 0xdbff ? MAX_PASTE_CHARS - 1 : MAX_PASTE_CHARS);
+}
+
 export default function RichTextEditor({ label, ariaLabel, value, onChange, placeholder, rows = 3 }) {
   const ref = useRef(null);
   const ids = useFieldIds(label);
   const isComposing = useRef(false);
   const [optimizerOpen, setOptimizerOpen] = useState(false);
+  const [pasteCut, setPasteCut] = useState(false); // the last paste was cut to MAX_PASTE_CHARS
   // The STAR Optimizer's statement as it opened (optimizerText), and the Range its result replaces:
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
@@ -151,7 +165,11 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const html = data?.getData('text/html');
     const text = data?.getData('text/plain');
     if (!html && !text) return false;
-    document.execCommand('insertHTML', false, html ? sanitizeForInsert(html) : plainTextToHtml(text));
+    // A paste past the limit goes in as its first part, as plain text (the markup of a cut page is no use).
+    const huge = (html || '').length > MAX_PASTE_HTML || (text || '').length > MAX_PASTE_CHARS;
+    setPasteCut(huge);
+    const clean = huge ? plainTextToHtml(cutPaste(text || html)) : html ? sanitizeForInsert(html) : plainTextToHtml(text);
+    document.execCommand('insertHTML', false, clean);
     emit();
     return true;
   }
@@ -368,6 +386,11 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           style={{ minHeight: minH }}
           data-placeholder={placeholder}
         />
+        {pasteCut && (
+          <p role="status" data-testid="paste-cut" className="px-3 pb-2 text-xs text-amber-700">
+            The pasted text was cut to its first {MAX_PASTE_CHARS.toLocaleString('en-US')} characters.
+          </p>
+        )}
       </div>
 
       {/* Mounted only while open: its statement starts from the one it opens on, every time. The kit's

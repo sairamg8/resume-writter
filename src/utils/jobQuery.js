@@ -12,10 +12,28 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Text as search compares it: lower case, accents aside ('Zürich' finds 'zurich'). */
-const fold = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const fold = (v) => {
+  const text = String(v ?? '');
+  // Plain ASCII has no accents: skip the normalise and the replace (most of a job list is ASCII).
+  return /^[\x00-\x7f]*$/.test(text) ? text.toLowerCase() : text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
 
 /** The fields a search looks in. */
 const SEARCH_FIELDS = ['company', 'role', 'location', 'contact', 'stage', 'salary'];
+
+// A job's folded search text, kept per job object: a keystroke filtered every job by folding its six
+// fields again (3000 jobs: ~18,000 normalise calls on the first key). The raw fields are kept beside
+// the text and compared, so a job edited in place is folded again, and an edited list (new job
+// objects) only folds what changed.
+const haystacks = new WeakMap();
+function searchText(job) {
+  const raw = SEARCH_FIELDS.map((k) => job[k]);
+  const hit = haystacks.get(job);
+  if (hit && hit.raw.every((v, i) => v === raw[i])) return hit.text;
+  const text = raw.map(fold).join('\n');
+  haystacks.set(job, { raw, text });
+  return text;
+}
 
 /** Open = still in the pipeline (saved … offer); on hold, rejected and withdrawn are closed. */
 export const isOpen = (job) => PIPELINE_STATUSES.includes(job?.status);
@@ -47,7 +65,7 @@ export function filterJobs(jobs, { q = '', statuses = [], followUpDue = false, n
     if (wanted.size && !wanted.has(j.status)) return false;
     if (followUpDue && !isFollowUpDue(j, now)) return false;
     if (!words.length) return true;
-    const text = SEARCH_FIELDS.map((k) => fold(j[k])).join('\n');
+    const text = searchText(j);
     return words.every((w) => text.includes(w));
   });
 }

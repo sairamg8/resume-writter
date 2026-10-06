@@ -6,6 +6,8 @@ import {
 import {
   analyzeAtsScore,
   matchResumeWithJob,
+  capPosting,
+  MAX_POSTING_CHARS,
   atsHeadingLabel,
   entriesInOneColumn,
   jobTitleFirst,
@@ -129,8 +131,9 @@ function AtsCheck({ resume, store }) {
   // The report reads the résumé alone; only the job match reads the posting. Each key typed in the
   // box redid the whole report with it, and now redoes the match (typing-freeze 6).
   const report = useMemo(() => analyzeAtsScore(resume), [resume]);
+  // A posting kept from an earlier session may be longer than the box takes now: scan the first part.
   const jobMatch = useMemo(
-    () => (jobDescription.trim() ? matchResumeWithJob(resume, jobDescription) : null),
+    () => (jobDescription.trim() ? matchResumeWithJob(resume, capPosting(jobDescription).text) : null),
     [resume, jobDescription],
   );
   const analysis = useMemo(() => ({ ...report, jobMatch }), [report, jobMatch]);
@@ -446,10 +449,18 @@ function AtsCheck({ resume, store }) {
         <textarea
           rows={3}
           value={jobDescription}
+          // The browser cuts a longer paste to what fits, at the caret, before it reaches the page.
+          maxLength={MAX_POSTING_CHARS}
           onChange={e => setJobDescription(e.target.value)}
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
           className="w-full text-xs pointer-coarse:text-base p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
+
+        {jobDescription.length >= MAX_POSTING_CHARS && (
+          <p className="text-xs text-amber-700" data-testid="jd-capped">
+            Only the first {MAX_POSTING_CHARS.toLocaleString('en-US')} characters of this posting are kept and scanned.
+          </p>
+        )}
 
         {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
             match to show: without this line the box took the text and nothing happened (R4-DUX-24). */}

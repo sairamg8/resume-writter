@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Download, FileSpreadsheet, LayoutDashboard, List, MoreHorizontal, Plus, SquareKanban, Upload } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
@@ -118,7 +118,11 @@ export function JobTracker({ store }) {
     if (removed.length) toast({ title: `${removed.length} job${removed.length === 1 ? '' : 's'} cleared`, action: { label: 'Undo', onClick: () => restoreJobs(removed) } });
   }
 
-  const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
+  // Kept while nothing it reads changes (a page render for another reason does not filter again).
+  const filteredJobs = useMemo(
+    () => filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] }),
+    [jobs, search, filterStatus],
+  );
   const counts = jobStats(jobs); // the definitions, tested: src/utils/jobQuery.js
   const stats = [
     { label: 'Total', value: counts.total },

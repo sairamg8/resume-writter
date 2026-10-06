@@ -563,7 +563,11 @@ export function extractJobKeywords(jobDescriptionText) {
   // Tokenize words, normalizing punctuation. An apostrophe stays inside its word, typed straight or
   // curly: read as a space, "You'll" and "we're" were the keywords "ll" and "re", which the stop
   // list's "you'll" and "we're" could never catch, and "+" wrote them into Skills (R4-CL-02).
-  const clean = blankPostingAddresses(jobDescriptionText.normalize('NFC'))
+  // The posting is composed and its addresses blanked once, and the phrase finds below read the same
+  // text: each did both on its own, and on a pasted multi-megabyte posting the pair cost a second or
+  // more of the page's one thread (typing-freeze: 5.7 MB paste).
+  const text = blankPostingAddresses(jobDescriptionText.normalize('NFC'));
+  const clean = text
     .replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, ' ')
     .replace(/\s+/g, ' ');
@@ -602,7 +606,6 @@ export function extractJobKeywords(jobDescriptionText) {
   // "learning-based", and taking a time off "learning" dropped the posting's own "continuous
   // learning" (review of R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately). The phrase's
   // tokens are read from the text around each find, cleaned as above but kept at the text's length.
-  const text = blankPostingAddresses(jobDescriptionText.normalize('NFC'));
   const spaced = text.replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, (c) => ' '.repeat(c.length));
   for (const phrase of multiWordPhrases) {
@@ -1494,4 +1497,19 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   return results;
+}
+
+/**
+ * How much of a pasted job posting is kept and scanned. A real posting is 5-20 kB; a 5.7 MB paste
+ * held the page for seconds on every change (typing-freeze hunt, C-2), the scan being linear in it.
+ */
+export const MAX_POSTING_CHARS = 200000;
+
+/** `text` cut to MAX_POSTING_CHARS (not through a surrogate pair), and whether it was cut. */
+export function capPosting(text) {
+  const t = String(text ?? '');
+  if (t.length <= MAX_POSTING_CHARS) return { text: t, capped: false };
+  const code = t.charCodeAt(MAX_POSTING_CHARS - 1);
+  const end = code >= 0xd800 && code <= 0xdbff ? MAX_POSTING_CHARS - 1 : MAX_POSTING_CHARS;
+  return { text: t.slice(0, end), capped: true };
 }
