@@ -146,7 +146,7 @@ export const SortableSection = memo(function SortableSection({
   ];
 
   return (
-    <div ref={setNodeRef} style={style} className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isHidden ? 'border-gray-100 opacity-60' : 'border-gray-200'}`}>
+    <div ref={setNodeRef} style={style} data-testid={`section-card-${section.id}`} className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isHidden ? 'border-gray-100 opacity-60' : 'border-gray-200'}`}>
       <div className={`flex items-center gap-1.5 px-3 py-2.5 border-b border-gray-100 ${isHidden ? 'bg-gray-50/50' : 'bg-gray-50'}`}>
         <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none shrink-0">
           <GripVertical size={15} />
@@ -155,6 +155,7 @@ export const SortableSection = memo(function SortableSection({
         <input
           type="text"
           aria-label="Section title"
+          data-testid="section-title-input"
           value={section.title}
           onChange={e => updateSection(section.id, s => ({ ...s, title: e.target.value }))}
           className={`flex-1 text-sm pointer-coarse:text-base font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`}

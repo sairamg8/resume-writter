@@ -143,10 +143,11 @@ export function ItemCard({ label, onRemove, onDuplicate, onToggleVisibility, vis
   return (
     <div className={`border rounded-lg overflow-hidden ${visible ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
       <div
+        data-testid="entry-header"
         className="flex items-center justify-between px-3 py-2 bg-gray-50 cursor-pointer select-none"
         onClick={() => setOpen(o => !o)}
       >
-        <span className={`text-sm font-medium truncate flex-1 ${visible ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{label || 'New Entry'}</span>
+        <span data-testid="entry-title" className={`text-sm font-medium truncate flex-1 ${visible ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{label || 'New Entry'}</span>
         <div className="flex items-center gap-1 shrink-0">
           {onToggleVisibility && (
             <button

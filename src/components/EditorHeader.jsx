@@ -120,18 +120,21 @@ export const EditorModeBar = memo(function EditorModeBar({ activeTab, setActiveT
       <div className="flex gap-1 flex-1 min-w-max sm:min-w-0 bg-white border border-gray-200 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('resume')}
+          data-testid="doc-switch-resume"
           className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
           <User size={13} className="shrink-0" /> <span className="min-w-0 truncate">Resume</span>
         </button>
         <button
           onClick={() => setActiveTab('coverletter')}
+          data-testid="doc-switch-letter"
           className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
           <MailIcon size={13} className="shrink-0" /> <span className="min-w-0 truncate">Cover Letter</span>
         </button>
         <button
           onClick={() => setActiveTab('ats')}
+          data-testid="ats-open"
           className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
           <ShieldCheck size={13} className="shrink-0" /> <span className="min-w-0 truncate">ATS Check</span>
@@ -140,6 +143,7 @@ export const EditorModeBar = memo(function EditorModeBar({ activeTab, setActiveT
       <button
         onClick={() => setActiveTab(prev => (prev === 'design' ? 'resume' : 'design'))}
         title="Design & Customize"
+        data-testid="design-open"
         className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : 'border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
       >
         <Palette size={15} />

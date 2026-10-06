@@ -107,7 +107,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
   );
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
+    <div data-testid="resume-card" className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
       {/* Thumbnail */}
       <div
         className="h-36 flex items-center justify-center relative cursor-pointer"
@@ -166,6 +166,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             <button
               onClick={rename.start}
               title="Rename"
+              data-testid="resume-card-rename"
               aria-label="Rename"
               className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 mt-0.5 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
             >
