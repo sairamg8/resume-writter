@@ -71,13 +71,16 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   // once (React.lazy); only the prefetch's fetches are counted below, so that first ask is set aside.
   calls.career = 0;
   const all = () => [...elements(view.document.body)];
+  let unmounted = false;
   return {
     view, calls, all,
+    /** Unmounts now, keeping the counting loaders: close() then skips the unmount. */
+    async unmountNow() { unmounted = true; await view.unmount(); },
     button: (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label),
     sidebar: () => all().find((el) => tokens(el).includes('lg:sticky')),
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
     async close() {
-      await view.unmount();
+      if (!unmounted) await view.unmount();
       Object.assign(loaders, real);
       delete globalThis.localStorage;
     },
@@ -156,6 +159,60 @@ describe('the prefetch', () => {
       assert.deepEqual(plain.calls, { letter: 1, career: 1 });
     } finally {
       globalThis.setTimeout = realSet;
+      await plain.close();
+    }
+  });
+
+  it('leaving the page before idle cancels the pending callback or timer (the one asked for), and a late run fetches nothing', async () => {
+    const saved = {
+      idle: globalThis.requestIdleCallback, cancel: globalThis.cancelIdleCallback,
+      set: globalThis.setTimeout, clear: globalThis.clearTimeout,
+    };
+    const restore = () => {
+      for (const [key, value] of [['requestIdleCallback', saved.idle], ['cancelIdleCallback', saved.cancel]]) {
+        if (value === undefined) delete globalThis[key];
+        else globalThis[key] = value;
+      }
+      globalThis.setTimeout = saved.set;
+      globalThis.clearTimeout = saved.clear;
+    };
+    const asked = { fns: [], ids: [], cancelled: [], cleared: [] };
+    // requestIdleCallback branch: the id it hands out is the one cancelIdleCallback gets.
+    globalThis.requestIdleCallback = (fn) => { asked.fns.push(fn); asked.ids.push(7001); return 7001; };
+    globalThis.cancelIdleCallback = (id) => { asked.cancelled.push(id); };
+    const idle = await dashboard(two());
+    try {
+      assert.equal(asked.fns.length, 1, 'one idle callback asked for');
+      await idle.unmountNow();
+      assert.deepEqual(asked.cancelled, asked.ids, 'the id asked for is the one cancelled');
+      asked.fns[0]();
+      assert.deepEqual(idle.calls, { letter: 0, career: 0 }, 'a callback run after leaving fetches nothing');
+    } finally {
+      restore();
+      await idle.close();
+    }
+    // setTimeout branch: no requestIdleCallback; the 1500 ms timer's handle is the one clearTimeout gets.
+    const timers = { fns: [], handles: [] };
+    globalThis.setTimeout = (fn, ms, ...rest) => {
+      if (ms !== 1500) return saved.set(fn, ms, ...rest);
+      const handle = { timer: timers.fns.length + 1 };
+      timers.fns.push(fn);
+      timers.handles.push(handle);
+      return handle;
+    };
+    globalThis.clearTimeout = (handle) => {
+      if (timers.handles.includes(handle)) asked.cleared.push(handle);
+      else saved.clear(handle);
+    };
+    const plain = await dashboard(two());
+    try {
+      assert.equal(timers.fns.length, 1, 'a timer where there is no idle callback');
+      await plain.unmountNow();
+      assert.deepEqual(asked.cleared, timers.handles, 'the timer asked for is the one cleared');
+      timers.fns[0]();
+      assert.deepEqual(plain.calls, { letter: 0, career: 0 }, 'a timer run after leaving fetches nothing');
+    } finally {
+      restore();
       await plain.close();
     }
   });
