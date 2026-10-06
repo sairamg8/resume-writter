@@ -4,6 +4,7 @@
 // prints its start alone, a promotion was two companies, and hidden entries counted. Plain JS with
 // a relative import, so the node unit tests load it as it is.
 import { parseMonthYear } from './dates.js';
+import { printedEntries } from './entryPrints.js';
 
 /**
  * `item` as the PDF prints it (ExperienceSection): a company or role its eye hides is blank, and so
@@ -29,7 +30,9 @@ function asPrinted(item, showDates) {
 /**
  * Every experience entry the résumé prints, in order: the visible items of every visible
  * experience section — the rule the ATS checker, the cover letter and the PDF follow — each with
- * only the company, role and dates the PDF prints (asPrinted).
+ * only the company, role and dates the PDF prints (asPrinted). An entry the PDF leaves out because it
+ * prints nothing (a blank one, or every field hidden with its eye: printedEntries) is not listed, as it
+ * took an empty row and its dot on the timeline (R5-HUNT12-REVIEW).
  */
 export function careerItems(resume) {
   const sections = Array.isArray(resume?.sections) ? resume.sections : [];
@@ -37,7 +40,7 @@ export function careerItems(resume) {
     .filter((s) => s && s.type === 'experience' && s.visible !== false)
     .flatMap((s) => {
       const showDates = s.settings?.showDates !== false;
-      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)) : [];
+      return Array.isArray(s.items) ? printedEntries({ type: s.type, items: s.items.filter(Boolean) }).map((i) => asPrinted(i, showDates)) : [];
     });
 }
 

@@ -13,10 +13,10 @@ describe('careerItems: the experience the résumé prints', () => {
   it('every visible experience section, its visible items, in order', () => {
     const resume = {
       sections: [
-        { type: 'experience', items: [{ id: 1 }, { id: 2, visible: false }, null] },
-        { type: 'education', items: [{ id: 3 }] },
-        { type: 'experience', visible: false, items: [{ id: 4 }] },
-        { type: 'experience', items: [{ id: 5 }] },
+        { type: 'experience', items: [{ id: 1, company: 'A' }, { id: 2, company: 'B', visible: false }, null] },
+        { type: 'education', items: [{ id: 3, institution: 'C' }] },
+        { type: 'experience', visible: false, items: [{ id: 4, company: 'D' }] },
+        { type: 'experience', items: [{ id: 5, company: 'E' }] },
         { type: 'experience' },
         null,
       ],
