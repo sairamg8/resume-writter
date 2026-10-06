@@ -65,7 +65,8 @@ describe('the resize handle and the phone notices are in the cv look', () => {
     assert.match(source('components/EditorMobilePill.jsx'), /data-testid="editor-pill"/);
     assert.match(source('components/ui/Toast.jsx'), /aria-label="Notifications"/);
     // Outside any @layer, so it outranks the stack's bottom-4 utility.
-    const before = css.slice(0, css.indexOf('body:has([data-testid="editor-pill"])'));
+    const rule = css.indexOf('body:has([data-testid="editor-pill"])');
+    const before = css.slice(0, css.lastIndexOf('@media (max-width: 767px)', rule)); // up to the rule's own @media
     assert.equal((before.match(/\{/g) ?? []).length, (before.match(/\}/g) ?? []).length, 'the rule is at the top level, not inside a layer');
   });
 });
