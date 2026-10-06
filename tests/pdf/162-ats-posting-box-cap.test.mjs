@@ -17,14 +17,14 @@ const memory = (seed = {}) => {
     getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, String(v)), removeItem: (k) => map.delete(k),
   };
 };
-const person = { ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }), id: 'r1' };
+const makePerson = () => ({ ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }), id: 'r1' });
 const store = { updateSections() {}, updateSetting() {}, setTemplate() {} };
 const LIMIT = 200000;
 
 async function panel(stored) {
   globalThis.sessionStorage = memory(stored === undefined ? {} : { 'cpwtcv_ats_jd:r1': JSON.stringify(stored) });
   const { default: AtsCheckerPanel } = await loadModule('/src/components/AtsCheckerPanel.jsx');
-  const view = mount(() => createElement(AtsCheckerPanel, { resume: person, store }), {});
+  const view = mount(() => createElement(AtsCheckerPanel, { resume: makePerson(), store }), {});
   const all = () => [...elements(view.container)];
   return { view, box: () => all().find((el) => el.tagName === 'TEXTAREA'), notice: () => all().find((el) => el.getAttribute('data-testid') === 'jd-capped'), missing: () => all().filter((el) => el.getAttribute('title') === 'Click to add to Skills').map((el) => el.textContent.trim()) };
 }
