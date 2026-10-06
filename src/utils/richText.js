@@ -739,10 +739,8 @@ export function sanitizeRichText(html) {
   let budget = 16 * String(html).length + 4096;
   const runsHtml = (runs) => {
     let line = '';
-    let group = '';
-    let cur = ''; // the address the group is inside
+    let cur = ''; // the address of the anchor that is open
     let was; // the run's address as typed, before it is checked and escaped
-    const flush = () => { line += cur ? `<a href="${cur}">${group}</a>` : group; group = ''; };
     for (const r of runs) {
       let t = esc(r.text).replace(/\n/g, '<br>');
       if (r.strike) t = `<s>${t}</s>`;
@@ -750,16 +748,18 @@ export function sanitizeRichText(html) {
       if (r.italic) t = `<em>${t}</em>`;
       if (r.bold) t = `<strong>${t}</strong>`;
       if (r.href !== was) {
-        flush();
         was = r.href;
         const a = was && safeHref(was);
         const h = a ? esc(a) : '';
-        budget -= (cur = h.length <= budget ? h : '').length;
+        if (h !== cur) {
+          if (cur) line += '</a>';
+          budget -= (cur = h.length <= budget ? h : '').length;
+          if (cur) line += `<a href="${cur}">`;
+        }
       }
-      group += t;
+      line += t;
     }
-    flush();
-    return line;
+    return cur ? `${line}</a>` : line;
   };
   const alignAttr = (b) => (b.align && b.align !== 'left' ? ` style="text-align: ${b.align};"` : '');
 
