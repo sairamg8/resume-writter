@@ -3,7 +3,7 @@
 // actions were new functions at each render and nothing in the section editor was memoised. With a
 // long résumé that was the freeze. This pins what a keystroke may touch: typing ONE character into an
 // entry's bullet, the summary, or a personal-info field re-renders the field's own part of the tree
-// and NOTHING else (no other entry, no other section), and the store's actions keep their identity.
+// and NOTHING else (no other entry, no other section), and the editor's actions keep their identity (useStableActions).
 //
 // How it counts (renders, never time): the real Résumé tab (EditorResumeTab) over the real store
 // (useAppStore), wired as the Editor wires it, mounted with react-dom/client over fake-dom.mjs. A
@@ -244,18 +244,24 @@ describe('typing one character re-renders only the edited field (PERF-4)', () =>
     } finally { await t.close(); }
   });
 
-  it('the store\'s actions keep their identity across a keystroke (updatePersonal, updateItem, updateSection)', async () => {
-    const t = await openTab();
-    try {
-      const first = t.store();
-      t.typeInEmail();
-      t.typeInBullet(0);
-      const now = t.store();
-      assert.ok(now.activeResume !== first.activeResume, 'the store changed (a render happened)');
-      for (const action of ['updatePersonal', 'updateItem', 'updateSection']) {
-        assert.equal(typeof now[action], 'function', `${action} is a store action`);
-        assert.ok(now[action] === first[action], `${action} is the same function after a keystroke`);
-      }
-    } finally { await t.close(); }
+  it('useStableActions: each action keeps its identity across renders and calls the latest one', async () => {
+    const { useStableActions } = await loadModule('/src/hooks/useStableActions.js');
+    const seen = [];
+    let bump;
+    function Host() {
+      const [n, setN] = useState(0);
+      bump = setN;
+      seen.push(useStableActions({ count: () => n, plain: 7 }));
+      return null;
+    }
+    const view = mount(Host, {});
+    await settle();
+    view.act(() => bump(1));
+    await settle();
+    assert.ok(seen.length >= 2, 'it rendered again');
+    assert.ok(seen.every((a) => a === seen[0] && a.count === seen[0].count), 'the same functions at every render');
+    assert.equal(seen[0].count(), 1, 'the call reaches the latest action, not the first');
+    assert.equal('plain' in seen[0], false, 'only functions are carried over');
+    await view.unmount();
   });
 });

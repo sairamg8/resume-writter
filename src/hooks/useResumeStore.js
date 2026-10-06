@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
 import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
@@ -334,9 +334,7 @@ export function useAppStore() {
    * nothing changed. `id`: that résumé instead, open or not — for a write that lands after a wait (an
    * upload's decode), by when the user may have opened another (R5-HUNT2).
    */
-  // One function for the life of the hook (it holds only the state setter), so the actions below keep
-  // their identity and a memoised editor part is not woken by a keystroke elsewhere (PERF-4).
-  const patchActive = useCallback((updater, id) => {
+  function patchActive(updater, id) {
     setAppState(prev => {
       let changed = false;
       const target = id ?? prev.activeId;
@@ -350,7 +348,7 @@ export function useAppStore() {
       // Nothing changed: the same store, so nothing is written, built or synced (R2-142).
       return changed ? { ...prev, resumes } : prev;
     });
-  }, []);
+  }
 
   // ── Resume management ──────────────────────────────────────────────
 
@@ -520,22 +518,10 @@ export function useAppStore() {
     patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }), id);
   }
 
-  // Every action below holds only patchActive and the state setter, both fixed: made once, so each keeps
-  // its identity from one render to the next (PERF-4).
-  const actions = useMemo(() => ({
-    // Delete, restore, a first sync's result, sent deletions forgotten — the sync tests run these too.
-    ...createSyncActions(setAppState),
-    ...createSectionActions(patchActive),
-    ...createDesignActions(patchActive, setAppState),
-    updatePersonal,
-    toggleFieldVisibility,
-    updateSetting,
-    clearSettings,
-    setTemplate,
-    updateCoverLetter,
-    resetSettings,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [patchActive]);
+  const sectionActions = createSectionActions(patchActive);
+  // Delete, restore, a first sync's result, sent deletions forgotten — the sync tests run these too.
+  const syncActions = createSyncActions(setAppState);
+  const designActions = createDesignActions(patchActive, setAppState);
 
   return {
     appState,
@@ -554,6 +540,15 @@ export function useAppStore() {
     renameResume,
     keepResume,
     importResume,
-    ...actions,
+    updatePersonal,
+    toggleFieldVisibility,
+    updateSetting,
+    clearSettings,
+    setTemplate,
+    updateCoverLetter,
+    resetSettings,
+    ...syncActions,
+    ...sectionActions,
+    ...designActions,
   };
 }
