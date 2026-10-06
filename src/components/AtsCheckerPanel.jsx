@@ -107,7 +107,11 @@ const restoreSetting = (key) => (s, prev, now) => {
   return { ...s, settings };
 };
 
-function AtsCheck({ resume, store }) {
+function AtsCheck({ resume, store, getLatest }) {
+  // What the buttons write from: the dock draws the panel from the résumé as it was after its pause (AtsDock), but a button
+  // acts on the latest one (`getLatest`), so a second "+" within the pause writes onto the first one's result. Without a
+  // `getLatest` (the panel on its own) it is the résumé it was given.
+  const current = () => getLatest?.() ?? resume;
   const { toast } = useToast();
   // The pasted posting is kept for the tab's session under the résumé's id: the Editor mounts this
   // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
@@ -148,8 +152,9 @@ function AtsCheck({ resume, store }) {
    * "Put Job Title First" below (TUI-7).
    */
   function handleStandardizeHeadings() {
-    if (!resume || !Array.isArray(resume.sections)) return;
-    applySectionFix('ats-fix-headings', standardizeSectionsForAts(resume.sections, resume.template), {
+    const now = current();
+    if (!now || !Array.isArray(now.sections)) return;
+    applySectionFix('ats-fix-headings', standardizeSectionsForAts(now.sections, now.template), {
       title: (n) => `Renamed ${count(n, 'section heading')}`,
       description: (pairs) => pairs.map(([was, now]) => `${headingOf(was)} → ${headingOf(now)}`).join(', '),
       restore: (s, prev, now) => (s.title === now.title ? { ...s, title: prev.title } : s),
@@ -168,8 +173,9 @@ function AtsCheck({ resume, store }) {
    * section still holds what the fix wrote (R5-HUNT3).
    */
   function applySectionFix(id, updated, { title, description, restore }) {
-    const before = resume.sections;
-    const fixed = resume.id;
+    const now = current();
+    const before = now.sections;
+    const fixed = now.id;
     const pairs = updated.flatMap((s, i) => (s !== before[i] ? [[before[i], s]] : []));
     if (!pairs.length) return;
     store.updateSections(updated);
@@ -192,8 +198,9 @@ function AtsCheck({ resume, store }) {
    * the company (jobTitleFirst) — not a hidden section, nor one that already leads with the role (R2-079).
    */
   function handleOptimizeExperienceOrder() {
-    if (!resume || !Array.isArray(resume.sections)) return;
-    applySectionFix('ats-fix-title-order', jobTitleFirst(resume.sections, resume.template), {
+    const now = current();
+    if (!now || !Array.isArray(now.sections)) return;
+    applySectionFix('ats-fix-title-order', jobTitleFirst(now.sections, now.template), {
       title: (n) => `Job title first (Role / Co.) in ${count(n, 'experience section')}`,
       description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
       restore: restoreSetting('titleOrder'),
@@ -230,8 +237,9 @@ function AtsCheck({ resume, store }) {
    * names (R2-021).
    */
   function handleGridsOneColumn() {
-    if (!resume || !Array.isArray(resume.sections)) return;
-    applySectionFix('ats-fix-grids', entriesInOneColumn(resume.sections, resume.template, resume.settings), {
+    const now = current();
+    if (!now || !Array.isArray(now.sections)) return;
+    applySectionFix('ats-fix-grids', entriesInOneColumn(now.sections, now.template, now.settings), {
       title: (n) => `Grids 1 in ${count(n, 'section')}: entries print one under another`,
       description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
       restore: restoreSetting('columns'),
@@ -263,7 +271,7 @@ function AtsCheck({ resume, store }) {
 
   /** Copy Text: says Copied!, or Copy failed where the browser refuses the clipboard (R2-080). */
   function handleCopyPlainText() {
-    const text = generateAtsPlainText(resume);
+    const text = generateAtsPlainText(current());
     copyText(text).then(() => 'done', () => 'failed').then((outcome) => {
       setCopiedText(outcome);
       setTimeout(() => setCopiedText(null), 2500);
@@ -272,14 +280,15 @@ function AtsCheck({ resume, store }) {
 
   /** The .txt, named as Export → ATS text names the same file: `<Name>_<Title>_ATS.txt`. */
   function handleDownloadPlainText() {
-    const text = generateAtsPlainText(resume);
-    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${buildExportFilename(resume)}_ATS.txt`);
+    const now = current();
+    const text = generateAtsPlainText(now);
+    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${buildExportFilename(now)}_ATS.txt`);
   }
 
   /** "+" on a missing keyword: into the first skill group that prints (keywordSkillTarget, R2-024). */
   function handleAddMissingSkill(keyword) {
     if (!keyword) return;
-    const target = keywordSkillTarget(resume?.sections);
+    const target = keywordSkillTarget(current()?.sections);
 
     if (target?.item) {
       const { skills } = skillGroup(target.item);
