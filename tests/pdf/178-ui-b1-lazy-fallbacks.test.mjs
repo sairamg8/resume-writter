@@ -64,6 +64,16 @@ async function dashboard(resumes, fail, custom = {}) {
     made, loaders, real, all, button, view,
     reloads: () => reloaded,
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
+    /** True when no dialog shows for `ms`: polled, as a check right after an action runs before a lazy piece could arrive. */
+    async dialogNever(ms = 500) {
+      const end = Date.now() + ms;
+      do {
+        view.act(() => {});
+        if (page.dialog()) return false;
+        await new Promise((r) => { setTimeout(r, 10); });
+      } while (Date.now() < end);
+      return true;
+    },
     /** Unmounts the page now (a visit ends); close() then skips the unmount. */
     async leave() { unmounted = true; await view.unmount(); },
     press(label) { view.act(() => reactProps(button(label)).onClick({})); },
@@ -88,7 +98,7 @@ it('New Cover with several résumés and the picker\'s code unreachable: a lette
     page.press('New Cover');
     await until(() => page.made.length > 0, 'a letter made');
     assert.deepEqual(page.made, ['resume_b'], 'from the most recently edited résumé, as the picker\'s first choice');
-    assert.equal(page.dialog(), undefined, 'no picker');
+    assert.ok(await page.dialogNever(), 'no picker');
     // Another press in the same visit: the guard (the editor is still opening) makes no second letter.
     page.press('New Cover');
     for (let i = 0; i < 20; i += 1) await new Promise((r) => { setTimeout(r, 0); });
