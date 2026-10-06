@@ -14,7 +14,8 @@ const cv = (items, settings) => ({ sections: [{ type: 'experience', items, ...(s
 
 test('a company, role and dates hidden by their eyes are neither listed nor counted', () => {
   const items = careerItems(cv([acme({ hiddenFields: ['company', 'role', 'startDate', 'endDate'] }), other]));
-  assert.deepEqual([items[0].company, items[0].role, items[0].startDate, items[0].endDate], ['', '', '', '']);
+  // The PDF prints nothing for it (entryPrints), so it is not an entry at all: no empty row and dot (R5-HUNT12-REVIEW).
+  assert.deepEqual(items.map((i) => i.company), ['Initech']);
   assert.equal(companyCount(items), 1, 'Acme is not counted');
   assert.equal(careerMonths(items, NOW), 12, 'its 23 months are not counted');
 });
