@@ -146,6 +146,16 @@ async function dashboard(resumes = [], { user = null } = {}) {
       }
       return page.dialog();
     },
+    /** The picker never comes up within `ms`: a settle() runs before a lazy picker could arrive, so one right after it proves nothing. */
+    async dialogNever(ms = 500) {
+      const end = Date.now() + ms;
+      do {
+        view.act(() => {});
+        if (page.dialog()) return false;
+        await new Promise((r) => { setTimeout(r, 10); });
+      } while (Date.now() < end);
+      return true;
+    },
     fileInput() {
       const input = all().find((el) => el.tagName === 'INPUT' && (el.type === 'file' || el.getAttribute('type') === 'file'));
       assert.ok(input, 'the Import file input');
@@ -385,7 +395,7 @@ describe('the dashboard: new résumés (R2-167)', () => {
     try {
       page.click(page.button('New Cover'));
       await settle();
-      assert.equal(page.dialog(), undefined, 'no résumé to pick from: no picker');
+      assert.ok(await page.dialogNever(), 'no résumé to pick from: no picker');
       assert.equal(page.resumes().length, 1);
       made = page.resumes()[0];
       assert.match(made.id, /^resume_[\w-]+$/);
@@ -410,7 +420,7 @@ describe('the dashboard: new résumés (R2-167)', () => {
       const before = plain(page.resumes()[0]);
       page.click(page.button('New Cover'));
       await settle();
-      assert.equal(page.dialog(), undefined, 'one résumé: no picker');
+      assert.ok(await page.dialogNever(), 'one résumé: no picker');
       assert.equal(page.resumes().length, 2);
       const [source, made] = page.resumes();
       assert.equal(made.kind, 'letter');
