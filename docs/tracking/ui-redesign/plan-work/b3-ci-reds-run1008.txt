@@ -1,0 +1,653 @@
+CI run 37514338790 (head df28b00e), FULL gate, suite shards: every failing test block (name, file:line, error). Cypress: 26-mobile-layout 3 failing (see the job log). Playwright all passed.
+
+    not ok 3 - the count is live: opening a dock renders the dock, and the chip and the Design button that show it
+      ---
+      duration_ms: 271.213541
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:586:3'
+      failureType: 'testCodeFailure'
+      error: `chip did not render for a dock opening. 2 commits: [{"rest":["MemoryRouter","Router","Routes","RenderedRoute","Page","EditorTabContent","EditorResumeTab","ChevronsDownUp","tag11","User","ChevronUp","DndContext","SortableContext","RestoreFocus","Accessibility","HiddenText","LiveRegion","Plus","ChevronDown"],"modes":["EditorModeBar"],"designButton":["EditorDesignButton","Palette","tag11"],"dock":["EditorDock","X","tag11","DesignDock"],"designPanel":["DesignPanel","DesignSection","ChevronDown","tag11","TemplateThumb","ResumeThumbnail","Header","Bar","Section","SavedDesigns","LetterheadNote","ColorsSection","RotateCcw","ContactIcon","TypographySection","HeadingsSection","DatesSection","ListsSection","LinksSection","PageNumbersSection"]},{"designPanel":["TypographySection","DesignSection","ChevronDown","tag11","RotateCcw"]}]. Props that were not the same value as before — the header's: [], the alerts': [], the mode bar's: ["dock"], the dock's: []`
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:591:77)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+
+    not ok 1 - a burst of keys renders it at most twice (Saving…, then Saved), as primitives, and nothing else of the bar
+      ---
+      duration_ms: 108.345477
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:598:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Saved Just now'
+        - 'Auto-saved to your browser'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Auto-saved to your browser'
+      actual: 'Saved Just now'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:601:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 4 - the switch shows the open document and the chip and the Design button show their dock: pressed, a dock opens, and pressed again goes back to the résumé
+      ---
+      duration_ms: 763.552778
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:902:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        the other dock replaces it
+        
+        'ats' !== 'design'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'design'
+      actual: 'ats'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:929:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 2 - the dock toggle keeps its identity, and a dock opened through it leaves the import notice the address holds now
+      ---
+      duration_ms: 450.67742
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:966:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        the same toggle, held since the first render, closes the dock it opened
+        
+        'design' !== null
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ~
+      actual: 'design'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:982:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 4 - the import notice's Dismiss acts on the latest address: it leaves the dock the editor is on
+      ---
+      duration_ms: 312.825095
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:1010:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'This résumé was read from a document, best-effort: check each section.'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'This résumé was read from a document, best-effort: check each section.'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/173-editor-header-render-count.test.mjs:1020:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 4 - Design opens the Design dock as a sheet (full width, over the stage) and lights itself; a second press closes it
+      ---
+      duration_ms: 281.922232
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-phone-frame.test.mjs:48:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(has(t, 'dock-design'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-phone-frame.test.mjs:52:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 5 - Edit and Preview close an open dock
+      ---
+      duration_ms: 563.260259
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-phone-frame.test.mjs:63:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + '/resume/resume_t20?dock=design'
+        - '/resume/resume_t20'
+                             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: '/resume/resume_t20'
+      actual: '/resume/resume_t20?dock=design'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-phone-frame.test.mjs:73:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 1 - has design-open, doc-switch-resume, doc-switch-letter and ats-open once each, on buttons that switch tabs
+      ---
+      duration_ms: 254.031632
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/178-ui-b1-test-hooks.test.mjs:71:3'
+      failureType: 'testCodeFailure'
+      error: 'onPick is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Object.onClick (/__w/resume-writter/resume-writter/src/components/EditorDocSwitch.jsx:53:19)
+        file:///__w/resume-writter/resume-writter/tests/pdf/178-ui-b1-test-hooks.test.mjs:84:39
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        Object.act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        click (file:///__w/resume-writter/resume-writter/tests/pdf/178-ui-b1-test-hooks.test.mjs:84:14)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/178-ui-b1-test-hooks.test.mjs:86:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+
+    not ok 2 - a given onShare draws the Share button once on a desktop bar; none given draws none (signed out, no cloud, a letter)
+      ---
+      duration_ms: 8.761289
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:168:3'
+      failureType: 'testCodeFailure'
+      error: 'window is not defined'
+      code: 'ERR_TEST_FAILURE'
+      name: 'ReferenceError'
+      stack: |-
+        resolveEventTimeStamp (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:22144:19)
+        startUpdateTimerByLane (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:5692:19)
+        updateContainerImpl (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:23508:10)
+        process.env.NODE_ENV.ReactDOMHydrationRoot.unmount.ReactDOMRoot.unmount (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:27910:11)
+        file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:364:22
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        Object.unmount (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:364:7)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:175:57)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+
+    not ok 1 - each opens its own dock, a second press closes it, and the other replaces it
+      ---
+      duration_ms: 370.150689
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:190:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+        +   'dock-ats'
+        -   'dock-design'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'dock-design'
+      actual:
+        0: 'dock-ats'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:197:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+
+    not ok 1 - "Auto-saved to your browser", then "Saved <time>" after a write, and the red "Not saved" when a write fails
+      ---
+      duration_ms: 131.415397
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:205:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Saved Just now'
+        - 'Auto-saved to your browser'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Auto-saved to your browser'
+      actual: 'Saved Just now'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:208:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 8 - negative twin: signed out, no dot; a build without a cloud, no account bar at all
+      ---
+      duration_ms: 11.4628
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:245:3'
+      failureType: 'testCodeFailure'
+      error: 'window is not defined'
+      code: 'ERR_TEST_FAILURE'
+      name: 'ReferenceError'
+      stack: |-
+        resolveEventTimeStamp (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:22144:19)
+        startUpdateTimerByLane (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:5692:19)
+        updateContainerImpl (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:23508:10)
+        process.env.NODE_ENV.ReactDOMHydrationRoot.unmount.ReactDOMRoot.unmount (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:27910:11)
+        file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:364:22
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        Object.unmount (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:364:7)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:251:59)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+    1..8
+
+    not ok 1 - a dock opened from the letter shows the résumé; the Resume switch is not the dock's opener
+      ---
+      duration_ms: 373.216739
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:294:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(t.all().some((el) => attr(el, 'data-testid') === 'dock-design'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-bar.test.mjs:303:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 1 - the chip renders at most twice for a burst of keys, shows Saving… then Saved, and no leaf of the header does
+      ---
+      duration_ms: 116.197406
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-save-chip.test.mjs:107:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Saved Just now'
+        - 'Auto-saved to your browser'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Auto-saved to your browser'
+      actual: 'Saved Just now'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-save-chip.test.mjs:110:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 4 - one dock at a time: the chip over an open Design dock replaces it, and the Design button over ATS does too
+      ---
+      duration_ms: 507.042024
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-dock.test.mjs:63:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(has(t, 'dock-design') && !has(t, 'dock-ats'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-dock.test.mjs:73:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 2 - picking the Cover letter closes an open dock
+      ---
+      duration_ms: 241.4745
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-dock.test.mjs:113:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(has(t, 'dock-design') || has(t, 'dock-ats'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-editor-dock.test.mjs:118:16)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 1 - an unknown tab opens the Résumé tab, and the address says so
+      ---
+      duration_ms: 130.114743
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:34:3'
+      failureType: 'uncaughtException'
+      error: 'useEditorTab is not a function or its return value is not iterable'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Page (file:///__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:20:27)
+        Object.react_stack_bottom_frame (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:25904:20)
+        renderWithHooks (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:7662:22)
+        updateFunctionComponent (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:10166:19)
+        beginWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:11778:18)
+        runWithFiberInDEV (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:871:30)
+        performUnitOfWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17641:22)
+        workLoopSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17469:41)
+        renderRootSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17450:11)
+        performWorkOnRoot (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:16583:35)
+      ...
+
+    not ok 2 - each known tab opens from the link
+      ---
+      duration_ms: 5.153896
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:42:3'
+      failureType: 'uncaughtException'
+      error: 'useEditorTab is not a function or its return value is not iterable'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Page (file:///__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:20:27)
+        Object.react_stack_bottom_frame (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:25904:20)
+        renderWithHooks (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:7662:22)
+        updateFunctionComponent (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:10166:19)
+        beginWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:11778:18)
+        runWithFiberInDEV (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:871:30)
+        performUnitOfWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17641:22)
+        workLoopSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17469:41)
+        renderRootSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17450:11)
+        performWorkOnRoot (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:16583:35)
+      ...
+
+    not ok 3 - a picked tab is kept in the address, replacing it, so a reload reopens it
+      ---
+      duration_ms: 5.853584
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:49:3'
+      failureType: 'uncaughtException'
+      error: 'useEditorTab is not a function or its return value is not iterable'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Page (file:///__w/resume-writter/resume-writter/tests/pdf/89-editor-tab-link.test.mjs:20:27)
+        Object.react_stack_bottom_frame (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:25904:20)
+        renderWithHooks (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:7662:22)
+        updateFunctionComponent (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:10166:19)
+        beginWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:11778:18)
+        runWithFiberInDEV (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:871:30)
+        performUnitOfWork (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17641:22)
+        workLoopSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17469:41)
+        renderRootSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:17450:11)
+        performWorkOnRoot (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom-client.development.js:16583:35)
+      ...
+    1..3
+
+    not ok 1 - the styled two-column Sidebar reads whole under Poppler reading order and -layout # TODO ATS-3, accepted: two columns side by side. Poppler orders text by position alone (it ignores tags, and redrawing column by column changes nothing) and -layout sorts every line by height, so the columns interleave. Greenhouse lists columned layouts as a parsing risk; the fix is the Single · ATS-safe toggle (tested above)
+      ---
+      duration_ms: 631.90279
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/40-ats-parse.test.mjs:186:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'pdftotext (reading order): 5 interleaved entries — contact×summary, contact×experience:0, experience:0×skills:0',
+        +   'pdftotext -layout: 9 fact(s) lost — "Led design-system and performance work for pr", "Led the rebuild of the checkout flow in React", "Built the company design system — 60+ compone", "Brought Largest Contentful Paint from 3.9 s t"',
+        +   'pdftotext -layout: 5 interleaved entries — contact×summary, contact×experience:0, experience:1×education:0'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'pdftotext (reading order): 5 interleaved entries — contact×summary, contact×experience:0, experience:0×skills:0'
+        1: 'pdftotext -layout: 9 fact(s) lost — "Led design-system and performance work for pr", "Led the rebuild of the checkout flow in React", "Built the company design system — 60+ compone", "Brought Largest Contentful Paint from 3.9 s t"'
+        2: 'pdftotext -layout: 5 interleaved entries — contact×summary, contact×experience:0, experience:1×education:0'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/40-ats-parse.test.mjs:190:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+
+    not ok 1 - Résumé scrolled down, then Design: Design opens at its top (Template), not at the Résumé's offset
+      ---
+      duration_ms: 357.796602
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:46:3'
+      failureType: 'testCodeFailure'
+      error: 'onToggleDock is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Object.onClick (/__w/resume-writter/resume-writter/src/components/EditorHeader.jsx:361:18)
+        file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:67
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        Object.act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        click (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:32)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:50:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+
+    not ok 2 - every trip between the three tabs, the Design toggle back to the Résumé included, starts at the top
+      ---
+      duration_ms: 5.442342
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:56:3'
+      failureType: 'testCodeFailure'
+      error: 'onPick is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Object.onClick (/__w/resume-writter/resume-writter/src/components/EditorDocSwitch.jsx:53:19)
+        file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:67
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        Object.act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        click (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:32)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:68:9)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+
+    not ok 3 - a re-render on the same tab (an edit, the name, a sync) keeps the scroll and the same scroll box
+      ---
+      duration_ms: 6.064687
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:75:3'
+      failureType: 'testCodeFailure'
+      error: 'onPick is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Object.onClick (/__w/resume-writter/resume-writter/src/components/EditorDocSwitch.jsx:26:19)
+        file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:67
+        process.env.NODE_ENV.exports.flushSync (/__w/resume-writter/resume-writter/node_modules/react-dom/cjs/react-dom.development.js:136:18)
+        Object.act (file:///__w/resume-writter/resume-writter/tests/pdf/fake-dom.mjs:354:23)
+        click (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:40:32)
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:82:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+
+    not ok 1 - the Résumé by default, the ?tab= one when the link names it
+      ---
+      duration_ms: 1172.792788
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:114:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        'resume' !== 'design'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'design'
+      actual: 'resume'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/32-editor-tab-scroll.test.mjs:116:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+
+    not ok 5 - Stacked, paragraphs: the company on line 3 is past the 2 lines a parser gives a job with no bullets # TODO T6, accepted: Stacked sets date, role and company on three lines, so with no bullet glyph and no line of 8+ words OpenResume's 2-line header ends before the company. The Timeline's jobs default to Side by side (role and company on line 2), which the tests above hold
+      ---
+      duration_ms: 201.700412
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/67-timeline-ats.test.mjs:117:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'Senior Frontend Engineer: company not in [03/2022 – Present | Senior Frontend Engineer]',
+        +   'Frontend Engineer: company not in [06/2019 – 02/2022 | Frontend Engineer]'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Senior Frontend Engineer: company not in [03/2022 – Present | Senior Frontend Engineer]'
+        1: 'Frontend Engineer: company not in [06/2019 – 02/2022 | Frontend Engineer]'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/67-timeline-ats.test.mjs:121:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+
+    not ok 2 - a short paragraph: the name on line 2 is past the 1 line a parser gives a project with no bullets # TODO T6, accepted: the Timeline sets a project's date above its name, and OpenResume reads a project with no bullet glyph and no line of 8+ words as a 1-line header — the date. A description of bullets, or a first line of 8+ words, keeps the name in it (above; measured with OpenResume on the demo)
+      ---
+      duration_ms: 256.651602
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/67-timeline-ats.test.mjs:143:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'Open Recipes: Open Recipes not in [01/2023]',
+        +   'a11y-check-action: a11y-check-action not in [04/2021 – 09/2021]'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Open Recipes: Open Recipes not in [01/2023]'
+        1: 'a11y-check-action: a11y-check-action not in [04/2021 – 09/2021]'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/67-timeline-ats.test.mjs:146:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+
+    not ok 2 - a dock opened from the letter makes the menu the résumé's
+      ---
+      duration_ms: 161.300228
+      type: 'test'
+      location: '/__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-letter-doc.test.mjs:51:3'
+      failureType: 'testCodeFailure'
+      error: 'Back | Operations Analyst CV | Export | Export Cover Letter PDF | Export Cover Letter Word | Export Cover Letter Text (.txt) | Export Résumé as Markdown (.md) | Export Résumé as ATS Text (.txt) | Export Résumé as JSON Resume (.json) | Export Backup JSON | Import as a new résumé (JSON, PDF, Word or text) |  | Resume | Cover Letter | ATS check | Design'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///__w/resume-writter/resume-writter/tests/pdf/180-ui-b3-letter-doc.test.mjs:57:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
