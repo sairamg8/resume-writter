@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PenLine, Eye } from 'lucide-react';
 
@@ -19,6 +19,7 @@ import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
+import { useStableObject } from '@/hooks/useStableObject';
 import ShareLinkModal, { firebasePublicIo } from '@/components/ShareLinkModal';
 
 export function Editor({ store, auth, sync }) {
@@ -55,6 +56,18 @@ export function Editor({ store, auth, sync }) {
   });
   const { panelWidth, separatorProps } = usePanelResize();
   const importNotice = useImportNotice();
+
+  // What the header shows — the name, the rename box, the Export menu's state, the account — does not
+  // change with a keystroke in the résumé, but each of these is a new object (with new functions) at
+  // every render. Kept as they are while their values are, with handlers that call the latest ones
+  // (a stale one would export the text before the last keystroke), the header is not rendered at
+  // every key (PERF-4). The way back is here, not in the header: see EditorHeader.
+  const headerRename = useStableObject(rename);
+  const headerExports = useStableObject(exportMenu);
+  const headerAuth = useStableObject(auth);
+  const headerSync = useStableObject(sync);
+  const goBack = useCallback(() => navigate('/'), [navigate]);
+  const openShare = useCallback(() => setShareOpen(true), []);
 
   function toggleAllSections() {
     const next = !allExpanded;
@@ -102,15 +115,16 @@ export function Editor({ store, auth, sync }) {
         style={!isMobile && layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
       >
         <EditorHeader
-          resume={resume}
-          rename={rename}
+          name={resume.name}
+          rename={headerRename}
           layoutMode={layoutMode}
           setLayoutMode={setLayoutMode}
-          exportMenu={exportMenu}
-          auth={auth}
-          sync={sync}
+          exportMenu={headerExports}
+          auth={headerAuth}
+          sync={headerSync}
           isMobile={isMobile}
-          onShare={canShare ? () => setShareOpen(true) : undefined}
+          onShare={canShare ? openShare : undefined}
+          onBack={goBack}
         />
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} importNotice={importNotice.notice} onDismissImport={importNotice.dismiss} />
         <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />

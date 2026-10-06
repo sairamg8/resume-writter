@@ -32,7 +32,7 @@ function firstNameClasses(html) {
 async function editorHeader(layoutMode, isMobile = false) {
   const { EditorHeader } = await loadModule('/src/components/EditorHeader.jsx');
   return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EditorHeader, {
-    resume: { name: 'Software Engineer CV' },
+    name: 'Software Engineer CV',
     rename: { editing: false, draft: '', setDraft: noop, commit: noop, cancel: noop, start: noop },
     layoutMode, setLayoutMode: noop, isMobile,
     exportMenu: { exporting: false, importing: false, keeps: false, letterTab: false },

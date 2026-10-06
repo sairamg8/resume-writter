@@ -80,7 +80,7 @@ describe('the editor header’s rename (R2-071)', () => {
     function Page({ resume }) {
       const rename = useRename(resume, (n) => renames.push(n));
       return createElement(MemoryRouter, null, createElement(EditorHeader, {
-        resume, rename, layoutMode: 'split', setLayoutMode() {}, exportMenu: {}, auth: { cloudAvailable: false }, sync: {},
+        name: resume.name, rename, layoutMode: 'split', setLayoutMode() {}, exportMenu: {}, auth: { cloudAvailable: false }, sync: {},
       }));
     }
     const view = mount(Page, { resume: cv(name) });
