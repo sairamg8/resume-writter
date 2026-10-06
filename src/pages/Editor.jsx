@@ -69,7 +69,7 @@ export function Editor({ store, auth, sync }) {
     resume, letterTab: doc === 'coverletter', authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
   });
   // With a dock open the panel is drawn no wider than the window less the dock and the stage's floor (what is remembered stays).
-  const { panelWidth, separatorProps } = usePanelResize({ dockOpen: Boolean(dock) });
+  const { panelWidth, separatorProps } = usePanelResize({ dockOpen: false });
   // The dock sits beside the preview only where the preview keeps its floor next to the (dragged) panel; else it overlays.
   const dockBeside = useMediaQuery(`(min-width: ${dockBesideFrom(!isMobile && layoutMode === 'split' ? panelWidth : 0)}px)`);
   const importNotice = useImportNotice();
