@@ -65,13 +65,26 @@ Word Sidebar band.
 - R2-139 (Templates UI suggestions): only accessibility items A7, A8, A11, A13 and A14 are left.
 - R2-142 (performance): PERF-1's WOFF cache is done in Round 4; the perf harness (N1/N2 budgets, Gate A/B), PERF-5
   (pdf.js paint order, canvas reuse) and PERF-6 (Gate B, a worker watchdog) landed 2026-10-05 (fail-first proven).
-  Left: PERF-4 (one commit per keystroke), not started.
+  PERF-4 (one commit per keystroke) done 2026-10-06: a keystroke in a field renders no component of any untouched entry or
+  section (tests/pdf/165, fail-first; the cause was dnd-kit's sensor options built anew at every render). Left:
+  PersonalInfoEditor and EditorHeader still re-render per key; the same sensor options on Board.jsx and Backlog.jsx; the
+  PDF build time of a 200,000-character field.
 - R2-143 (open-source release): only the owner items in section 3 are left.
 - R2-147 (per-section styling): done 2026-10-05 — column layout (details top/left/right, mixed columns, widths:
-  Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven.
-- R2-148 (import, localisation, letters): the PDF column and Executive/Timeline items are fixed in Round 4; a résumé
+  Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven. Right-sidebar PDF import done
+  2026-10-06 (the right column is read first when it starts the page and its largest text is at least 1.3 times the left's).
+- R2-148 (import, localisation, letters): the PDF column and Executive/Timeline items are fixed in Round 4 (a Timeline
+  company ending in "Inc." or "Ltd." kept its company and role from 2026-10-06); a résumé
   deleted on another device now takes its public copy down by the account's index of copies (2026-10-05). Résumé
   language and RTL are parked (English only).
+
+**Also done 2026-10-06 (four cluster sessions, merged; full gate run 37403313389 on `35d6bb48`):** the sanitizer writes a
+link's address once per run of same-address runs and drops no ordinary link, `withLinks` is linear, three huge-input
+bounds are pinned (A); PERF-4 (B); the Job Tracker search on 3000 jobs, proved by work counts, and a 5.7 MB paste cut at
+200,000 characters in the rich-text fields and the ATS box, each with a visible notice (C); one stuck-"rendering"
+preview path, Career History no longer listing blank or all-hidden entries, the Timeline "Inc." company and the
+right-sidebar PDF import (D). Not proven: the hunt's minutes-long preview hang; a pdf.js call that never settles has no
+watchdog in PdfPreview. Reports: `wf-reports/1006-*.json`.
 
 **Bookkeeping, after the deploy:**
 - Rows R2-137 and R2-133 still describe the old Word band; update them from `reports/r4-exp.json`.
