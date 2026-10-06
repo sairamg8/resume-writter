@@ -13,7 +13,7 @@ export function SyncHeldNotice({ name, className }) {
   const what = name === 'jobs' ? 'job' : 'project';
   return (
     <div className={className}>
-      <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+      <p role="status" className="cv-notice-warn text-xs px-3 py-2">
         {held.length === 1
           ? `This ${what} is too large to sync to your account and stays on this device only: `
           : `These ${what}s are too large to sync to your account and stay on this device only: `}
