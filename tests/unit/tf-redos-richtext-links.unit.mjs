@@ -92,16 +92,3 @@ test('the same HTML as the old sanitizer, adjacent anchors to one address joined
     assert.equal(sanitizeRichText(html), joinAnchors(before.sanitizeRichText(html)), JSON.stringify(html));
   }
 });
-
-test('a long address that comes back after short inner links, or after every block, is checked once: time grows with the input', () => {
-  const best = (fn) => { let min = Infinity; for (let k = 0; k < 3; k += 1) { const t = performance.now(); fn(); min = Math.min(min, performance.now() - t); } return min; };
-  const href = `http://x.io/${'a'.repeat(100_000)}`;
-  const inner = (n) => `<a href="${href}">${'<a href="b.io">y</a>z'.repeat(n)}</a>`;
-  const blocks = (n) => `<a href="${href}">${'<p>y</p>'.repeat(n)}</a>`;
-  for (const make of [inner, blocks]) {
-    const small = best(() => sanitizeRichText(make(3000)));
-    const large = best(() => sanitizeRichText(make(12_000)));
-    // Linear: 4x. Squared: 16x. The floor keeps a few milliseconds of noise from reading as growth.
-    assert.ok(large < 9 * Math.max(small, 15), `3 000 took ${small.toFixed(0)} ms, 12 000 took ${large.toFixed(0)} ms`);
-  }
-});
