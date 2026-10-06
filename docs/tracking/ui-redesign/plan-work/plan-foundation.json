@@ -1,0 +1,1001 @@
+{
+  "angle": "FOUNDATION-FIRST: tokens and test spine first (B1), then the shared bars and account (B2), the workspace shell and kit variants (B3), then screen by screen on top of them. Dead-code.unit makes an unreferenced primitive fail, so a primitive lands with its first consumer: tokens/kit variants/bars in B1-B3, the editor dock with the editor frame (B5), the overlay Drawer with the job drawer (B11).",
+  "principles": [
+    "Parity rule first: UI only, every live function stays; new capabilities are PARKED. Ownership is by area file plus ID range; the CATCH-ALL rule per area (written in the owning batch) is: editor-content -> B6, editor-design-templates -> B7, editor-letter-ats-export -> B9, shell-docs -> B4, applications -> B11, projects -> B13, mobile -> B14. Every other row of a file, including any row added by review or later, belongs to that batch. Cite rows as '<file>: <ID>' (EDIT-/NEW- exist in two files; 'D-nn' is the DRAWN BUT NOT table of shell-docs, projects and mobile; 'Nn' is applications section 2).",
+    "The parity file's Fix column is the build spec and the live app wins where board and app differ. The lead turns each batch's rows (ID, live behaviour, status, fix) into docs/tracking/ui-redesign/batches/B<n>.md with a generator script (tools/brief.mjs, written in B1) so builders read the fix inline, never only the board; every CHANGED row is marked DO NOT BUILD AS DRAWN.",
+    "The phone is built with its surface, not in a phone batch: each batch owns the desktop and phone rows of its screens (mobile.md is split by section across B2-B13). Breakpoints: 768 px (editor, useIsMobile) and Tailwind sm/md/lg; the 768-1100 px band has no board and gets one rule in B5 (dock overlays below 1100) verified in B14.",
+    "Start-up path has about 0 kB spare (71-startup-chunks, cap 1,100 kB of minified JS; CSS and index.html are free). B1 creates headroom FIRST (lazy NewLetterModal+Dialog closure, lazy CareerHistoryPanel; reserve: lazy jsonResumeImport with a 122 update). Only B2 and B4 add start-up JS and each keeps a bytes ledger (71 diagnostic read before and after, in the report). B3 and B5-B13 are lazy-only. Rules for all: never import the ui barrel from start-up code; AppBar, BottomTabBar and AuthBar import only compose and named lucide icons; no new util imported by both Dashboard and a lazy chunk (it is hoisted); repeated class strings become index.css component classes.",
+    "Single-owner files, one batch at a time (batches never overlap): Editor.jsx, EditorHeader.jsx, useEditorTab.js, EditorPreviewPane.jsx, EditorTabContent.jsx = B5 only (B7-B9 plug in through DesignDock.jsx, AtsDock.jsx and the panels, which B5 creates as thin wrappers); DesignPanel*.jsx + tests/pdf/parity registries = B7; PersonalInfoEditor*.jsx, SectionEditor*.jsx, RichTextEditor.jsx, EditorResumeTab.jsx = B6; AuthBar.jsx = B2; Dashboard.jsx, ResumeCard.jsx = B1 (testid, lazy boundaries), B2 (header), B4 (body); AppRoutes.jsx = B3 and only if a route changes (expected untouched); index.css = B1, then in each later batch exactly ONE named cluster may append component classes. Inside a batch no two clusters own the same file.",
+    "Tests: no test runs here; CI only. Per batch: failfirst for every src commit's new tests, ONE combined targeted dispatch (tests + named playwright/cypress specs + 71-startup-chunks when a non-lazy file was touched), then ONE full gate on the final head. New tests assert reachability and behaviour (opener found by role+name, control inside data-testid region, same write as before, union of controls of regrouped panels equals the old walk count, negative twin for the old path), never Tailwind classes; the 56 dph/dvis class-pin files are restated as the defect they guard, with evidence, never weakened. A commit must carry its src change and its test (a tests-only commit cannot be failfirst'ed). Testid spine and per-runner helpers (openDesign, openAts, switchTo) land in B1 so B5 changes helper bodies, not 40 specs.",
+    "Protocol refinements (no step dropped): step 1 adds brief generation and, for B2/B4, a start-up read (dispatch tests: 71-startup-chunks alone, read the '# start-up path' line); step 3 render check compares against the named board for look and against tokens where no board exists (about 40% of surfaces are undrawn); step 4 reviewers check every CHANGED row with a negative twin; step 5 adds a label sweep (tools/label-inventory.mjs lists title/aria-label/placeholder/button text of touched files at base vs head; any difference must map to a parity row or be reverted; this catches the tooltip-level rows two reviewers still call unlisted); step 7 also updates docs/knowledge/*.md paths (knowledge-docs.unit) and writes a row ledger (parity ID -> test name).",
+    "Windows: each batch is sized to one 3 h window; if the gate is not reached the batch spans the next window (RUN-STATE) and nothing else starts. Likely spill: B4, B5, B6, B7, B13; each has a named split point in its risks. Nothing is pushed to master; the head after each batch is functionally complete but visually mixed, so deploy is the owner's call after B14.",
+    "Accessibility is deferred: noted in the batch reports, never planned or fixed. Commits are authored sairamgudiputi <sairamgudiputi8@gmail.com>, no trailers, no mention of Claude or AI; work goes to claude/wonderful-maxwell-vu8xqw only."
+  ],
+  "canvasCorrections": {
+    "needed": false,
+    "whenAndHow": "No redraw before or during the build. Reasons: of the first 890 audited rows 37% are MISSING because the canvas never drew a home (undrawn panes: Design Template/Type/Spacing/Headings/More, 10 of 11 entry forms, ATS categories, every menu body, phone Documents menus, Privacy, most states) and 11% CHANGED; a redraw would touch about 25 of 39 boards, cost two or more windows of agents on a 4-CPU box, and wait on the owner's re-approval, while the build must anyway keep the live control and restyle it from tokens. The parity Fix column already says exactly what each CHANGED/MISSING row needs, so the builder gets it inline in B<n>.md (DO NOT BUILD AS DRAWN flag) and the board is the look reference only. Safety nets: reviewer negative-twin tests per CHANGED row; label sweep. Optional and NON-BLOCKING: after B9 and after B13 a small parallel workflow may redraw only the boards whose decision the build overruled (EditorAts, EditorDraft, Jobs/JobsList/MobileJobs, ProjectBacklog, EditorTemplates), from screenshots of the built UI, so the canvas stays a faithful spec; skip it if the owner does not ask. If the owner overrules a parity default (for example accepts merged Interviewing/Closed columns), that single board decision is applied in the owning batch brief, no canvas edit."
+  },
+  "batches": [
+    {
+      "id": "B1",
+      "title": "Foundation 1: canvas look as tokens, stable test hooks, start-up headroom",
+      "goal": "Flip colours, radii, shadow and type to the canvas tokens with CSS only (0 start-up bytes), give every later restyle stable data-testid hooks and per-runner open helpers, and create start-up headroom before any start-up screen is touched.",
+      "whyHere": "Every later batch restyles through tokens and selects by testid; B2 adds bars to the start-up path that has about 0 kB spare, so the room must exist first. Needs no owner answer (the web-font link waits for the owner; the token stack names Instrument Sans first and falls back to system-ui).",
+      "dependsOn": [],
+      "boards": ["Main", "Editor", "Jobs", "BRIEF.md visual system (token reference only; no screen is rebuilt)"],
+      "parityOwned": [
+        "shell-docs: SHEL-107, SHEL-134..SHEL-135"
+      ],
+      "parked": ["Instrument Sans web font link (owner call: Google Fonts link, self-host, or keep system-ui)", "dark mode (none today, none drawn)"],
+      "clusters": [
+        {
+          "name": "tokens",
+          "filesOwned": ["src/index.css"],
+          "work": "@theme: ground #F5F6F8, surface, sunken #EEF0F4, stage #E9ECF1, hairline #E2E5EB, field #D5DAE3, ink #151922, body #2A303C, muted #4F586A, faint #6B7385, brand #2B59FF (+ #1E45D6 text, soft fills, soft border), good/warn/bad with soft fills; re-point the existing kit names (ink, ink-subtle, ink-subtlest, line, line-subtle, sunken, hovered, brand*) to the canvas values so the whole kit and workspace flip at 0 bytes; new radius tokens (card 14, control 9, chip full), --shadow-pop (0 4px 8px rgba(20,30,50,.06), 0 18px 44px rgba(20,30,50,.20)), --font-sans (Instrument Sans, system-ui, ...). @layer components classes for the repeated look (.cv-card, .cv-chip, .cv-field, .cv-notice-warn/bad, .cv-pill-nav) so start-up JSX uses short names. Do NOT change kit Button/Tabs defaults, heights or radii (class-pin tests); variants come in B3. Legacy gray/blue utilities stay until their screen batch."
+        },
+        {
+          "name": "test-spine",
+          "filesOwned": ["src/components/SectionEditor.jsx", "src/components/SectionEditorEntryItems.jsx", "src/components/EditorResumeTab.jsx", "src/components/ResumeCard.jsx", "tests/pdf/resume-tab.mjs", "tests/pdf/fake-dom.mjs", "tests/pdf/165-perf4-editor-render-count.test.mjs", "cypress/support/selectors.js", "cypress/support/commands.js", "tests/playwright/pw-helpers.js"],
+          "newFiles": ["tests/pdf/ui-selectors.mjs", "tests/pdf/178-ui-b1-test-hooks.test.mjs"],
+          "work": "No-visual-change hooks: data-testid section-card-<id>, section-title-input, entry-header, entry-title, resume-card, resume-card-rename (keep the existing 32 ids and the preview attributes). Move resume-tab.mjs and test 165 from div.cursor-pointer.select-none / span.truncate / the .group.bg-white.rounded-2xl card to the testids; add byRole(container, role, name) to fake-dom.mjs; Cypress commands openDesign(), openAts(), switchTo('resume'|'letter') and Playwright openDesignPanel delegate to ONE function per runner that today clicks the old tab (B5 changes only these bodies). Selector/label constants live in tests/pdf/ui-selectors.mjs (tests only: a src/constants module imported by Dashboard would be start-up weight)."
+        },
+        {
+          "name": "headroom",
+          "filesOwned": ["src/pages/Dashboard.jsx"],
+          "work": "React.lazy + Suspense (null fallback) for NewLetterModal (takes the Dialog closure: Dialog, useFocusTrap, placement, useScrollLock, usePresence, Portal off the start-up path if nothing else on it imports them) and for CareerHistoryPanel (+ careerHistory.js); an idle-time import() prefetch after first paint and on hover/focus of the New cover letter button so offline and slow networks still open them; a failed chunk shows the existing import/error notice and uses the lazyPage chunk-reload guard (cpwtcv_chunk_reload). Reserve offset, only if the ledger needs it later: lazy jsonResumeImport/jsonResumeSections/jsonResumeText inside the file-pick handler (then update tests/pdf/122 with evidence)."
+        },
+        {
+          "name": "lead-tools",
+          "filesOwned": ["docs/tracking/ui-redesign/tools/brief.mjs", "docs/tracking/ui-redesign/tools/label-inventory.mjs", "docs/tracking/ui-redesign/batches/B1.md"],
+          "work": "brief.mjs: parity rows of a batch (by the ranges in this plan) to batches/B<n>.md with the Fix column and DO NOT BUILD AS DRAWN flags; label-inventory.mjs: title/aria-label/placeholder/button-text inventory of changed files, base vs head. Docs only, no CI."
+        }
+      ],
+      "testsNew": [
+        "tests/unit/ui-b1-design-tokens.unit.mjs (index.css defines every BRIEF token with the canvas hex, no #0c66e4 left, --font-sans starts with Instrument Sans, legacy kit token names still defined)",
+        "tests/pdf/178-ui-b1-test-hooks.test.mjs (mounts EditorResumeTab and ResumeCard: every testid above is present and unique)",
+        "tests/pdf/178-ui-b1-startup-headroom.test.mjs (startup-modules.mjs: Dashboard on the path; NewLetterModal, Dialog, CareerHistoryPanel, careerHistory.js off it; lazy boundaries open the modal and the panel)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/resume-tab.mjs and tests/pdf/165-perf4-editor-render-count.test.mjs (selectors to testids; same assertions)",
+        "cypress/support/selectors.js, cypress/support/commands.js, tests/playwright/pw-helpers.js (helpers; CARD to testid)",
+        "tests mounting NewLetterModal or CareerHistoryPanel through the Dashboard, to await the lazy boundary: tests/pdf/104-r5-dlg-new-letter-dialog, 96-modal-outside-click, 59-career-history, 103-r4-dvis-29-career-sidebar-fits-window, 103-r4-dvis-32-career-panel-workspace-look, 104-r5-hunt6-dash-career-after-letter, 96-dashboard, tests/unit/ime-enter-guard.unit.mjs",
+        "tests/pdf/71-startup-chunks.test.mjs is read, not changed"
+      ],
+      "startupBudgetPlan": "Net NEGATIVE. First action: dispatch tests with 71-startup-chunks alone and record the '# start-up path X kB of 1,100 kB' line; last action: same on the final head. Target at least +15 kB of headroom (NewLetterModal+Dialog closure about 20 kB source, CareerHistory about 12 kB source); if the gain is smaller, apply the reserve jsonResumeImport offset in this batch. Tokens, component classes and testids cost 0 or tens of bytes.",
+      "bugHuntFocus": [
+        "functions that stopped working: New cover letter flow (three cases, once-per-visit guard), Career History open/navigate, import after the lazy change",
+        "offline and slow network: a lazy chunk not yet fetched; chunk-reload guard; prefetch fires once",
+        "tests that pass for the wrong reason: testid helpers that match nothing; helpers still clicking the old tab",
+        "perf/render counts: tests 165 and 173 unchanged in numbers",
+        "persistence and error states: import error notice when the chunk fails",
+        "narrow widths: 390 px Dashboard unchanged by tokens"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate: failfirst proves ui-b1 tests fail without their src commit; related tests (every file in testsToUpdate) green; ONE full gate green on the head; bug hunt last round empty; report batches/B1-report.md and RUN-STATE/HANDOFF pushed",
+        "71 margin before and after printed in the report and after >= before + 10 kB (state the exact figure); the ledger starts here",
+        "tools/brief.mjs generates B2.md..B14.md and its row counts per batch equal the counts in this plan (112 for B4, 118 for B5, and so on)",
+        "no kit default changed (ui-kit, ui-overlays, ui-helpers, ui-shell unit tests untouched)"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "tokens flip the workspace (jobs, projects) look immediately: contrast and wrapping surprises are only noted (a11y deferred); the legacy Dashboard/editor stay old until their batches, so the head is visually mixed",
+        "lazy Dashboard parts add async to 8 tests; each update must still assert the same behaviour",
+        "if Dialog is also imported by another start-up module the gain shrinks: measure, do not assume"
+      ],
+      "ownerCalls": []
+    },
+    {
+      "id": "B2",
+      "title": "Foundation 2: start-up shell (AppBar, phone tab bar, account and sync, legal pages, loading and crash)",
+      "goal": "One top bar and one phone bottom tab bar for the start-up pages, the account menu and sync chips in the canvas style with every live state, restyled Terms/Privacy, and the page loading and crash states.",
+      "whyHere": "The bar and the account control are shared by Documents, New, the editor and the workspace; building them once, on the start-up path, under the headroom from B1, avoids a second shell. Dashboard.jsx header only; the body waits for B4.",
+      "dependsOn": ["B1"],
+      "boards": ["Main (top bar)", "ShellMenus (avatar menu, signed-out prompt)", "States (sync chips, banners)", "Legal", "MobileHome (top bar, bottom tab bar)"],
+      "parityOwned": [
+        "editor-content: NEW-012",
+        "shell-docs: SHEL-001..SHEL-004, SHEL-010, SHEL-017, SHEL-020..SHEL-032, SHEL-089..SHEL-103, SHEL-111..SHEL-112, SHEL-116, SHEL-118, SHEL-123..SHEL-124, SHEL-132..SHEL-133, SHEL-137, SHEL-141, D-14..D-16",
+        "mobile: MOBI-002, MOBI-010..MOBI-014, MOBI-018, MOBI-150, MOBI-157, D-01"
+      ],
+      "parked": ["Documents and Applications groups in the search palette and the search field on Documents/New/editor (D-02: the field appears only where it works)", "Back up and sync prompt card with Not now (shell-docs D-15)", "Documents save chip (D-14 first half); the avatar-menu sync line is kept"],
+      "clusters": [
+        {
+          "name": "bars",
+          "filesOwned": ["src/components/AppBar.jsx", "src/components/BottomTabBar.jsx", "src/pages/Dashboard.jsx (header block only)", "src/index.css (this batch's single editor)"],
+          "newFiles": ["src/components/AppBar.jsx", "src/components/BottomTabBar.jsx"],
+          "work": "AppBar: CV mark + CPWT-CV link to /, nav Documents / Applications / Projects with the sunken-pill active state (active on /jobs/*, /boards/*, /work), slots for a search control and the account; BottomTabBar (phone, 72 px, three tabs). Both live in src/components (not shell/) so they are plainly start-up code, import only react-router Link and named lucide icons, and are used by Dashboard now and by the workspace, New, Terms/Privacy later. The Dashboard header keeps its page actions in a row under the bar until B4 moves them. Nav labels per canvas (Job Tracker -> Applications, Resumes -> Documents)."
+        },
+        {
+          "name": "account",
+          "filesOwned": ["src/components/AuthBar.jsx", "src/components/SyncHeldNotice.jsx"],
+          "work": "Avatar menu (name, email, sync line, Keyboard shortcuts via dynamic import of ShortcutsDialog, Terms, Privacy, Sign out) kept hand-rolled (no kit Popover on the start-up path); signed-out Google button with Signing in state, the sign-in failure popover with all seven wordings and the silent cases, account loading placeholder, no-cloud build hides everything; the seven sync states as chips with the held items NAMED (Stopped with <name>, Sync is off, Sync error); SyncHeldNotice restyled. compact and hideName props keep working for the editor and workspace."
+        },
+        {
+          "name": "legal-and-states",
+          "filesOwned": ["src/pages/TermsPage.jsx", "src/pages/PrivacyPage.jsx", "src/components/ErrorBoundary.jsx", "src/utils/lazyPage.js"],
+          "work": "Terms and Privacy: one readable column (680 px) with the live text unchanged word for word, mailto when configured, last-updated, footer links both ways; routes /terms /privacy unchanged. Page loading state and crash fallback with both buttons and the one-time reload; offline/old-tab behaviour unchanged (RouteFrame scroll code untouched)."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/179-ui-b2-app-bar.test.mjs (three nav links, active state per route incl /jobs/:id and /boards/:id/summary, brand link to /, no search slot on non-workspace routes)",
+        "tests/pdf/179-ui-b2-bottom-tab-bar.test.mjs (three tabs on a phone, navigation, hidden at md+)",
+        "tests/pdf/179-ui-b2-account-menu.test.mjs (menu entries; seven sign-in failure wordings; Signing in disabled state; all seven sync states with names; no-cloud hides)",
+        "tests/pdf/179-ui-b2-legal-pages.test.mjs (all 10 Terms sections word for word; Privacy text; contact mailto; links on every page)",
+        "tests/pdf/179-ui-b2-crash-loading.test.mjs (loading state; crash fallback buttons)"
+      ],
+      "testsToUpdate": [
+        "AuthBar users: tests/pdf/89-sign-in-errors, 103-r4-dvis-27-sign-in-button, 75-sync-status-tap, 100-r4-sync-02-sync-dot-unreachable, 102-r4-dux-07-workspace-account, 103-r4-dvis-31-editor-account-name, r5hunt6-sign-in-error-clears-on-sign-in, tests/unit/collection-sync-status.unit.mjs, tests/unit/ime-enter-guard.unit.mjs",
+        "Dashboard header: tests/pdf/103-r4-dvis-14-dashboard-projects-brand, 103-r4-dvis-26-dashboard-header-stacks-until-lg, 96-dashboard",
+        "legal: tests/unit/legal-footer.unit.mjs, tests/pdf/79-site-owner, 95-sync-privacy-notices, 99-public-link",
+        "cypress 00-smoke and 01-dashboard (Job Tracker / Projects buttons become nav links), 11-demo-account (sign-in); tests/pdf/173 only reads the account name prop (unchanged)"
+      ],
+      "startupBudgetPlan": "Spends the B1 headroom. Ledger in the report: AppBar about 1.5 kB, BottomTabBar about 1 kB, AuthBar menu and chips about +1.5 kB, legal pages rewritten in place with .cv-* classes (about 0), icons about 0.4 kB each. Read 71 before (dispatch tests: 71-startup-chunks) and after; stop and apply a reserve offset (jsonResumeImport lazy) if the margin would drop under 3 kB.",
+      "bugHuntFocus": [
+        "functions that stopped working: Sign in/out, failure messages, held-items names, demo accounts, Terms/Privacy reachable from every page, shortcuts dialog",
+        "persistence: signed-out/no-cloud path; account change while a page is open",
+        "narrow widths: 390 px bars, bottom bar not covering page actions or the editor pill later",
+        "perf/render counts: AuthBar still not re-rendered per keystroke in the editor (173 case)",
+        "error and empty states: crash card after a failed chunk; offline load",
+        "keyboard: Escape closes the menu, ? opens shortcuts"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 58 rows (SAME rows pinned by an invariant test or an existing named test); CHANGED SHEL-028, SHEL-092 and MOBI-010 each with a negative twin (seven sync states drawn; mailto kept; avatar menu on every phone page)",
+        "start-up ledger written; 71 passes with margin >= 3 kB, figure in the report",
+        "AppBar/BottomTabBar/AuthBar import no kit barrel or ui file other than compose",
+        "Terms/Privacy text byte-identical to master except wrapper markup (diff attached)"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "the only batch besides B4 that can break the cap; the ledger and early read are the guard",
+        "nav rename breaks Cypress/test selectors on 'Job Tracker' text: grep and update, never loosen",
+        "AuthBar is memo-sensitive in the editor (PERF-4): props shape must not change"
+      ],
+      "ownerCalls": ["Nav wording Applications/Documents (default: follow the canvas; parity allows renames)", "Search field omitted on Documents/New/editor (default: omit; owner may approve a new Documents search)"]
+    },
+    {
+      "id": "B3",
+      "title": "Foundation 3: workspace shell (Applications and Projects chrome), kit variants, search, Public page",
+      "goal": "Put the lazy workspace on the shared AppBar and phone tab bar, keep every shell function (search, create, shortcuts, sync, project switcher), add the canvas look as kit variants, and restyle the public page.",
+      "whyHere": "Applications and Projects both sit in this layout; doing it once means B10-B13 only fill pages. Everything here is lazy (0 start-up bytes).",
+      "dependsOn": ["B2"],
+      "boards": ["ShellMenus (search palette)", "Jobs and Projects (top bar only)", "MobileJobs and MobileProject (bars)", "Public"],
+      "parityOwned": [
+        "editor-letter-ats-export: ELAE-125..ELAE-129, ELAE-147, NEW-26..NEW-27",
+        "shell-docs: SHEL-005..SHEL-009, SHEL-011..SHEL-016, SHEL-018..SHEL-019, SHEL-083..SHEL-088, SHEL-108..SHEL-109, SHEL-117, SHEL-136, SHEL-138, SHEL-140, SHEL-143, D-02, D-13, D-19..D-20",
+        "applications: APPL-010..APPL-011, APPL-144..APPL-145, N14",
+        "projects: PROJ-049..PROJ-050, PROJ-204..PROJ-205, PROJ-207..PROJ-208, PROJ-217, PROJ-233..PROJ-234, D-18",
+        "mobile: MOBI-001, MOBI-003..MOBI-009, MOBI-015..MOBI-017, MOBI-151..MOBI-156, MOBI-158..MOBI-159"
+      ],
+      "parked": ["Applications/Documents groups in the palette (job results; D-02, N14)", "Want your own? Make a resume footer on the public page (D-13)", "Read-only copy header label beyond the live footer sentence (NEW-26)", "palette Open action label is styling only (D-19)"],
+      "clusters": [
+        {
+          "name": "bar-and-layout",
+          "filesOwned": ["src/components/shell/TopBar.jsx", "src/components/shell/WorkspaceLayout.jsx", "src/components/shell/PageHeader.jsx", "src/components/shell/Sidebar.jsx", "src/components/shell/SidebarContent.jsx", "src/components/shell/WorkspaceRoute.jsx", "src/components/shell/projects.js", "src/AppRoutes.jsx (only if a route changes; expected untouched)", "src/index.css (this batch's single editor)"],
+          "work": "TopBar becomes AppBar plus slots (search, global Create and the c key, sync chip for jobs/projects, shortcuts entry); the Projects item opens the project switcher menu (starred first, recent up to 8, View all projects, Your work, Create project); phone: AppBar + BottomTabBar, drawer removed, the same Projects menu reachable from the bar so Your work, the project list and Create project stay one tap away until B12 draws the phone landing; PageHeader restyled (contract kept). Sidebar: if the owner says drop, retire it at md+ with its [ shortcut and cpwtcv_sidebar_collapsed key (list in the report); if no answer by B3, keep it restyled and collapsible and leave removal to B14. WorkspaceRoute error boundary per path kept (PROJ-234)."
+        },
+        {
+          "name": "search-hotkeys",
+          "filesOwned": ["src/components/shell/QuickSearch.jsx", "src/utils/workspaceSearch.js", "src/hooks/useHotkeys.js", "src/components/ui/ShortcutsDialog.jsx", "src/components/shell/CollectionSyncDot.jsx"],
+          "newFiles": ["src/components/shell/QuickSearch.jsx"],
+          "work": "QuickSearch extracted from TopBar (lazy); Projects group (live ranking: key typed in full, projects, key prefix, title words), the no-match line, arrow/Enter/Escape, phone search (icon in the bar opens a full-width box, 16 px text, X to close); / c ? [ guards unchanged (not while typing or under a dialog); shortcuts dialog and its entry; collection sync dot states for jobs/projects."
+        },
+        {
+          "name": "kit-variants",
+          "filesOwned": ["src/components/ui/Button.jsx", "src/components/ui/Popover.jsx", "src/components/ui/Menu.jsx", "src/components/ui/MenuList.jsx", "src/components/ui/NavTabs.jsx", "src/components/ui/Tabs.jsx", "src/components/ui/Toast.jsx", "src/components/ui/ConfirmDialog.jsx", "src/components/ui/Chip.jsx", "src/components/ui/Badge.jsx", "src/components/ui/EmptyState.jsx"],
+          "work": "ADD variants and props, change no default: Button quiet/primary at canvas shape (9 px radius, 36 px, 44 px touch), NavTabs and tabClass pill variant (view switches and project tabs adopt it in B10/B12), Popover/Menu with --shadow-pop, Toast and ConfirmDialog card shape, Chip tones. Start-up kit files (Dialog, Tooltip, IconButton, Kbd, compose, placement, useFloating, useFocusTrap, usePresence, useScrollLock, Portal, focusRing) are NOT touched."
+        },
+        {
+          "name": "public-page",
+          "filesOwned": ["src/pages/PublicResume.jsx"],
+          "work": "Slim bar with the brand link to /, the read-only paper (live PDF render), Download PDF with the preparing and failure states, the four message states (loading, not published, error, no cloud), the rendering/failed-with-Retry states, phone reading (page scaled to width), the footer sentence; data rules and no-stale-content on link change unchanged."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/180-ui-b3-workspace-shell.test.mjs (nav active states, Projects menu content and entries, global Create and c, Your work reachable, sidebar decision, sync chip)",
+        "tests/pdf/180-ui-b3-quick-search.test.mjs (Projects group, no-match line, ranking, phone search open/close, key guards)",
+        "tests/pdf/180-ui-b3-phone-bar.test.mjs (bottom tab bar on workspace pages; Your work, project list and Create project reachable on a phone)",
+        "tests/pdf/180-ui-b3-public-page.test.mjs (states, preparing/failure, phone, brand link)",
+        "tests/unit/ui-kit.unit.mjs and ui-overlays.unit.mjs gain cases for each new variant (defaults asserted unchanged)"
+      ],
+      "testsToUpdate": [
+        "tests/unit/ui-shell.unit.mjs, tests/pdf/102-r4-dux-07-workspace-account, 102-r4-dux-06-one-discard-question, 105-r5-hunt3-create-in-viewed-project",
+        "search: tests/pdf/103-r4-dph-04-phone-search, 103-r4-dph-11-topbar-search, 103-r4-dvis-15-topbar-search-kit, tests/unit/r5-job-03-quick-search-fits.unit.mjs, r4-lo-25-quick-search-shrunk-list.unit.mjs, 103-r4-dvis-14-dashboard-projects-brand",
+        "tests/unit/collection-sync-status.unit.mjs, tests/pdf/99-public-link, r5hunt7-public-page-link-change, 71-startup-public-link-lazy (stays)",
+        "cypress 06-job-tracker and 00-smoke (nav labels), 21-a11y (watch only)"
+      ],
+      "startupBudgetPlan": "Lazy-only: shell/*, ui/* variants and PublicResume are outside the start-up path. AppBar and BottomTabBar are imported, not edited. AppRoutes.jsx (start-up) is touched only if a route changes and then net-zero. Run tests: 71-startup-chunks in the targeted dispatch and record the unchanged figure.",
+      "bugHuntFocus": [
+        "functions that stopped working: c, /, ?, [ shortcuts and their guards; search results open the issue or project; Create from every workspace page",
+        "keyboard: palette arrows, Enter, Escape",
+        "narrow widths: 390 px bar with search open; bottom bar versus page actions",
+        "persistence: window scroll memory per history entry (RouteFrame untouched), sidebar key if kept",
+        "error and empty states: no-match line; public page four states; board storage notices still shown on workspace pages",
+        "tests that pass for the wrong reason: nav-label tests matching both old and new text"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 72 rows; every shortcut and the Projects menu entries pinned by name; CHANGED SHEL-011 and PROJ-207 each with a negative twin (create from any workspace page and c; the Projects group in search)",
+        "kit unit tests show no default changed; 71 margin unchanged from B2",
+        "phone: Your work, project list, Create project reachable (MOBI-004..006) before B12 starts"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "sidebar decision unanswered: ship kept-and-restyled, never drop a function silently",
+        "kit variants must not move the 74 class-pin tests; any default edit is a defect",
+        "four clusters but two agents at a time: order bar-and-layout and search-hotkeys first, kit-variants and public-page second"
+      ],
+      "ownerCalls": ["Sidebar and [ shortcut: drop (canvas draws none) or keep (default: keep restyled until B14, no function lost)", "Project switcher placement (default: the Projects nav item menu)"]
+    },
+    {
+      "id": "B4",
+      "title": "Documents, Import and New: the start-up page set",
+      "goal": "Rebuild the Documents page, the Import dialog and the New page in the canvas style with every live function: card menu, letters group, notices, demo originals, 28 looks, role starters, phone cards.",
+      "whyHere": "With the bars and account done (B2) and headroom (B1), the one remaining start-up page body can be rebuilt under a measured bytes ledger. It is the first screen users see.",
+      "dependsOn": ["B1", "B2"],
+      "boards": ["Main", "Empty", "ImportModal", "New", "MobileHome", "States (confirm delete, storage banner)"],
+      "parityOwned": [
+        "editor-content: NEW-019",
+        "editor-letter-ats-export: ELAE-034..ELAE-035, ELAE-131..ELAE-133, NEW-28, NEW-30..NEW-31",
+        "shell-docs: SHEL-033..SHEL-082, SHEL-113, SHEL-115, SHEL-119..SHEL-122, SHEL-125..SHEL-131, SHEL-139, SHEL-142, D-01, D-03..D-12, D-17..D-18",
+        "projects: PROJ-209",
+        "mobile: MOBI-020..MOBI-039, MOBI-165..MOBI-167, D-02",
+        "shell-docs: CATCH-ALL every other row of shell-docs.md, including any row added by review, belongs to B4"
+      ],
+      "parked": ["ATS score chip on cards (D-01, editor-content NEW-019, mobile D-02)", "Recently edited sort (D-03; keep creation order SHEL-048)", "Applications strip and next-interview tile on Documents (D-04)", "first-run three-option page and 28 looks copy beyond the live count (D-05)", "everything-stays-in-browser sentence, drop zone (D-06, D-07, ELAE NEW-28), It becomes a new resume wording (D-08)", "Its cover letter goes too and the cascade (D-09, ELAE NEW-30), cover letter chip as attachment (D-18, ELAE NEW-31)", "storage-full sign-in advice and Open Documents button (D-10)", "New page One/Two column/ATS-safe filter chips unless the owner agrees (D-11); use-this-template footer bar copy (D-17)"],
+      "clusters": [
+        {
+          "name": "documents",
+          "filesOwned": ["src/pages/Dashboard.jsx", "src/components/ResumeCard.jsx", "src/components/ResumeThumbnail.jsx", "src/components/RecoveryNotice.jsx", "src/components/CareerHistoryPanel.jsx", "src/components/NewLetterModal.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Page header with the primary New resume and quiet secondary actions; card grid with real thumbnail, name over two lines (ending kept), template and age in the meta line; the card more menu: Edit, Rename inline, Copy (once per visit guard), Delete (confirm and the live prompt), Keep as my original and the last-original disabled hint (demo accounts); Cover Letters group with letter cards (Edit, Copy, Delete), New cover letter button with the three cases and the picker; empty state with the live single Create action; notice strip slot: storage full/blocked (live texts and export advice), recovery notice with downloads, held items, originals waiting; Career History kept (lazy, also on Insights in B11); footer Terms/Privacy; Back keeps scroll; one new document per visit; phone grid with a way to rename, copy and delete without hover. Page actions from B2's temporary row go to the header."
+        },
+        {
+          "name": "import",
+          "filesOwned": ["src/components/ImportMenu.jsx"],
+          "newFiles": ["src/components/ImportDialog.jsx"],
+          "work": "Import opens a lazy dialog (click-time chunk): file picker (no drop zone, parked), accepted types hint from DOCUMENT_HINT (PDF, Word, Markdown, text, JSON backup, JSON Resume), Reading state with the busy guard, error strip with Dismiss and every refusal reason and the 20 MB limit, Import as my original (demo accounts), import after sign-out message. importDocument.js untouched; Dashboard receives the same callbacks."
+        },
+        {
+          "name": "new-page",
+          "filesOwned": ["src/pages/NewResume.jsx", "src/components/StarterTemplateModal.jsx", "src/components/TemplateThumb.jsx"],
+          "work": "Back arrow with back-or-home semantics, title and lead, looks drawn with the user's résumé and the Your details from select, live category chips, ALL looks selectable (19 templates + Sidebar single-column card + 8 designs + saved designs: scroll, filter, group, never fewer), look card content (ATS badge, description), pick makes the résumé exactly once, Start blank, role starters (all five) with the dynamic look line and look row, Import a file link, no-résumé-yet state, phone layout."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/181-ui-b4-documents-cards.test.mjs (card menu functions with their guards and Undo/confirm, two-line names, template+age meta, order, phone no-hover reachability)",
+        "tests/pdf/181-ui-b4-letters-group.test.mjs (Cover Letters group, New cover letter three cases and once guard, letter card actions, deleting a resume keeps letters)",
+        "tests/pdf/181-ui-b4-notices.test.mjs (storage full/blocked texts, recovery, held, originals waiting)",
+        "tests/pdf/181-ui-b4-import-dialog.test.mjs (states, error reasons, 20 MB, demo original, busy guard)",
+        "tests/pdf/181-ui-b4-new-page.test.mjs (every look selectable incl saved designs, categories, starters, once-guard, back semantics)",
+        "tests/pdf/181-ui-b4-startup-ledger.test.mjs (ImportDialog, NewLetterModal, CareerHistoryPanel off the start-up path)"
+      ],
+      "testsToUpdate": [
+        "Dashboard/ResumeCard users: tests/pdf/96-dashboard, 83-dashboard-thumbnails, 80-dashboard-import-read-error, 104-r5-dash-card-name-two-lines, 162-redos-resume-card-name, 104-r5-hunt6-dash-back-keeps-scroll, 104-r5-hunt6-dash-career-after-letter, 104-r5-hunt6-dash-delete-keeps-designs, 104-r5-hunt6-dash-editor-import-after-sign-out, 104-r5-hunt6-dash-import-after-sign-out, 105-r5-hunt1-dash-double-click, 103-r4-dvis-26/28, 103-r4-dvis-13-new-resume-source-select, imp-import-busy, 104-r5-dlg-new-letter-dialog",
+        "tests/pdf/122-startup-json-resume-export-lazy.test.mjs only if the reserve offset is used (evidence in the commit)",
+        "cypress 01-dashboard, 11-demo-account, 11-demo-account-keep, 29-exports-imports, 30-starters-and-design, 00-smoke (CARD testid from B1)"
+      ],
+      "startupBudgetPlan": "The second and last batch that adds start-up JS. Bytes ledger by file in the report. Rules: card, grid and header rewritten IN PLACE with .cv-* classes (no growth from class strings); the import dialog is a lazy chunk; Career History and NewLetterModal already lazy (B1); icons by name only. Read 71 first (dispatch), then after each cluster merge; if the margin would drop under 2 kB use reserve offsets in this order: lazy jsonResumeImport trio (update 122 with evidence), then ask the owner about raising the cap (last resort).",
+      "bugHuntFocus": [
+        "functions that stopped working: rename/copy/delete/keep-original, new cover letter flow, import every file type, demo originals, career history link",
+        "persistence: storage full/blocked banners, recovery, sign-in/out changes what is listed (SHEL-113), Back keeps scroll",
+        "narrow widths: 390 px cards, long names, bottom bar overlap, import on a phone",
+        "perf/render counts: Dashboard re-render per store change, thumbnail painting and cache (SHEL-129/130)",
+        "error and empty states: every import error, empty Documents, load failure of a lazy chunk",
+        "tests that pass for the wrong reason: card tests matching a menu that is not rendered"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 112 rows; each CHANGED row (SHEL-041, 048, 052, 069, 073, 074, 076) has a negative-twin test, and so do ELAE-133 (a letter stays its own record), MOBI-027, MOBI-028 and MOBI-031",
+        "start-up ledger and 71 margin in the report, margin >= 0 with the figure; no un-ledgered growth",
+        "demo-account and no-cloud paths verified in Cypress 11-demo-account*"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "largest start-up risk of the plan; Dashboard has 17 mounting tests and ResumeCard 10",
+        "split point if the window runs out: land documents and import (gate), then New page as B4b in the next window before B5",
+        "template cards are shared with the editor gallery (B7): keep TemplateThumb props stable"
+      ],
+      "ownerCalls": ["Cover letters: keep the live separate group of letter cards (default) versus attach inside the resume (canvas; parity says keep)", "Card order: creation order (default) versus Recently edited (parked)", "Career History on Documents in addition to Insights (default: both, lazy)", "Extra New-page filter chips (default: only the live category chips)"]
+    },
+    {
+      "id": "B5",
+      "title": "Editor frame: tabless editor, full-width bar, Resume/Cover letter switch, dock beside the page, stage, banners, phone frame",
+      "goal": "Replace the tab strip with the canvas frame: full-width bar (back, name, save chip, switch, ATS chip, Download, Share, sync, avatar), content-only sidebar, stage toolbar (Design button, view modes, zoom), one dock for Design or ATS, banners and stage states, and the phone equivalents, with every live behaviour intact.",
+      "whyHere": "The README requires bar, switch, URL contract and dock to land as ONE batch (two shells otherwise). Contents of the panels stay as they are (full panels inside thin wrappers) so B6-B9 can restyle them one at a time on a working frame.",
+      "dependsOn": ["B1", "B2"],
+      "boards": ["Editor", "EditorLetter", "EditorAts (frame only)", "MobileEdit", "MobilePreview", "States (banners)"],
+      "parityOwned": [
+        "editor-content: EDIT-001..EDIT-039, EDIT-128..EDIT-134, EDIT-138..EDIT-143, EDIT-145, EDIT-150..EDIT-152, EDIT-158..EDIT-161, EDIT-171, NEW-001..NEW-002, NEW-008..NEW-011, NEW-014, NEW-018, NEW-020..NEW-021",
+        "editor-design-templates: EDIT-003, EDIT-006..EDIT-011, EDIT-089, EDIT-093, NEW-011",
+        "editor-letter-ats-export: NEW-09, NEW-29",
+        "shell-docs: SHEL-110",
+        "mobile: MOBI-040..MOBI-048, MOBI-054..MOBI-055, MOBI-069..MOBI-080, MOBI-161, MOBI-178..MOBI-182, D-03..D-04, D-07, D-13, D-23"
+      ],
+      "parked": ["score number on the ATS chip and 1 page count (EDIT NEW-001/002, ELAE NEW-09; display-only, owner may accept)", "pinch to zoom and N pages caption on phone preview (D-07)", "zoom values 76/86/90 and 90 percent default (NEW-008; live 25 percent steps wins)", "storage-full new wording and Open Documents link (NEW-009)", "Paper layout options (NEW-014, drawing aid)"],
+      "clusters": [
+        {
+          "name": "frame",
+          "filesOwned": ["src/pages/Editor.jsx", "src/components/EditorHeader.jsx", "src/hooks/useEditorTab.js", "src/components/EditorTabContent.jsx", "src/hooks/usePanelResize.js", "src/index.css (this batch's single editor)"],
+          "work": "Root becomes bar over a row (sidebar | resize handle | stage | dock). EditorHeader (still exported by name, memo, props only, callbacks not Links): back, rename in place, save chip with all four states, ATS chip (label, no number), Download (existing ExportDropdown unchanged inside), Share (live visibility rule: signed-in, cloud, not a letter), sync dot with all seven states, avatar and signed-out Sign in. EditorModeBar keeps its export and becomes the Resume | Cover letter switch (phone: under the header). EditorAlerts: import notice, export/import error, storage-full/blocked live texts. useEditorTab: ?tab=resume|coverletter plus ?dock=design|ats; old ?tab=design and ?tab=ats accepted and rewritten; unknown values dropped; navigation state (import notice) kept. Opening Design or ATS from the letter view follows the live rule (they belong to the resume). Collapse/Personal-info open state kept in Editor across switches. Phone: header (back, tap-to-rename, save text, account, Download, ATS 44 px), switch under it, pill Edit | Preview | Design, picking any dock lands on Edit with that panel."
+        },
+        {
+          "name": "stage-and-dock",
+          "filesOwned": ["src/components/EditorPreviewPane.jsx", "src/components/LayoutToggle.jsx", "src/components/FontFallbackNotice.jsx", "src/components/PdfPreview.jsx (state markup only)"],
+          "newFiles": ["src/components/EditorDock.jsx", "src/components/DesignDock.jsx", "src/components/AtsDock.jsx"],
+          "work": "Stage toolbar: Design button (pressed when open), three view modes (Editor only / Split view / Preview only, hidden preview never unmounted, builds nothing), zoom -/+ 50-150 percent in 25 steps remembered, paper label; footer with Terms/Privacy; placeholders: Rendering preview, Updating preview chip (clear of the pill), Preview failed with Retry, font fallback notice (both wordings); preview repaints from the real stage width. EditorDock is a shrink-0 sibling after the stage (360 px) holding ONE dock; DesignDock and AtsDock are thin wrappers around the unchanged DesignPanel and AtsCheckerPanel (all groups), mounted only while open, own scroll box reset on change, never an animated width (ResizeObserver repaints); below 1100 px the dock overlays the stage with a close X instead of resizing it; phone: full-width sheet. The 4 px resize handle keeps its title, range 240-640, key and Home/End."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/173-editor-header-render-count.test.mjs", "tests/pdf/32-editor-tab-scroll.test.mjs", "tests/pdf/103-r4-dvis-12-editor-tabs-truncate.test.mjs", "tests/pdf/103-r4-dph-31-pill-clears-tab-bottom.test.mjs", "tests/pdf/103-r4-dph-40-updating-chip-above-pill.test.mjs", "tests/pdf/78-letter-export-menu.test.mjs", "cypress/support/commands.js (helper bodies)", "tests/playwright/pw-helpers.js (helper bodies)", "cypress/e2e/02-editor.cy.js, 04-design.cy.js, 04-design-left-bar.cy.js, 05-cover-letter.cy.js, 07-regressions-store.cy.js, 13-regressions-fonts.cy.js, 14-contacts.cy.js, 22-regressions-letters.cy.js, 23-editor-panels.cy.js, 25-date-format.cy.js, 26-mobile-layout.cy.js, 27-ats-checker.cy.js, 30-starters-and-design.cy.js", "tests/playwright/picker.spec.mjs, parity-ui-controls.spec.mjs, pdf-templates.spec.mjs, pdf-typography-spacing.spec.mjs"],
+          "work": "Starts after frame and stage-and-dock agree the testids (editor-bar, editor-switch-resume, editor-switch-letter, ats-chip, design-button, dock-design, dock-ats, editor-sidebar, stage-toolbar). Rewrites the tab tests to the same user-visible guards on the switch and dock (truncation, scroll reset per switch and per dock change, pill clears the bottom, chip above pill); 173 keeps its intent: the bar, switch, ATS chip, account and Download render ZERO times per keystroke, no router hook or Link under any memo part, stable handlers call the latest closure; only helper bodies change in Cypress/Playwright, with per-spec edits where a spec clicked a tab by text."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/182-ui-b5-editor-bar.test.mjs (every bar function present once; callbacks only; Share visibility rule; ATS chip opens the dock; save chip four states; render counts)",
+        "tests/pdf/182-ui-b5-editor-url.test.mjs (?tab and ?dock mapping, legacy ?tab=design/ats rewritten, unknown dropped, import notice state survives a switch, Dashboard letter links land on the letter)",
+        "tests/pdf/182-ui-b5-editor-dock.test.mjs (one dock at a time; panel unmounted when closed; 1-Page Fit stops on close; Undo toast dismissed on close; scroll reset; below 1100 overlay)",
+        "tests/pdf/182-ui-b5-stage-states.test.mjs (view modes incl hidden stage builds nothing, zoom steps, placeholder, chip, retry, font notice, footer links, banners with live texts)",
+        "tests/pdf/182-ui-b5-phone-frame.test.mjs (pill, tap-to-rename, account control, tab pick returns to Edit, export reachable)",
+        "tests/playwright/ui-b5-editor-frame.spec.mjs (dock opens beside the page: preview width shrinks and repaints, no rebuild; boundingBox checks at 1440, 1280, 1100, 1024, 768, 390)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/173-editor-header-render-count (REWRITE, same intent), 32-editor-tab-scroll, 103-r4-dvis-12-editor-tabs-truncate, 103-r4-dph-31-pill-clears-tab-bottom, 103-r4-dph-40-updating-chip-above-pill, 78-letter-export-menu (reads EditorHeader.jsx text), 89-editor-tab-link, 99-cover-letters, 81-job-resume-pickers, 105-r5-hunt2, 89-save-status, 29-page-size-preview-caption, 103-r4-dvis-31-editor-account-name",
+        "tests/pdf/71-preview-hidden-builds and 71-preview-typing-debounce and 165 must stay green unchanged (the contract proof)",
+        "Cypress 02, 04-design, 04-design-left-bar, 05, 07, 13, 14, 22, 23 (the survives-a-trip case is REWRITTEN: Personal Info stays closed across switches), 25, 26, 27, 30; Playwright picker, parity-ui-controls (opener only), pdf-templates, pdf-typography-spacing, pdf-cover-letter (deep link stays)"
+      ],
+      "startupBudgetPlan": "Lazy-only: Editor chunk. EditorHeader imports AuthBar (already start-up) and ExportDropdown (lazy); no new module is imported by both Dashboard and the editor. Nothing under src/components/ui start-up files is touched. Read 71 once in the targeted dispatch (unchanged expected).",
+      "bugHuntFocus": [
+        "perf/render counts: 165 and 173 numbers; dock open/close causes ONE repaint of visible pages and no PDF rebuild; no width transition",
+        "functions that stopped working: rename, Share, Download busy states, layout modes, panel width drag with keyboard, zoom memory, deep links (?tab=coverletter 33 references), letter-linked jobs, Back keeps Documents scroll",
+        "persistence: panel width key, zoom, open states across switches, autosave and cross-tab merge",
+        "narrow widths: 390, 768, 1024, 1100, 1280; pill, Updating chip and dock not colliding; no horizontal page scroll",
+        "error and empty states: preview failed/Retry, storage full, import notice, crash and loading, missing resume id",
+        "keyboard: Escape closes an overlay dock; Home/End on the handle",
+        "tests that pass for the wrong reason: helpers that open the dock but assert nothing about the panel"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 118 rows; CHANGED EDIT-005/019/025/026/141/150/171 each with a negative twin; the Share-on-letter rule pinned",
+        "every old entry reachable: a test opens each of Design, ATS, Cover letter, Export, Import, Share, layout modes from the new frame (Cypress helpers) on desktop and phone",
+        "all 33 ?tab=coverletter users green without edits other than helpers",
+        "tests/perf not required unless 165/173 numbers moved; if they moved dispatch perf: node once"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "the biggest structural change and the highest test churn (about 25 files); split point: land frame + URL + bar with the dock as a plain right column first, then stage states, as B5b in the next window",
+        "PERF-4: one router hook or Link inside a memo part re-renders it per key; 173 is the fail-first proof",
+        "dock narrows the preview: below 1100 px overlay rule must be tested in a browser, not only in the node fake DOM"
+      ],
+      "ownerCalls": ["ATS chip: label only (default) versus a live score number (needs the analysis in the bar: perf risk)", "Design/ATS opened from the letter view: live rule (default, they act on the resume) versus a letter-specific Design", "Share on the letter view: live (shares the resume; default) versus hide it"]
+    },
+    {
+      "id": "B6",
+      "title": "Editor content: sections, entries, rich text, Personal info, Section style popover",
+      "goal": "Restyle the content sidebar to the canvas cards and popover while every live control stays: collapse/expand all, section rename/hide/duplicate/delete/reset, entry grip/eye/duplicate/delete, all 11 entry forms, rich text toolbar, Personal info with Header look and photo, Section style with every option.",
+      "whyHere": "The frame (B5) exists; the content sidebar is the next-most-used surface and the most test-pinned (112 files through resume-tab.mjs, hooks from B1).",
+      "dependsOn": ["B1", "B5"],
+      "boards": ["Editor (sidebar)", "EditorSection", "EditorPersonal", "MobileEdit"],
+      "parityOwned": [
+        "editor-content: EDIT-040..EDIT-127, EDIT-135..EDIT-137, EDIT-144, EDIT-146..EDIT-149, EDIT-154..EDIT-157, EDIT-162..EDIT-164, EDIT-166..EDIT-170, NEW-003..NEW-007, NEW-013, NEW-015..NEW-017",
+        "mobile: MOBI-057..MOBI-067, MOBI-168, MOBI-170..MOBI-175, D-12, D-21..D-22",
+        "editor-content: CATCH-ALL every other row of editor-content.md, including any row added by review, belongs to B6"
+      ],
+      "parked": ["Add link (extra custom links; NEW-004)", "entry count beside a section title and one-line card summaries (NEW-003/016, D-12/D-21; display-only, owner may accept)", "wording renames Role/From/To/Highlights/Roomy/Columns/Dots/Entry title (NEW-013/017: live labels stay, they are test and walker contracts)", "Improve button on Summary: NOT new, kept as the STAR Optimizer toolbar button (NEW-005)"],
+      "clusters": [
+        {
+          "name": "sections-and-entries",
+          "filesOwned": ["src/components/SectionEditor.jsx", "src/components/SectionEditorEntryItems.jsx", "src/components/SectionEditorLeafItems.jsx", "src/components/SectionEditorShared.jsx", "src/components/EditorResumeTab.jsx", "src/components/RichTextEditor.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Section card: grip, click-to-edit title, eye with a visible hidden state, Section style button, more menu (Duplicate, Delete with the confirm, Reset style with Undo), collapse chevron; a quiet Collapse all / Expand all; entry rows with grip, eye, duplicate, delete (always visible on touch, untouched-entry skips confirm), add entry opens itself; Add section grid with all 11 types in Core/More groups; all 11 entry forms (Experience Location, Month+Year selects with text fallback, Currently working here, per-field hide eyes, skill levels, languages, custom) in the card style; rich text toolbar that appears with the focused field (Bold, Italic, Underline, lists, link with its validation, alignment, STAR Optimizer button) with focus and paste/cap rules unchanged; native prompt/alert/confirm kept. Keep EditorResumeTab props and the hooks (testids from B1); no new component under the section tree takes the whole resume or a fresh object/array/function prop (165)."
+        },
+        {
+          "name": "personal-info",
+          "filesOwned": ["src/components/PersonalInfoEditor.jsx", "src/components/PersonalInfoEditorHeader.jsx", "src/components/PersonalInfoEditorPhoto.jsx", "src/components/HeaderIconPickerModal.jsx", "src/components/HeaderSpacingControls.jsx"],
+          "work": "Optional view prop (default 'all') so mounting without it shows everything (walker). Card: round photo upload with status chip and print warnings, Remove with Undo, eye; fields with eyes; link label and URL second line; Header look disclosure with alignment, contacts, photo shape and a More header options group holding EVERY live header control (photo size/border/height/text position/position/tone, name+title layout, bottom border, contact layout/style, icon set/size, spacing, per-field icon controls, the icon library modal with all its behaviours); template-dependent notes kept; Summary is the rich text editor. No control text, title, aria-label or data-* row key renamed."
+        },
+        {
+          "name": "section-style",
+          "filesOwned": ["src/components/SectionEditorCustomizer.jsx"],
+          "newFiles": ["src/components/SectionStylePopover.jsx"],
+          "work": "SectionCustomizer stays a self-contained named export (walker mounts it); the new popover wraps it (kit Popover, Done button, phone bottom sheet) and shows every option: Alignment, Spacing/Rows, Grids 1-4 for Skills, Title layout incl Side by side, Order (Experience), Skills style and separator, Languages level, Show dates/location, Group roles, Spacing override, the template-condition notes and hiding rules."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/parity/registry-header.mjs", "tests/pdf/parity/registry-sections.mjs (only if a label changed; default untouched)", "cypress/e2e/16-headers.cy.js", "cypress/e2e/17-section-options.cy.js", "cypress/e2e/24-image-uploads.cy.js", "cypress/e2e/28-writing-helpers.cy.js", "tests/pdf/103-r4-dph-26-rename-box-touch-text.test.mjs", "tests/pdf/103-r4-dph-28-section-fields-touch-text.test.mjs", "tests/pdf/103-r4-dph-29-personal-info.test.mjs", "tests/pdf/103-r4-dph-29-section-options.test.mjs"],
+          "work": "Updates the class-pin tests to restate the same defect on the new markup and the opener of Section options (now a popover); adds the new tests below."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/183-ui-b6-section-card.test.mjs (collapse/expand all, rename, hide with state, duplicate, delete with confirm, reset style Undo, keyboard reorder, dropped-off-list unchanged)",
+        "tests/pdf/183-ui-b6-entry-actions.test.mjs (grip, eye, duplicate, delete, untouched skips confirm, always visible without hover)",
+        "tests/pdf/183-ui-b6-entry-forms.test.mjs (all 11 section types: every live field, per-field eye, month/year selects, current flag, location, skill levels)",
+        "tests/pdf/183-ui-b6-personal-info.test.mjs (view prop default shows all; union of controls in the disclosures equals the walk count from tests/pdf/parity/walk-cache.mjs; icon library modal)",
+        "tests/pdf/183-ui-b6-section-style-popover.test.mjs (union of popover controls equals SectionCustomizer; Done, Escape, outside click; phone sheet)",
+        "tests/pdf/183-ui-b6-rich-toolbar.test.mjs (every toolbar control, link validation, focus not taken, caps)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/165-perf4-editor-render-count (must stay green: no other section or job renders per keystroke), tests/pdf/resume-tab.mjs consumers (112 files; change only the helper)",
+        "tests/pdf/103-r4-dph-26/28/29, 104-r5-panels-*, 31-contact-fields, 27-header-spacing, 16-saved-data-photos, 80-upload-budget-sections, tests/unit/touch-reveal.unit.mjs, cursor-pointer.unit.mjs (new clickable divs need cursor-pointer or a role)",
+        "tests/pdf/parity/* (18 walker tests) untouched and green; Cypress 02, 16, 17, 21 (watch), 23, 24, 28; Playwright parity-ui-controls (Header Customization, Photo, Section options, Customize layout texts), bullet-optimizer"
+      ],
+      "startupBudgetPlan": "Lazy-only (Editor chunk). RichTextEditor is also used by the Job notes (lazy). No new module shared with the Dashboard. 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "perf/render counts: 165 (bullet, summary and email keystrokes render only their own part; PersonalInfoEditor memo; dnd sensor options stay module constants)",
+        "functions that stopped working: every section type's fields, reorder by keyboard and touch, Add section, hide/show, photo upload limits and the three messages, icon library, STAR button, link rules",
+        "persistence: open states kept across switches, same-value edits are not edits, oversize photos shrunk",
+        "narrow widths: 390 px entry forms (16 px fields), popover as sheet, sidebar 240 px minimum",
+        "keyboard: drag keyboard sensor, Enter/Escape in rename, IME guards",
+        "tests that pass for the wrong reason: walker passes because a control is hidden by default (view prop default must be all)"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 138 rows; walker matrix unchanged (00-registry, 01-offered, 40-structure green); union-count tests pin nothing dropped",
+        "CHANGED rows EDIT-042/044/062/065/104/118/144 and MOBI-065/172/173 each have a negative-twin test; phone card header offers grip/eye/more (EDIT-144)"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "largest row count; split point: sections-and-entries plus rich text first (gate), personal-info and the popover as B6b in the next window",
+        "label changes break walker signatures and 112 tests: none are allowed without a registry update in the same commit",
+        "10 of 11 entry forms have no board: use the Experience card as the pattern and review against the live fields, not a picture"
+      ],
+      "ownerCalls": ["Label renames from the canvas (default: keep live labels)", "Display-only additions: entry count and one-line summaries (default: parked)"]
+    },
+    {
+      "id": "B7",
+      "title": "Design drawer and templates: DesignDock, template gallery, phone Design sheet",
+      "goal": "Give the Design panel its canvas drawer (rail Template, Color, Type, Spacing, Headings, More) with every one of its controls, the template gallery with all looks and apply-on-click Undo, and the phone Design sheet with all ten sections reachable.",
+      "whyHere": "The dock exists (B5) with the full panel inside; this batch regroups it behind the optional groups prop and restyles the gallery. It owns DesignPanel*.jsx and the parity registries alone.",
+      "dependsOn": ["B5"],
+      "boards": ["Editor (drawer open)", "EditorTemplates", "EditorPersonal (drawer open)", "MobileDesign"],
+      "parityOwned": [
+        "editor-content: EDIT-153",
+        "editor-design-templates: EDIT-001..EDIT-002, EDIT-004..EDIT-005, EDIT-012..EDIT-088, EDIT-090..EDIT-092, EDIT-094..EDIT-103, NEW-001..NEW-010, NEW-012..NEW-013",
+        "mobile: MOBI-081..MOBI-087, MOBI-160, MOBI-185..MOBI-188, D-08..D-11",
+        "editor-design-templates: CATCH-ALL every other row of editor-design-templates.md, including any row added by review, belongs to B7"
+      ],
+      "parked": ["per-element accent toggles and Use accent on headings (NEW-001/002, MOBI-085, D-10)", "new accent palette defaults (#2B59FF set) and text-colour chip set (NEW-003/004: keep the live eight presets, four text presets and custom pickers)", "Cancel / Use template two-step (NEW-005; live apply-on-click with Undo and Done)", "Showing 8 of 28 sentence, category word on cards (NEW-006/007)", "live preview above the phone Design sheet (D-08)"],
+      "clusters": [
+        {
+          "name": "drawer",
+          "filesOwned": ["src/components/DesignPanel.jsx", "src/components/DesignPanelColors.jsx", "src/components/DesignPanelDates.jsx", "src/components/DesignPanelHeadings.jsx", "src/components/DesignPanelLayout.jsx", "src/components/DesignPanelLinks.jsx", "src/components/DesignPanelLists.jsx", "src/components/DesignPanelPageNumbers.jsx", "src/components/DesignPanelShared.jsx", "src/components/DesignPanelTemplate.jsx", "src/components/DesignPanelTypography.jsx", "src/components/DesignDock.jsx", "tests/pdf/parity/registry.mjs, registry-design.mjs, matrix.mjs, panels.mjs (only when a label changes; default untouched)", "src/index.css (this batch's single editor)"],
+          "work": "Optional groups prop on DesignPanel (default undefined = all; show('colors') &&), ONE instance across group changes (Undo toasts and a running 1-Page Fit must survive a pane change; they stop only on unmount). DesignDock: rail 64 px + pane 356 px, groups: Template (current look, list or Browse with the same count, sidebar layout and column controls, template notes), Color (accent presets and custom with hex readout, text colours, name/title colours with resets, header text, sidebar background, border colours), Type (13 fonts, custom fonts and Add a Google Font with guards and the offline check, name/heading fonts, size presets, seven scale rows, notes), Spacing (1-Page Fit flow, Balanced/Spacious, line height, page size, margins, gaps), Headings (case, icons, border, style cards), More (contact icon pack and size, dates, lists, links, page numbers), per-group reset arrows with Undo, Reset design with the two-step confirm and what it keeps, saved designs; opens at its top; never rename a control text, title, aria-label, data-* row key or the emoji in the spacing preset labels (walker signature). Narrow-panel layout rules kept."
+        },
+        {
+          "name": "gallery",
+          "filesOwned": ["src/components/TemplateGallery.jsx", "src/components/TemplateThumb.jsx", "src/hooks/usePickCard.js"],
+          "work": "Gallery frame, category and filter chips as live, ALL looks selectable (19 templates + Sidebar single-column + 8 designs + saved designs; scroll, filter, group), current-look marker, apply on click with the Undo notice (8 s) and a single Done, empty-filter message, My designs: Save my design with the name field and clash messages, delete with the two-step confirm, empty text; title count includes saved designs; stays mounted with the picture cache; the cover-letter letterhead thumbnail and the one-line description and ATS badge on every safe look; phone gallery sheet, two cards per row, Done always in view."
+        },
+        {
+          "name": "phone-design",
+          "filesOwned": ["src/components/DesignPanelPhone.jsx"],
+          "newFiles": ["src/components/DesignPanelPhone.jsx"],
+          "work": "Phone Design sheet as a chip rail Template, Color, Type, Spacing, Headings, More (so all ten sections are reachable), 16 px fields, per-section Reset with Undo, Save my design / My designs / Reset all with the inline confirm, the Word caveat and 1-Page Fit sentence shown as visible text on touch (no hover), room under the sheet for the pill. Uses the same DesignPanel groups prop, no second copy of any control."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/184-ui-b7-design-dock.test.mjs (union of controls across the six groups equals the all-groups walk count; one DesignPanel instance across group changes; toasts and 1-Page Fit survive a pane change and stop on close)",
+        "tests/pdf/184-ui-b7-gallery.test.mjs (all looks incl saved designs selectable; filters; apply-on-click with Undo and Done; count title; save/delete/name clash)",
+        "tests/pdf/184-ui-b7-phone-design.test.mjs (rail includes More, every section reachable, Reset with confirm, hover-only hints visible)",
+        "tests/pdf/184-ui-b7-design-reachability.test.mjs (opener found by role+name; each design control found inside dock-design by testid)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/parity/* (18 files via walk-cache): must stay green with no prop passed",
+        "63 DesignPanel users stay; class pins: tests/pdf/93-picker-cards (reads source), 83-templates-ui-leftovers, 103-r4-dph-33-design-fields-touch-text, 93-name-heading-font, 27-header-spacing, tests/unit/page-margins.unit.mjs, spacing-numbers.unit.mjs, picker-ui.unit.mjs, r4dsn-gallery-count.unit.mjs, r4dsn-gallery-category.unit.mjs",
+        "Cypress 04-design, 04-design-left-bar, 07 (one case), 13, 25, 30; Playwright picker (role names), pdf-templates, pdf-typography-spacing, pdf-colors, parity-ui-controls"
+      ],
+      "startupBudgetPlan": "Lazy-only (Editor chunk). TemplateThumb and pickerCards are shared with New (B4, lazy page) so they stay in lazy chunks; nothing imported by Dashboard. 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "functions that stopped working: 1-Page Fit single flight and disabled state, Undo ids, add Google Font guards and offline check, number typed-box rules, resets and what Reset keeps, saved designs surviving deleting a resume",
+        "perf/render counts: dock open with a keystroke in the content (DesignPanel re-renders only while open, as today); no width transition",
+        "persistence: panel open state, template section memory, custom fonts key, cross-tab merge of settings",
+        "narrow widths: 390 px sheet, 240 px dock minimum, gallery 2-up",
+        "error and empty states: empty filter, name clash, offline font check",
+        "tests that pass for the wrong reason: union count taken from the new groups instead of the pinned old walk"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 123 rows incl CHANGED EDIT-017/025/028/030/044/046/048 (editor-design-templates) and MOBI-083 each with a negative twin",
+        "walker matrix and 00-registry/01-offered green without edits (or registry edits justified in the report)",
+        "render check at 1440 and 390 for the drawer, gallery and phone sheet"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "emoji in spacing preset labels conflicts with the canvas rule: keep (walker signature) and flag",
+        "the panes Template, Type, Spacing, Headings, More are undrawn: design them from the Color pane and tokens; split point: drawer first (gate), gallery and phone sheet as B7b",
+        "regrouping must not unmount DesignPanel"
+      ],
+      "ownerCalls": ["None blocking; PARK list confirmed in the brief"]
+    },
+    {
+      "id": "B8",
+      "title": "Cover letter, Draft from resume, Improve (Bullet Optimizer)",
+      "goal": "Restyle the cover-letter panel (letterhead block with every control, recipient, body, closing and signature), the Draft dialog with the live archetypes, and the Improve dialog with every live tool; no new capability.",
+      "whyHere": "The switch and preview already show the letter (B5); the rich text toolbar and entry points exist (B6); these three surfaces share the letter and optimizer files and the same tests.",
+      "dependsOn": ["B5", "B6"],
+      "boards": ["EditorLetter", "EditorDraft", "EditorImprove", "MobileEdit (letter view)"],
+      "parityOwned": [
+        "editor-content: EDIT-165",
+        "editor-letter-ats-export: ELAE-001..ELAE-033, ELAE-036..ELAE-047, ELAE-076..ELAE-089, ELAE-134..ELAE-137, ELAE-139..ELAE-140, ELAE-144..ELAE-145, NEW-01..NEW-08, NEW-13..NEW-18",
+        "mobile: MOBI-068, MOBI-183"
+      ],
+      "parked": ["Draft: pasted job posting, Or use an application chips, Tone cards, Length (NEW-01..05)", "word counter and plain text hint (NEW-06), 1 page caption (NEW-07)", "Improve: Shorter suggestion, Add a number with invented figures, best-verb row, word count in the strength line, Undo toast after Apply (NEW-13..17); the Improve button on Summary is the existing STAR button (NEW-18: same function, kept)"],
+      "clusters": [
+        {
+          "name": "letter-panel",
+          "filesOwned": ["src/components/CoverLetterPanel.jsx", "src/components/CoverLetterPanelShared.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Optional groups prop (default all). Letterhead block (collapsible, opens with every control): photo target with status line (every wording), Remove own, eye, photo text position, Fields Position (3 layouts) with the side gap, contact style Icon/Bullet/Bar, contact layout, six visible-contact eyes, the template note; Who it is for: Date with Today, recipient name/title/company, subject; body = rich text (toolbar, STAR button; not the drawn plain box); closing phrase, signature space Tight/Wide, signature name and designation; fallbacks kept; 16 px fields on touch; letter data keys unchanged."
+        },
+        {
+          "name": "draft-dialog",
+          "filesOwned": ["src/components/CoverLetterGeneratorModal.jsx"],
+          "work": "Same dialog restyled: target company/role, recipient, the THREE live archetype cards (Impact and Metrics-Driven, Strategic and Leadership, Adaptability and Growth), no-details warning, live preview, Apply with the replace note and the Undo notice (letter-generated), Cancel, Escape and outside-click rules, phone full-screen. NO tone, length, posting or application controls."
+        },
+        {
+          "name": "improve-dialog",
+          "filesOwned": ["src/components/BulletOptimizerModal.jsx"],
+          "work": "Improve surface (dialog or drawer with room for 60 verbs): opens on the sentence at the caret/selection, editable statement box, Quality N/100 with the verb and metric indicators, weak-phrase indicator with Auto-Fix, tip lines, verb-blocked tip, power verb chips by category (60), six metric placeholder chips, seven Google X-Y-Z templates with Restore, Copy, Apply to Resume through the editor's own undo stack, Cancel/Escape/backdrop keep edits; defaults and scroll limits kept. utils/bulletOptimizer.js untouched."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/parity/letter-panels.mjs", "tests/pdf/185-ui-b8-letter-walker.test.mjs", "cypress/e2e/05-cover-letter.cy.js", "cypress/e2e/14-contacts.cy.js", "cypress/e2e/22-regressions-letters.cy.js", "cypress/e2e/28-writing-helpers.cy.js", "tests/playwright/bullet-optimizer.spec.mjs", "tests/playwright/pdf-cover-letter.spec.mjs"],
+          "newFiles": ["tests/pdf/parity/letter-panels.mjs", "tests/pdf/185-ui-b8-letter-walker.test.mjs"],
+          "work": "A parity walker over CoverLetterPanel, the generator and the optimizer (the audit found none walks the letter today): every control found by the walker is asserted to write the same key as before."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/185-ui-b8-letter-panel.test.mjs (letterhead controls, photo status wordings, date+Today, signature space/designation, rich body, groups default all)",
+        "tests/pdf/185-ui-b8-draft-dialog.test.mjs (three archetype cards, warning, apply+Undo, cancel; negative twin: no tone/length/posting/application controls exist)",
+        "tests/pdf/185-ui-b8-improve.test.mjs (60 verbs, 6 metrics, 7 templates+Restore, Auto-Fix, Copy, Apply through undo; negative twin: no invented figures, no Shorter)",
+        "tests/pdf/185-ui-b8-letter-walker.test.mjs (see cluster tests)"
+      ],
+      "testsToUpdate": [
+        "CoverLetterPanel users: tests/pdf/31-contact-fields, 102-r4-dux-04-letter-apply-undo, 83-letter-signature-photo, 12-cover-letter, 44-cover-letter-generator-shapes, 21-cover-letter-looks-panel, 22-cover-letter-loo*, r4cl-generator-letter-fields, 103-r4-dph-34-letter-fields-touch-text, r5hunt2-letter-undo-other-resume, 105-r5-hunt2-late-upload, 16-saved-data-photos",
+        "generator: 61-cover-letter-generator-recipient, 43-cover-letter-generator-escape, 104-r5-dlg-generator-dialog, 102-r4-dux-13-generator-no-details, 96-modal-outside-click, 104-r5-dlg-dph-36-generator-share-touch-text",
+        "optimizer: r4cl-optimizer-chips, 102-r4-dux-09-optimizer-backdrop-keeps-edits, 103-r4-dvis-23-optimizer-not-faded, 104-r5-opt-01-escape-keeps-edits, 104-r5-opt-dux-22-restore-through-edits, 102-r4-dux-22-template-undo, r5hunt11-verb-chip-worked-with, r5hunt13-verb-chip-adverb-in-weak-phrase, 104-r5-opt-sw-wt-04-verb-chip-negative, tests/unit/touch-reveal.unit.mjs",
+        "known flake: tests/pdf/102-r4-dout-09-letter-title-weight on suite shard 2/6: rerun the failed shard once, never weaken"
+      ],
+      "startupBudgetPlan": "Lazy-only (Editor chunk). Nothing imported by Dashboard; NewLetterModal (B1 lazy) untouched.",
+      "bugHuntFocus": [
+        "functions that stopped working: letter photo/position/contact controls reach the PDF, Auto-Generate Undo, optimizer Apply writes back into the right field, export follows the open document (Letter PDF/Word/text)",
+        "persistence: letter data keys, letter-linked jobs open on the letter, ?tab=coverletter",
+        "narrow widths: 390 px Draft and Improve full screen, 16 px fields",
+        "keyboard: Escape in generator/optimizer keeps edits; IME guards",
+        "error and empty states: no-details warning, photo budget messages",
+        "tests that pass for the wrong reason: archetype test passing with the three cards but wrong text"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 84 rows; CHANGED ELAE-020/076/079/080/084/086/137 each with a negative twin",
+        "letter walker added and green; no tone/length/posting control in the DOM (negative twin)"
+      ],
+      "estimatedHours": 2.5,
+      "risks": [
+        "the letter photo and letterhead controls are undrawn: design from the Personal info photo pattern (B6)",
+        "optimizer shares RichTextEditor with Job notes (B11 consumer): keep its props stable"
+      ],
+      "ownerCalls": ["Confirm the PARK list for Draft and Improve (default: parked; live archetypes and chips are built)"]
+    },
+    {
+      "id": "B9",
+      "title": "ATS drawer, Download/Export/Import menu, Share dialog",
+      "goal": "Fill the ATS dock with the full checker, rebuild the Download split-button menu with every format and entry, and the Share dialog with all its states, plus the phone ATS and export sheets.",
+      "whyHere": "Frame and dock exist (B5); this batch closes the editor's remaining three surfaces which share useEditorExports and the export tests.",
+      "dependsOn": ["B5"],
+      "boards": ["EditorAts", "EditorDownload", "EditorShare", "ImportModal (editor entry)", "MobileEdit", "MobilePreview"],
+      "parityOwned": [
+        "editor-letter-ats-export: ELAE-048..ELAE-075, ELAE-090..ELAE-124, ELAE-130, ELAE-138, ELAE-141..ELAE-143, ELAE-146, NEW-10..NEW-12, NEW-19..NEW-25, NEW-32..NEW-33",
+        "mobile: MOBI-049..MOBI-053, MOBI-056, MOBI-176..MOBI-177, D-05..D-06",
+        "editor-letter-ats-export: CATCH-ALL every other row of editor-letter-ats-export.md, including any row added by review, belongs to B9"
+      ],
+      "parked": ["score prediction sentence, Show me jumps, rewritten check wordings beyond live meaning (NEW-10/11/12)", "ATS-safe chip claim and item descriptions (NEW-19/20; wording only if the owner likes)", "auto-update claim for the public link (NEW-24: updating stays manual)", "Done button on Share is allowed (same function as X)"],
+      "clusters": [
+        {
+          "name": "ats-drawer",
+          "filesOwned": ["src/components/AtsCheckerPanel.jsx", "src/components/AtsParserView.jsx", "src/components/AtsDock.jsx"],
+          "work": "Dock content: score dial with grade and the four live colour bands (>=90 green, >=75 blue, >=60 amber, else red), progress bar, counts Passed / Suggestions / Critical, the six category breakdowns (headings, points, collapse), every check item with its inline fix (Put Job Title First, Standardize All Section Headings with Undo ids ats-fix-*, three layout fixes), What a parser reads disclosure (toggle, Copy, error with Retry, per-job field chips, side-by-side warning, help text), Match a job box (kept per resume in session storage, 200,000-character cap notice, no-keywords notice, Match %, missing keywords with +, matched), ATS plain-text card (Copy Text, Download .txt); the panel stays keyed by resume id and mounted only while open; phone sheet with the full panel (ATS chip 44 px)."
+        },
+        {
+          "name": "download-menu",
+          "filesOwned": ["src/components/ExportDropdown.jsx", "src/hooks/useEditorExports.js"],
+          "work": "Download split button: primary Download PDF with chevron menu: PDF, Word, ATS text, Markdown, JSON Resume, Backup JSON, letter-tab variants (Letter PDF, Word, Cover Letter Text .txt with the live wording), Import a file (JSON, PDF, Word, text) with the hint line, Import as my original (demo accounts only), Share a public link (live visibility), Copy plain text as a second entry to the ATS text (same function as ATS Copy Text); busy and error states, menu behaviour, file names and font/engine warm-up unchanged; phone export sheet carrying every entry."
+        },
+        {
+          "name": "share-dialog",
+          "filesOwned": ["src/components/ShareLinkModal.jsx"],
+          "work": "All live states: loading, read error, not published (explanation, what would be public, Publish), published (switch semantics kept as Publish/Unpublish, link field, Copy with label, Open, time, what is public with the private-fields sentence), stale with the manual Update the public copy, unpublish two-step confirm, busy and error line; the result lands only on its own resume; dialog keeps X/Escape/outside click."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/parity/ats-export-panels.mjs", "cypress/e2e/03-export.cy.js", "cypress/e2e/27-ats-checker.cy.js", "cypress/e2e/29-exports-imports.cy.js", "tests/playwright/parity-preview-download.spec.mjs"],
+          "newFiles": ["tests/pdf/parity/ats-export-panels.mjs"],
+          "work": "Walker over AtsCheckerPanel, ExportDropdown and ShareLinkModal controls; spec updates for the opener and labels."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/186-ui-b9-ats-drawer.test.mjs (bands, counts incl critical, six categories, every fix with Undo, parser disclosure states, Match a job cap notices, unmount keeps the posting in session state)",
+        "tests/pdf/186-ui-b9-download-menu.test.mjs (every format and letter variant, Import a file, demo Import as my original, Share visibility, busy/error, labels pinned by tests/pdf/ui-selectors.mjs)",
+        "tests/pdf/186-ui-b9-share-dialog.test.mjs (loading, read-error, not-published, published, stale+update, two-step unpublish, busy/error, other-resume result)",
+        "tests/pdf/186-ui-b9-phone-sheets.test.mjs (ATS sheet and export sheet reachable and complete)"
+      ],
+      "testsToUpdate": [
+        "AtsCheckerPanel users (17): tests/pdf/102-r4-dux-12-ats-fix-undo, 102-r4-dux-03-ats-classic-undo, 56-ats-layout-fix-buttons, 58-ats-standardize-headings, 77-ats-panel, 98-ats-parser-view, 98-ats-job-fields, 161-tf-ats-job-box-keystroke, 162-ats-posting-box-cap, r4cl-ats-jd-kept, 102-r4-dux-24-jd-no-keywords, r5hunt3-ats-fix-undo-other-resume, 103-r4-dvis-24-ats-rows-by-panel-width, 103-r4-dph-35-ats-job-box-touch-text, 16-saved-data-text-fields",
+        "export: tests/pdf/53-export-error-handling, 78-letter-export-menu, 102-r4-dux-17-import-new-resume-notice, 103-r4-dvis-22-export-menu-on-screen, 83-templates-ui-leftovers, 99-public-link",
+        "share: tests/pdf/104-r5-dlg-share-link-dialog, 102-r4-dux-10-unpublish-confirm, 100-r4-sync-05-copied-label, 100-r4-sync-04-too-large-message, 105-r5-hunt4-share-result-other-resume, 96-modal-outside-click",
+        "Cypress 03, 27, 29, 12-regressions-security; Playwright pdf-*, parity-preview-download"
+      ],
+      "startupBudgetPlan": "Lazy-only. ExportDropdown and useEditorExports stay editor-only (a hook imported by Dashboard would be hoisted: ImportDialog from B4 must not import them). 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "functions that stopped working: every export format produces its file, import from the editor opens the notice, share publish/update/unpublish, ATS fixes with Undo, score recomputed from the printed resume",
+        "perf/render counts: AtsCheckerPanel re-render per key only while open (as today); analyze memoised",
+        "persistence: posting kept per resume across unmount; share state per resume",
+        "narrow widths: 390 px sheets, menu on screen (103-r4-dvis-22)",
+        "error and empty states: parser view error/Retry, share read error, export errors",
+        "tests that pass for the wrong reason: format tests that only check a menu label, not the downloaded blob"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 91 rows; CHANGED ELAE-051/053/072/119/121 each with a negative twin",
+        "every Download entry of today pinned including Import as my original (PARITY-RULE names it)",
+        "new walker green; optional canvas sync note recorded"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "ATS drawer must stay mounted only while open and keyed by resume id",
+        "export labels are shared by 47 Cypress uses: keep exact entry labels",
+        "Share on letter view: live shares the resume (owner call in B5)"
+      ],
+      "ownerCalls": ["Wording of the public-link states (default: live wording, manual update)", "ATS category headings order (default live)"]
+    },
+    {
+      "id": "B10",
+      "title": "Applications 1: page, Board, List, notices, import/export, phone board",
+      "goal": "Rebuild the Applications page header, view switch, toolbar, Board and List with all eight statuses, every card and column field, the more menu, notices and the phone chips/List.",
+      "whyHere": "The workspace shell is done (B3); Applications is lazy-only and independent of the editor; the board and list come before the drawer and form because the drawer is opened from them.",
+      "dependsOn": ["B3"],
+      "boards": ["Jobs", "JobsList", "MobileJobs", "States (empty Applications)"],
+      "parityOwned": [
+        "shell-docs: SHEL-104",
+        "applications: APPL-001..APPL-009, APPL-012..APPL-055, APPL-123..APPL-132, APPL-141, APPL-143, N4..N5, N8, N12..N13, N15, N17",
+        "mobile: MOBI-090..MOBI-105, MOBI-107..MOBI-110, MOBI-190..MOBI-193, D-14, D-17..D-20"
+      ],
+      "parked": ["relative times on cards and Activity (N4: absolute dates stay)", "interview this week count (N5)", "footer sorted by latest activity and Open the board link (N8)", "per-column + add (N17)", "merged Interviewing/Closed chips (D-17: every status stays reachable)"],
+      "clusters": [
+        {
+          "name": "board-and-header",
+          "filesOwned": ["src/pages/JobTracker.jsx", "src/components/job/KanbanView.jsx", "src/components/job/StatusBadge.jsx", "src/components/job/jobTone.js", "src/components/tracker/Lozenge.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Header Applications with the plain count, view switch Board | List | Insights (pill variant, Summary stays reachable), Add job button (keeps opening the existing form route until B11 turns it into a modal), more menu holding Import JSON, Export JSON, Export CSV and Clear all jobs (danger, with its confirm and Undo); toolbar search, status quick filters with counts (second tap clears, none selected at start), result count and Clear, totals strip; search/status/sort memory (J-30); Board with ALL eight statuses as distinct columns (live default; sub-groups allowed only visually) with drop hint and filtered-empty state; card: company, role, posting link, location and salary line, contact, notes preview, absolute applied day, deadline DatePill (closed never late), tasks count and bar, hover/touch menu: Move to (all 8, current checked, Undo toast) and Delete (confirm and Undo); drag and keyboard move unchanged (module-constant sensors, memoised cards, day prop)."
+        },
+        {
+          "name": "list-and-notices",
+          "filesOwned": ["src/components/job/ListView.jsx", "src/components/job/Pipeline.jsx", "src/components/job/JobsNotSavedAlert.jsx", "src/components/job/ImportNotice.jsx"],
+          "work": "List table with Company+posting, Role, real Status chip, Location, Salary, Applied, Deadline (same red/amber rules), Contact, Tasks, Resume, row open and row menu with Delete; Sort menu offering all eight columns plus Latest activity, both directions and default, saved; list empty state; notices strip: not-saved (its own texts and the export advice), sync held, recovery notice, import result; cloud-sync indicator, c shortcut and Add a job tooltip come from B3. Phone: stage chips for every status incl Phone Screen/Interview separate and Closed, List as cards with sort or a scrolling table (Location, Salary, Contact stay), card actions sheet (Move to, Delete), Add job FAB, Insights icon, import/export in the more menu."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/81-job-tracker-session.test.mjs", "tests/pdf/81-job-tracker-page.test.mjs", "tests/pdf/81-job-tracker-ui.test.mjs", "cypress/e2e/06-job-tracker.cy.js", "cypress/e2e/20-regressions-job-shape.cy.js", "cypress/e2e/20-regressions-job-store.cy.js", "cypress/e2e/20-regressions-job-unsaved.cy.js"],
+          "work": "Updates the Job Tracker tests to the new markup keeping the guards; investigates the J-30 flake (search, status filter and list sort kept after opening a job and Back) by reading the failing shard log and fixing the cause or the test's wait with evidence, never skipping it."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/187-ui-b10-board.test.mjs (eight distinct columns, drop hint, filtered-empty with Clear, move menu with all 8 and Undo, delete confirm and Undo)",
+        "tests/pdf/187-ui-b10-card.test.mjs (every card field incl posting link, contact, location/salary, tasks bar, absolute applied day, deadline pill rules)",
+        "tests/pdf/187-ui-b10-list.test.mjs (columns incl Location/Salary/Contact, real status names, sort menu eight columns plus latest, both directions, saved, empty state)",
+        "tests/pdf/187-ui-b10-toolbar-menu.test.mjs (search/status memory J-30, result count, import JSON, export JSON/CSV, Clear all with Undo, notices)",
+        "tests/pdf/187-ui-b10-phone.test.mjs (chips for all statuses, List, card actions, Add job)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/81-job-tracker-session (J-30), 81-job-tracker-page, 81-job-tracker-ui, 102-r4-dux-18-board-empty, 102-r4-dux-02-clear-all-undo, 105-r5-hunt7-status-move-undo, 103-r4-dvis-04-kit-tabs, 103-r4-dph-02-summary-grid-columns, 95-sync-privacy-notices, 81-job-inputs-touch-text, 118-job-search-keystroke-work (must stay), tests/unit/job-csv.unit.mjs, 103-r4-dvis-09-job-labels (class pins restated)",
+        "Cypress 06-job-tracker (Add job header button, List view toggle titles), 20-regressions-job-*"
+      ],
+      "startupBudgetPlan": "Lazy-only (jobs pages are lazy chunks). utils used by the Dashboard (jobStats) are not edited. 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "perf/render counts: 3,000-job list does not redraw every card per keystroke (118, memoised cards, day prop); sensors module constants (172)",
+        "functions that stopped working: every status reachable by drag, keyboard and menu; import merge rules; clear all with Undo",
+        "persistence: search/status/sort session keys, list sort key, cloud sync indicator",
+        "narrow widths: 390 px chips and cards, table scroll",
+        "error and empty states: no jobs, nothing matches, storage full, unreadable list recovery",
+        "tests that pass for the wrong reason: J-30 style tests that wait on a timer"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 102 rows; CHANGED APPL-013/017/028/029/031/040/045/049/123/124, MOBI-091/092/094/096/097/107 each with a negative twin (Phone Screen and Interview distinct, Closed sub-statuses distinct)",
+        "J-30 root-caused or its wait fixed with evidence; flake not re-appearing in the batch's full gate"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "the canvas merges statuses; the live eight must stay visible (owner call)",
+        "list columns plus phone List: horizontal scroll rule must keep Location/Salary/Contact one tap away"
+      ],
+      "ownerCalls": ["Status grouping: live eight columns (default) versus canvas five lanes with sub-statuses", "Relative dates on cards (default parked)"]
+    },
+    {
+      "id": "B11",
+      "title": "Applications 2: job drawer, Add/Edit job modal, Insights, overlay Drawer primitive",
+      "goal": "Open a job in a right-hand drawer (bottom sheet on a phone) holding every live detail, status and task function, rebuild the Add/Edit form as a modal with every field and guard, and rebuild Insights with every live list and the career history card.",
+      "whyHere": "Needs the board and list as openers (B10). It introduces the overlay Drawer, whose first consumer is the job drawer; B13 reuses it for the issue drawer.",
+      "dependsOn": ["B10"],
+      "boards": ["Jobs (drawer open)", "JobAdd", "JobsInsights", "MobileJobs (detail)"],
+      "parityOwned": [
+        "shell-docs: D-21..D-22",
+        "applications: APPL-056..APPL-122, APPL-133..APPL-140, APPL-142, N1..N3, N6..N7, N9..N11, N16",
+        "mobile: MOBI-106, MOBI-111, D-24",
+        "applications: CATCH-ALL every other row of applications.md, including any row added by review, belongs to B11"
+      ],
+      "parked": ["job-side ATS match card (N1) and attached cover letter row (N2)", "free-text Next step and interview time (N3: build only Deadline and Follow-up lists)", "stat tile hints with names and times (N6)", "Edit career history button (N7, D-21)", "Move to Interviewing label (N16: live next-status wording)", "N9 and N10 are the same functions: kept (Applied default, More details layout)"],
+      "clusters": [
+        {
+          "name": "drawer",
+          "filesOwned": ["src/components/ui/Drawer.jsx", "src/pages/JobDetail.jsx", "src/components/job/OverviewTab.jsx", "src/components/job/TasksTab.jsx", "src/components/job/NotesTab.jsx", "src/components/job/StatusHistory.jsx", "src/components/job/TodoItem.jsx", "src/pages/JobTracker.jsx (outlet wiring only)", "src/index.css (this batch's single editor)"],
+          "newFiles": ["src/components/ui/Drawer.jsx"],
+          "work": "Drawer: right panel over a scrim (about 520 px), Escape and outside click via useOverlayClose, scroll lock, deep link /jobs/:id kept with browser Back, not-found state; phone: bottom sheet or full screen. Content: header with company/role editable in place (company OR role rule), Posting button, status menu with all 8, stepper with Phone Screen and every step clickable, next-status button, Mark as On Hold/Rejected/Withdrawn, restart and resume actions with the closed/On Hold looks, history with all entries (absolute date-time title, badges, reopened marker), Overview details rows (location, salary, URL, work mode, source, applied date, deadline with its warning, follow-up, contact, interview stage, resume picker with Open resume) all editable in place and each row shown even when None, Tasks (add, tick, rename, delete with Undo, progress, To Do and Completed lists, empty state), Notes rich text with autosave and the STAR button, Created/Updated times, Delete job with confirm and Undo; picking the current status does nothing."
+        },
+        {
+          "name": "job-modal",
+          "filesOwned": ["src/pages/JobForm.jsx", "src/components/job/InterviewStageSelector.jsx", "src/components/job/Field.jsx"],
+          "work": "Add job as a modal over the board: Company, Role, Posting link, Status (opens at Applied), Applied date (status follows date rule), Resume used, More details group with every other live field (location, salary, work mode, source, deadline, follow-up, contact, interview stage with custom stages and clear, notes rich text); Enter saves; save rule company OR role (message says a company or a role is enough); leave guard Discard your changes; unsaved draft restore line; Edit job (same modal, Save changes) from the drawer; job deleted in another tab and form not found states; account left while open; after Add or Save the drawer shows that job; Cancel/Close return to where it was opened; the routes /jobs/new and /jobs/:id/edit stay and render the modal over the board."
+        },
+        {
+          "name": "insights",
+          "filesOwned": ["src/components/job/JobSummary.jsx", "src/components/tracker/Charts.jsx", "src/utils/careerHistory.js (read only)"],
+          "work": "Insights: stat strip (active, interviewing, offers, response rate with the live fixed hints), pipeline funnel, status donut with legend and empty state, Deadlines list (status badge, DatePill, empty text) and Follow-ups due (due-only rule, +N more, empty text) possibly under one Next steps card with labelled groups, Career History card (lazy CareerHistoryPanel, same numbers and rules), rows open the job drawer; Insights is never filtered by the board's search or status. Phone: Summary reachable (Insights icon and view switch)."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/188-ui-b11-job-drawer.test.mjs (status menu all 8, stepper steps clickable incl Phone Screen, closing/restart/resume actions, history, tasks seven functions, notes autosave and rich toolbar, details editable incl dates and resume picker/Open resume, deep link and Back, not-found, picking the current status does nothing)",
+        "tests/pdf/188-ui-b11-job-modal.test.mjs (every field, stage picker and custom stages, company-or-role rule and message, discard guard, draft restore, edit mode, deleted in another tab, after-save opens the drawer)",
+        "tests/pdf/188-ui-b11-insights.test.mjs (tiles, funnel, donut, Deadlines, Follow-ups +N more, career card, never filtered, rows open the drawer)",
+        "tests/unit/ui-b11-drawer.unit.mjs (Drawer: Escape, outside click, scroll lock, closes on route change)"
+      ],
+      "testsToUpdate": [
+        "JobDetail users (11): tests/pdf/105-r5-hunt7-status-move-undo, 105-r5-hunt5-job-import-dates, 103-r4-dvis-04-kit-tabs, 105-r5-hunt3-job-task-undo-after-tab-switch, 95-job-notes-tab, 100-r4-job-01-details-resume, 81-job-tracker-ui, 104-r5-job-02-job-form-not-found, 103-r4-dvis-08-posting-link, 100-r4-job-03-closed-not-overdue",
+        "JobForm users (16): 100-r4-job-02-follow-up-fields, 102-r4-dux-06-one-discard-question, 81-job-resume-pickers, 103-r4-dvis-01-job-form-page-header, r5hunt6-signout-job-form, 103-r4-dph-20-job-form-notes, 67-job-form-save, 103-r4-dph-16-job-form-header-wraps, 105-r5-hunt1-job-form-draft-typed-fields, 103-r4-dvis-03-job-form-kit-fields, r5hunt6-signout-other-tab, 54-job-form-null-crash, 104-r5-job-01-overview-field-kit-box, 81-job-inputs-touch-text",
+        "tests/pdf/59-career-history, 103-r4-dvis-32-career-panel-workspace-look, 103-r4-dph-02-summary-grid-columns; tests/pdf/71-startup-chunks stays (page names still lazy); Cypress 06-job-tracker, 20-regressions-job-*"
+      ],
+      "startupBudgetPlan": "Lazy-only. ui/Drawer.jsx is a new lazy kit file imported only by lazy pages; it must not import Dialog's start-up-only parts in a way that moves them (Dialog is lazy since B1). Route names JobDetail/JobForm stay in the 71 regex. 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "functions that stopped working: every field editable in place, status moves with Undo toast wordings, delete from the drawer closes it and Undo restores in place, history entries, tasks Undo after tab switch",
+        "persistence: draft restore, hidden data fields, cross-tab merge, sign-out while the form is open, deep link reload of /jobs/:id",
+        "narrow widths: 390 px drawer as sheet, 16 px fields, the Add job modal scroll",
+        "keyboard: Enter saves, Escape closes the drawer but not mid-edit loss (discard question once)",
+        "error and empty states: not found, empty tasks, no deadlines",
+        "tests that pass for the wrong reason: drawer tests asserting the drawer exists but not that each row writes"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 90 rows; CHANGED APPL-061/062/063/068/070/074/078/087/089/092/098/099/105/112/117/118 each with a negative twin",
+        "all of N9/N10 same-function items verified; Drawer unit test green"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "drawer versus page route: deep links, Back and breadcrumb must keep behaving (owner call default: both kept)",
+        "most undrawn rows (tasks, notes, details) are MISSING: the builder follows the live Overview/Tasks/Notes tabs, regrouped as drawer sections",
+        "Drawer primitive must be reusable by B13 without change"
+      ],
+      "ownerCalls": ["Drawer replaces the /jobs/:id page entirely (default: yes, deep link and Back kept)", "After saving return to the drawer (default: yes per fix)"]
+    },
+    {
+      "id": "B12",
+      "title": "Projects 1: landing, project header and tabs, Board, create dialogs, phone landing and board",
+      "goal": "Rebuild the Projects landing (Your work, recent, all projects), the shared project header and tabs, the Board with toolbar, swimlanes, cards and composers, the create project and create issue dialogs, and the phone landing and board, keeping every live function.",
+      "whyHere": "Projects stays (parity); it is lazy-only and independent of the editor, so it comes after the editor and Applications. Board first because the issue drawer and the other views (B13) open from it.",
+      "dependsOn": ["B3"],
+      "boards": ["Projects", "ProjectBoard", "MobileProject", "States (empty Projects)"],
+      "parityOwned": [
+        "shell-docs: SHEL-105",
+        "projects: PROJ-001..PROJ-032, PROJ-040..PROJ-048, PROJ-060..PROJ-083, PROJ-116..PROJ-117, PROJ-200..PROJ-203, PROJ-206, PROJ-210, PROJ-212..PROJ-216, PROJ-218..PROJ-219, PROJ-229..PROJ-230, PROJ-235, D-01..D-02, D-05, D-07",
+        "mobile: MOBI-120..MOBI-125, MOBI-127..MOBI-141, MOBI-195..MOBI-196"
+      ],
+      "parked": ["issue/epic/backlog renamed task/group/plan and Kind (D-01: live words stay)", "recent-project stats Done/Due soon/Edited (D-05)", "Your work subtitle 4 tasks need you this week (D-07)", "Today holds up to 3 tasks hint (MOBI D-15: B13 table)", "key chip is allowed display-only (D-02)"],
+      "clusters": [
+        {
+          "name": "landing-header",
+          "filesOwned": ["src/pages/Boards.jsx", "src/pages/YourWork.jsx", "src/components/board/CreateProjectDialog.jsx", "src/components/board/ProjectTabs.jsx", "src/components/board/BoardStorageNotice.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Landing: Your work (Overdue, Due today, Due this week, In progress sections shown only when non-empty; Worked on tab with the 15 latest; row with type icon, status and updated time; Mark done as a real control with the Undo toast, recurrence cleanup, hidden without a done column; the two empty lines), Recent projects (up to 4, starred first; Backlog quick link and Kanban/Scrum label kept; Open issues N), All projects table (Key, Type, Lead, Updated, search with no-match line, row menu) with phone cards; Create project dialog (all four templates, key rules, disabled reasons) via the primary button and ?create=1, landing on the new project's board (history entry replaced); recovery and sync-held notices; shared project header (breadcrumb with a real project link, tile, name click-to-rename, key chip, star, project menu) and view tabs with Backlog also for Kanban projects (live); project not found state."
+        },
+        {
+          "name": "board",
+          "filesOwned": ["src/pages/Board.jsx", "src/components/board/BoardToolbar.jsx", "src/components/board/BoardColumn.jsx", "src/components/board/IssueCard.jsx", "src/components/board/InlineCreate.jsx"],
+          "work": "Toolbar: search, Filter popover with the four filters and a count, quick filters Overdue and Due this week, Clear filters, Group by with swimlanes (fold, count, sticky column row), info line (active sprint, end date, goal; hidden-done notice), no-match line; columns with WIP chip n/limit, column menu (rename, WIP, delete rules), add column; card face: title, epic lozenge, up to 2 labels and +N, type icon (Task/Bug/Story/Epic via a new IssueTypeIcon used again in B13), key, due pill, priority, story points, checklist and comment counts; card menu Open / Move to (columns) / Priority / Copy link / Duplicate / Delete (hover, always visible on touch); drag with module-constant sensors; column foot composer with the type picker; phone: search and one Filters button with the panel, column switcher scrolling beyond four columns, card Move to, floating create."
+        },
+        {
+          "name": "create-issue",
+          "filesOwned": ["src/components/board/CreateIssueDialog.jsx"],
+          "newFiles": ["src/components/board/IssueTypeIcon.jsx"],
+          "work": "Create issue dialog/sheet with every field (Project select that keeps typed fields, Type, Status, Summary 255, and the live others), defaults from the opener (viewed project, clicked column, calendar day), reachable from the bar Create, c, column foot, calendar day plus; discard-typed guard; IssueTypeIcon component shared with B13."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/82-board-pages.test.mjs", "tests/pdf/103-r4-dph-06-board-toolbar-filters.test.mjs", "tests/pdf/103-r4-dph-08-projects-table-phone.test.mjs", "tests/pdf/82-board-ime-enter.test.mjs", "tests/pdf/102-r4-dux-01-create-issue-project-switch.test.mjs", "tests/pdf/102-r4-dux-05-discard-typed-create.test.mjs", "tests/pdf/105-r5-hunt3-create-in-viewed-project.test.mjs"],
+          "work": "Updates the Boards/Board/CreateIssue tests; 172-board-sensors-stable, board-scroll-snap.unit and board-drop*.unit stay green untouched."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/189-ui-b12-projects-landing.test.mjs (Your work buckets incl Overdue and In progress, Worked on, Mark done control with Undo, recent four, all-projects Lead column, no-match line, create dialog, ?create=1, lands on new board)",
+        "tests/pdf/189-ui-b12-project-header.test.mjs (breadcrumb link, rename, star, menu, Backlog tab for Kanban, not-found)",
+        "tests/pdf/189-ui-b12-board.test.mjs (Filter four filters, Overdue/Due this week/Clear, swimlanes, info line, WIP, composer with type picker, card face incl points and +N and type icon, card menu Move to, no-match line)",
+        "tests/pdf/189-ui-b12-create-issue.test.mjs (all fields, opener defaults, project switch keeps fields, discard guard)",
+        "tests/pdf/189-ui-b12-phone.test.mjs (landing cards, Filters panel, column switcher beyond four, Move to, create sheet)"
+      ],
+      "testsToUpdate": [
+        "Board users (18) incl tests/pdf/82-board-pages, 82-board-ime-enter, 103-r4-dph-06, 103-r4-dph-08, 95-sync-privacy-notices, 104-r5-brd-helpers.mjs consumers; tests/unit/board-scroll-snap.unit.mjs and touch-reveal.unit.mjs",
+        "tests/pdf/172-board-sensors-stable must stay green",
+        "Cypress: no Projects spec exists; Playwright none"
+      ],
+      "startupBudgetPlan": "Lazy-only (boards pages and board components are lazy chunks). 71 read in the targeted dispatch.",
+      "bugHuntFocus": [
+        "functions that stopped working: drag between columns and swimlanes, WIP, filters per view memory (PROJ-218), Mark done, create from every opener, deep links ?issue=",
+        "persistence: boards storage keys, demo project, cross-tab merge, updatedAt stamping, cloud sync",
+        "narrow widths: 390 px landing and board, bottom bar versus floating create",
+        "error and empty states: no projects, no work, project not found, unreadable boards recovery",
+        "perf/render counts: sensors constants (172), card memo",
+        "tests that pass for the wrong reason: tests that find cards by title text but not their menu"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 111 rows; CHANGED PROJ-022/025/026/027/044/064/068/080/117/212/229 and MOBI-127/130 each with a negative twin (type icon visible on every card; Backlog tab for Kanban)",
+        "phone landing keeps Your work and Create project reachable (MOBI-004..006 verified from B3)"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "the canvas drops the type icon, points, Overdue/In progress, the card menu: all are restored per fix; easy to forget one: the brief lists them",
+        "AppRoutes unchanged: the landing merges Your work and the list on /boards and /work routes (both routes kept)"
+      ],
+      "ownerCalls": ["Vocabulary: issue/epic/backlog (default live) versus task/group/plan (canvas)", "Kanban Backlog tab kept (default: yes, live)"]
+    },
+    {
+      "id": "B13",
+      "title": "Projects 2: issue drawer, List, Calendar, Timeline, Summary, Backlog and sprints, Settings, phone views",
+      "goal": "Open an issue in the shared Drawer with every live field, checklist and activity, restyle List, Calendar, Timeline, Summary, Backlog with sprints and Settings keeping every function, and give the phone its views.",
+      "whyHere": "Needs the board as opener and the Drawer from B11; last because Projects is outside the stated product goal but stays by the parity rule.",
+      "dependsOn": ["B11", "B12"],
+      "boards": ["ProjectIssue", "ProjectList", "ProjectCalendar", "ProjectTimeline", "ProjectSummary", "ProjectBacklog", "ProjectSettings", "MobileProject"],
+      "parityOwned": [
+        "shell-docs: SHEL-106",
+        "projects: PROJ-090..PROJ-115, PROJ-120..PROJ-127, PROJ-130..PROJ-148, PROJ-160..PROJ-177, PROJ-180..PROJ-191, PROJ-211, PROJ-220..PROJ-228, PROJ-231..PROJ-232, PROJ-236, D-03..D-04, D-06, D-08..D-17, D-19..D-21",
+        "mobile: MOBI-126, MOBI-142, MOBI-197..MOBI-199, D-15..D-16",
+        "projects: CATCH-ALL every other row of projects.md, including any row added by review, belongs to B13"
+      ],
+      "parked": ["Timeline Weeks/Months (D-03, D-21)", "Due soon list on Summary (D-04: live shows the count; keep the count)", "checkbox square on List rows (D-06)", "No due date rail (D-08)", "Start next sprint and open/done counts (D-10, D-11)", "author name Alex Johnson, Comments default tab without All (D-15, D-16: live You and All tab stay)", "boardTransfer.js export/import projects has no caller: not exposed (owner decides)"],
+      "clusters": [
+        {
+          "name": "issue-drawer",
+          "filesOwned": ["src/components/board/IssueDialog.jsx", "src/components/board/IssueDetails.jsx", "src/components/board/IssueFields.jsx", "src/components/board/IssueActivity.jsx", "src/components/board/IssueChecklist.jsx", "src/components/board/useIssueActions.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Issue in the B11 Drawer (deep link ?issue=KEY kept, trail with project link that closes the view when opened over that project and parent epic link): title, status chip as a menu of the project's columns, checklist, description, compact properties (priority, due, labels) plus More details with every live field (type, parent epic not on epics, sprint on Scrum, story points, start date, repeats), created/updated/resolved stamps, activity tabs All (default), Comments with count, History with field/old/new entries and empty lines, epic view with Add child issue and child list with progress, Copy link toasts, delete/duplicate."
+        },
+        {
+          "name": "views",
+          "filesOwned": ["src/pages/ProjectList.jsx", "src/pages/ProjectCalendar.jsx", "src/pages/ProjectTimeline.jsx", "src/pages/ProjectSummary.jsx"],
+          "work": "List: Type, Key, Summary, Status (menu), Priority, Labels, Parent, Due, Points, Updated, header sort asc/desc/rank, toolbar search + Epic/Type(incl Epic)/Label/Priority + Overdue/Due this week/Clear, foot composer; Calendar: month grid with at most three chips and +N more, Today, search and filters, the day plus creating an issue due that day, the No due date count (list parked); Timeline: epic rows that fold with indented children, status chip and type icon, bar spans, today line, one 8-week scale, empty line; Summary: stat strip, status donut, due-soon count, recent activity (live sentence, 8 entries), epic progress, More charts, empty lines. Type icon from B12 everywhere."
+        },
+        {
+          "name": "backlog-settings",
+          "filesOwned": ["src/pages/Backlog.jsx", "src/components/board/BacklogParts.jsx", "src/pages/BoardSettings.jsx"],
+          "work": "Backlog: Kanban page (one Backlog section with every open issue, Use sprints), Scrum sections with points bubbles per status, row type icon and points, status menu, epic lozenge, drag handle or row menu, sprint start dialog (name, dates, goal, blocking rules), complete sprint dialog (done/open counts, move open issues), create sprint, sprint menu with Delete and Undo, toasts NAME started/completed, epic panel (Groups toggle) with its empty text, toolbar and Clear, empty lines; ?complete=1 dropped when no sprint. Settings: name, key, description, colour, way of working Kanban/Scrum, columns (name, kind, WIP, reorder, delete rules incl last column and Undo), Advanced disclosure (labels, hide done), Delete project, field limits, save-on-leave note. Phone: List, Calendar, Timeline, Summary, Backlog, Settings and issue sheet reachable (list hides Type/Labels/Parent/Points/Updated columns but status stays one tap away)."
+        },
+        {
+          "name": "tests",
+          "filesOwned": ["tests/pdf/82-backlog-page.test.mjs", "tests/pdf/82-backlog-r4.test.mjs", "tests/pdf/82-settings-page.test.mjs", "tests/pdf/82-board-columns-r4.test.mjs", "tests/pdf/103-r4-dph-09-project-list-phone.test.mjs", "tests/pdf/103-r4-dph-05-calendar-controls-outside-scroller.test.mjs", "tests/pdf/103-r4-dph-18-calendar-controls-wrap.test.mjs", "tests/pdf/103-r4-dph-01-timeline-name-column.test.mjs", "tests/pdf/103-r4-dvis-20-timeline-row-hover.test.mjs", "tests/pdf/105-r5-hunt3-list-backlog-hidden-create.test.mjs", "tests/pdf/107-r5-hunt6-type-filter-epic.test.mjs", "tests/pdf/104-r5-brd-sw-b-01-column-delete-undo.test.mjs", "tests/pdf/107-r5-hunt6-column-category-undo.test.mjs"],
+          "work": "Updates view and settings tests to the new markup keeping every guard."
+        }
+      ],
+      "testsNew": [
+        "tests/pdf/190-ui-b13-issue-drawer.test.mjs (properties and More details fields, status menu of all columns, checklist, All/Comments/History incl empty lines, resolved stamp, epic child list, trail links, deep link, Copy link toasts)",
+        "tests/pdf/190-ui-b13-views.test.mjs (List columns, header sort, status menu, filters incl Overdue/Due this week/Clear; Calendar three chips and +N more, day plus, filters; Timeline epic fold, status chip, type icon; Summary lists, epic progress, empty lines)",
+        "tests/pdf/190-ui-b13-backlog.test.mjs (Kanban backlog, section composer, points bubbles, sprint start/complete dialogs and rules, sprint menu Undo, toasts, epic panel)",
+        "tests/pdf/190-ui-b13-settings.test.mjs (columns rules, advanced, delete project, limits)",
+        "tests/pdf/190-ui-b13-phone-views.test.mjs (every view reachable on a phone, status change one tap away)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/82-board-pages, 82-backlog-page, 82-backlog-r4, 82-settings-page, 82-board-columns-r4, 103-r4-dph-09/05/18/01, 103-r4-dvis-20-timeline-row-hover, 105-r5-hunt3-list-backlog-hidden-create, 107-r5-hunt6-type-filter-epic, 104-r5-brd-sw-b-01-column-delete-undo, 107-r5-hunt6-column-category-undo, r5hunt8-rev-unreadable-text-stays, r5hunt8-settings-wip-fraction, 82-board-ime-enter, helper files 103-r4-backlog-page.mjs, 103-r4-board-settings-helpers.mjs, issue-view-page.mjs",
+        "tests/pdf/172-board-sensors-stable must stay green untouched"
+      ],
+      "startupBudgetPlan": "Lazy-only. All project pages stay in the 71 page regex. Final 71 read recorded; B14 re-reads.",
+      "bugHuntFocus": [
+        "functions that stopped working: sprint lifecycle (start, complete, delete with Undo), epic child progress, status changes from every row, calendar day create, timeline bar spans, settings column delete rules",
+        "persistence: per-view filters, folded sections, sort, boards keys, deep links ?issue= and ?complete=",
+        "narrow widths: 390 px each view, drawer as sheet, tables that scroll",
+        "error and empty states: every empty line, project not found",
+        "perf/render counts: Backlog/Board sensor constants, big lists",
+        "tests that pass for the wrong reason: tests that open the drawer but check only the title"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate for the 120 rows; CHANGED PROJ-091/108/109/120/123/125/127/134/138/139/144/162/170/172/174/220/225 and MOBI-197 each with a negative twin",
+        "type icon on every card, List row, Backlog row, Calendar chip and Timeline row (PROJ-229)",
+        "Drawer reused unchanged from B11"
+      ],
+      "estimatedHours": 3,
+      "risks": [
+        "largest Projects batch; split point: issue drawer + List + Calendar first, Timeline + Summary + Backlog + Settings as B13b",
+        "most views have a one-chip-a-day canvas calendar: the 3-a-day limit and +N more must be kept (unproven in the canvas)",
+        "any change to the sprint rules is a behaviour change, not a restyle"
+      ],
+      "ownerCalls": ["boardTransfer.js UI exposure (default: none)", "Weeks/Months scale (default: parked)"]
+    },
+    {
+      "id": "B14",
+      "title": "Integration and release candidate: cross-surface sweep, owner-call closures, final gate",
+      "goal": "Close every deferred decision, sweep all surfaces at 1440, 1280, 1100, 1024, 768 and 390 px, re-read the start-up margin and the perf budgets, update the knowledge docs, and produce a release-candidate head with one full gate and a hand-off list for the owner.",
+      "whyHere": "Per-batch gates prove each surface; this proves the whole app together and applies the late owner answers (sidebar, font, cap) in one small batch.",
+      "dependsOn": ["B13"],
+      "boards": ["all 39 for a final visual pass; no redraw"],
+      "parityOwned": [
+        "shell-docs: SHEL-114 (not-saved banners on the other pages: each context keeps its own text and export advice; checked across Documents, editor, Applications and Projects)",
+        "mobile: CATCH-ALL every other row of mobile.md, including any row added by review (the unnumbered revision rows D-02/D-03 revised, D-07 revised and D-17 revised in section 6g) and any row added after this plan, belongs to B14"
+      ],
+      "parked": ["the complete PARKED list below, handed to the owner as one table with the evidence of what stayed live"],
+      "clusters": [
+        {
+          "name": "owner-closures",
+          "filesOwned": ["index.html", "src/components/shell/Sidebar.jsx", "src/components/shell/SidebarContent.jsx", "src/components/shell/WorkspaceLayout.jsx", "src/index.css (this batch's single editor)"],
+          "work": "Apply what the owner answered: retire the sidebar and its [ shortcut and key if requested (else keep and document); Instrument Sans link in index.html with display swap and preconnect (or self-hosted) if requested, otherwise keep the system-ui fallback; vocabulary or label renames if approved (each with the label sweep); a cap raise ONLY if the ledger shows it is unavoidable and the owner agrees (71-startup-chunks.test.mjs and tests/perf/budgets.mjs)."
+        },
+        {
+          "name": "sweep-and-docs",
+          "filesOwned": ["docs/knowledge/*.md", "docs/tracking/ui-redesign/batches/B14-report.md", "docs/tracking/HANDOFF.md", "docs/tracking/ui-redesign/RUN-STATE.md"],
+          "work": "Update docs/knowledge for every moved, new or deleted src path (knowledge-docs.unit); remove the temporary thin wrappers if any batch left one; the row ledger of all 1,223 rows (ID, batch, test); hand-off with the parked list and the open owner calls."
+        },
+        {
+          "name": "cross-surface-tests",
+          "filesOwned": ["tests/playwright/ui-b14-widths.spec.mjs"],
+          "newFiles": ["tests/playwright/ui-b14-widths.spec.mjs"],
+          "work": "One Playwright spec visiting Documents, New, editor (resume, letter, Design dock, ATS dock), Applications (board, list, drawer, insights), Projects (landing, board, issue drawer, list, summary) at the six widths: no horizontal page scroll, key controls inside the viewport, dock overlay below 1100, bottom tab bar not covering page actions. Screenshots saved as artifacts for the owner's visual approval."
+        }
+      ],
+      "testsNew": [
+        "tests/playwright/ui-b14-widths.spec.mjs",
+        "tests/pdf/191-ui-b14-notices.test.mjs (SHEL-114: the four not-saved banners, one per context, keep their own texts: editor and Documents mention removing large photos and exporting JSON, jobs mention exporting from the Job Tracker, projects mention no JSON export)",
+        "tests/unit/ui-b14-no-sidebar.unit.mjs (only if the owner drops the sidebar: no Sidebar import reachable, [ is a no-op)"
+      ],
+      "testsToUpdate": [
+        "tests/pdf/71-startup-chunks.test.mjs and tests/perf/budgets.mjs only with the owner's approval of a cap change",
+        "tests/unit/knowledge-docs.unit.mjs consumers (docs paths)"
+      ],
+      "startupBudgetPlan": "Read the final 71 margin on the head and record the whole ledger B1..B14 (headroom created, spent in B2 and B4, final figure); must be >= 0 and ideally >= 2 kB; dispatch perf: all once (typing path changed in B5/B6) and record it against budgets (not part of the gate).",
+      "bugHuntFocus": [
+        "all six lenses across surfaces: functions that stopped working (the row ledger against a Playwright walk), perf/render counts (165, 173, 172, 118 together), persistence (every storage key listed in the parity files still written), narrow widths (the six widths), keyboard (/ c ? [ Escape), error and empty states, tests that pass for the wrong reason (mutate three random new tests)",
+        "the 768-1100 px band of the editor and the workspace",
+        "label sweep over the whole diff against master: every title/aria-label/placeholder change maps to a parity row"
+      ],
+      "doneCriteria": [
+        "RUN-STATE batch gate; ONE full gate on the exact head with all 15 jobs green, run id recorded; perf run recorded",
+        "all 1,223 plan rows have a ledger entry (SAME/MOVED/RESTYLED, test name) and no CHANGED/MISSING row is left unbuilt except the PARKED list",
+        "owner hand-off: parked list, open calls, screenshots; no push to master; deploy is the owner's call"
+      ],
+      "estimatedHours": 2.5,
+      "risks": [
+        "answers that arrive late (sidebar, font, cap) can force touching B2/B3 files: they are applied here by named cluster only",
+        "a regression found late in an early batch's area: fix forward here with a failfirst test; never reopen a closed batch's gate"
+      ],
+      "ownerCalls": ["Deploy: after B14 only (default) or earlier with a mixed look", "Font loading", "Sidebar removal", "Cap raise only if the ledger demands it"]
+    }
+  ],
+  "sharedRisks": [
+    "Start-up path: about 0 kB spare, a red 71-startup-chunks fails the full gate; mitigated by B1 headroom first, ledgers in B2/B4, lazy-only elsewhere; unknown until measured (the exact margin was never read)",
+    "Whole-source scanners: dead-code.unit (new files must be imported), knowledge-docs.unit (docs/knowledge paths), cursor-pointer.unit (clickable div/span), touch-reveal.unit, 24-private-data: each batch report states it passed them",
+    "PERF-4: a router hook or Link under a memo editor part, a fresh prop, or a context changing per key re-renders everything per keystroke; 165 and 173 are the proofs and must stay green in B5-B9",
+    "Parity walker signatures: renaming control text/title/aria-label/data-* row keys or the emoji in spacing preset labels changes registries; groups/view props default to all",
+    "Test churn: about 93 mounting files, 56 dph/dvis class pins, 15 Cypress and 4 Playwright specs; Playwright re-runs are expensive (build + 3 machines): put changed specs in the single targeted dispatch and re-run only red ones",
+    "Mixed look between batches and no deploy: the head is complete but half old, half new until B14; owner must accept this or deploy earlier knowingly",
+    "Window overflow in B4-B7 and B13: each names a split point; the next batch never starts before the gate",
+    "Offline and lazy chunk failures introduced by B1 and B4 (Dashboard parts and Import dialog now fetched on demand): prefetch on idle and the chunk-reload guard",
+    "Known flakes: J-30 in tests/pdf/81-job-tracker-session (B10 owns the root cause), tests/pdf/102-r4-dout-09 on shard 2/6, nine files reaching the live font CDN, 164-huge-paste-linear wall clock: rerun the failed shard once, never weaken",
+    "Canvas versus live conflicts: boards drop or merge functions (statuses, columns, type icons, menus, letters list); the brief's DO NOT BUILD AS DRAWN flags and negative-twin tests are the control",
+    "Undrawn surfaces (about 40% of rows) mean the builder designs from tokens: render-check against the nearest board for look, against the live app for function",
+    "Single-owner collisions when a batch spans two windows: the next batch must not start; index.css is edited by one named cluster per batch only"
+  ],
+  "parkedForOwner": [
+    "Draft from resume: pasted job posting, Or use an application, Tone, Length, tailored sample text (ELAE NEW-01..05)",
+    "Improve: Shorter suggestion, Add a number with invented figures, best-verb row, word count, Undo toast after Apply (ELAE NEW-13..17); the Improve button on Summary is the existing STAR button, kept",
+    "ATS: score number on the top-bar chip and on Documents cards, score prediction sentence, Show me jumps (EDIT NEW-002, ELAE NEW-09/10/11, shell D-01)",
+    "Editor: 1 page / N pages count, pinch to zoom, zoom 76/86/90 values, Add link, entry counts and card summaries (display-only items the owner may accept)",
+    "Design: per-element accent toggles, Use accent on headings, new accent palette defaults, Cancel / Use template two-step, Showing 8 of 28 line, category word on cards, live preview above the phone sheet",
+    "Documents: ATS chips, Recently edited sort, Applications strip and next-interview tile, first-run three options, drop zone, 'stays in this browser' sentence, 'It becomes a new resume', 'Its cover letter goes too' (and the cascade, which would be untrue), cover letter chip as attachment, Back up and sync prompt card, search field on Documents/New/editor and Applications/Documents groups in the palette",
+    "Applications: relative times, interview-this-week count, free-text Next step and interview time, job-side ATS match card, attached cover letter row, per-column plus, merged Interviewing/Closed chips, Edit career history button, stat-tile hints with names, footer line",
+    "Projects: task/group/plan vocabulary, Timeline Weeks/Months, Due soon list, No due date rail, recent-project stats, checkbox on List rows, WIP hint sentence, Start next sprint, open/done counts in sprint headers, author name instead of You, Comments default tab without All, boardTransfer.js UI",
+    "Share and public: auto-update wording, Read-only copy header, Want your own? footer, storage-full new advice and Open Documents button",
+    "Phone: pinch zoom, always-on ATS chip number, Today holds up to 3 tasks line"
+  ],
+  "openOwnerCalls": [
+    "Sidebar and its [ shortcut: drop (canvas) or keep restyled (default until B14); needed before B3",
+    "Web font: Google Fonts link, self-hosted, or keep system-ui (default keep; applied in B1 if answered, else B14)",
+    "Start-up cap: raise only if the ledger proves it unavoidable (last resort, B14)",
+    "Search field on Documents/New/editor: omit (default) or approve a new Documents search",
+    "Nav and label wording: Applications/Documents (default follow canvas); issue/epic/backlog versus task/group/plan (default live); editor field renames From/To/Highlights/Role (default live)",
+    "Cover letters on Documents: separate group (live, default) versus inside the resume",
+    "ATS chip number and Documents card score (default parked; needs the analysis computed on every editor render)",
+    "Design/ATS from the letter view and Share on the letter view (default live: act on the resume)",
+    "Applications statuses: eight live columns (default) versus five canvas lanes",
+    "Job drawer replaces /jobs/:id page (default yes, deep link and Back kept)",
+    "Display-only additions (entry counts, N pages, Done/Due soon stats): one yes or no",
+    "Deploy cadence: only after B14 (default) or earlier with a mixed look",
+    "boardTransfer.js: expose a projects JSON export/import (default no)"
+  ],
+  "totalWindowsEstimate": 16
+}
