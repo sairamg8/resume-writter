@@ -563,7 +563,11 @@ export function extractJobKeywords(jobDescriptionText) {
   // Tokenize words, normalizing punctuation. An apostrophe stays inside its word, typed straight or
   // curly: read as a space, "You'll" and "we're" were the keywords "ll" and "re", which the stop
   // list's "you'll" and "we're" could never catch, and "+" wrote them into Skills (R4-CL-02).
-  const clean = blankPostingAddresses(jobDescriptionText.normalize('NFC'))
+  // The posting is composed and its addresses blanked once, and the phrase finds below read the same
+  // text: each did both on its own, and on a pasted multi-megabyte posting the pair cost a second or
+  // more of the page's one thread (typing-freeze: 5.7 MB paste).
+  const text = blankPostingAddresses(jobDescriptionText.normalize('NFC'));
+  const clean = text
     .replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, ' ')
     .replace(/\s+/g, ' ');
@@ -602,7 +606,6 @@ export function extractJobKeywords(jobDescriptionText) {
   // "learning-based", and taking a time off "learning" dropped the posting's own "continuous
   // learning" (review of R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately). The phrase's
   // tokens are read from the text around each find, cleaned as above but kept at the text's length.
-  const text = blankPostingAddresses(jobDescriptionText.normalize('NFC'));
   const spaced = text.replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, (c) => ' '.repeat(c.length));
   for (const phrase of multiWordPhrases) {
