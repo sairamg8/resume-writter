@@ -30,7 +30,7 @@ async function until(check, what) {
 const offline = () => Promise.reject(new TypeError('Failed to fetch dynamically imported module'));
 
 /** The Dashboard over `resumes`; `fail` names the pieces whose import() rejects. `reloads()`: page reloads asked for. */
-async function dashboard(resumes, fail) {
+async function dashboard(resumes, fail, custom = {}) {
   const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
@@ -38,6 +38,7 @@ async function dashboard(resumes, fail) {
   const real = { ...loaders };
   warmed.clear();
   for (const key of fail) loaders[key] = offline;
+  Object.assign(loaders, custom); // loader functions the test keeps for the whole run
   globalThis.localStorage = new MemoryStorage([]);
   let reloaded = 0;
   const savedLocation = globalThis.location;
@@ -57,14 +58,17 @@ async function dashboard(resumes, fail) {
   const view = mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
     createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
   const all = () => [...elements(view.document.body)];
+  let unmounted = false;
   const button = (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label);
-  return {
+  const page = {
     made, loaders, real, all, button, view,
     reloads: () => reloaded,
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
+    /** Unmounts the page now (a visit ends); close() then skips the unmount. */
+    async leave() { unmounted = true; await view.unmount(); },
     press(label) { view.act(() => reactProps(button(label)).onClick({})); },
     async close() {
-      await view.unmount();
+      if (!unmounted) await view.unmount();
       Object.assign(loaders, real);
       console.error = savedError;
       globalThis.location = savedLocation;
@@ -72,6 +76,7 @@ async function dashboard(resumes, fail) {
       delete globalThis.localStorage;
     },
   };
+  return page;
 }
 
 const cv = (id, name, updatedAt) => ({ ...resume({ personal: { name: `${name} Person`, title: 'Analyst' } }), id, name, updatedAt });
@@ -132,4 +137,41 @@ it('Try again while it is still unreachable keeps the notice, and a later Try ag
     await until(() => page.button('Open Job Tracker →'), 'the panel');
     assert.equal(page.reloads(), 0);
   } finally { await page.close(); }
+});
+
+// The same loader function all along (never swapped for a new one when the network is back): the cached
+// view of a rejected import must not be kept, or Try again and a remount hand out the same rejection.
+it('the same loader fails once: Try again then shows the panel (a rejected view is not kept)', async () => {
+  const { _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
+  const trueCareer = _lazyForTest.loaders.career;
+  let asked = 0;
+  const flaky = () => (asked++ === 0 ? offline() : trueCareer());
+  const page = await dashboard(several(), [], { career: flaky });
+  try {
+    await until(() => page.button('Try again'), 'the notice');
+    assert.equal(page.loaders.career, flaky, 'the loader is still the same function');
+    page.view.act(() => reactProps(page.button('Try again')).onClick({}));
+    await until(() => page.button('Open Job Tracker →'), 'the panel after Try again');
+    assert.equal(page.button('Try again'), undefined, 'the notice is gone');
+    assert.equal(page.loaders.career, flaky, 'never swapped');
+  } finally { await page.close(); }
+});
+
+it('the same loader fails once: a later visit (remount) shows the panel with no Try again', async () => {
+  const { _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
+  const trueCareer = _lazyForTest.loaders.career;
+  let asked = 0;
+  const flaky = () => (asked++ === 0 ? offline() : trueCareer());
+  const first = await dashboard(several(), [], { career: flaky });
+  let second;
+  try {
+    await until(() => first.button('Try again'), 'the notice on the first visit');
+    await first.leave();
+    second = await dashboard(several(), [], { career: flaky });
+    await until(() => second.button('Open Job Tracker →'), 'the panel on the next visit');
+    assert.equal(second.button('Try again'), undefined, 'no notice, no Try again');
+  } finally {
+    if (second) await second.close();
+    await first.close();
+  }
 });
