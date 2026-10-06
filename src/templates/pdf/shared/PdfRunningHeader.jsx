@@ -1,4 +1,5 @@
 import { Text } from './PdfText';
+import { breakHugeText } from './splitHugeBlock';
 import { pageMargins } from '@/constants/pageMargins';
 import { RUNNING_HEADER_PT, runningHeaderText, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from './pdfColors';
@@ -10,7 +11,9 @@ import { textShades } from './pdfColors';
  * `insetPt`: a band the template carries along the paper's top edge (the Banner's strip), kept clear.
  * `left`: where the line's box starts (the Sidebar's main column); the right margin ends it — it is
  * set flush right, so a short name never reaches past the page's own text. `right`: where it ends
- * instead, with the Sidebar's column on the right (Design → Layout → Details Right).
+ * instead, with the Sidebar's column on the right (Design → Layout → Details Right). A line of more than
+ * 12 000 characters (a name that long, repeated on every page) is cut into lines (breakHugeText): its
+ * text comes from a render prop, which Text's own cut does not see.
  */
 export function PdfRunningHeader({ personal, settings, insetPt = 0, left, right }) {
   const { v, h } = pageMargins(settings);
@@ -24,7 +27,7 @@ export function PdfRunningHeader({ personal, settings, insetPt = 0, left, right 
         fontSize: RUNNING_HEADER_PT, lineHeight: 1.2, textAlign: 'right',
         color: textShades(settings.textColor || '#111111').meta,
       }}
-      render={({ pageNumber }) => (pageNumber > 1 ? runningHeaderText(personal?.name, pageNumber) : '')}
+      render={({ pageNumber }) => (pageNumber > 1 ? breakHugeText(runningHeaderText(personal?.name, pageNumber)) : '')}
     />
   );
 }

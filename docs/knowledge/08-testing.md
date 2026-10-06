@@ -19,7 +19,11 @@ Helpers the PDF and unit suites share:
   a component in Node
 - `tests/pdf/fake-firestore.mjs` — an in-memory Firestore for the cloud-sync tests
 - `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics (a test can wrap its
-  `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does)
+  `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does, or hold a call for ever, as
+  `174-preview-pdfjs-watchdog` does)
+- `tests/pdf/call-counts.mjs` — how many times named functions of a library ran while something ran (V8's
+  precise coverage over `node:inspector`): the way a test pins a cost by counting work, never by timing it
+  (`175-plain-field-linear` counts textkit's `computeCost`)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
   and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
 - `tests/pdf/startup-modules.mjs` — the start-up path by module, walked from `src/main.jsx` through static
