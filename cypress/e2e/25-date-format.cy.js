@@ -10,8 +10,8 @@ const formatSelect = () => cy.contains('label', /^Date format$/).parent().find('
 const previewText = () => cy.preview().invoke('text');
 
 const openDates = () => {
-  cy.get('button[title="Design & Customize"]').click();
-  cy.contains('button', /^Dates$/).click();
+  cy.openDesign();
+  cy.get('[data-testid="dock-design"]').contains('button', /^Dates$/).click();
 };
 
 /** An experience section holding `items`, as an imported .json stores one. */

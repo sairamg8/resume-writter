@@ -86,8 +86,8 @@ describe('Design → Spacing → Smart Page Fit presets', () => {
 
   beforeEach(() => {
     cy.visitEditor('classic');
-    cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', /^Spacing$/i).click();
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').contains('button', /^Spacing$/i).click();
     cy.contains('Smart Page Fit Presets').should('be.visible');
   });
 

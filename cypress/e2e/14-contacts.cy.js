@@ -52,7 +52,7 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
       expect(pdfText(pdf)).not.to.contain(PHONE);
       expect(pdfText(pdf)).to.contain(EMAIL);
     });
-    cy.contains('button', 'Resume').click();
+    cy.switchTo('resume');
     cy.previewReady();
     cy.preview().invoke('text').should((t) => expect(squash(t)).to.contain(PHONE).and.to.contain(EMAIL));
   });
@@ -110,7 +110,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
 
   it('previews five distinct packs, and picking one reaches the store', () => {
     cy.visitEditor('classic');
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     packs().should('have.length', 5).each(($b) => {
       expect($b.find('svg')).to.have.length(6);
       $b.find('svg').each((_, svg) => expect(svg.querySelectorAll('path, rect, circle').length).to.be.greaterThan(0));
@@ -139,7 +139,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
   // style (PDF = preview, and Word), and so does a later switch to Classic, Minimal or Executive.
   const hint = () => iconSection().children('p').first();
   const pickMinimal = () => {
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     packs().filter(':contains("Minimal")').click();
   };
   /** The email, then `mark` (the style's separator), then the phone — in a text with no spaces. */
@@ -149,10 +149,10 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     cy.visitEditor('modern', { settings: { contactStyle: 'bar' } });
     pickMinimal();
     cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'bar' }));
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.previewReady();
     letter().invoke('text').should(contactsWith('|'));
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     cy.get('[data-testid="template-classic"]').click();
     cy.store().should((s) => {
       expect(active(s).template).to.eq('classic');
@@ -165,7 +165,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     cy.visitEditor('sidebar', { settings: { contactStyle: 'bullet' } });
     pickMinimal();
     cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'bullet' }));
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.previewReady();
     letter().invoke('text').should(contactsWith('•'));
     cy.exportLetterDocx().then((docx) => contactsWith('•')(docx.paragraphs.join(' ')));
@@ -173,7 +173,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
 
   it('Classic draws the pack only with the Icon style: its hint says a pick switches Bar to Icon, and a pick does (R9-4)', () => {
     cy.visitEditor('classic', { settings: { contactStyle: 'bar' } });
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     hint().should('contain.text', 'Picking a pack switches the résumé to Icon');
     packs().filter(':contains("Minimal")').click();
     cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'icon' }));
@@ -246,10 +246,10 @@ describe('per-field contact icons in the editor (R1-2, R1-4)', () => {
     cy.visitEditor('classic', { state });
     cy.contains('label', 'Email').should('exist');
     letterRows().should('have.length', 0); // the letter follows the résumé's Bar: no icon anywhere
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.contains('p', 'Contact Style').next().contains('button', 'Icon').click();
     cy.store().should((s) => expect(active(s).coverLetter.headerStyle).to.eq('icon'));
-    cy.contains('button', 'Resume').click();
+    cy.switchTo('resume');
     iconRows().should('have.length', 0);
     letterRows().should('have.length', 6);
     letterRows().first().parent().contains('button', 'Clear').click();
@@ -265,14 +265,14 @@ describe('per-field contact icons in the editor (R1-2, R1-4)', () => {
   it('ONB-8: Design -> Contact icons hint accurately reflects whether icons are shown', () => {
     // Classic with Bar: neither draws icons
     cy.visitEditor('classic', { state: withStyle('classic', 'bar') });
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     cy.contains('p', 'Contact style must be Icon').should('not.exist');
     cy.contains('p', 'while icons are shown').scrollIntoView().should('be.visible');
 
     // Switch letter to Icon: custom images appear
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.contains('p', 'Contact Style').next().contains('button', 'Icon').click();
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     cy.contains('p', 'while icons are shown').should('not.exist');
     cy.contains('p', 'Custom images per field appear under Personal Info → Fields.').scrollIntoView().should('be.visible');
   });

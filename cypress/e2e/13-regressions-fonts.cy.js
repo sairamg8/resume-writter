@@ -4,8 +4,8 @@ const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const META = 'https://cdn.jsdelivr.net/npm/@fontsource/*@5/metadata.json';
 
 const openTypography = () => {
-  cy.get('button[title="Design & Customize"]').click();
-  cy.contains('button', /^Typography$/i).click();
+  cy.openDesign();
+  cy.get('[data-testid="dock-design"]').contains('button', /^Typography$/i).click();
 };
 
 describe('typography regressions', () => {

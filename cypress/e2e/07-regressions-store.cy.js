@@ -173,9 +173,9 @@ describe('regressions — resume store', () => {
     cy.contains('[role="alert"]', 'Not saved').should('be.visible');
   });
 
-  /** The Design panel's template list shows the template `picked`, and only it, selected. */
+  /** The Design dock's template list shows the template `picked`, and only it, selected. */
   const selected = (picked = 'classic') => {
-    cy.get('button[title="Design & Customize"]').click();
+    cy.openDesign();
     ['executive', 'classic', 'modern', 'minimal', 'sidebar']
       .forEach((id) => cy.get(`[data-testid="template-${id}"]`).should(id === picked ? 'have.class' : 'not.have.class', 'border-blue-500'));
   };

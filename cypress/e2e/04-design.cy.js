@@ -2,10 +2,10 @@
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const settingsOf = (s) => active(s).settings;
 
-/** Open the Design tab, and optionally one of its collapsible sections by title. */
+/** Open the Design dock, and optionally one of its collapsible sections by title. */
 const openDesign = (section) => {
-  cy.get('button[title="Design & Customize"]').click();
-  if (section) cy.contains('button', new RegExp(`^${section}$`, 'i')).click();
+  cy.openDesign();
+  if (section) cy.get('[data-testid="dock-design"]').contains('button', new RegExp(`^${section}$`, 'i')).click();
 };
 
 /** Text of the PDF preview — the PDF's own glyphs, so upper-casing shows as real capitals. */
