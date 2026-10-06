@@ -7,12 +7,13 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { setup, teardown, loadModule } from './harness.mjs';
 
-before(setup);
 after(teardown);
 
 let syncHeld;
 let SyncHeldNotice;
+// One hook: the modules load through the Vite instance setup() starts (two separate before hooks left loadModule with none).
 before(async () => {
+  await setup();
   ({ syncHeld } = await loadModule('/src/utils/collectionSyncMeta.js'));
   ({ SyncHeldNotice } = await loadModule('/src/components/SyncHeldNotice.jsx'));
 });

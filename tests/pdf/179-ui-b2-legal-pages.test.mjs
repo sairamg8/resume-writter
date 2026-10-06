@@ -21,9 +21,11 @@ const EXPECTED = {
 const flat = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const auth = { user: null, authLoading: false, cloudAvailable: true, signInWithGoogle() {}, signOut() {} };
 const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
+// The page at its own address, as the router has it (an address of /terms or /privacy marks no nav area current).
 async function render(file, props = { auth, sync }) {
   const { default: Page } = await loadModule(file);
-  return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Page, props)));
+  const at = file.includes('Terms') ? '/terms' : '/privacy';
+  return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [at] }, createElement(Page, props)));
 }
 
 for (const [name, file] of [['Terms', '/src/pages/TermsPage.jsx'], ['Privacy', '/src/pages/PrivacyPage.jsx']]) {
