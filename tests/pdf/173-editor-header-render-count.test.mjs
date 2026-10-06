@@ -1,41 +1,45 @@
 // PERF-4 follow-up (docs/tracking/HANDOFF.md: "PersonalInfoEditor and EditorHeader still re-render per
-// key"): the editor's header — back, the résumé's name, the Export menu, the account — rendered again at
-// every keystroke anywhere in the résumé, with the Export menu and the account bar under it. A keystroke
-// changes the store's open résumé, so the Editor page renders, and each prop it gave the header was a new
-// value every time: the résumé, the rename box (useRename), the Export menu's state and handlers
-// (useEditorExports), the account and the sync (App.jsx's useAuth and useCloudSync make a new object, with
-// new functions, at every render) and Share's handler. And the header's own useNavigate woke it however
-// its props were kept: the router gives every component using one a new context value whenever the page's
-// <Routes> render, and the store sits above them, so that is every key.
-// This pins what a keystroke may touch — no component of the header at all — and, the other way, that what
-// the header shows still updates (the name and the rename box, an export in progress, the Export menu's
-// tab, the layout, the account and the sync), and that a handler the header has held since its first
-// render acts on the LATEST résumé: stable handlers that kept the first render's closure would export the
-// text as it was before the last key.
-// The Personal Info editor is pinned here too, because it needs the same wiring (the router above it):
-// a bullet's keystroke renders nothing of it.
-// The editor's alerts (an export error, a storage-full error, an import notice: EditorAlerts) and its mode bar
-// (Resume | Cover Letter | ATS Check | Design: EditorModeBar) are pinned the same way, each a part of its own in
-// the count: a keystroke rendered both, for each handler the page gave them was a new function and neither
-// was memoised. Kept, those handlers must still act on the LATEST state: a stale tab picker would drop an
-// import's notice from the address and leave a phone on the preview; a stale Dismiss would send the editor
-// back to the tab it had when the notice came. And what they show still updates: the open tab, an export
-// error and its Dismiss, a storage that is full (said once: a failed write makes a new error each time, with
-// the same reason), an import notice.
+// key"), rewritten for the B3 frame (UI rebuild: no tab strip; a bar of memo leaves, a Resume | Cover Letter
+// switch, the ATS chip, the Design button, one right dock). The intent is the one it always had: a keystroke
+// anywhere in the résumé must render none of the editor's bar — back and the name (EditorBackName), the Export
+// menu (EditorExportMenu, ExportDropdown), Share, the account bar (EditorAccount, AuthBar), the document switch
+// (EditorDocSwitch), the ATS chip, the Design button, the alerts, the phone's pill — and, with a dock open,
+// neither the Design panel nor the ATS scan in the commit of the key. Each of those was once rendered at every
+// key: a keystroke changes the store's open résumé, so the Editor page renders, and every prop it gave a part was
+// a new value every time (the rename box, the Export menu's state and handlers, the account and the sync that
+// App.jsx's useAuth and useCloudSync make new at every render, Share's and Back's handlers, the document and
+// dock pickers). And a router hook or a <Link> inside a memo part woke it however its props were kept: the
+// router gives every component using one a new context value whenever the page's <Routes> render, and the store
+// sits above them, so that is every key.
+// Three things are pinned: what a keystroke may touch (nothing of the bar; the save chip at most twice, in its
+// own labelled budget: it reads `saving` and `savedAt`, which a keystroke and its write change); that what the
+// bar shows still updates (the name and the rename box, an export in progress, the Export menu's wording for
+// the open document, the layout, the account and the sync, the open document and dock); and that a handler a
+// part has held since its first render acts on the LATEST state (stable handlers that kept the first render's
+// closure would export the text as it was before the last key, drop an import's notice from the address and
+// leave a phone on the preview).
 //
-// How it counts (renders, never time), as tests/pdf/165-perf4-editor-render-count.test.mjs: a React
-// DevTools hook installed before react-dom loads is told of every commit, and the fibers that RENDERED in
-// it (a function component's body ran; the fibers a memoised component bails out of are not among them)
-// are credited to the header, the alerts or the mode bar when it, or a component under it, is the one. What
-// is mounted is the real Editor page (src/pages/Editor.jsx) over the real store (useAppStore), wired as
-// App.jsx and AppRoutes.jsx wire it: the store above <Routes>, the account and the sync new objects at every
-// render. The page's body runs as in the app — `Editor(props)` called from the route's component, hooks and
-// all — and of the tree it returns the editor panel's header, alerts and mode bar and its Résumé tab are
-// mounted, exactly as the page built them. The preview (a PDF built in a worker), the template gallery and
-// the share dialog (closed) are not drawn. No component is edited, wrapped or mocked. Fictional people.
+// The tests are only worth having if they fail when the contract is broken, so the file proves its own sensitivity
+// twice. In the file: a probe memo leaf given a new object at every render, and one holding a <Link>, are mounted
+// beside the bar in the same real page and router, and a keystroke must render both (while a leaf of stable props
+// renders 0 times). Against the source: the lead's failfirst is a sabotage commit pair (a <Link> added to a leaf of
+// the bar; saving passed through EditorHeader; an unstable prop given to a leaf) which turns the counts and the
+// `changed` lists below red, and the revert turns them green.
+//
+// How it counts (renders, never time), as tests/pdf/165-perf4-editor-render-count.test.mjs: a React DevTools hook
+// installed before react-dom loads is told of every commit, and the fibers that RENDERED in it (a function
+// component's body ran; the fibers a memoised component bails out of are not among them) are credited to the part
+// that is, or holds, them. What is mounted is the real Editor page (src/pages/Editor.jsx) over the real store
+// (useAppStore), wired as App.jsx and AppRoutes.jsx wire it: the store above <Routes>, in a MemoryRouter, the
+// account and the sync new objects at every render. The page's body runs as in the app — `Editor(props)` called
+// from the route's component, hooks and all — and of the tree it returns the bar whole, the alerts, the Résumé
+// tab, the phone's pill and the dock are mounted, exactly as the page built them. The preview (a PDF built in a
+// worker), the template gallery and the share dialog are not drawn. No component is edited, wrapped or mocked.
+// Fictional people.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement, Fragment, useState } from 'react';
+import fs from 'node:fs';
+import { createElement, Fragment, memo, useState } from 'react';
 
 // No Firebase in this test's build, whatever .env holds (the Editor imports the share dialog, whose cloud
 // is the app's own Firestore). Read when setup() starts Vite.
@@ -57,7 +61,7 @@ const RENDERING_TAGS = new Set([0, 1, 11, 15]); // function, class, forwardRef, 
  * looks for it once, at load), so everything that loads it — the fake DOM, the router — is imported after.
  */
 function installRenderProbe() {
-  const probe = { on: false, parts: null, commits: [] }; // parts: label → the type the page imports, for each part counted
+  const probe = { on: false, parts: [], commits: [] }; // parts: [label, the type the page imports] for each part counted
 
   /** The fibers that rendered in the commit that just finished: the walk the DevTools make. */
   function rendered(root) {
@@ -73,13 +77,14 @@ function installRenderProbe() {
   }
 
   /**
-   * 'header', 'alerts' or 'modes' for that part's own fiber and everything under it, else 'rest'. A part is
-   * found by the type the page imports (`elementType`: the memo wrapper, or the function itself where it is
-   * not memoised).
+   * The label of the part a fiber is, or sits under, else 'rest'. The nearest part wins: the switch, the chip and
+   * the Design button are under the mode bar, so each is its own label and 'modes' is the mode bar's own function.
+   * A part is found by the type the page imports (`elementType`: the memo wrapper, or the function itself where
+   * it is not memoised), or the function a simple memo's fiber holds.
    */
   function labelOf(fiber) {
     for (let f = fiber; f; f = f.return) {
-      for (const [label, type] of Object.entries(probe.parts)) if (f.elementType === type) return label;
+      for (const [label, type] of probe.parts) if (f.elementType === type || f.type === type) return label;
     }
     return 'rest';
   }
@@ -94,7 +99,7 @@ function installRenderProbe() {
     onPostCommitFiberRoot() {},
     setStrictMode() {},
     onCommitFiberRoot(_id, root) {
-      if (!probe.on || !probe.parts) return;
+      if (!probe.on) return;
       // Labelled now: a fiber's `return` and flags are rewritten by the next commit.
       probe.commits.push(rendered(root).map((f) => ({ label: labelOf(f), name: f.type?.displayName || f.type?.name || f.type?.render?.name || f.type?.type?.name || `tag${f.tag}` })));
     },
@@ -106,7 +111,7 @@ const probe = installRenderProbe();
 const { setup, teardown, loadModule, resume, section, experience } = await import('./harness.mjs');
 const { mount, elements, reactProps, withInnerHtml } = await import('./fake-dom.mjs');
 const { MemoryStorage, settle } = await import('./resume-tab.mjs');
-const { MemoryRouter, Routes, Route, useNavigate } = await import('react-router-dom');
+const { MemoryRouter, Routes, Route, Link, useNavigate } = await import('react-router-dom');
 
 let build;
 before(async () => {
@@ -137,6 +142,10 @@ const NOTICE = 'This résumé was read from a document, best-effort: check each 
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
 const attr = (el, name) => el.getAttribute(name) ?? '';
+/** The leaves of the bar, the alerts and the pill: none of them may render for a keystroke. */
+const BAR = ['header', 'modes', 'switch', 'chip', 'designButton', 'alerts', 'pill'];
+/** Past the store's coalesced write (SAVE_WAIT_MS, 300 ms) and the ATS scan's pause (250 ms): the state changes that follow a key render the page again. */
+const PAUSE = 700;
 
 /** Up to four jobs with bullets, an education, a skills section and a summary: a résumé long enough to feel. */
 function fixture(jobs) {
@@ -175,24 +184,17 @@ function find(node, type) {
   return node.type === type ? node : find(node.props.children, type);
 }
 
-/** The text a React tree (as written) holds. */
-const textIn = (node) => {
-  if (Array.isArray(node)) return node.map(textIn).join('');
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  return node && typeof node === 'object' && node.props ? textIn(node.props.children) : '';
-};
-
-/** The first element of a React tree (as written) that is a <button> with exactly `label` for text. */
-function findButton(node, label) {
+/** The first element of a React tree (as written) whose `data-testid` prop is `id`. */
+function findTid(node, id) {
   if (Array.isArray(node)) {
     for (const child of node) {
-      const hit = findButton(child, label);
+      const hit = findTid(child, id);
       if (hit) return hit;
     }
     return null;
   }
   if (!node || typeof node !== 'object' || !node.props) return null;
-  return node.type === 'button' && textIn(node) === label ? node : findButton(node.props.children, label);
+  return node.props['data-testid'] === id ? node : findTid(node.props.children, id);
 }
 
 /** Polls until `done()` holds (a write the store makes 300 ms after a key, a state set after one): by what happened, not by a clock. */
@@ -204,31 +206,55 @@ async function until(done, what) {
   assert.fail(`never happened: ${what}`);
 }
 
+// Two probe leaves for the sensitivity twins: memo leaves that hold what a sabotaged leaf of the bar would.
+let probeLeaves = false; // mounted beside the bar only where a test asks
+const StableLeaf = memo(function StableLeaf({ label }) { return createElement('i', { 'data-probe': 'stable' }, label); });
+const UnstableLeaf = memo(function UnstableLeaf({ options }) { return createElement('i', { 'data-probe': 'unstable' }, String(options.n)); });
+const LinkLeaf = memo(function LinkLeaf() { return createElement(Link, { to: '/', 'data-probe': 'link' }, 'Home'); });
+
 /**
  * The editor as the app mounts it, over a saved résumé. `signedIn`: the account is signed in; `signInAs`:
  * whom the sign-in button signs in. `expand`: every entry's card opened (a card starts collapsed), so its
- * bullets can be typed in. Returns the page's
- * parts to read and drive, and `measure(fn)`: `fn`'s commits — which components of the header, of the alerts
- * and of the mode bar rendered, which others did, and which of each part's props were not the same value as before.
+ * bullets can be typed in. `path`: the address after /resume/:id ('' or '?tab=coverletter', '?dock=design').
+ * Returns the page's parts to read and drive, and `measure(fn)`: `fn`'s commits — which labelled parts rendered
+ * in each, and which of the props the Editor gave the header, the alerts, the mode bar and the dock were not the
+ * same value as before.
  */
-async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs = USER } = {}) {
+async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs = USER, path = '' } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Editor } = await loadModule('/src/pages/Editor.jsx');
-  const { EditorHeader, EditorAlerts, EditorModeBar } = await loadModule('/src/components/EditorHeader.jsx');
+  const { EditorHeader, EditorAlerts, EditorModeBar, EditorAtsChip, EditorDesignButton } = await loadModule('/src/components/EditorHeader.jsx');
+  const { EditorDocSwitch } = await loadModule('/src/components/EditorDocSwitch.jsx');
+  const { EditorDock } = await loadModule('/src/components/EditorDock.jsx');
+  const { EditorMobilePill } = await loadModule('/src/components/EditorMobilePill.jsx');
+  const { EditorSaveStatus } = await loadModule('/src/components/EditorSaveStatus.jsx');
   const { EditorTabContent } = await loadModule('/src/components/EditorTabContent.jsx');
   const { EditorPreviewPane } = await loadModule('/src/components/EditorPreviewPane.jsx');
-  probe.parts = { header: EditorHeader, alerts: EditorAlerts, modes: EditorModeBar };
+  const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');
+  const { default: AtsCheckerPanel } = await loadModule('/src/components/AtsCheckerPanel.jsx');
+  probe.parts = [
+    ['header', EditorHeader], ['alerts', EditorAlerts], ['modes', EditorModeBar], ['save', EditorSaveStatus],
+    ['switch', EditorDocSwitch], ['chip', EditorAtsChip], ['designButton', EditorDesignButton],
+    ['pill', EditorMobilePill], ['dock', EditorDock], ['designPanel', DesignPanel], ['atsPanel', AtsCheckerPanel],
+    ['probeStable', StableLeaf], ['probeUnstable', UnstableLeaf], ['probeLink', LinkLeaf],
+  ];
+  // The ATS panel keeps the pasted posting for the session.
+  const sessionMap = new Map();
+  globalThis.sessionStorage = {
+    get length() { return sessionMap.size; }, key: (i) => [...sessionMap.keys()][i] ?? null,
+    getItem: (k) => (sessionMap.has(k) ? sessionMap.get(k) : null), setItem: (k, v) => sessionMap.set(k, String(v)), removeItem: (k) => sessionMap.delete(k),
+  };
 
   const r = fixture(jobs);
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })]]);
   const live = {
     store: null, navigate: null, setSyncStatus: null, appRenders: 0, signOuts: [], tree: null,
-    headerProps: [], alertsProps: [], modesProps: [], previewProps: [],
+    headerProps: [], alertsProps: [], modesProps: [], dockProps: [], previewProps: [], saveProps: [],
   };
   // The window's width: a desktop one until `goPhone`. Only the query the Editor asks (useIsMobile) answers by it.
   const screen = { desktop: true, listeners: new Set() };
 
-  /** The route's component: the Editor page's body, of which the header, the alerts, the mode bar and the Résumé tab are mounted. */
+  /** The route's component: the Editor page's body, of which the bar, the alerts, the Résumé tab, the pill and the dock are mounted. */
   function Page(props) {
     live.navigate = useNavigate();
     const tree = Editor(props);
@@ -237,13 +263,28 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
     const modes = find(tree, EditorModeBar);
     const tab = find(tree, EditorTabContent);
     const preview = find(tree, EditorPreviewPane);
+    const bar = findTid(tree, 'editor-bar');
+    const save = find(tree, EditorSaveStatus);
     assert.ok(header && alerts && modes && tab && preview, 'the Editor renders its header, alerts, mode bar, tab area and preview pane');
+    assert.ok(bar && save, 'the Editor renders its bar, with the save chip in it');
+    const pill = find(tree, EditorMobilePill);
+    const dock = find(tree, EditorDock);
     live.tree = tree;
     live.headerProps.push(header.props);
     live.alertsProps.push(alerts.props);
     live.modesProps.push(modes.props);
+    live.dockProps.push(dock ? dock.props : null);
     live.previewProps.push(preview.props);
-    return createElement(Fragment, null, header, alerts, modes, tab.props.activeTab === 'resume' ? tab : null);
+    live.saveProps.push(save.props);
+    const probes = probeLeaves
+      ? [
+        createElement(StableLeaf, { key: 'a', label: 'stable' }),
+        // A new object at every render of the page: the unstable prop a leaf of the bar must never be given.
+        createElement(UnstableLeaf, { key: 'b', options: { n: 1 } }),
+        createElement(LinkLeaf, { key: 'c' }),
+      ]
+      : [];
+    return createElement(Fragment, null, bar, alerts, tab.props.activeTab === 'resume' ? tab : null, pill, dock, ...probes);
   }
 
   /** App.jsx: the store, the account and the sync, below which the routes are — new objects at every render. */
@@ -275,13 +316,14 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
       addEventListener(_type, listener) { if (query === DESKTOP) screen.listeners.add(listener); },
       removeEventListener(_type, listener) { screen.listeners.delete(listener); },
     });
-    return createElement(MemoryRouter, { initialEntries: [`/resume/${r.id}`] }, createElement(App));
+    return createElement(MemoryRouter, { initialEntries: [`/resume/${r.id}${path}`] }, createElement(App));
   }
 
   const view = mount(Root, {});
   await settle();
   const all = () => [...elements(view.container)];
   const byTitle = (title) => all().find((el) => el.getAttribute('title') === title);
+  const byTid = (id) => all().find((el) => attr(el, 'data-testid') === id);
   const call = (el, name, event = {}) => {
     const handler = reactProps(el)?.[name];
     assert.ok(handler, `no ${name} handler on <${el?.tagName}>`);
@@ -335,6 +377,7 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
     live,
     id: r.id,
     byTitle,
+    byTid,
     call,
     act: (fn) => view.act(fn),
     text: () => view.container.textContent,
@@ -347,23 +390,30 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
     firstAlerts: () => live.alertsProps[0],
     modes: () => live.modesProps.at(-1),
     firstModes: () => live.modesProps[0],
+    /** What the save chip was given at its latest render. */
+    save: () => live.saveProps.at(-1),
     /** The alerts on screen, each as its text: a message and its Dismiss button. */
     alertTexts: () => all().filter((el) => ['alert', 'status'].includes(attr(el, 'role')) && /\bpx-4 py-2 text-xs\b/.test(attr(el, 'class'))).map((el) => text(el).replace(/Dismiss$/, '')),
     dismissButtons: () => all().filter((el) => el.tagName === 'BUTTON' && text(el) === 'Dismiss'),
-    /** A tab of the mode bar, by its label. */
-    tabButton: (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label),
-    /** The layout the Editor gave the preview pane: 'split' on a desktop; on a phone 'editor', or 'preview' once the floating toggle is on it. */
+    /** A control of the bar, by its testid, pressed as a click, and the address change it sets off settled. */
+    async press(id) {
+      const el = byTid(id);
+      assert.ok(el, `no control with the testid ${id}`);
+      call(el, 'onClick');
+      await settle(); // the address changes in the router's own time
+    },
+    /** The document switch's button that is lit (the open document), by the one class only the lit one has. */
+    openDoc: () => ['doc-switch-resume', 'doc-switch-letter'].filter((id) => /\bshadow-sm\b/.test(attr(byTid(id), 'class'))),
+    chipOpen: () => /\bbg-cv-good-soft\b/.test(attr(byTid('ats-chip'), 'class')),
+    designOpen: () => /\bbg-cv-brand-soft\b/.test(attr(byTid('design-button'), 'class')),
+    /** Which dock is on screen: 'design', 'ats' or null. */
+    dockOnScreen: () => ['design', 'ats'].find((name) => byTid(`dock-${name}`)) ?? null,
+    /** The layout the Editor gave the preview pane: 'split' on a desktop; on a phone 'editor', or 'preview' once the floating pill is on it. */
     previewLayout: () => live.previewProps.at(-1).layoutMode,
     /** The window becomes a phone's: its width query says so to the Editor, as the browser would. */
     goPhone() {
       screen.desktop = false;
       view.act(() => { for (const listener of screen.listeners) listener({ matches: false }); });
-    },
-    /** The phone's floating toggle: Preview, as the Editor's latest render built it. */
-    showPreview() {
-      const button = findButton(live.tree, 'Preview');
-      assert.ok(button, 'a phone has the floating Edit | Preview toggle');
-      view.act(() => button.props.onClick());
     },
     renameBox: () => all().find((el) => el.tagName === 'INPUT' && attr(el, 'aria-label') === 'Résumé name'),
     exportButton: () => all().find((el) => el.tagName === 'BUTTON' && /^(Export|\.\.\.|Reading…)$/.test(text(el))),
@@ -375,8 +425,10 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
     typeInSummary: () => typeInBox(summaryBox()),
     typeInEmail,
     /**
-     * `fn`'s commits (and what runs after it for `wait` ms more): the rendered components under the header, under the
-     * alerts and under the mode bar, the others', and each part's props that changed (`changed` the header's).
+     * `fn`'s commits (and what runs after it for `wait` ms more): `count(label)`, the number of commits in which
+     * something of that labelled part rendered; `names(label)`, the components of it that rendered; `first`, the
+     * labels of the first commit; and the props the Editor gave the header, the alerts, the mode bar and the dock that
+     * were not the same value as before (`changed`, `changedAlerts`, `changedModes`, `changedDock`).
      */
     async measure(fn, wait = 0) {
       const from = live.headerProps.length;
@@ -389,13 +441,18 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
       } finally {
         probe.on = false;
       }
-      const names = { header: new Set(), alerts: new Set(), modes: new Set(), rest: new Set() };
-      for (const commit of probe.commits) for (const { label, name } of commit) names[label].add(name);
+      const commits = probe.commits.map((commit) => {
+        const by = new Map();
+        for (const { label, name } of commit) by.set(label, new Set(by.get(label)).add(name));
+        return by;
+      });
       /** The keys of `list`'s props since `from` that were not the same value as before it. */
       const changedIn = (list) => {
         const was = list[from - 1];
         const changed = new Set();
+        if (!was) return [];
         for (const props of list.slice(from)) {
+          if (!props) continue;
           for (const key of new Set([...Object.keys(was), ...Object.keys(props)])) if (!Object.is(was[key], props[key])) changed.add(key);
         }
         return [...changed];
@@ -403,21 +460,25 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
       const changed = changedIn(live.headerProps);
       const changedAlerts = changedIn(live.alertsProps);
       const changedModes = changedIn(live.modesProps);
+      const changedDock = changedIn(live.dockProps);
       return {
-        commits: probe.commits.length,
-        header: [...names.header],
-        alerts: [...names.alerts],
-        modes: [...names.modes],
-        rest: [...names.rest],
+        commits,
+        count: (label) => commits.filter((c) => c.has(label)).length,
+        names: (label) => [...new Set(commits.flatMap((c) => [...(c.get(label) ?? [])]))],
+        /** The rendered components that are under none of the parts counted: the edit's own. */
+        rest: () => [...new Set(commits.flatMap((c) => [...(c.get('rest') ?? [])]))],
         changed,
         changedAlerts,
         changedModes,
-        report: () => `${probe.commits.length} commits. Rendered under the header: ${JSON.stringify([...names.header])}, under the alerts: ${JSON.stringify([...names.alerts])}, under the mode bar: ${JSON.stringify([...names.modes])}; elsewhere: ${JSON.stringify([...names.rest])}. Props that were not the same value as before — the header's: ${JSON.stringify(changed)}, the alerts': ${JSON.stringify(changedAlerts)}, the mode bar's: ${JSON.stringify(changedModes)}`,
+        changedDock,
+        report: () => `${commits.length} commits: ${JSON.stringify(commits.map((c) => Object.fromEntries([...c].map(([l, n]) => [l, [...n]]))))}. Props that were not the same value as before — the header's: ${JSON.stringify(changed)}, the alerts': ${JSON.stringify(changedAlerts)}, the mode bar's: ${JSON.stringify(changedModes)}, the dock's: ${JSON.stringify(changedDock)}`,
       };
     },
     async close() {
+      probeLeaves = false;
       await view.unmount();
       delete globalThis.localStorage;
+      delete globalThis.sessionStorage;
     },
   };
 }
@@ -429,16 +490,16 @@ const CASES = [
   ['a personal-info field (Email)', (t) => t.typeInEmail(), (t) => t.store().activeResume.personal.email.endsWith(MARK)],
 ];
 
-describe('typing one character renders nothing of the editor header (PERF-4)', () => {
+describe('typing one character renders nothing of the editor bar (PERF-4)', () => {
   for (const signedIn of [false, true]) {
     for (const [what, type, reached] of CASES) {
-      it(`${what}, ${signedIn ? 'signed in' : 'signed out'}: not the header, the Export menu or the account bar`, async () => {
+      it(`${what}, ${signedIn ? 'signed in' : 'signed out'}: not the header, the Export menu or the account bar, nor a prop of it that is a new value`, async () => {
         const t = await openEditor({ jobs: 4, signedIn, expand: true });
         try {
           const w = await t.measure(() => type(t));
           assert.ok(reached(t), 'the character reached the store');
-          assert.ok(w.commits >= 1 && w.rest.length >= 1, `the edit rendered its own part, so the count is live. ${w.report()}`);
-          assert.deepEqual(w.header, [], `typing rendered part of the header. ${w.report()}`);
+          assert.ok(w.commits.length >= 1 && w.rest().length >= 1, `the edit rendered its own part, so the count is live. ${w.report()}`);
+          assert.deepEqual(w.names('header'), [], `typing rendered part of the header (back, name, Export menu, Share, account). ${w.report()}`);
           assert.deepEqual(w.changed, [], `typing gave the header a prop that is not the same value as before. ${w.report()}`);
         } finally { await t.close(); }
       });
@@ -453,42 +514,160 @@ describe('typing one character renders nothing of the editor header (PERF-4)', (
     const t = await openEditor({ jobs: 4, expand: true });
     try {
       let w = await t.measure(() => t.typeInEmail());
-      assert.ok(w.rest.includes('PersonalInfoEditor'), `a key in its own field renders it, so the count is live. ${w.report()}`);
+      assert.ok(w.rest().includes('PersonalInfoEditor'), `a key in its own field renders it, so the count is live. ${w.report()}`);
       w = await t.measure(() => t.typeInBullet(1));
       assert.ok(t.store().activeResume.sections[0].items[1].description.includes(MARK), 'the character reached the store');
-      assert.ok(w.rest.length >= 1, `the bullet rendered its own part. ${w.report()}`);
-      assert.deepEqual(w.rest.filter((name) => PERSONAL.includes(name)), [], `typing in a bullet rendered part of the Personal Info editor. ${w.report()}`);
+      assert.ok(w.rest().length >= 1, `the bullet rendered its own part. ${w.report()}`);
+      assert.deepEqual(w.rest().filter((name) => PERSONAL.includes(name)), [], `typing in a bullet rendered part of the Personal Info editor. ${w.report()}`);
     } finally { await t.close(); }
   });
 
-  it('the write that follows the keystroke (Saving…, then Saved) renders nothing of it either', async () => {
+  it('the write that follows the keystroke (Saving…, then Saved) renders nothing of the header either', async () => {
     const t = await openEditor({ jobs: 1 });
     try {
-      // Past the store's coalesced write (SAVE_WAIT_MS, 300 ms): its state changes render the page again.
-      const w = await t.measure(() => t.typeInSummary(), 500);
+      const w = await t.measure(() => t.typeInSummary(), PAUSE);
       assert.ok(t.store().savedAt, 'the write has happened');
-      assert.deepEqual(w.header, [], `the header rendered. ${w.report()}`);
+      assert.deepEqual(w.names('header'), [], `the header rendered. ${w.report()}`);
       assert.deepEqual(w.changed, [], w.report());
     } finally { await t.close(); }
   });
 });
 
-describe('what the header shows still updates', () => {
+describe('typing one character renders none of the switch, the ATS chip, the Design button, the alerts or the pill (PERF-4)', () => {
+  for (const signedIn of [false, true]) {
+    for (const [what, type, reached] of CASES) {
+      it(`${what}, ${signedIn ? 'signed in' : 'signed out'}: not EditorModeBar, EditorDocSwitch, EditorAtsChip, EditorDesignButton, EditorAlerts`, async () => {
+        const t = await openEditor({ jobs: 4, signedIn, expand: true });
+        try {
+          const w = await t.measure(() => type(t));
+          assert.ok(reached(t), 'the character reached the store');
+          assert.ok(w.commits.length >= 1 && w.rest().length >= 1, `the edit rendered its own part, so the count is live. ${w.report()}`);
+          for (const label of BAR) assert.equal(w.count(label), 0, `typing rendered ${label}. ${w.report()}`);
+          assert.deepEqual(w.changedAlerts, [], `typing gave the alerts a prop that is not the same value as before. ${w.report()}`);
+          assert.deepEqual(w.changedModes, [], `typing gave the mode bar a prop that is not the same value as before. ${w.report()}`);
+        } finally { await t.close(); }
+      });
+    }
+  }
+
+  it('the write that follows the keystroke (Saving…, then Saved) renders none of them either, in a phone\'s window too', async () => {
+    for (const phone of [false, true]) {
+      const t = await openEditor({ jobs: 1 });
+      try {
+        if (phone) t.goPhone();
+        const w = await t.measure(() => t.typeInSummary(), PAUSE);
+        assert.ok(t.store().savedAt, 'the write has happened');
+        for (const label of BAR) assert.equal(w.count(label), 0, `${label} rendered${phone ? ' on a phone' : ''}. ${w.report()}`);
+        assert.deepEqual([w.changed, w.changedAlerts, w.changedModes], [[], [], []], w.report());
+        if (phone) assert.ok(t.byTid('editor-pill'), 'the phone has its pill, so the count of it is live');
+      } finally { await t.close(); }
+    }
+  });
+});
+
+describe('typing with a dock open renders no part of the bar and neither panel in the key\'s own commit (PERF-4)', () => {
+  for (const [dock, panel] of [['design', 'designPanel'], ['ats', 'atsPanel']]) {
+    it(`the ${dock} dock: the bar's leaves do not render, the dock is given the same design, store and close, and ${panel} waits for the pause`, async () => {
+      const t = await openEditor({ jobs: 1, signedIn: true, path: `?dock=${dock}` });
+      try {
+        assert.equal(t.dockOnScreen(), dock, 'the dock is open');
+        const w = await t.measure(() => t.typeInSummary(), PAUSE);
+        assert.ok(t.store().activeResume.personal.summary.includes(MARK), 'the character reached the store');
+        assert.ok(w.commits.length >= 1 && w.commits[0].size >= 1, `the key rendered its own part, so the count is live. ${w.report()}`);
+        for (const label of BAR) assert.equal(w.count(label), 0, `${label} rendered with the ${dock} dock open. ${w.report()}`);
+        assert.equal(w.commits[0].has(panel), false, `${panel} rendered in the key's own commit. ${w.report()}`);
+        assert.ok(w.count(panel) <= 1, `${panel} rendered ${w.count(panel)} times. ${w.report()}`);
+        assert.deepEqual(w.changedDock, ['resume'], `the dock is given what a keystroke changes, its résumé, and nothing else (an unstable design, store or onClose renders its panels at every key). ${w.report()}`);
+        assert.deepEqual(w.changed, [], w.report());
+      } finally { await t.close(); }
+    });
+  }
+
+  it('the count is live: opening a dock renders the dock, and the chip and the Design button that show it', async () => {
+    const t = await openEditor();
+    try {
+      const w = await t.measure(() => t.press('design-button'));
+      assert.equal(t.dockOnScreen(), 'design');
+      for (const label of ['modes', 'designButton', 'chip', 'dock']) assert.ok(w.count(label) >= 1, `${label} did not render for a dock opening. ${w.report()}`);
+      assert.equal(w.count('header'), 0, `the header rendered for a dock opening. ${w.report()}`);
+    } finally { await t.close(); }
+  });
+});
+
+describe('the save chip has its own budget (PERF-4)', () => {
+  it('a burst of keys renders it at most twice (Saving…, then Saved), as primitives, and nothing else of the bar', async () => {
+    const t = await openEditor({ jobs: 1 });
+    try {
+      assert.equal(text(t.byTid('save-status')), 'Auto-saved to your browser');
+      const w = await t.measure(() => { t.typeInSummary(); t.typeInSummary(); t.typeInSummary(); }, PAUSE);
+      assert.ok(t.store().savedAt, 'the write has happened');
+      assert.ok(w.count('save') >= 1, `the chip shows Saving… and Saved, so it renders. ${w.report()}`);
+      assert.ok(w.count('save') <= 2, `the chip rendered ${w.count('save')} times for one burst. ${w.report()}`);
+      assert.match(text(t.byTid('save-status')), /^Saved /);
+      for (const label of BAR) assert.equal(w.count(label), 0, `${label} rendered for the write. ${w.report()}`);
+      assert.deepEqual(Object.keys(t.save()).sort(), ['persistError', 'savedAt', 'saving'], 'the chip is given three primitives and no more');
+      for (const value of Object.values(t.save())) assert.ok(['boolean', 'number', 'object'].includes(typeof value) && (typeof value !== 'object' || value === null), 'each a boolean or a time, never an object');
+    } finally { await t.close(); }
+  });
+
+  it('the header is not given the save state: no prop of it holds saving, savedAt or an error', async () => {
+    const t = await openEditor();
+    try {
+      const keys = Object.keys(t.header());
+      for (const key of ['saving', 'savedAt', 'persistError', 'saveStatus']) assert.ok(!keys.includes(key), `EditorHeader is given ${key}`);
+    } finally { await t.close(); }
+  });
+});
+
+describe('the count catches what it guards against (sensitivity twins)', () => {
+  it('a leaf given a new object at every render renders at every key; a leaf of stable props and one with a router hook do as they should', async () => {
+    probeLeaves = true;
+    const t = await openEditor();
+    try {
+      const w = await t.measure(() => { t.typeInSummary(); t.typeInSummary(); });
+      assert.ok(w.count('probeUnstable') >= 1, `a memo leaf given {…} at every render must render: the count would not see an unstable prop on a leaf of the bar. ${w.report()}`);
+      assert.ok(w.count('probeLink') >= 1, `a memo leaf with a <Link> must render at a key: the count would not see a Link added to a leaf of the bar. ${w.report()}`);
+      assert.equal(w.count('probeStable'), 0, `a leaf of stable props rendered. ${w.report()}`);
+      for (const label of BAR) assert.equal(w.count(label), 0, `${label} rendered. ${w.report()}`);
+    } finally { await t.close(); }
+  });
+
+  it('the changed-props list sees a prop that is a new value, and none that is not', async () => {
+    const t = await openEditor();
+    try {
+      // A rename of the résumé is a new `name` for the header: the list names it, and nothing more.
+      const w = await t.measure(() => t.act(() => t.store().renameResume(t.id, 'Another name')));
+      assert.ok(w.count('header') >= 1, `the header shows the new name, so it renders. ${w.report()}`);
+      assert.ok(w.changed.includes('name'), w.report());
+      for (const key of ['exportMenu', 'auth', 'sync', 'onBack', 'onShare']) assert.ok(!w.changed.includes(key), `${key} is the same value as before. ${w.report()}`);
+    } finally { await t.close(); }
+  });
+
+  it('no memo part of the bar reads the router or draws a Link (the source of the leaves)', () => {
+    const strip = (code) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const file of ['components/EditorHeader.jsx', 'components/EditorDocSwitch.jsx', 'components/EditorSaveStatus.jsx', 'components/EditorMobilePill.jsx', 'components/EditorDock.jsx']) {
+      const code = strip(fs.readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8'));
+      assert.ok(!/useNavigate|useParams|useSearchParams|useLocation|<Link\b|react-router/.test(code), `${file} uses the router`);
+    }
+  });
+});
+
+describe('what the bar shows still updates', () => {
   it('renaming: the box opens on the name, Enter saves what was typed, and the header shows it', async () => {
     const t = await openEditor();
     try {
       assert.equal(text(t.byTitle('Rename resume')), NAME);
       let w = await t.measure(() => t.call(t.byTitle('Rename resume'), 'onClick'));
       assert.equal(t.renameBox()?.value, NAME, 'the box opens on the name');
-      assert.ok(w.header.includes('EditorHeader'), `the header shows the box. ${w.report()}`);
+      assert.ok(w.count('header') >= 1, `the header shows the box. ${w.report()}`);
       w = await t.measure(() => t.call(t.renameBox(), 'onChange', { target: { value: 'Operations CV' } }));
       assert.equal(t.renameBox().value, 'Operations CV', 'the box shows what is typed');
-      assert.ok(w.header.includes('EditorHeader'), w.report());
+      assert.ok(w.count('header') >= 1, w.report());
       w = await t.measure(() => t.call(t.renameBox(), 'onKeyDown', { key: 'Enter' }));
       assert.equal(t.store().activeResume.name, 'Operations CV', 'Enter reached the store');
       assert.equal(t.renameBox(), undefined, 'the box is closed');
       assert.equal(text(t.byTitle('Rename resume')), 'Operations CV', 'the header shows the new name');
-      assert.ok(w.header.includes('EditorHeader'), w.report());
+      assert.ok(w.count('header') >= 1, w.report());
     } finally { await t.close(); }
   });
 
@@ -497,7 +676,7 @@ describe('what the header shows still updates', () => {
     try {
       const w = await t.measure(() => t.act(() => t.store().renameResume(t.id, 'Renamed in another tab')));
       assert.equal(text(t.byTitle('Rename resume')), 'Renamed in another tab');
-      assert.ok(w.header.includes('EditorHeader'), w.report());
+      assert.ok(w.count('header') >= 1, w.report());
       t.call(t.byTitle('Rename resume'), 'onClick');
       assert.equal(t.renameBox().value, 'Renamed in another tab', 'a stale start() would open the box on the name the header first held');
       t.call(t.renameBox(), 'onBlur');
@@ -519,7 +698,7 @@ describe('what the header shows still updates', () => {
       });
       assert.equal(text(t.exportButton()), 'Export', 'and is back once the file is made');
       assert.equal(downloads.files.length, 1);
-      assert.ok(w.header.includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
+      assert.ok(w.names('header').includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
     } finally { downloads.restore(); await t.close(); }
   });
 
@@ -534,7 +713,7 @@ describe('what the header shows still updates', () => {
       const w = await t.measure(() => { t.act(() => { run = t.header().exportMenu.handleImportFile(file); }); });
       assert.equal(text(t.exportButton()), 'Reading…', 'the button says a document is being read');
       assert.equal(reactProps(t.exportButton()).disabled, true);
-      assert.ok(w.header.includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
+      assert.ok(w.names('header').includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
       release();
       await run;
       await settle();
@@ -544,14 +723,15 @@ describe('what the header shows still updates', () => {
     } finally { await t.close(); }
   });
 
-  it('on the Cover Letter tab the Export menu names the letter', async () => {
+  it('on the Cover Letter document the Export menu names the letter (the switch picks it, the menu follows)', async () => {
     const t = await openEditor();
     try {
-      t.call(t.exportButton(), 'onClick'); // opens the menu, on the Résumé tab
+      t.call(t.exportButton(), 'onClick'); // opens the menu, on the Resume document
       assert.ok(t.buttonLabels().includes('Export PDF'), t.buttonLabels().join(' | '));
-      const w = await t.measure(() => t.act(() => t.live.navigate(`/resume/${t.id}?tab=coverletter`)));
+      const w = await t.measure(() => t.press('doc-switch-letter'));
+      assert.deepEqual(t.openDoc(), ['doc-switch-letter']);
       assert.ok(t.buttonLabels().includes('Export Cover Letter PDF'), t.buttonLabels().join(' | '));
-      assert.ok(w.header.includes('ExportDropdown'), w.report());
+      assert.ok(w.names('header').includes('ExportDropdown'), w.report());
     } finally { await t.close(); }
   });
 
@@ -563,7 +743,7 @@ describe('what the header shows still updates', () => {
       assert.equal(offered(), false, t.buttonLabels().join(' | '));
       const w = await t.measure(() => t.call(t.signInButton(), 'onClick'));
       assert.equal(offered(), true, t.buttonLabels().join(' | '));
-      assert.ok(w.header.includes('ExportDropdown'), w.report());
+      assert.ok(w.names('header').includes('ExportDropdown'), w.report());
     } finally { await t.close(); }
   });
 
@@ -574,7 +754,7 @@ describe('what the header shows still updates', () => {
       assert.deepEqual(toggles(), [], 'in the split layout the preview toolbar carries it');
       const w = await t.measure(() => t.act(() => t.header().setLayoutMode('editor')));
       assert.equal(toggles().length, 3);
-      assert.ok(w.header.includes('LayoutToggle'), w.report());
+      assert.ok(w.names('header').includes('LayoutToggle'), w.report());
       t.act(() => t.header().setLayoutMode('split'));
       assert.deepEqual(toggles(), []);
     } finally { await t.close(); }
@@ -587,10 +767,10 @@ describe('what the header shows still updates', () => {
       let w = await t.measure(() => t.call(t.signInButton(), 'onClick'));
       assert.equal(t.signInButton(), undefined, 'signed in: no sign-in button');
       assert.equal(attr(t.syncDot(), 'aria-label'), 'Synced');
-      assert.ok(w.header.includes('AuthBar'), `the account bar rendered for it. ${w.report()}`);
+      assert.ok(w.names('header').includes('AuthBar'), `the account bar rendered for it. ${w.report()}`);
       w = await t.measure(() => t.act(() => t.live.setSyncStatus('syncing')));
       assert.equal(attr(t.syncDot(), 'aria-label'), 'Syncing…', 'the sync dot follows the status');
-      assert.ok(w.header.includes('AuthBar'), w.report());
+      assert.ok(w.names('header').includes('AuthBar'), w.report());
       t.act(() => t.header().auth.signOut());
       assert.ok(t.signInButton(), 'signed out again');
     } finally { await t.close(); }
@@ -652,48 +832,32 @@ describe('a handler the header has held since its first render acts on the lates
       assert.deepEqual(t.live.signOuts, [latest], 'the call went to the render the page was last at, not the first');
     } finally { await t.close(); }
   });
-});
 
-describe('typing one character renders neither the alerts nor the mode bar of the editor (PERF-4)', () => {
-  for (const signedIn of [false, true]) {
-    for (const [what, type, reached] of CASES) {
-      it(`${what}, ${signedIn ? 'signed in' : 'signed out'}: not EditorAlerts, not EditorModeBar`, async () => {
-        const t = await openEditor({ jobs: 4, signedIn, expand: true });
-        try {
-          const w = await t.measure(() => type(t));
-          assert.ok(reached(t), 'the character reached the store');
-          assert.ok(w.commits >= 1 && w.rest.length >= 1, `the edit rendered its own part, so the count is live. ${w.report()}`);
-          assert.deepEqual(w.alerts, [], `typing rendered part of the alerts. ${w.report()}`);
-          assert.deepEqual(w.modes, [], `typing rendered part of the mode bar. ${w.report()}`);
-          assert.deepEqual(w.changedAlerts, [], `typing gave the alerts a prop that is not the same value as before. ${w.report()}`);
-          assert.deepEqual(w.changedModes, [], `typing gave the mode bar a prop that is not the same value as before. ${w.report()}`);
-        } finally { await t.close(); }
-      });
-    }
-  }
-
-  it('the write that follows the keystroke (Saving…, then Saved) renders neither either', async () => {
-    const t = await openEditor({ jobs: 1 });
+  it('Back goes to the dashboard from the function the header held since its first render', async () => {
+    const t = await openEditor();
     try {
-      const w = await t.measure(() => t.typeInSummary(), 500);
-      assert.ok(t.store().savedAt, 'the write has happened');
-      assert.deepEqual([w.alerts, w.modes], [[], []], w.report());
-      assert.deepEqual([w.changedAlerts, w.changedModes], [[], []], w.report());
+      const held = t.firstHeader().onBack;
+      t.typeInEmail();
+      await settle();
+      assert.equal(t.header().onBack, held, 'the header was given the same Back after the keys');
+      t.act(() => held());
+      await settle();
+      assert.match(t.text(), /THE DASHBOARD/);
     } finally { await t.close(); }
   });
 });
 
-describe('what the alerts and the mode bar show still updates', () => {
+describe('what the alerts, the switch, the chip and the Design button show still updates', () => {
   it('an export error shows, and its Dismiss takes it away', async () => {
     const t = await openEditor();
     try {
       assert.deepEqual(t.alertTexts(), []);
       let w = await t.measure(() => t.act(() => t.header().exportMenu.setExportError('PDF export failed (boom). Check your connection and try again.')));
       assert.deepEqual(t.alertTexts(), ['PDF export failed (boom). Check your connection and try again.']);
-      assert.ok(w.alerts.includes('EditorAlerts'), `the alert rendered for it. ${w.report()}`);
+      assert.ok(w.names('alerts').includes('EditorAlerts'), `the alert rendered for it. ${w.report()}`);
       w = await t.measure(() => t.call(t.dismissButtons()[0], 'onClick'));
       assert.deepEqual(t.alertTexts(), [], 'Dismiss takes it away');
-      assert.ok(w.alerts.includes('EditorAlerts'), w.report());
+      assert.ok(w.names('alerts').includes('EditorAlerts'), w.report());
     } finally { await t.close(); }
   });
 
@@ -704,107 +868,160 @@ describe('what the alerts and the mode bar show still updates', () => {
       localStorage.setItem = () => { throw Object.assign(new Error('full'), { name: 'QuotaExceededError' }); };
       let w = await t.measure(async () => { t.typeInSummary(); await until(() => t.store().persistError, 'the write storage refuses'); });
       assert.deepEqual(t.alertTexts(), [FULL]);
-      assert.ok(w.alerts.includes('EditorAlerts'), `the notice rendered the alerts. ${w.report()}`);
+      assert.ok(w.names('alerts').includes('EditorAlerts'), `the notice rendered the alerts. ${w.report()}`);
+      assert.equal(text(t.byTid('save-status')), 'Not saved', 'and the save chip says so, in red');
       const first = t.store().persistError;
       w = await t.measure(async () => { t.typeInSummary(); await until(() => t.store().persistError !== first, 'another refused write'); });
       assert.notEqual(t.store().persistError, first, 'a refused write makes a new error each time');
       assert.deepEqual(t.alertTexts(), [FULL]);
-      assert.deepEqual([w.alerts, w.modes], [[], []], `the same reason is no news. ${w.report()}`);
+      for (const label of BAR) assert.equal(w.count(label), 0, `the same reason is no news, but ${label} rendered. ${w.report()}`);
       delete localStorage.setItem; // storage takes writes again
       w = await t.measure(async () => { t.typeInSummary(); await until(() => !t.store().persistError, 'a write that fits'); });
       assert.deepEqual(t.alertTexts(), [], 'the notice goes once a write fits');
-      assert.ok(w.alerts.includes('EditorAlerts'), w.report());
+      assert.ok(w.names('alerts').includes('EditorAlerts'), w.report());
     } finally {
       delete localStorage.setItem;
       await t.close();
     }
   });
 
-  it('a document import\'s notice shows, and its Dismiss takes it off the address and leaves the tab where it is', async () => {
+  it('a document import\'s notice shows, and its Dismiss takes it off the address and leaves the document where it is', async () => {
     const t = await openEditor();
     try {
       let w = await t.measure(() => t.act(() => t.live.navigate(`/resume/${t.id}?tab=coverletter`, { state: { importNotice: NOTICE } })));
       assert.deepEqual(t.alertTexts(), [NOTICE]);
-      assert.ok(w.alerts.includes('EditorAlerts'), `the notice rendered the alerts. ${w.report()}`);
-      assert.equal(t.modes().activeTab, 'coverletter');
+      assert.ok(w.names('alerts').includes('EditorAlerts'), `the notice rendered the alerts. ${w.report()}`);
+      assert.equal(t.modes().doc, 'coverletter');
       w = await t.measure(() => t.call(t.dismissButtons()[0], 'onClick'));
       assert.deepEqual(t.alertTexts(), [], 'Dismiss takes the notice away');
-      assert.equal(t.modes().activeTab, 'coverletter', 'and leaves the tab it was on');
-      assert.ok(w.alerts.includes('EditorAlerts'), w.report());
+      assert.equal(t.modes().doc, 'coverletter', 'and leaves the document it was on');
+      assert.ok(w.names('alerts').includes('EditorAlerts'), w.report());
     } finally { await t.close(); }
   });
 
-  it('picking a tab shows it open in the mode bar; the Design button opens Design and, pressed again, goes back to the résumé', async () => {
+  it('the switch shows the open document and the chip and the Design button show their dock: pressed, a dock opens, and pressed again goes back to the résumé', async () => {
     const t = await openEditor();
     try {
-      const open = () => ['Resume', 'Cover Letter', 'ATS Check'].filter((label) => /bg-(?:blue|violet|emerald)-600/.test(attr(t.tabButton(label), 'class')));
-      assert.deepEqual(open(), ['Resume']);
-      let w = await t.measure(() => t.call(t.tabButton('Cover Letter'), 'onClick'));
-      assert.equal(t.modes().activeTab, 'coverletter');
-      assert.deepEqual(open(), ['Cover Letter']);
-      assert.ok(w.modes.includes('EditorModeBar'), `the mode bar rendered for it. ${w.report()}`);
-      w = await t.measure(() => t.call(t.byTitle('Design & Customize'), 'onClick'));
-      assert.equal(t.modes().activeTab, 'design');
-      assert.deepEqual(open(), [], 'none of the three is open on Design');
-      assert.match(attr(t.byTitle('Design & Customize'), 'class'), /bg-amber-50/);
-      assert.ok(w.modes.includes('EditorModeBar'), w.report());
-      t.call(t.byTitle('Design & Customize'), 'onClick');
-      await settle(); // the address changes in the router's own time
-      assert.equal(t.modes().activeTab, 'resume', 'the Design button again goes back to the résumé');
-      assert.deepEqual(open(), ['Resume']);
+      assert.deepEqual(t.openDoc(), ['doc-switch-resume']);
+      let w = await t.measure(() => t.press('doc-switch-letter'));
+      assert.equal(t.modes().doc, 'coverletter');
+      assert.deepEqual(t.openDoc(), ['doc-switch-letter']);
+      assert.ok(w.count('switch') >= 1 && w.count('modes') >= 1, `the switch rendered for it. ${w.report()}`);
+      // (The header does render for a document pick: the Export menu's words follow the open document.)
+      // Design belongs to the résumé: opened from the letter it opens over the Resume (EDIT-171).
+      w = await t.measure(() => t.press('design-button'));
+      assert.equal(t.modes().dock, 'design');
+      assert.equal(t.modes().doc, 'resume', 'a dock opened from the letter switches to the Resume');
+      assert.deepEqual(t.openDoc(), ['doc-switch-resume']);
+      assert.equal(t.dockOnScreen(), 'design');
+      assert.ok(t.designOpen() && !t.chipOpen(), 'the Design button is the lit one');
+      assert.ok(w.count('designButton') >= 1 && w.count('modes') >= 1, `the Design button rendered for it. ${w.report()}`);
+      await t.press('design-button');
+      assert.equal(t.modes().dock, null, 'the Design button again closes the dock');
+      assert.equal(t.dockOnScreen(), null);
+      assert.deepEqual(t.openDoc(), ['doc-switch-resume'], 'and the document is the Resume');
+      // The ATS chip is the same toggle, and one dock at a time.
+      w = await t.measure(() => t.press('ats-chip'));
+      assert.equal(t.dockOnScreen(), 'ats');
+      assert.ok(t.chipOpen() && !t.designOpen());
+      assert.ok(w.count('chip') >= 1, `the chip rendered for it. ${w.report()}`);
+      await t.press('design-button');
+      assert.equal(t.dockOnScreen(), 'design', 'the other dock replaces it');
+      assert.ok(t.designOpen() && !t.chipOpen());
+    } finally { await t.close(); }
+  });
+
+  it('negative twin: picking the Cover letter closes an open dock, and the Resume switch never opens one', async () => {
+    const t = await openEditor({ path: '?dock=ats' });
+    try {
+      assert.equal(t.dockOnScreen(), 'ats');
+      await t.press('doc-switch-letter');
+      assert.equal(t.dockOnScreen(), null, 'the dock is closed');
+      assert.equal(t.modes().doc, 'coverletter');
+      await t.press('doc-switch-resume');
+      assert.equal(t.dockOnScreen(), null, 'the Resume switch opens no dock');
+      assert.equal(t.modes().doc, 'resume');
     } finally { await t.close(); }
   });
 });
 
 describe('a handler the alerts or the mode bar have held since their first render acts on the latest (no stale closure)', () => {
-  it('the tab picker keeps its identity, and a tab picked through it leaves the import notice the address holds now', async () => {
+  it('the document picker keeps its identity, and a document picked through it leaves the import notice the address holds now', async () => {
     const t = await openEditor();
     try {
-      const held = t.firstModes().setActiveTab;
+      const held = t.firstModes().onPickDoc;
       t.typeInEmail();
       await settle();
-      assert.equal(t.modes().setActiveTab, held, 'the mode bar was given the same function after the keys');
+      assert.equal(t.modes().onPickDoc, held, 'the mode bar was given the same function after the keys');
       t.act(() => t.live.navigate(`/resume/${t.id}`, { state: { importNotice: NOTICE } }));
       await settle();
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a notice came after the picker was made');
-      t.act(() => held('design'));
+      t.act(() => held('coverletter'));
       await settle();
-      assert.equal(t.modes().activeTab, 'design');
+      assert.equal(t.modes().doc, 'coverletter');
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a stale picker read the address as it was at the first render, and took the notice off');
     } finally { await t.close(); }
   });
 
-  it('on a phone, a tab picked through the picker held since the desktop brings the editor back from the preview', async () => {
+  it('the dock toggle keeps its identity, and a dock opened through it leaves the import notice the address holds now', async () => {
     const t = await openEditor();
     try {
-      const held = t.firstModes().setActiveTab;
-      assert.equal(t.previewLayout(), 'split');
-      t.goPhone();
-      assert.equal(t.previewLayout(), 'editor', 'a phone starts on the editor');
-      t.showPreview();
-      assert.equal(t.previewLayout(), 'preview');
-      t.act(() => held('coverletter'));
+      const held = t.firstModes().onToggleDock;
+      t.typeInEmail();
       await settle();
-      assert.equal(t.modes().activeTab, 'coverletter');
-      assert.equal(t.previewLayout(), 'editor', 'a stale picker knew a desktop, and left the phone on the preview');
+      assert.equal(t.modes().onToggleDock, held, 'the mode bar was given the same function after the keys');
+      t.act(() => t.live.navigate(`/resume/${t.id}`, { state: { importNotice: NOTICE } }));
+      await settle();
+      assert.deepEqual(t.alertTexts(), [NOTICE]);
+      t.act(() => held('design'));
+      await settle();
+      assert.equal(t.modes().dock, 'design');
+      assert.deepEqual(t.alertTexts(), [NOTICE], 'a stale toggle took the notice off the address');
+      t.act(() => held('design'));
+      await settle();
+      assert.equal(t.modes().dock, null, 'the same toggle, held since the first render, closes the dock it opened');
+      assert.deepEqual(t.alertTexts(), [NOTICE]);
     } finally { await t.close(); }
   });
 
-  it('the import notice\'s Dismiss acts on the latest address: it leaves the tab the editor is on', async () => {
+  it('on a phone, a document or a dock picked through the functions held since the desktop brings the editor back from the preview', async () => {
+    const t = await openEditor();
+    try {
+      const heldDoc = t.firstModes().onPickDoc;
+      const heldDock = t.firstModes().onToggleDock;
+      assert.equal(t.previewLayout(), 'split');
+      t.goPhone();
+      assert.equal(t.previewLayout(), 'editor', 'a phone starts on the editor');
+      await t.press('pill-preview');
+      assert.equal(t.previewLayout(), 'preview');
+      t.act(() => heldDoc('coverletter'));
+      await settle();
+      assert.equal(t.modes().doc, 'coverletter');
+      assert.equal(t.previewLayout(), 'editor', 'a stale picker knew a desktop, and left the phone on the preview');
+      await t.press('pill-preview');
+      assert.equal(t.previewLayout(), 'preview');
+      t.act(() => heldDock('ats'));
+      await settle();
+      assert.equal(t.modes().dock, 'ats');
+      assert.equal(t.previewLayout(), 'editor', 'a stale toggle left the phone on the preview, under the dock it opened');
+    } finally { await t.close(); }
+  });
+
+  it('the import notice\'s Dismiss acts on the latest address: it leaves the dock the editor is on', async () => {
     const t = await openEditor();
     try {
       const held = t.firstAlerts().onDismissImport;
       t.typeInEmail();
       await settle();
       assert.equal(t.alerts().onDismissImport, held, 'the alerts were given the same function after the keys');
-      t.act(() => t.live.navigate(`/resume/${t.id}?tab=design`, { state: { importNotice: NOTICE } }));
+      t.act(() => t.live.navigate(`/resume/${t.id}?dock=design`, { state: { importNotice: NOTICE } }));
       await settle();
-      assert.equal(t.modes().activeTab, 'design');
+      assert.equal(t.modes().dock, 'design');
       assert.deepEqual(t.alertTexts(), [NOTICE]);
       t.act(() => held());
       await settle();
       assert.deepEqual(t.alertTexts(), [], 'the notice is gone');
-      assert.equal(t.modes().activeTab, 'design', 'a stale Dismiss went to the address of the first render, the Résumé tab');
+      assert.equal(t.modes().dock, 'design', 'a stale Dismiss went to the address of the first render, the Resume with no dock');
     } finally { await t.close(); }
   });
 
