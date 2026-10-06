@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, ChevronDown, ChevronUp, GripVertical, Settings2, Eye, EyeOff, MoreHorizontal, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -12,46 +12,8 @@ import { newSectionGrid } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId } from '@/constants/templates';
 import { useToast } from '@/components/ui/Toast';
 import { Menu } from '@/components/ui/Menu';
-import { useSameList } from '@/hooks/useSameList';
 
-// One options object for the life of the page: useSensor makes a new sensor from a new one, and dnd-kit
-// wakes every sortable under it for a new list of sensors (PERF-4).
-const KEYBOARD_SENSOR = { coordinateGetter: sortableKeyboardCoordinates };
-
-/** The card each section type draws for one entry. */
-const ENTRY_CARD = {
-  experience: ExperienceItem, education: EducationItem, skills: SkillItem, projects: ProjectItem,
-  languages: LanguageItem, certifications: CertificationItem, awards: AwardItem,
-  volunteering: VolunteeringItem, references: ReferenceItem, interests: InterestItem,
-};
-
-/**
- * One entry of a section, with its drag handle. Memoised on what it is given: an entry's object is a
- * new one only when it was edited (the store's updaters share the others), and the three actions are
- * the store's own, fixed ones, so a keystroke in one entry leaves every other entry, here and in the
- * other sections, as it is (PERF-4).
- */
-const SectionEntry = memo(function SectionEntry({ sectionId, type, item, defaultOpen, updateItem, removeItem, duplicateItem }) {
-  // By its own key only: a type named like an Object member ('valueOf') is a custom section (R1-LEFT-c).
-  const Card = Object.hasOwn(ENTRY_CARD, type) ? ENTRY_CARD[type] : CustomItem;
-  const factory = Object.hasOwn(NEW_ITEM, type) ? NEW_ITEM[type] : NEW_ITEM.custom;
-  return (
-    <SortableItemWrapper id={item.id}>
-      <Card
-        item={item}
-        defaultOpen={defaultOpen}
-        onUpdate={u => updateItem(sectionId, item.id, () => u)}
-        onRemove={() => {
-          // An untouched new entry goes without asking; anything with content asks first.
-          if (untouched(item, factory()) || confirm('Delete this entry?')) removeItem(sectionId, item.id);
-        }}
-        onDuplicate={duplicateItem && (() => duplicateItem(sectionId, item.id))}
-      />
-    </SortableItemWrapper>
-  );
-});
-
-export const SortableSection = memo(function SortableSection({
+export function SortableSection({
   section, template, updateSection, updateSectionSettings,
   removeSection, addItem, updateItem, removeItem, reorderItems,
   toggleSectionVisibility, duplicateSection, duplicateItem,
@@ -70,9 +32,8 @@ export const SortableSection = memo(function SortableSection({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const itemSensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, KEYBOARD_SENSOR)
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-  const itemIds = useSameList(section.items.map(i => i.id));
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const isHidden = section.visible === false;
 
@@ -100,6 +61,42 @@ export const SortableSection = memo(function SortableSection({
     const item = factory();
     openOnMount.current = item.id;
     addItem(section.id, item);
+  }
+
+  // An entry nobody has filled in yet: no field holds anything but what a new entry starts with (a
+  // new language's 'Professional', a job's current: false). Deleting one does not ask (R4-ED-06).
+  // Every field counts, not only text ones: a job marked current (which prints 'Present') or older
+  // data's bullets list was deleted without asking (R4-LO-20). The id, the entry's hidden switch and
+  // its hidden fields are how it shows, not what it holds.
+  const fresh = useMemo(() => factory(), [factory]);
+  function untouched(item) {
+    return !Object.entries(item).some(([k, v]) => !NOT_CONTENT.has(k) && isContent(v, fresh[k]));
+  }
+
+  function renderItem(item) {
+    const props = {
+      item,
+      defaultOpen: item.id === openOnMount.current,
+      onUpdate: u => updateItem(section.id, item.id, () => u),
+      onRemove: () => {
+        // An untouched new entry goes without asking; anything with content asks first.
+        if (untouched(item) || confirm('Delete this entry?')) removeItem(section.id, item.id);
+      },
+      onDuplicate: duplicateItem && (() => duplicateItem(section.id, item.id)),
+    };
+    switch (section.type) {
+      case 'experience':     return <ExperienceItem     {...props} />;
+      case 'education':      return <EducationItem      {...props} />;
+      case 'skills':         return <SkillItem          {...props} />;
+      case 'projects':       return <ProjectItem        {...props} />;
+      case 'languages':      return <LanguageItem       {...props} />;
+      case 'certifications': return <CertificationItem  {...props} />;
+      case 'awards':         return <AwardItem          {...props} />;
+      case 'volunteering':   return <VolunteeringItem   {...props} />;
+      case 'references':     return <ReferenceItem      {...props} />;
+      case 'interests':      return <InterestItem       {...props} />;
+      default:               return <CustomItem         {...props} />;
+    }
   }
 
   function resetStyle() {
@@ -199,18 +196,11 @@ export const SortableSection = memo(function SortableSection({
       {sectionOpen && (
         <div className="p-3 space-y-2">
           <DndContext sensors={itemSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-            <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <SortableContext items={section.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
               {section.items.map(item => (
-                <SectionEntry
-                  key={item.id}
-                  sectionId={section.id}
-                  type={section.type}
-                  item={item}
-                  defaultOpen={item.id === openOnMount.current}
-                  updateItem={updateItem}
-                  removeItem={removeItem}
-                  duplicateItem={duplicateItem}
-                />
+                <SortableItemWrapper key={item.id} id={item.id}>
+                  {renderItem(item)}
+                </SortableItemWrapper>
               ))}
             </SortableContext>
           </DndContext>
@@ -224,17 +214,6 @@ export const SortableSection = memo(function SortableSection({
       )}
     </div>
   );
-});
-
-/**
- * An entry nobody has filled in yet: no field holds anything but what a new entry starts with (`fresh`:
- * a new language's 'Professional', a job's current: false). Deleting one does not ask (R4-ED-06).
- * Every field counts, not only text ones: a job marked current (which prints 'Present') or older
- * data's bullets list was deleted without asking (R4-LO-20). The id, the entry's hidden switch and
- * its hidden fields are how it shows, not what it holds.
- */
-function untouched(item, fresh) {
-  return !Object.entries(item).some(([k, v]) => !NOT_CONTENT.has(k) && isContent(v, fresh[k]));
 }
 
 /** Keys of an entry that hold no content of their own: its id, and how it shows (R4-LO-20). */
