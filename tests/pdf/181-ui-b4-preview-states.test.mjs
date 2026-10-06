@@ -82,7 +82,10 @@ describe('the Updating chip: while a rebuild runs over pages already shown', () 
     const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
     const before = bare.slice(0, bare.indexOf(rule[0]));
     const depth = [...before].reduce((n, c) => n + (c === '{') - (c === '}'), 0);
-    assert.equal(depth, 0, 'the rule is inside a block (a layer?): a utility would outrank it');
+    // Not inside a layer (a utility would outrank it): the one block around it is the media query that keeps it to the widths
+    // where the dock sits BESIDE the stage (from 1100 px; below it the dock lies over the stage and the chip stays at the corner).
+    assert.equal(depth, 1, 'the rule is inside one block, and that block is not a layer');
+    assert.match(before.slice(before.lastIndexOf('@')), /^@media \(min-width: 1100px\)\s*\{\s*$/, 'the block is the media query for the dock beside the stage');
   });
 });
 

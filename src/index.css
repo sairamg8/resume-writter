@@ -244,15 +244,19 @@ body {
 }
 
 /* The "Updating preview…" chip (PdfPreview, class cv-preview-chip) is fixed to the window's bottom right; with a dock
-   open (360 px, the editor's right edge) it sits left of it, so it never rides over the dock. Below 768 px a dock
-   takes the whole screen and the chip is behind it. Outside a layer: it outranks the chip's right-4 utility. */
-body:has([data-testid="dock-design"], [data-testid="dock-ats"]) .cv-preview-chip {
-  right: calc(360px + 1rem);
+   beside the stage (from 1100 px: 360 px, the editor's right edge) it sits left of the dock, so it never rides over it.
+   Below 1100 px the dock lies OVER the stage, and the chip stays at the corner, clear of the editor panel. Outside a
+   layer: it outranks the chip's right-4 utility. */
+@media (min-width: 1100px) {
+  body:has([data-testid="dock-design"], [data-testid="dock-ats"]) .cv-preview-chip {
+    right: calc(360px + 1rem);
+  }
 }
 
 /* A notice (ui/Toast, portalled to the body) is drawn above the editor's Edit | Preview | Design pill on a phone: both sit at the
-   window's bottom (16 px), so a notice covered the pill. Outside a layer: it outranks the stack's bottom-4 utility. */
-@media (max-width: 767px) {
+   window's bottom (16 px), so a notice covered the pill. The media query is the exact complement of the pill's own (useIsMobile(768):
+   not (min-width: 768px)), so no width has the pill without the lift. Outside a layer: it outranks the stack's bottom-4 utility. */
+@media not all and (min-width: 768px) {
   body:has([data-testid="editor-pill"]) [aria-label="Notifications"] {
     bottom: 5rem;
   }

@@ -61,12 +61,12 @@ describe('the resize handle and the phone notices are in the cv look', () => {
 
   it('a rule lifts the notice stack above the pill on a phone, and both elements it names exist', () => {
     const css = source('index.css');
-    assert.match(css, /@media \(max-width: 767px\)\s*\{\s*body:has\(\[data-testid="editor-pill"\]\) \[aria-label="Notifications"\]\s*\{\s*bottom: 5rem;/);
+    assert.match(css, /@media not all and \(min-width: 768px\)\s*\{\s*body:has\(\[data-testid="editor-pill"\]\) \[aria-label="Notifications"\]\s*\{\s*bottom: 5rem;/);
     assert.match(source('components/EditorMobilePill.jsx'), /data-testid="editor-pill"/);
     assert.match(source('components/ui/Toast.jsx'), /aria-label="Notifications"/);
     // Outside any @layer, so it outranks the stack's bottom-4 utility.
     const rule = css.indexOf('body:has([data-testid="editor-pill"])');
-    const before = css.slice(0, css.lastIndexOf('@media (max-width: 767px)', rule)); // up to the rule's own @media
+    const before = css.slice(0, css.lastIndexOf('@media not all and (min-width: 768px)', rule)); // up to the rule's own @media
     assert.equal((before.match(/\{/g) ?? []).length, (before.match(/\}/g) ?? []).length, 'the rule is at the top level, not inside a layer');
   });
 });
