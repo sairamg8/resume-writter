@@ -99,7 +99,7 @@ on unheard, so it cannot hold the preview's queued build or an export for good. 
 not lay out beside it on the one thread (each slowed the other past its budget): it waits for it — the same
 résumé (Retry) takes its file, another builds once it is done — and one still running 20 s later is taken to be
 hung, so the next starts anyway and no later build waits for it (`tests/pdf/121-main-thread-build-overrun.test.mjs`).
-This is the only watchdog, and
+This is the only watchdog on the build, and
 fonts take room in its budgets, bounded: `pdfFontLoader.js` waits for the CDN `FONT_LOAD_MS` (10 s), one
 deadline shared by every font metadata lookup and every CDN face of a build (bundled Noto Sans faces get the
 whole wait each). A lookup or face whose wait starts with the deadline all but spent (a slow network, a CJK
@@ -117,6 +117,15 @@ keeps it until the next build puts its own in (`landPrepared`), so no build lays
 `_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`,
 `tests/pdf/112-pdf-worker-watchdog.test.mjs`); the font wait with `_setFontLoadWaitForTest(ms)`
 (`tests/pdf/113-font-load-stall.test.mjs`, its grace in `tests/pdf/120-font-wait-grace.test.mjs`).
+
+The preview's own calls to pdf.js have a budget of their own (`PdfPreview.jsx`, `pdfjsTimeoutMs`: 20 s, twice that until
+a document has opened, plus a second per page, up to 100 pages). Loading the library, opening the PDF, reading its
+pages and painting them are each a stage with its clock; a stage past its budget fails the build the way any other
+failure does ("Preview failed to render (The preview took too long to draw)" and Retry, the next change builds), its
+loading task is destroyed, its paint is cancelled and its canvases are shrunk and never pooled (a late paint would draw
+into them), and what pdf.js settles late is dropped. A clock that rings 5 s or more late starts the stage again. The
+pages' text, read once they are up, is let go the same way: those pages' text is empty and the status is 'ready'.
+The test sets the clock with `_setPreviewClockForTest` (`tests/pdf/174-preview-pdfjs-watchdog.test.mjs`).
 
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
 bar in Skills style Bars — the main column of every template and the Sidebar's side column

@@ -87,8 +87,8 @@ or `all`; only that job runs, and its table is on the run's summary. With `brows
 runs Gate B, `tests/playwright/perf-gate-b.spec.mjs` (PERF-6: the longest main-thread task and key delay
 while typing on a long résumé, with the PDF worker and with it refused; soft targets of 50 ms), which the
 Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
-The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
-`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/115-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
+The PDF worker's watchdog, the preview's own budget for its pdf.js calls and its paint-before-text and canvas pool are pinned in the gate by
+`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`, `tests/pdf/174-preview-pdfjs-watchdog.test.mjs` and `tests/pdf/115-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
 The typing-freeze fixes (2026-10-05, `docs/tracking/TYPING-FREEZE-HUNT-2026-10-05.md`) by
 `tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs` (the dev server serves the worker no Fast Refresh runtime; it
 starts the dev server in-process), `tests/pdf/111-preview-one-build-at-a-time.test.mjs` and
