@@ -736,7 +736,7 @@ export function sanitizeRichText(html) {
   // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
   // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
   // Runs of one link share its address string, so a run is told from the one before it by a pointer compare.
-  let budget = 16 * String(html).length + 4096;
+  let budget = 16 * `${html}`.length + 4096;
   const runsHtml = (runs) => {
     let line = '';
     let cur = ''; // the address of the anchor that is open
@@ -748,9 +748,7 @@ export function sanitizeRichText(html) {
       if (r.italic) t = `<em>${t}</em>`;
       if (r.bold) t = `<strong>${t}</strong>`;
       if (r.href !== was) {
-        was = r.href;
-        const a = was && safeHref(was);
-        const h = a ? esc(a) : '';
+        const h = esc(safeHref((was = r.href)) || '');
         if (h !== cur) {
           if (cur) line += '</a>';
           budget -= (cur = h.length <= budget ? h : '').length;
