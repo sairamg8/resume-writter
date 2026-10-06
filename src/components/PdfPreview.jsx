@@ -492,15 +492,16 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       data-preview-pages={count}
     >
       {status === 'error' && (
-        <div role="alert" className="mx-auto max-w-md text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+        <div role="alert" data-testid="preview-error" className="cv-notice-bad mx-auto max-w-md text-xs px-3 py-2 flex items-start gap-2">
           <span className="flex-1">Preview failed to render{error?.message ? ` (${error.message})` : ''}.</span>
-          <button onClick={() => setRetry((n) => n + 1)} className="font-semibold hover:text-red-900">Retry</button>
+          <button onClick={() => setRetry((n) => n + 1)} className="font-semibold underline underline-offset-2">Retry</button>
         </div>
       )}
 
       {!view && status !== 'error' && (
         <div
-          className="mx-auto bg-white shadow-2xl shrink-0 flex items-center justify-center text-xs text-gray-400"
+          data-testid="preview-placeholder"
+          className="mx-auto bg-white shadow-2xl shrink-0 flex items-center justify-center text-xs text-cv-faint"
           style={{ width: cssWidth, height: Math.round(cssWidth * box.ratio) }}
         >
           Rendering preview…
@@ -522,9 +523,9 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       )}
 
       {/* Below md it rides above the editor's Edit | Preview pill, which sits at the same bottom-4
-          and hid the chip's start (R4-DPH-40). */}
+          and hid the chip's start (R4-DPH-40); with a dock open it moves left of the dock (index.css). */}
       {status === 'rendering' && view && (
-        <span className="fixed bottom-4 max-md:bottom-16 right-4 text-[11px] text-gray-500 bg-white/90 border border-gray-200 rounded-full px-3 py-1 shadow-sm">
+        <span data-testid="preview-updating" className="cv-preview-chip fixed bottom-4 max-md:bottom-16 right-4 text-[11px] text-cv-muted bg-cv-surface/90 border border-cv-hairline rounded-cv-chip px-3 py-1">
           Updating preview…
         </span>
       )}

@@ -243,6 +243,13 @@ body {
   }
 }
 
+/* The "Updating preview…" chip (PdfPreview, class cv-preview-chip) is fixed to the window's bottom right; with a dock
+   open (360 px, the editor's right edge) it sits left of it, so it never rides over the dock. Below 768 px a dock
+   takes the whole screen and the chip is behind it. Outside a layer: it outranks the chip's right-4 utility. */
+body:has([data-testid="dock-design"], [data-testid="dock-ats"]) .cv-preview-chip {
+  right: calc(360px + 1rem);
+}
+
 /* Reduced motion: the workspace shell and every kit layer (Portal) carry data-ui-motion; there,
    animations and transitions finish at once (1 ms, so animationend and transitionend still fire).
    Scoped so the résumé editor keeps its own behaviour. */

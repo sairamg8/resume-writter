@@ -11,7 +11,7 @@ export function FontFallbackNotice() {
   if (!font) return null;
   const online = typeof window === 'undefined' || window.navigator?.onLine !== false;
   return (
-    <p data-font-fallback={font} className="mb-3 max-w-md text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 shrink-0">
+    <p data-font-fallback={font} data-testid="font-fallback-notice" className="cv-notice-warn mb-3 max-w-md text-center text-xs px-3 py-2 shrink-0">
       {fontFallbackMessage(font, online)}
     </p>
   );
