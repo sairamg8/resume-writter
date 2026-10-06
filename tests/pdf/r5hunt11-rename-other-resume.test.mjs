@@ -35,7 +35,7 @@ describe('the editor header’s rename box when another résumé takes the page'
     function Page({ resume: r }) {
       const rename = useRename(r, (n) => renames.push([r.id, n]));
       return createElement(MemoryRouter, null, createElement(EditorHeader, {
-        resume: r, rename, layoutMode: 'split', setLayoutMode() {}, exportMenu: {}, auth: { cloudAvailable: false }, sync: {},
+        name: r.name, rename, layoutMode: 'split', setLayoutMode() {}, exportMenu: {}, auth: { cloudAvailable: false }, sync: {},
       }));
     }
     const view = mount(Page, { resume });

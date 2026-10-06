@@ -52,7 +52,7 @@ describe('R4-DPH-29: the editor\'s Personal Info boxes are 16 px on a touch scre
     const { EditorHeader } = await loadModule('/src/components/EditorHeader.jsx');
     const exportMenu = { exporting: false, importing: false, keeps: false, letterTab: false };
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EditorHeader, {
-      resume: { name: 'Harbor Pilot CV' },
+      name: 'Harbor Pilot CV',
       rename: { editing: true, draft: 'Harbor Pilot CV', setDraft: noop, commit: noop, cancel: noop, start: noop },
       layoutMode: 'split', setLayoutMode: noop, exportMenu,
       auth: { user: null, authLoading: false, cloudAvailable: false }, sync: {},

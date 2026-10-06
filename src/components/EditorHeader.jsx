@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { memo } from 'react';
 import { User, ArrowLeft, Mail as MailIcon, Palette, ShieldCheck } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
@@ -7,17 +7,20 @@ import { notSavedMessage } from '@/utils/storageBackup';
 import { isImeKey } from '@/components/ui/compose';
 
 /**
- * The editor panel's header: back to the dashboard, the résumé's name (click to rename), the
- * layout toggle in editor-only mode, the Export menu and the account.
+ * The editor panel's header: back to the dashboard (`onBack`), the résumé's name (click to rename),
+ * the layout toggle in editor-only mode, the Export menu and the account.
  * The rename state is the Editor's (`rename`, useRename), as are the export handlers (`exportMenu`)
  * and Share a public link (`onShare`, absent where it is not offered).
+ * Memoised, over props the Editor keeps the same while what the header shows is (useStableObject): a
+ * keystroke in the résumé renders none of it, neither the Export menu nor the account bar (PERF-4).
+ * So it takes the résumé's `name`, not the résumé, and no router hook of its own: the router gives
+ * every component using one a new context value whenever the page's routes render, which is every
+ * keystroke, and woke it however its props were kept.
  */
-export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false, onShare }) {
-  const navigate = useNavigate();
-
+export const EditorHeader = memo(function EditorHeader({ name, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false, onShare, onBack }) {
   return (
     <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200 flex items-center gap-1.5 sm:gap-2 bg-white">
-      <button onClick={() => navigate('/')} title="Back to dashboard" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
+      <button onClick={onBack} title="Back to dashboard" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
         <ArrowLeft size={15} />
       </button>
       <div className="flex-1 min-w-0 pr-1">
@@ -37,7 +40,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           />
         ) : (
           <button onClick={rename.start} title="Rename resume" className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-gray-600 truncate block w-full text-left">
-            {resume.name}
+            {name}
           </button>
         )}
       </div>
@@ -68,7 +71,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
       </div>
     </div>
   );
-}
+});
 
 /**
  * A failed export or import (dismissable), browser storage that is full, and after a PDF, Word or
