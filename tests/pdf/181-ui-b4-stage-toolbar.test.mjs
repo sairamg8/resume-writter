@@ -78,11 +78,11 @@ describe('the panel is held off the stage\'s floor while a dock is open (the res
     const store = memoryStorage({ [KEY]: '640' });
     const { view, now } = await hook(1100, true);
     try {
-      const e = { key: 'ArrowRight', preventDefault() {} };
+      const e = { key: 'ArrowLeft', preventDefault() {} };
       view.act(() => now().separatorProps.onKeyDown(e));
-      assert.equal(now().panelWidth, 436, 'one 16 px step from the 420 drawn');
-      assert.equal(store.get(KEY), '436');
-      assert.equal(now().separatorProps['aria-valuenow'], 436);
+      assert.equal(now().panelWidth, 404, 'one 16 px step from the 420 drawn, not from the 640 remembered');
+      assert.equal(store.get(KEY), '404');
+      assert.equal(now().separatorProps['aria-valuenow'], 404);
     } finally { await view.unmount(); }
     await sleep(0);
   });
