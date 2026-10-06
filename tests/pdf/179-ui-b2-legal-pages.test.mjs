@@ -47,6 +47,16 @@ for (const [name, file] of [['Terms', '/src/pages/TermsPage.jsx'], ['Privacy', '
       assert.match(html, /© 2026 CPWT-CV/);
     });
 
+    it('shows a signed-in visitor\'s first name beside the avatar from sm, as the Dashboard bar does (hideName is the editor\'s narrow panel only)', async () => {
+      const html = await render(file, { auth: { ...auth, user: { uid: 'u1', displayName: 'Ada Lovelace', email: 'ada@example.com', photoURL: null } }, sync });
+      assert.match(html, /<span class="[^"]*hidden sm:block[^"]*">Ada<\/span>/);
+      assert.equal(html.includes('sm:sr-only'), false, 'the name is not hidden');
+    });
+
+    it('leaves room for the fixed phone tab bar below the footer', async () => {
+      assert.match(await render(file), /pb-\[72px\] md:pb-0/);
+    });
+
     it('offers Sign in to a signed-out visitor', async () => {
       assert.match(await render(file), /aria-label="Sign in with Google"/);
     });

@@ -13,7 +13,7 @@ export default function TermsPage({ auth, sync }) {
   const goBack = useBackOrHome();
   return (
     <div className="min-h-screen bg-cv-ground text-cv-body">
-      <AppBar active={null} account={<AuthBar {...auth} {...sync} compact hideName />} />
+      <AppBar active={null} account={<AuthBar {...auth} {...sync} compact />} />
       <div className="max-w-[680px] mx-auto px-4 py-10">
         <button onClick={goBack} aria-label="Back" title="Back" className="mb-6 p-1.5 rounded-cv-control hover:bg-cv-sunken text-cv-muted transition-colors">
           <ArrowLeft size={16} />
