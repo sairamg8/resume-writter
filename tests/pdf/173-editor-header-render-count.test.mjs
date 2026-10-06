@@ -115,6 +115,7 @@ const MARK = 'Z'; // the one character typed
 const NAME = 'Operations Analyst CV';
 const USER = { uid: 'u_tamsin', displayName: 'Tamsin Verhoeven', email: 'tamsin.verhoeven@example.com', photoURL: null };
 const NO_HELD = []; // the sync's held list is a state: one array until a résumé is held or let go
+const DOCUMENT = 'Robin Vale\nProduct Designer\nrobin@example.org\n\nEXPERIENCE\nFabrikam Studio - Lead Designer\n2019 - 2023 | Leeds, UK\n* Designed the booking flow.';
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
 const attr = (el, name) => el.getAttribute(name) ?? '';
@@ -397,6 +398,27 @@ describe('what the header shows still updates', () => {
       assert.equal(downloads.files.length, 1);
       assert.ok(w.header.includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
     } finally { downloads.restore(); await t.close(); }
+  });
+
+  it('an import in progress says "Reading…" and disables the Export button until the document is read, then the new résumé opens', async () => {
+    const t = await openEditor();
+    try {
+      // A picked document whose bytes arrive when the test says, as a big PDF's do while pdf.js loads.
+      let release;
+      const bytes = new Promise((resolve) => { release = () => resolve(new TextEncoder().encode(DOCUMENT).buffer); });
+      const file = { name: 'robin.txt', arrayBuffer: () => bytes };
+      let run;
+      const w = await t.measure(() => { t.act(() => { run = t.header().exportMenu.handleImportFile(file); }); });
+      assert.equal(text(t.exportButton()), 'Reading…', 'the button says a document is being read');
+      assert.equal(reactProps(t.exportButton()).disabled, true);
+      assert.ok(w.header.includes('ExportDropdown'), `the Export menu rendered for it. ${w.report()}`);
+      release();
+      await run;
+      await settle();
+      assert.equal(text(t.exportButton()), 'Export', 'and is back once it is read');
+      assert.equal(t.store().appState.resumes.length, 2, 'the document became a new résumé');
+      assert.notEqual(text(t.byTitle('Rename resume')), NAME, 'which the editor opened, and the header shows');
+    } finally { await t.close(); }
   });
 
   it('on the Cover Letter tab the Export menu names the letter', async () => {
