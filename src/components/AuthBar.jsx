@@ -211,7 +211,7 @@ export default function AuthBar({
         <button
           data-testid="account-button"
           onClick={() => setMenuOpen(o => !o)}
-          className="flex items-center gap-1.5 p-0.5 sm:pr-2 rounded-full hover:bg-cv-sunken transition-colors"
+          className={`flex items-center gap-1.5 p-0.5 ${hideName ? '' : 'sm:pr-2'} rounded-full hover:bg-cv-sunken transition-colors`}
         >
           <Avatar user={user} size="w-9 h-9 text-[13px]" />
           {/* hideName: sm:sr-only, not dropped, so from sm up the button still reads out the name as before. */}

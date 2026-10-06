@@ -106,6 +106,9 @@ describe('the avatar menu', () => {
     const html = (u, extra = {}) => renderToStaticMarkup(createElement(AuthBar, { user: u, cloudAvailable: true, signOut() {}, isOnline: true, ...extra }));
     assert.match(html(user), /<span class="[^"]*hidden sm:block[^"]*">Alex<\/span>/);
     assert.match(html(user, { hideName: true }), /<span class="[^"]*sm:sr-only[^"]*">Alex<\/span>/);
+    // The narrow editor header gives the name's room back: no right padding for a name that is not shown.
+    assert.match(html(user), /<button data-testid="account-button" class="[^"]*\bsm:pr-2\b/);
+    assert.doesNotMatch(html(user, { hideName: true }), /<button data-testid="account-button" class="[^"]*\bsm:pr-2\b/);
     assert.match(html({ ...user, photoURL: 'https://img.example/a.png' }), /<img[^>]*referrerPolicy="no-referrer"/i);
     assert.match(html({ ...user, displayName: 'alex johnson' }), />a<\/div>/, 'the initial is displayName[0], not upper-cased');
     assert.match(html({ ...user, displayName: null }), />U<\/div>/);
