@@ -525,7 +525,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       {/* Below md it rides above the editor's Edit | Preview pill, which sits at the same bottom-4
           and hid the chip's start (R4-DPH-40); with a dock open it moves left of the dock (index.css). */}
       {status === 'rendering' && view && (
-        <span data-testid="preview-updating" className="cv-preview-chip fixed bottom-4 max-md:bottom-16 right-4 text-[11px] text-cv-muted bg-cv-surface/90 border border-cv-hairline rounded-cv-chip px-3 py-1">
+        <span data-testid="preview-updating" className="cv-preview-chip z-50 fixed bottom-4 max-md:bottom-16 right-4 text-[11px] text-cv-muted bg-cv-surface/90 border border-cv-hairline rounded-cv-chip px-3 py-1">
           Updating preview…
         </span>
       )}
