@@ -51,7 +51,7 @@ The correct code passes all of them (run 37519961910, 37523255819).
 |---|---|---|---|
 | B2 final | 37491778368 | 1083.8 kB | 16.2 kB |
 | B3 (head bcbc9639) | 37519323495 | 1083.8 kB | 16.2 kB |
-| B3 final | GATE_RUN | GATE_STARTUP | GATE_SPARE |
+| B3 final (head b9d09da7, src identical to the gate head) | 37525795158 | 1083.8 kB | 16.2 kB |
 B3 adds NO bytes to the start-up path: the Editor and all its new parts are in the lazy editor chunk (nothing new is imported from a start-up file).
 
 ## Other CI reads
