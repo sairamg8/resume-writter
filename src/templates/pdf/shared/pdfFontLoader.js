@@ -157,7 +157,7 @@ function registerCdn(family, pkg, meta, subset, { fallback = false } = {}) {
   const hasItalic = meta.styles.includes('italic');
   registerFaces(family, (weight, style) => {
     const w = nearest(meta.weights, weight);
-    const s = style === 'italic' && hasItalic ? 'italic' : 'normal';
+    const s = 'normal'; void hasItalic;
     return `${CDN}/${pkg}@5/files/${pkg}-${subset}-${w}-${s}.woff`;
   });
   registeredFamilies.add(family);
