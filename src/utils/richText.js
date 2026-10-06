@@ -736,13 +736,8 @@ export function sanitizeRichText(html) {
   // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
   // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
   // Each address is checked and escaped once however often it comes back.
-  let budget = 16 * String(html ?? '').length + 4096;
+  let budget = 16 * String(html).length + 4096;
   const written = new Map();
-  const hrefOf = (raw) => {
-    let h = written.get(raw);
-    if (h === undefined) { const safe = raw && safeHref(raw); h = safe ? esc(safe) : ''; written.set(raw, h); }
-    return h;
-  };
   const runsHtml = (runs) => {
     let line = '';
     let group = '';
@@ -754,11 +749,14 @@ export function sanitizeRichText(html) {
       if (r.underline) t = `<u>${t}</u>`;
       if (r.italic) t = `<em>${t}</em>`;
       if (r.bold) t = `<strong>${t}</strong>`;
-      const h = hrefOf(r.href);
+      let h = written.get(r.href);
+      if (h === undefined) {
+        const a = r.href && safeHref(r.href);
+        written.set(r.href, h = a ? esc(a) : '');
+      }
       if (h !== cur) {
         flush();
-        cur = h.length <= budget ? h : '';
-        budget -= cur.length;
+        budget -= (cur = h.length <= budget ? h : '').length;
       }
       group += t;
     }
