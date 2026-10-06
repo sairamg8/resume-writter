@@ -11,10 +11,11 @@ export function useOutsideClose(ref, active, onClose, onEscape) {
     if (!active) return undefined;
     const away = (e) => { if (!ref.current?.contains(e.target)) onClose(); };
     const key = (e) => { if (e.key === 'Escape') onEscape(); };
-    document.addEventListener('pointerdown', away);
+    // Capture phase: a page element that stops pointerdown cannot keep this control open.
+    document.addEventListener('pointerdown', away, true);
     if (onEscape) document.addEventListener('keydown', key);
     return () => {
-      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('pointerdown', away, true);
       document.removeEventListener('keydown', key);
     };
   }, [ref, active, onClose, onEscape]);

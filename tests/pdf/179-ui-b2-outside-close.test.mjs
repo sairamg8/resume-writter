@@ -39,6 +39,21 @@ describe('useOutsideClose', () => {
     } finally { await p.view.unmount(); }
   });
 
+  it('listens for the pointer in the capture phase (a press on an element that stops pointerdown still closes), and removes it the same way', async () => {
+    const p = await probe({ active: false, onClose() {} });
+    try {
+      const seen = [];
+      const doc = p.view.document;
+      const add = doc.addEventListener;
+      const remove = doc.removeEventListener;
+      doc.addEventListener = (type, fn, opts) => { seen.push(['add', type, opts]); return add.call(doc, type, fn, opts); };
+      doc.removeEventListener = (type, fn, opts) => { seen.push(['remove', type, opts]); return remove.call(doc, type, fn, opts); };
+      p.view.update({ active: true, onClose() {} });
+      p.view.update({ active: false, onClose() {} });
+      assert.deepEqual(seen.filter(([, type]) => type === 'pointerdown'), [['add', 'pointerdown', true], ['remove', 'pointerdown', true]]);
+    } finally { await p.view.unmount(); }
+  });
+
   it('Escape is listened for only when a handler is passed', async () => {
     let closed = 0;
     let escaped = 0;
