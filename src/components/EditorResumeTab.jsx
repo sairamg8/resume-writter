@@ -12,6 +12,7 @@ import { SECTION_GROUPS } from '@/constants/resume';
 import PersonalInfoEditor from '@/components/PersonalInfoEditor';
 import { SortableSection } from '@/components/SectionEditor';
 import { useStableActions } from '@/hooks/useStableActions';
+import { useSameList } from '@/hooks/useSameList';
 
 /**
  * The Résumé tab: Collapse/Expand All, Personal Info, the sections (drag to reorder) and Add
@@ -24,6 +25,7 @@ export function EditorResumeTab({
 }) {
   // The store's actions as ones that keep their identity, so the memoised sections are not woken by a keystroke elsewhere.
   const actions = useStableActions(store);
+  const sectionIds = useSameList(resume.sections.map(s => s.id));
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -83,7 +85,7 @@ export function EditorResumeTab({
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
-        <SortableContext items={resume.sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
           {resume.sections.map(section => (
             <SortableSection
               key={section.id}

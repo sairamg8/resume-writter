@@ -12,6 +12,7 @@ import { newSectionGrid } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId } from '@/constants/templates';
 import { useToast } from '@/components/ui/Toast';
 import { Menu } from '@/components/ui/Menu';
+import { useSameList } from '@/hooks/useSameList';
 
 /** The card each section type draws for one entry. */
 const ENTRY_CARD = {
@@ -67,6 +68,7 @@ export const SortableSection = memo(function SortableSection({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const itemIds = useSameList(section.items.map(i => i.id));
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const isHidden = section.visible === false;
 
@@ -193,7 +195,7 @@ export const SortableSection = memo(function SortableSection({
       {sectionOpen && (
         <div className="p-3 space-y-2">
           <DndContext sensors={itemSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-            <SortableContext items={section.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
               {section.items.map(item => (
                 <SectionEntry
                   key={item.id}
