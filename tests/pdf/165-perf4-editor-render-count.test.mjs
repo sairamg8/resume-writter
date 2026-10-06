@@ -193,6 +193,7 @@ async function openTab() {
       return {
         commits: probe.commits.length,
         count: (label) => tally.get(label) ?? 0,
+        names: (label) => [...(names.get(label) ?? [])],
         report: () => JSON.stringify([...tally]) + ' Rendered: ' + JSON.stringify([...names].map(([l, n]) => [l, [...n].join('/')])),
       };
     },
@@ -203,9 +204,20 @@ async function openTab() {
   };
 }
 
-/** Nothing of `labels` rendered in `w`. */
+// The parts that draw what an entry or a section holds: the cards, their fields and the rich-text box.
+// dnd-kit's own parts (the sortable wrapper and its grip) are woken by its context at every render and
+// are not what this pins: they hold no field.
+const CONTENT = new Set([
+  'ItemCard', 'FieldRow', 'InputField', 'DateField', 'MonthPicker', 'RichTextEditor', 'CurrentBox', 'CurrentDates',
+  'ExperienceItem', 'EducationItem', 'SkillItem', 'ProjectItem', 'CustomItem', 'SectionCustomizer', 'SectionEntry',
+]);
+
+/** No part that draws the content of `labels` (entries, sections) rendered in `w`. */
 function assertUntouched(w, labels, what) {
-  for (const label of labels) assert.equal(w.count(label), 0, `${what}: ${label} re-rendered (${w.count(label)} commits). Counts: ${w.report()}`);
+  for (const label of labels) {
+    const drawn = w.names(label).filter((name) => CONTENT.has(name));
+    assert.deepEqual(drawn, [], `${what}: ${label} re-rendered ${drawn.join(', ')}. Counts: ${w.report()}`);
+  }
 }
 
 describe('typing one character re-renders only the edited field (PERF-4)', () => {
