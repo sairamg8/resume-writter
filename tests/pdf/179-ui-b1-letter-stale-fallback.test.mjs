@@ -35,7 +35,9 @@ async function dashboard() {
   const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
-  const { loaders, warmed, clock } = _lazyForTest;
+  const { loaders, warmed } = _lazyForTest;
+  // Without the seam (the code before this fix) the test still runs and fails on the stray letter, not on a missing clock.
+  const clock = _lazyForTest.clock ?? { now: () => 0 };
   const real = { ...loaders };
   const realNow = clock.now;
   warmed.clear();
