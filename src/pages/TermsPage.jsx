@@ -1,37 +1,30 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBackOrHome } from '@/hooks/useBackOrHome';
 import { SITE_OWNER } from '@/utils/siteOwner';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import AppBar from '@/components/AppBar';
+import AuthBar from '@/components/AuthBar';
+import BottomTabBar from '@/components/BottomTabBar';
 
 // The deployment's contact address (VITE_CONTACT_EMAIL); a fork without it names nobody's.
 const { contactEmail } = SITE_OWNER;
 
-export default function TermsPage() {
+export default function TermsPage({ auth, sync }) {
   const goBack = useBackOrHome();
   return (
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button onClick={goBack} aria-label="Back" title="Back" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <FileText size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-900">CPWT-CV</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-cv-ground text-cv-body">
+      <AppBar active={null} account={<AuthBar {...auth} {...sync} compact hideName />} />
+      <div className="max-w-[680px] mx-auto px-4 py-10">
+        <button onClick={goBack} aria-label="Back" title="Back" className="mb-6 p-1.5 rounded-cv-control hover:bg-cv-sunken text-cv-muted transition-colors">
+          <ArrowLeft size={16} />
+        </button>
+        <h1 className="text-3xl font-bold text-cv-ink mb-2">Terms and Conditions</h1>
+        <p className="text-sm text-cv-faint mb-10">Last updated: June 27, 2026</p>
 
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Terms and Conditions</h1>
-        <p className="text-sm text-gray-400 mb-10">Last updated: June 27, 2026</p>
-
-        <div className="prose prose-gray max-w-none space-y-8 text-sm text-gray-700 leading-relaxed">
+        <div className="prose prose-gray max-w-none space-y-8 text-sm text-cv-body leading-relaxed">
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">1. Acceptance of Terms</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">1. Acceptance of Terms</h2>
             <p>
               By accessing or using CPWT-CV ("the Service", "we", "our"), you agree to be bound by these Terms
               and Conditions. If you do not agree to these terms, please do not use the Service.
@@ -39,7 +32,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">2. Description of Service</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">2. Description of Service</h2>
             <p>
               CPWT-CV is a browser-based resume and cover letter builder. It allows users to create,
               edit, export, and (with a Google account) sync resume data to the cloud. The Service is
@@ -48,7 +41,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">3. User Accounts</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">3. User Accounts</h2>
             <p>
               You may use CPWT-CV without an account; all data is stored in your browser's local storage.
               If you choose to sign in with Google, your resume data will be synced to our cloud database
@@ -58,7 +51,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">4. Your Content</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">4. Your Content</h2>
             <p>
               You retain full ownership of all resume content you create using CPWT-CV. We do not claim
               any intellectual property rights over your data. By using the cloud sync feature, you grant
@@ -68,7 +61,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Acceptable Use</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">5. Acceptable Use</h2>
             <p>You agree not to:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li>Use the Service for any unlawful purpose</li>
@@ -79,7 +72,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Service Availability</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">6. Service Availability</h2>
             <p>
               We aim to keep CPWT-CV available at all times but do not guarantee uninterrupted access.
               We may modify, suspend, or discontinue the Service at any time without notice. Because resume
@@ -89,7 +82,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">7. Disclaimer of Warranties</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">7. Disclaimer of Warranties</h2>
             <p>
               The Service is provided "as is" without warranties of any kind, either express or implied.
               We do not warrant that the Service will be error-free, secure, or that exported documents
@@ -98,7 +91,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Limitation of Liability</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">8. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by law, CPWT-CV shall not be liable for any indirect,
               incidental, or consequential damages arising from your use of the Service, including but
@@ -107,7 +100,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">9. Changes to Terms</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">9. Changes to Terms</h2>
             <p>
               We may update these Terms from time to time. Continued use of the Service after changes
               are posted constitutes acceptance of the new Terms.
@@ -115,11 +108,11 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">10. Contact</h2>
+            <h2 className="text-lg font-semibold text-cv-ink mb-3">10. Contact</h2>
             <p>
               {contactEmail ? (<>
                 For questions about these Terms, contact us at{' '}
-                <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline">
+                <a href={`mailto:${contactEmail}`} className="text-cv-brand-text hover:underline">
                   {contactEmail}
                 </a>.
               </>) : 'Contact the people who run this site.'}
@@ -129,6 +122,7 @@ export default function TermsPage() {
       </div>
 
       <Footer />
+      <BottomTabBar />
     </div>
   );
 }
@@ -140,12 +134,12 @@ function Footer() {
   // of the same page (Back needed one more press to leave) and kept the scroll (R4-APP-08).
   const open = (to) => (to === pathname ? window.scrollTo(0, 0) : navigate(to));
   return (
-    <div className="border-t border-gray-200 bg-white mt-12">
-      <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-xs text-gray-400">© 2026 CPWT-CV. All rights reserved.</p>
-        <div className="flex gap-4 text-xs text-gray-400">
-          <button onClick={() => open('/terms')} className="hover:text-gray-700 transition-colors">Terms</button>
-          <button onClick={() => open('/privacy')} className="hover:text-gray-700 transition-colors">Privacy Policy</button>
+    <div className="border-t border-cv-hairline bg-cv-surface mt-12 pb-[72px] md:pb-0">
+      <div className="max-w-[680px] mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-xs text-cv-faint">© 2026 CPWT-CV. All rights reserved.</p>
+        <div className="flex gap-4 text-xs text-cv-faint">
+          <button onClick={() => open('/terms')} className="hover:text-cv-ink transition-colors">Terms</button>
+          <button onClick={() => open('/privacy')} className="hover:text-cv-ink transition-colors">Privacy Policy</button>
         </div>
       </div>
     </div>
