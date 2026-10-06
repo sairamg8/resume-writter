@@ -1823,7 +1823,7 @@ function entriesOf(type, lines, aside) {
         // the line under it, and for a type with a second line (a role, a degree) the one under that
         // when it holds two fields or a place. Before, such an entry had no title, and its title and
         // company went into its description (R2-148).
-        const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text) && !isMetaLine(n.text);
+        const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && (!/[.!?]$/.test(n.text) || CORPORATE.test(n.text)) && !isMetaLine(n.text); // "Inc." ends a name, not a sentence
         if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
           header.push(info[i++]);
           const n = info[i];

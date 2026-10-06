@@ -320,7 +320,10 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const list = await pagesText(pages);
     if (!mounted.current || shownGen.current !== gen) return;
     setTexts({ gen, list });
-    ended.current = { gen, status: 'ready', error: null };
+    // Not over the record of a build that started after these pages went up and ended while the text was
+    // still being read (it failed): an undo back to that build's input must find its error, not nothing,
+    // and the status was left on 'rendering' with no build running.
+    if (!(ended.current?.gen > gen)) ended.current = { gen, status: 'ready', error: null };
     // Older than the latest change: its pages are up, but the latest build still owns the status.
     if (gen !== generation.current) return;
     setError(null);

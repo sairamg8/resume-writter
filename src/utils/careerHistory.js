@@ -13,23 +13,28 @@ import { parseMonthYear } from './dates.js';
  */
 function asPrinted(item, showDates) {
   const hides = (key) => Array.isArray(item.hiddenFields) && item.hiddenFields.includes(key);
+  const noCompany = hides('company');
+  const noRole = hides('role');
   const noStart = !showDates || hides('startDate');
   const noEnd = !showDates || hides('endDate');
-  if (!hides('company') && !hides('role') && !noStart && !noEnd) return item;
+  if (!(noCompany || noRole || noStart || noEnd)) return item;
   return {
     ...item,
-    company: hides('company') ? '' : item.company,
-    role: hides('role') ? '' : item.role,
+    company: noCompany ? '' : item.company,
+    role: noRole ? '' : item.role,
     startDate: noStart ? '' : item.startDate,
     endDate: noEnd ? '' : item.endDate,
-    current: noEnd ? false : item.current,
+    current: !noEnd && item.current,
   };
 }
 
 /**
  * Every experience entry the résumé prints, in order: the visible items of every visible
  * experience section — the rule the ATS checker, the cover letter and the PDF follow — each with
- * only the company, role and dates the PDF prints (asPrinted).
+ * only the company, role and dates the PDF prints (asPrinted). An entry the PDF leaves out because it
+ * prints nothing (a blank one, or every field hidden with its eye: printedEntries) is not listed, as it
+ * took an empty row and its dot on the timeline (R5-HUNT12-REVIEW). Decided on what asPrinted leaves, with no
+ * import of entryPrints.js, which the start-up path has no room for.
  */
 export function careerItems(resume) {
   const sections = Array.isArray(resume?.sections) ? resume.sections : [];
@@ -37,7 +42,7 @@ export function careerItems(resume) {
     .filter((s) => s && s.type === 'experience' && s.visible !== false)
     .flatMap((s) => {
       const showDates = s.settings?.showDates !== false;
-      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)) : [];
+      return Array.isArray(s.items) ? s.items.filter((i) => i && i.visible !== false).map((i) => asPrinted(i, showDates)).filter((i) => i.company || i.role || i.startDate || i.endDate) : [];
     });
 }
 
@@ -75,7 +80,7 @@ export function careerMonths(items, now = new Date()) {
 }
 
 /** A company as compared: trimmed, inner spaces collapsed, any case ("Initech " is "initech"). */
-const companyKey = (name) => String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+const companyKey = (name) => `${name ?? ''}`.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /** How many different companies `items` name (a promotion at one is one); a blank name is none. */
 export function companyCount(items) {
@@ -89,9 +94,7 @@ export function entryLabel(months) {
   if (!(months > 0)) return '';
   const yrs = Math.floor(months / 12);
   const mos = months % 12;
-  if (yrs === 0) return `${mos}mo`;
-  if (mos === 0) return `${yrs}yr`;
-  return `${yrs}yr ${mos}mo`;
+  return [yrs && `${yrs}yr`, mos && `${mos}mo`].filter(Boolean).join(' ');
 }
 
 /** The career total: "4 years", "1 year", "5 months", "3 yrs 2 mos", "1 yr 1 mo"; '' when none. */
@@ -99,8 +102,8 @@ export function totalLabel(months) {
   if (!(months > 0)) return '';
   const yrs = Math.floor(months / 12);
   const mos = months % 12;
-  if (yrs === 0) return plural(mos, 'month', 'months');
-  if (mos === 0) return plural(yrs, 'year', 'years');
+  if (!yrs) return plural(mos, 'month', 'months');
+  if (!mos) return plural(yrs, 'year', 'years');
   return `${plural(yrs, 'yr', 'yrs')} ${plural(mos, 'mo', 'mos')}`;
 }
 

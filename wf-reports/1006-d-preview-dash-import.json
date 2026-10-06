@@ -1,0 +1,46 @@
+{
+  "cluster": "1006-d-preview-dash-import",
+  "branch": "claude/wf-1006-d-preview-dash-import",
+  "base": "3f579152",
+  "rows": [
+    { "id": "D-1", "outcome": "fixed",
+      "commits": ["8b4a19ae", "69d81b16", "767c8342"],
+      "tests": ["tests/pdf/170-preview-late-text-keeps-error.test.mjs", "tests/pdf/171-preview-state-machine.test.mjs"],
+      "summary": "Found one way to be stuck on 'rendering' with nothing running: the page text of an older build, read slowly after its pages went up, wrote its 'ready' over the record of a newer build that had failed, so an undo back to that failed build's input restored 'rendering' for good. A newer build's record is no longer overwritten. 170 is the fail-first test (failfirst run 37400065668 green); 171 is 12 seeded random walks over typing/bursts/undo/hide/show/finish/fail/failed paint/held page text/Retry/time, asserting never 'rendering' once nothing runs, a hidden pane starts no build, and one more change still builds. A timeout or dead worker reaches the component as a failed build (pdfBuild.js rejects; tests/pdf/126 covers the watchdog), so it is modelled as one. The hunt's exact minutes-long hang is not proven to be this; other event orders in the component (queue, hide/show, Retry, undo) were read and none leaves 'rendering'. Not covered: a pdf.js getDocument/paint call that never settles has no watchdog in the component.",
+      "remaining": "pdf.js stage hang (getDocument/render/getTextContent never settling) is unguarded in PdfPreview; not reproduced, noted." },
+    { "id": "R5-HUNT12-REVIEW-CAREER-BLANK-ENTRIES (D-2, fix 40baad10 Career History hidden fields)", "outcome": "fixed",
+      "commits": ["64d9805f", "2e1d011c", "e9e2428d", "f52c6319", "c03fb803", "fa803df2"],
+      "tests": ["tests/unit/r5-hunt12-review-career-blank-entries.unit.mjs", "tests/unit/r5-hunt12-career-hidden-fields.unit.mjs", "tests/unit/career-history.unit.mjs"],
+      "summary": "Real gap: careerItems listed a blank entry or one with company, role and dates all hidden as an empty row with a timeline dot, though the PDF leaves it out. It now drops an entry with no company, role, start or end left after the eyes. Product call: decided on what asPrinted leaves (no entryPrints import: the start-up path has 0.0 kB spare on master, an entryPrints import took it to 1100.8 kB), so an entry that prints only a description or location is not listed. The existing r5-hunt12-career-hidden-fields test expected the all-hidden entry listed with blank fields; updated to expect it gone (its own title says 'neither listed nor counted'; the PDF drops it, entryPrints). career-history.unit fixtures of bare {id} entries were given a company. Failfirst run 37400284453 green for 64d9805f. Start-up size: entryLabel, asPrinted, companyKey and totalLabel were written shorter to give back the added bytes; 71-startup-chunks passes on head fa803df2 (runs 37402248329 and 37402547508).",
+      "remaining": "" },
+    { "id": "D-2 cc75b46f (section type case)", "outcome": "not-a-bug",
+      "commits": [], "tests": [],
+      "summary": "Reviewed: SECTION_TYPE_DEFAULTS keys are lower-case; typeAsWritten trims and lower-cases only when the lower-cased form is an own key; odd and unknown types stay as written; ids and a second load are stable; later normalizeResume steps run after withSectionShapes. No defect found.",
+      "remaining": "" },
+    { "id": "D-2 settings-not-object (d3466ef6, 80947419, 48f06765)", "outcome": "not-a-bug",
+      "commits": [], "tests": [],
+      "summary": "Reviewed: withSettingsObject runs first in normalizeResume and returns the same object when settings are an object; old null/string/array settings now go through the v8 migration with {} (same itemGap result as the old null path, better than the old string path). Load paths (store, cloud sync, syncMerge, import, export) all normalize; a newer build's file gets {} only if its settings are not an object. No defect found.",
+      "remaining": "" },
+    { "id": "D-3a R2-148-c Executive/Timeline", "outcome": "fixed",
+      "commits": ["fd49136a", "174d6abd"],
+      "tests": ["tests/pdf/99-import-roundtrip-entry-layouts-company-comma.test.mjs", "tests/pdf/99-import-roundtrip-entry-layouts.test.mjs"],
+      "summary": "Settled at HEAD: the HANDOFF is stale, STATUS.md is right: 50b95664 (re-land after the f2da8ef revert) is an ancestor, and 99-import-roundtrip-entry-layouts already pinned two jobs on Classic, Executive and Timeline. A third job at 'Tailspin Toys, Inc.' (company with a comma and a trailing full stop) with location 'Austin, TX' passed on Classic and Executive but FAILED on Timeline (company, role and location empty, header text in the description): the date-alone header rule's titleLike rejected any line ending in '.', so 'Data Analyst<TAB>Tailspin Toys, Inc.' was not taken as a title. titleLike now also accepts a line ending in a legal ending (CORPORATE, e.g. Inc., Ltd.). Failfirst run 37400868122 green for 174d6abd.",
+      "remaining": "Known limit from R2-148-c.done.json stands: a one-word location with no region under a Timeline title stays in the description." },
+    { "id": "D-3b right-sidebar PDF import", "outcome": "fixed",
+      "commits": ["d1067af5", "e9e2428d"],
+      "tests": ["tests/unit/import-pdf-right-column.unit.mjs", "tests/pdf/99-import-roundtrip-right-sidebar.test.mjs"],
+      "summary": "Reproduced: with Details Right the main column is on the left and pdfPageBlocks always read the left block first, so the summary was taken as the name. When a two-column run starts the page and the right column's tallest text is at least 1.3 times the left's (the Sidebar name is 19 pt against 12 pt headings), the right column is read first. Details Left, Compact grids and equal-size columns are unchanged. A real-PDF round trip of the Sidebar with layoutDetails right asserts name, title, summary, every contact, section order, jobs, school, skills, languages, certificate and project. Failfirst run 37400284453 green for d1067af5.",
+      "remaining": "Relies on the name being clearly the largest text: a name shrunk to the heading size falls back to the old order. A right column that is not the Sidebar template is not handled." }
+  ],
+  "review": {
+    "issues": [
+      "D-2: the agent's first Career History fix imported entryPrints into careerHistory.js, which took the start-up path to 1100.8 kB (cap 1100, master 0.0 spare): replaced by a dependency-free rule.",
+      "D-2: the agent's Career History fix broke the existing r5-hunt12-career-hidden-fields test (it expected the all-hidden entry listed blank): updated with evidence.",
+      "D-3: the agent's company-comma probe found a real Timeline defect (fixed in 174d6abd).",
+      "D-1 review by the agent: confirmed; no counter-example to the ended-record guard; 171 relies on 25 ms / 400 ms waits (a very slow machine could give a spurious failure, never a false pass)."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Start-up size: master sits at 0.0 kB to spare; head fa803df2 passes 71-startup-chunks (to-spare figure not read, still under the cap). Only careerHistory.js is on the start-up path among my changes; PdfPreview, importFile and importText load lazily. State-machine test 171 first failed on a recovery-step bug of its own (builds not settled as they came), fixed in 767c8342. Noted, not fixed (accessibility is deferred / out of scope): none seen. HANDOFF should say R2-148-c is fixed and add the Timeline 'Inc.' case."
+}

@@ -145,3 +145,32 @@ export async function opened(v0, props = {}) {
   assert.equal(p.shown(), name(v0), 'the first render is on screen');
   return { ...p, calls, build };
 }
+
+/**
+ * A gate on the fake pdf.js' text reads (`pdf` from preview()): after `hold()` every getTextContent waits
+ * until `release()`. The preview reads a page's text after its pages are up (PERF-5), so a held gate leaves
+ * a shown build's status on 'rendering' with its text still to come.
+ */
+export function textGate(pdf) {
+  let gate = null;
+  const open = pdf.pdfjs.lib.getDocument;
+  pdf.pdfjs.lib.getDocument = (args) => {
+    const task = open(args);
+    return {
+      promise: task.promise.then((doc) => {
+        const getPage = doc.getPage;
+        doc.getPage = async (n) => {
+          const page = await getPage(n);
+          const read = page.getTextContent;
+          page.getTextContent = async () => { if (gate) await gate.promise; return read(); };
+          return page;
+        };
+        return doc;
+      }),
+    };
+  };
+  return {
+    hold: () => { if (!gate) { let go; gate = { promise: new Promise((r) => { go = r; }), go }; } },
+    release: () => { const g = gate; gate = null; g?.go(); },
+  };
+}
