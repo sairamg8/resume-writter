@@ -610,16 +610,12 @@ export function extractJobKeywords(jobDescriptionText) {
     if (found) {
       const parts = phrase.split(/[^\p{L}\p{N}]+/u);
       if (parts.length > 1) {
-        let near = null; // [end, read] of the run the last find sat in: finds of "ci/cd" in "ci/cd/ci/cd/…" share one run
         for (const at of text.matchAll(new RegExp(wholeWord(phrase).source, 'giu'))) {
-          if (!near || at.index >= near[0]) {
-            let from = at.index;
-            let to = at.index + at[0].length;
-            while (from > 0 && !/\s/.test(spaced[from - 1])) from--;
-            while (to < spaced.length && !/\s/.test(spaced[to])) to++;
-            near = [to, spaced.slice(from, to).split(/\s+/).map((raw) => jobKeywordOf(raw)?.toLowerCase())];
-          }
-          const read = near[1];
+          let from = at.index;
+          let to = at.index + at[0].length;
+          while (from > 0 && !/\s/.test(spaced[from - 1])) from--;
+          while (to < spaced.length && !/\s/.test(spaced[to])) to++;
+          const read = spaced.slice(from, to).split(/\s+/).map((raw) => jobKeywordOf(raw)?.toLowerCase());
           for (const part of parts) {
             if (!read.includes(part) || !counts.has(part)) continue;
             if (counts.get(part) > 1) counts.set(part, counts.get(part) - 1);
