@@ -51,9 +51,9 @@ test.describe('Exported PDF — Typography & Spacing Customizations', () => {
   test('Smart Page Fit: clicking 1-Page Fit tightens layout in UI and exported PDF', async ({ page }) => {
     await visitEditor(page, 'classic');
 
-    // Open Design panel, expand Spacing section and click 1-Page Fit preset
+    // Open the Design dock, expand its Spacing section and click 1-Page Fit preset (the form beside the dock has buttons of its own)
     await openDesignPanel(page);
-    await page.locator('button:has-text("Spacing")').first().click();
+    await page.locator('[data-testid="dock-design"] button:has-text("Spacing")').first().click();
     const onePageBtn = page.locator('button:has-text("1-Page Fit")');
     await expect(onePageBtn).toBeVisible();
     await onePageBtn.click();

@@ -1,7 +1,7 @@
-// Design → Template in the real browser (R2-139): pictures a browser paints, and flows that cross tabs and
+// Design → Template in the real browser (R2-139): pictures a browser paints, and flows that cross a document switch, the dock and
 // pages. A2/A1/F1 the gallery shows each card's real page 1 and letterhead; A3/B3 its chips filter; A4 a
 // switch's notice carries Undo; A9 the Sidebar's single column is a card; A12 a collapsed Template stays
-// collapsed across tabs; E1 on a phone the gallery fills the screen, two cards to a row, Done in view;
+// collapsed across a document switch; E1 on a phone the gallery fills the screen, two cards to a row, Done in view;
 // B4 a design saved on one résumé is picked on another and deleted; C1 the dashboard shows each résumé's
 // real page, kept across visits; D1 New Resume picks the look beside the starters.
 import { test, expect } from '@playwright/test';
@@ -77,13 +77,15 @@ test.describe('the template gallery', () => {
   });
 });
 
-test('a collapsed Template stays collapsed across tabs (A12)', async ({ page }) => {
+test('a collapsed Template stays collapsed across a document switch and a closed dock (A12)', async ({ page }) => {
   await visitEditor(page, 'classic');
   await openDesignPanel(page);
   await expect(page.getByTestId('template-classic')).toBeVisible();
   await page.getByRole('button', { name: 'Template', exact: true }).click();
   await expect(page.getByTestId('template-classic')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Cover Letter' }).first().click();
+  // Picking the letter closes the dock; the Design button opens it again, on the Résumé.
+  await page.getByTestId('doc-switch-letter').click();
+  await expect(page.getByTestId('dock-design')).toHaveCount(0);
   await openDesignPanel(page);
   await expect(page.getByRole('button', { name: 'Template', exact: true })).toBeVisible();
   await expect(page.getByTestId('template-classic')).toHaveCount(0);
