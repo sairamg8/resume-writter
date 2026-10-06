@@ -9,7 +9,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createElement } from 'react';
-import { prepare, finish, openEditor, loadModule, elements, reactProps, text, attr, NAME, MARK, USER } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, loadModule, elements, reactProps, text, attr, NAME, MARK, USER } from './180-ui-b3-editor-mount.mjs';
 import { mount } from './fake-dom.mjs';
 
 before(prepare);
@@ -172,7 +172,11 @@ describe('Share keeps its live visibility rule', () => {
       assert.equal(byTid(yes.list(), 'share-button').length, 1);
       assert.equal(byTid(no.list(), 'share-button').length, 0);
       yes.act(() => reactProps(byTid(yes.list(), 'share-button')[0]).onClick());
-    } finally { await yes.view.unmount(); await no.view.unmount(); }
+    } finally {
+      // Last mounted, first unmounted: each mount saves the window that was there before it and puts it back.
+      await no.view.unmount();
+      await yes.view.unmount();
+    }
   });
 
   it('no cloud and a letter in the real Editor: no Share anywhere', async () => {
@@ -191,30 +195,37 @@ describe('the chip and the Design button toggle the dock', () => {
     const t = await openEditor();
     try {
       const open = () => t.all().map((el) => attr(el, 'data-testid')).filter((id) => /^dock-(design|ats)$/.test(id));
-      await t.press('ats-chip');
-      assert.deepEqual(open(), ['dock-ats']);
-      await t.press('design-button');
-      assert.deepEqual(open(), ['dock-design']);
-      await t.press('design-button');
-      assert.deepEqual(open(), []);
+      // A dock's panels may load after the press: wait for what the press shows, not a count of ticks.
+      const shows = async (id, docks) => {
+        await t.press(id);
+        await until(() => JSON.stringify(open()) === JSON.stringify(docks), `${id} leaves ${JSON.stringify(docks)} open (now ${JSON.stringify(open())})`);
+      };
+      await shows('ats-chip', ['dock-ats']);
+      await shows('design-button', ['dock-design']);
+      await shows('design-button', []);
     } finally { await t.close(); }
   });
 });
 
 describe('the save chip in the bar: its states', () => {
-  it('"Auto-saved to your browser", then "Saved <time>" after a write, and the red "Not saved" when a write fails', async () => {
+  it('"Auto-saved to your browser" before a first write, then "Saved <time>" once one lands, and the red "Not saved" when a write fails', async () => {
+    // The leaf before any write: no time, nothing held, no error.
+    const { EditorSaveStatus } = await loadModule('/src/components/EditorSaveStatus.jsx');
+    const fresh = mount(() => createElement(EditorSaveStatus, { persistError: false, saving: false, savedAt: null }), {});
+    try { assert.equal(text([...elements(fresh.container)].find((el) => attr(el, 'data-testid') === 'save-status')), 'Auto-saved to your browser'); } finally { await fresh.unmount(); }
     const t = await openEditor();
     try {
-      assert.equal(text(byTid(inBar(t), 'save-status')[0]), 'Auto-saved to your browser');
+      const chip = () => text(byTid(inBar(t), 'save-status')[0]);
+      // The real editor's store writes once as it opens, so its chip never rests on the first words: it has Saved.
+      await until(() => /^Saved /.test(chip()), `the opening write lands (chip: ${chip()})`);
+      const first = t.save().savedAt;
+      assert.ok(first, 'the opening write has a time');
       t.typeInSummary();
-      await t.measure(async () => {}, 600);
-      assert.match(text(byTid(inBar(t), 'save-status')[0]), /^Saved /);
+      await until(() => t.save().savedAt > first && /^Saved /.test(chip()), `a typed change is written (chip: ${chip()})`);
       localStorage.setItem = () => { throw Object.assign(new Error('full'), { name: 'QuotaExceededError' }); };
       t.typeInSummary();
-      await t.measure(async () => {}, 600);
-      const chip = byTid(inBar(t), 'save-status')[0];
-      assert.equal(text(chip), 'Not saved');
-      assert.match(attr(chip, 'class'), /\btext-cv-bad\b/);
+      await until(() => chip() === 'Not saved', `a failed write shows Not saved (chip: ${chip()})`);
+      assert.match(attr(byTid(inBar(t), 'save-status')[0], 'class'), /\btext-cv-bad\b/);
     } finally { await t.close(); }
   });
 
@@ -248,7 +259,11 @@ describe('EDIT-019 (CHANGED): the sync dot keeps every state in the bar, with it
     try {
       assert.equal(byTid(out.list(), 'sync-status').length, 0);
       assert.equal(byTid(none.list(), 'sign-in-button').length + byTid(none.list(), 'account-button').length, 0);
-    } finally { await out.view.unmount(); await none.view.unmount(); }
+    } finally {
+      // Last mounted, first unmounted (the window each mount found is restored by its unmount).
+      await none.view.unmount();
+      await out.view.unmount();
+    }
   });
 });
 
@@ -293,23 +308,26 @@ describe('EDIT-026 (CHANGED): export, share and import stay reachable on a phone
 describe('EDIT-171 (CHANGED): the open document and the docks', () => {
   it('a dock opened from the letter shows the résumé; the Resume switch is not the dock\'s opener', async () => {
     const t = await openEditor({ path: '?tab=coverletter' });
+    const docks = () => t.all().map((el) => attr(el, 'data-testid')).filter((id) => /^dock-(design|ats)$/.test(id));
     try {
       assert.equal(t.preview().activeTab, 'coverletter');
       await t.press('design-button');
+      await until(() => docks().includes('dock-design'), `the Design dock opens from the letter (docks: ${docks()})`);
       assert.equal(t.preview().activeTab, 'resume');
       assert.equal(t.header().exportMenu.letterTab, false);
       // negative twin: the Resume switch (EDIT-089's live rule) leaves the dock as it was
       await t.press('doc-switch-resume');
-      assert.ok(t.all().some((el) => attr(el, 'data-testid') === 'dock-design'));
+      assert.deepEqual(docks(), ['dock-design']);
+      assert.match(t.url(), /dock=design/);
     } finally { await t.close(); }
   });
 
   it('negative twin: picking the Cover letter closes an open dock and shows the letter', async () => {
     const t = await openEditor({ path: '?dock=ats' });
     try {
-      assert.ok(t.all().some((el) => attr(el, 'data-testid') === 'dock-ats'));
+      await until(() => t.all().some((el) => attr(el, 'data-testid') === 'dock-ats'), 'the ATS dock is open from the address');
       await t.press('doc-switch-letter');
-      assert.ok(!t.all().some((el) => attr(el, 'data-testid') === 'dock-ats'));
+      await until(() => !t.all().some((el) => attr(el, 'data-testid') === 'dock-ats'), 'picking the letter closes the dock');
       assert.equal(t.preview().activeTab, 'coverletter');
     } finally { await t.close(); }
   });
