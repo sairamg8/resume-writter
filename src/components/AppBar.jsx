@@ -24,7 +24,7 @@ export default function AppBar({ account, search, active, children }) {
       <div className="h-14 md:h-16 px-4 md:px-8 flex items-center gap-4 md:gap-8">
         <Link to="/" className="flex items-center gap-2.5 shrink-0">
           <span className="flex size-[30px] md:size-8 items-center justify-center rounded-cv-control bg-cv-brand text-xs md:text-[13px] font-bold text-white">CV</span>
-          <span className="hidden sm:inline text-base md:text-[17px] font-bold tracking-tight">CPWT-CV</span>
+          <span className="text-base md:text-[17px] font-bold tracking-tight">CPWT-CV</span>
         </Link>
         <nav className="hidden md:flex gap-1">
           {TABS.map(([id, to, label]) => (

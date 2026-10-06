@@ -47,7 +47,7 @@ describe('AppBar: the three areas and the brand', () => {
       assert.ok(brand, 'the brand link: the CV mark and the name');
       assert.equal(brand.getAttribute('href'), '/');
       const name = [...elements(brand)].find((el) => text(el) === 'CPWT-CV');
-      assert.ok(tokens(name).includes('hidden') && tokens(name).includes('sm:inline'), 'the name shows from sm');
+      assert.ok(!tokens(name).some((t) => t === 'hidden' || t.endsWith(':inline')), 'the name shows at every width, a phone bar too (the canvas phone bar draws it)');
       const links = { documents: ['/', 'Documents'], applications: ['/jobs', 'Applications'], projects: ['/boards', 'Projects'] };
       for (const id of NAV) {
         const a = b.nav(id);
