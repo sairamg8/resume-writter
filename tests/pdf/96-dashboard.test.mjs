@@ -138,6 +138,14 @@ async function dashboard(resumes = [], { user = null } = {}) {
     },
     // The open dialog: a closed one fades out for 150 ms (data-state="closed") before it unmounts.
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
+    /** The picker once it is up: its code arrives through the Dashboard's boundary (Lazy), later than a settle. */
+    async dialogUp() {
+      for (let i = 0; i < 500 && !page.dialog(); i += 1) {
+        await new Promise((r) => { setTimeout(r, 10); });
+        view.act(() => {});
+      }
+      return page.dialog();
+    },
     fileInput() {
       const input = all().find((el) => el.tagName === 'INPUT' && (el.type === 'file' || el.getAttribute('type') === 'file'));
       assert.ok(input, 'the Import file input');
@@ -426,7 +434,7 @@ describe('the dashboard: new résumés (R2-167)', () => {
       const lighthouse = plain(page.resumes()[1]);
       page.click(page.button('New Cover'));
       await settle();
-      const dialog = page.dialog();
+      const dialog = await page.dialogUp();
       assert.ok(dialog, 'which résumé heads the letter');
       assert.ok(page.has('H2', 'New Cover Letter'));
       const choices = page.all(dialog).filter((el) => el.tagName === 'BUTTON' && el.getAttribute('aria-label') !== 'Close');

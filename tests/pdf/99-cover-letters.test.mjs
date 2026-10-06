@@ -126,6 +126,7 @@ async function openApp(resumes, dataVersion = 13) {
     await settle();
   };
   const click = (el) => fire(el, 'onClick');
+  const openDialog = () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed') ?? null;
   return {
     view,
     store: () => store,
@@ -136,7 +137,15 @@ async function openApp(resumes, dataVersion = 13) {
     fire,
     press: (label) => click(button(label)),
     // The open dialog: a closed one fades out for 150 ms (data-state="closed") before it unmounts.
-    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed') ?? null,
+    dialog: openDialog,
+    /** The picker once it is up: its code arrives through the Dashboard's boundary (Lazy), later than a settle. */
+    async dialogUp() {
+      for (let i = 0; i < 500 && !openDialog(); i += 1) {
+        await new Promise((r) => { setTimeout(r, 10); });
+        view.act(() => {});
+      }
+      return openDialog();
+    },
     /** Every card on the dashboard: its text, and whether it is in the Cover Letters group. */
     cards: () => all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className))
       .map((el) => ({ el, text: text(el), letter: inside(el, 'SECTION') })),
@@ -214,7 +223,7 @@ describe('New Cover Letter takes a résumé\'s name, job title, contacts and pho
     ]);
     try {
       await app.press('New Cover');
-      const dialog = app.dialog();
+      const dialog = await app.dialogUp();
       assert.ok(dialog, 'before: a blank résumé was made at once');
       assert.equal(dialog.getAttribute('aria-modal'), 'true');
       assert.ok(text(dialog).includes('New Cover Letter'));
@@ -240,15 +249,15 @@ describe('New Cover Letter takes a résumé\'s name, job title, contacts and pho
       await app.press('New Cover Letter');
       // The kit's Dialog takes Escape on its outer layer, the panel's overlay's parent; the first
       // résumé has the focus, inside it, so the key bubbles there.
-      await app.fire(app.dialog().parentNode.parentNode, 'onKeyDown', { key: 'Escape' });
+      await app.fire((await app.dialogUp()).parentNode.parentNode, 'onKeyDown', { key: 'Escape' });
       assert.equal(app.dialog(), null, 'Escape closes it');
       await app.press('New Cover');
-      await app.click([...elements(app.dialog())].find((el) => el.getAttribute('aria-label') === 'Close'));
+      await app.click([...elements(await app.dialogUp())].find((el) => el.getAttribute('aria-label') === 'Close'));
       assert.equal(app.dialog(), null, 'Close closes it');
       assert.equal(app.store().appState.resumes.length, 2, 'and neither made a letter');
 
       await app.press('New Cover');
-      await app.click(app.button('Blank letter', app.dialog(), true));
+      await app.click(app.button('Blank letter', await app.dialogUp(), true));
       const letter = app.active();
       assert.equal(letter.kind, 'letter');
       assert.equal(letter.name, 'Cover Letter');

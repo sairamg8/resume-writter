@@ -115,7 +115,8 @@ it('Career History with its code unreachable: the notice and Try again; Try agai
     page.view.act(() => reactProps(retry).onClick({}));
     await until(() => page.button('Open Job Tracker →'), 'the panel after Try again');
     assert.equal(page.button('Try again'), undefined, 'the notice is gone');
-    assert.ok(page.all().some((el) => text(el).includes('Newest CV Person')), 'the panel shows the résumé edited last');
+    // The panel shows the open résumé: the store's activeId is the first one, resume_a.
+    assert.ok(page.all().some((el) => text(el).includes('Older CV Person')), 'the panel shows the open résumé');
     assert.equal(page.reloads(), 0, 'the page was not reloaded');
   } finally { await page.close(); }
 });
