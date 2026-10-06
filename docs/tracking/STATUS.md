@@ -66,9 +66,10 @@ Word Sidebar band.
 - R2-142 (performance): PERF-1's WOFF cache is done in Round 4; the perf harness (N1/N2 budgets, Gate A/B), PERF-5
   (pdf.js paint order, canvas reuse) and PERF-6 (Gate B, a worker watchdog) landed 2026-10-05 (fail-first proven).
   PERF-4 (one commit per keystroke) done 2026-10-06: a keystroke in a field renders no component of any untouched entry or
-  section (tests/pdf/165, fail-first; the cause was dnd-kit's sensor options built anew at every render). Left:
-  PersonalInfoEditor and EditorHeader still re-render per key; the same sensor options on Board.jsx and Backlog.jsx; the
-  PDF build time of a 200,000-character field.
+  section (tests/pdf/165, fail-first; the cause was dnd-kit's sensor options built anew at every render). Its follow-ups
+  (the Personal Info editor, the editor header, Board.jsx's and Backlog.jsx's sensors) are fixed on
+  `claude/perf4-followups-1006` (tests/pdf/172, 173, 165; fail-first proven), not on master yet. Left: the PDF build time of
+  a 200,000-character field; EditorAlerts and EditorModeBar still re-render per key.
 - R2-143 (open-source release): only the owner items in section 3 are left.
 - R2-147 (per-section styling): done 2026-10-05 — column layout (details top/left/right, mixed columns, widths:
   Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven. Right-sidebar PDF import done
