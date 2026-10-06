@@ -402,6 +402,18 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
       call(el, 'onClick');
       await settle(); // the address changes in the router's own time
     },
+    /**
+     * A control pressed, then waited for until `done()` holds (500 x 10 ms, by what happened, never a fixed tick count): the
+     * address change reaches the page as a router transition, and a dock's panels (the Design groups, the ATS scan) take their
+     * time to mount, so `press`'s settle can end before the screen shows the result. What the page rendered
+     * (`modes()`, `header()`) is read while rendering, before the commit: only the screen says it is done.
+     */
+    async pressUntil(id, done, what) {
+      const el = byTid(id);
+      assert.ok(el, `no control with the testid ${id}`);
+      call(el, 'onClick');
+      await until(done, what);
+    },
     /** The document switch's button that is lit (the open document), by the one class only the lit one has. */
     openDoc: () => ['doc-switch-resume', 'doc-switch-letter'].filter((id) => /\bshadow-sm\b/.test(attr(byTid(id), 'class'))),
     chipOpen: () => /\bbg-cv-good-soft\b/.test(attr(byTid('ats-chip'), 'class')),
@@ -583,12 +595,16 @@ describe('typing with a dock open renders no part of the bar and neither panel i
     });
   }
 
-  it('the count is live: opening a dock renders the dock, and the chip and the Design button that show it', async () => {
+  it('the count is live: opening a dock renders the dock, and the button or the chip that shows it', async () => {
     const t = await openEditor();
     try {
-      const w = await t.measure(() => t.press('design-button'));
-      assert.equal(t.dockOnScreen(), 'design');
-      for (const label of ['modes', 'designButton', 'chip', 'dock']) assert.ok(w.count(label) >= 1, `${label} did not render for a dock opening. ${w.report()}`);
+      // Each button is lit by its own dock only (`open` is a boolean of its own), so the Design dock opening renders the Design
+      // button and not the chip, and the ATS dock the chip: the leaf that shows the dock renders, the other does not need to.
+      let w = await t.measure(() => t.pressUntil('design-button', () => t.dockOnScreen() === 'design', 'the Design dock opens'));
+      for (const label of ['modes', 'designButton', 'dock']) assert.ok(w.count(label) >= 1, `${label} did not render for the Design dock opening. ${w.report()}`);
+      assert.equal(w.count('header'), 0, `the header rendered for a dock opening. ${w.report()}`);
+      w = await t.measure(() => t.pressUntil('ats-chip', () => t.dockOnScreen() === 'ats', 'the ATS dock replaces it'));
+      for (const label of ['modes', 'chip', 'designButton', 'dock']) assert.ok(w.count(label) >= 1, `${label} did not render for the ATS dock opening. ${w.report()}`);
       assert.equal(w.count('header'), 0, `the header rendered for a dock opening. ${w.report()}`);
     } finally { await t.close(); }
   });
@@ -598,8 +614,15 @@ describe('the save chip has its own budget (PERF-4)', () => {
   it('a burst of keys renders it at most twice (Saving…, then Saved), as primitives, and nothing else of the bar', async () => {
     const t = await openEditor({ jobs: 1 });
     try {
-      assert.equal(text(t.byTid('save-status')), 'Auto-saved to your browser');
-      const w = await t.measure(() => { t.typeInSummary(); t.typeInSummary(); t.typeInSummary(); }, PAUSE);
+      // The store writes the résumé it opened with 300 ms after the mount, so on a slow machine the chip already reads "Saved"
+      // here: that first write is waited for, and the burst is counted after it ("Auto-saved to your browser" before a
+      // write is pinned on the leaf itself, tests/pdf/180-ui-b3-save-chip).
+      await until(() => t.store().savedAt && /^Saved /.test(text(t.byTid('save-status'))), 'the write of the opened résumé landed');
+      const first = t.store().savedAt;
+      const w = await t.measure(async () => {
+        t.typeInSummary(); t.typeInSummary(); t.typeInSummary();
+        await until(() => t.store().savedAt !== first && /^Saved /.test(text(t.byTid('save-status'))), 'the burst was written and the chip says Saved');
+      });
       assert.ok(t.store().savedAt, 'the write has happened');
       assert.ok(w.count('save') >= 1, `the chip shows Saving… and Saved, so it renders. ${w.report()}`);
       assert.ok(w.count('save') <= 2, `the chip rendered ${w.count('save')} times for one burst. ${w.report()}`);
@@ -909,23 +932,23 @@ describe('what the alerts, the switch, the chip and the Design button show still
       assert.ok(w.count('switch') >= 1 && w.count('modes') >= 1, `the switch rendered for it. ${w.report()}`);
       // (The header does render for a document pick: the Export menu's words follow the open document.)
       // Design belongs to the résumé: opened from the letter it opens over the Resume (EDIT-171).
-      w = await t.measure(() => t.press('design-button'));
+      w = await t.measure(() => t.pressUntil('design-button', () => t.dockOnScreen() === 'design', 'the Design dock opens over the Resume'));
       assert.equal(t.modes().dock, 'design');
       assert.equal(t.modes().doc, 'resume', 'a dock opened from the letter switches to the Resume');
       assert.deepEqual(t.openDoc(), ['doc-switch-resume']);
       assert.equal(t.dockOnScreen(), 'design');
       assert.ok(t.designOpen() && !t.chipOpen(), 'the Design button is the lit one');
       assert.ok(w.count('designButton') >= 1 && w.count('modes') >= 1, `the Design button rendered for it. ${w.report()}`);
-      await t.press('design-button');
+      await t.pressUntil('design-button', () => t.dockOnScreen() === null, 'the Design button again closes the dock');
       assert.equal(t.modes().dock, null, 'the Design button again closes the dock');
       assert.equal(t.dockOnScreen(), null);
       assert.deepEqual(t.openDoc(), ['doc-switch-resume'], 'and the document is the Resume');
       // The ATS chip is the same toggle, and one dock at a time.
-      w = await t.measure(() => t.press('ats-chip'));
+      w = await t.measure(() => t.pressUntil('ats-chip', () => t.dockOnScreen() === 'ats', 'the ATS dock opens'));
       assert.equal(t.dockOnScreen(), 'ats');
       assert.ok(t.chipOpen() && !t.designOpen());
       assert.ok(w.count('chip') >= 1, `the chip rendered for it. ${w.report()}`);
-      await t.press('design-button');
+      await t.pressUntil('design-button', () => t.dockOnScreen() === 'design', 'the other dock replaces it');
       assert.equal(t.dockOnScreen(), 'design', 'the other dock replaces it');
       assert.ok(t.designOpen() && !t.chipOpen());
     } finally { await t.close(); }
@@ -935,7 +958,7 @@ describe('what the alerts, the switch, the chip and the Design button show still
     const t = await openEditor({ path: '?dock=ats' });
     try {
       assert.equal(t.dockOnScreen(), 'ats');
-      await t.press('doc-switch-letter');
+      await t.pressUntil('doc-switch-letter', () => t.dockOnScreen() === null, 'the dock is closed');
       assert.equal(t.dockOnScreen(), null, 'the dock is closed');
       assert.equal(t.modes().doc, 'coverletter');
       await t.press('doc-switch-resume');
@@ -974,11 +997,11 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await settle();
       assert.deepEqual(t.alertTexts(), [NOTICE]);
       t.act(() => held('design'));
-      await settle();
+      await until(() => t.dockOnScreen() === 'design', 'the dock opens');
       assert.equal(t.modes().dock, 'design');
       assert.deepEqual(t.alertTexts(), [NOTICE], 'a stale toggle took the notice off the address');
       t.act(() => held('design'));
-      await settle();
+      await until(() => t.dockOnScreen() === null, 'the dock closes');
       assert.equal(t.modes().dock, null, 'the same toggle, held since the first render, closes the dock it opened');
       assert.deepEqual(t.alertTexts(), [NOTICE]);
     } finally { await t.close(); }
@@ -1015,11 +1038,11 @@ describe('a handler the alerts or the mode bar have held since their first rende
       await settle();
       assert.equal(t.alerts().onDismissImport, held, 'the alerts were given the same function after the keys');
       t.act(() => t.live.navigate(`/resume/${t.id}?dock=design`, { state: { importNotice: NOTICE } }));
-      await settle();
+      await until(() => t.dockOnScreen() === 'design' && t.alertTexts().length === 1, 'the Design dock and the notice are on screen');
       assert.equal(t.modes().dock, 'design');
       assert.deepEqual(t.alertTexts(), [NOTICE]);
       t.act(() => held());
-      await settle();
+      await until(() => t.alertTexts().length === 0, 'the notice is gone');
       assert.deepEqual(t.alertTexts(), [], 'the notice is gone');
       assert.equal(t.modes().dock, 'design', 'a stale Dismiss went to the address of the first render, the Resume with no dock');
     } finally { await t.close(); }
