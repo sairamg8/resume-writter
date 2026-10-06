@@ -14,6 +14,10 @@ import { useToast } from '@/components/ui/Toast';
 import { Menu } from '@/components/ui/Menu';
 import { useSameList } from '@/hooks/useSameList';
 
+// One options object for the life of the page: useSensor makes a new sensor from a new one, and dnd-kit
+// wakes every sortable under it for a new list of sensors (PERF-4).
+const KEYBOARD_SENSOR = { coordinateGetter: sortableKeyboardCoordinates };
+
 /** The card each section type draws for one entry. */
 const ENTRY_CARD = {
   experience: ExperienceItem, education: EducationItem, skills: SkillItem, projects: ProjectItem,
@@ -66,7 +70,7 @@ export const SortableSection = memo(function SortableSection({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const itemSensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR)
   );
   const itemIds = useSameList(section.items.map(i => i.id));
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };

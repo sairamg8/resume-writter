@@ -14,6 +14,10 @@ import { SortableSection } from '@/components/SectionEditor';
 import { useStableActions } from '@/hooks/useStableActions';
 import { useSameList } from '@/hooks/useSameList';
 
+// One options object for the life of the page: useSensor makes a new sensor from a new one, and dnd-kit
+// wakes every sortable under it for a new list of sensors (PERF-4).
+const KEYBOARD_SENSOR = { coordinateGetter: sortableKeyboardCoordinates };
+
 /**
  * The Résumé tab: Collapse/Expand All, Personal Info, the sections (drag to reorder) and Add
  * Section. What is open is the Editor's state, so it survives a trip to Design or the letter.
@@ -28,7 +32,7 @@ export function EditorResumeTab({
   const sectionIds = useSameList(resume.sections.map(s => s.id));
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR)
   );
 
   // Collapse/Expand All reaches the sections there when it was pressed (and every one when the tab
