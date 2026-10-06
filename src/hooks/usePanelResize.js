@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useSyncExternalStore } from 'react';
 
 const KEY = 'cpwtcv-panel-width';
 const DEFAULT_WIDTH = 360;
@@ -10,6 +10,17 @@ const KEY_STEP = 16;
 const DOCK_PX = 360;
 const STAGE_FLOOR_PX = 320;
 const clamp = (w) => Math.min(MAX, Math.max(MIN, w));
+
+// The window's width, read at every render while a dock is open (a store the resize event reports to), so the very
+// render that opens the dock already draws the narrowed panel: a width kept in state from an effect would draw the
+// remembered one for a frame first, and the stage would repaint at the squeezed width. Closed, nothing is followed.
+const followWindow = (notify) => {
+  window.addEventListener('resize', notify);
+  return () => window.removeEventListener('resize', notify);
+};
+const readWindow = () => window.innerWidth;
+const noFollow = () => () => {};
+const noWidth = () => NaN;
 
 /**
  * The width last remembered, clamped to 240–640; 360 when there is none, it is not a number, or the
@@ -44,16 +55,9 @@ function appliedWidth(width, dockOpen, viewport) {
  */
 export function usePanelResize({ dockOpen = false } = {}) {
   const [storedPx, setPanelWidth] = useState(storedWidth);
-  const [viewport, setViewport] = useState(() => (typeof window === 'undefined' ? NaN : window.innerWidth));
   const dragState = useRef(null);
   // The window's width is only followed while a dock is open: nothing else reads it.
-  useEffect(() => {
-    if (!dockOpen || typeof window === 'undefined') return undefined;
-    const read = () => setViewport(window.innerWidth);
-    read();
-    window.addEventListener('resize', read);
-    return () => window.removeEventListener('resize', read);
-  }, [dockOpen]);
+  const viewport = useSyncExternalStore(dockOpen ? followWindow : noFollow, dockOpen ? readWindow : noWidth, noWidth);
   const panelWidth = appliedWidth(storedPx, dockOpen, viewport);
 
   function onPointerDown(e) {

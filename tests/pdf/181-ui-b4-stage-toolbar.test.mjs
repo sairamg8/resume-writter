@@ -43,11 +43,13 @@ describe('the panel is held off the stage\'s floor while a dock is open (the res
   async function hook(width, dockOpen = false) {
     const { usePanelResize } = await loadModule('/src/hooks/usePanelResize.js');
     let latest = null;
-    const Probe = ({ open }) => { latest = usePanelResize({ dockOpen: open }); return null; };
+    const drawn = [];
+    const Probe = ({ open }) => { latest = usePanelResize({ dockOpen: open }); drawn.push(latest.panelWidth); return null; };
     const view = mount(Probe, { open: false });
     view.window.innerWidth = width;
+    drawn.length = 0;
     view.update({ open: dockOpen });
-    return { view, now: () => latest };
+    return { view, now: () => latest, drawn };
   }
 
   it('a stored 640 at 1100 px with a dock open is drawn at 420 (window - 360 - 320); the stored width is untouched', async () => {
@@ -57,6 +59,16 @@ describe('the panel is held off the stage\'s floor while a dock is open (the res
       assert.equal(now().panelWidth, 420);
       assert.equal(now().storedWidth, 640);
       assert.equal(store.get(KEY), '640', 'the remembered width is not rewritten by the clamp');
+    } finally { await view.unmount(); }
+  });
+
+  it('the render that opens the dock already draws the narrowed width: no frame at the remembered one', async () => {
+    memoryStorage({ [KEY]: '640' });
+    const { view, now, drawn } = await hook(1100, true);
+    try {
+      assert.ok(drawn.length > 0, 'the dock opened with a render');
+      assert.deepEqual([...new Set(drawn)], [420], `every render since the dock opened drew 420, got ${drawn.join(', ')}`);
+      assert.equal(now().panelWidth, 420);
     } finally { await view.unmount(); }
   });
 
