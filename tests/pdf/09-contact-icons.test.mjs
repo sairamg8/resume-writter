@@ -19,15 +19,14 @@ const PERSONAL = {
 /**
  * What each pack draws for email, phone, location, website, LinkedIn and GitHub: one letter per
  * painted shape (S stroke, F fill, E even-odd fill), the stroke width in view-box units, and
- * where the phone's first shape starts — a handset (Classic, Bold), a smartphone outline
+ * where the phone's first shape starts — a handset (Classic), a smartphone outline
  * (Modern, Minimal) or a solid handset (Filled).
  */
 const PACKS = {
   filled:  { width: null, shapes: ['F', 'F', 'E', 'E', 'E', 'F'], phoneStart: [7.05, 2.6] },
-  lucide:  { width: 2, shapes: ['SS', 'S', 'SS', 'SSS', 'SSS', 'SS'], phoneStart: [13.832, 16.568] },
-  refined: { width: 1.75, shapes: ['SS', 'SSF', 'SS', 'SSS', 'SSFSS', 'S'], phoneStart: [9.25, 2.5] },
-  minimal: { width: 1.5, shapes: ['SS', 'SS', 'SS', 'SS', 'SS', 'SS'], phoneStart: [7, 3.5] },
-  bold:    { width: 2.6, shapes: ['SS', 'S', 'SS', 'SSS', 'SSS', 'SS'], phoneStart: [13.832, 16.568] },
+  lucide:  { width: 1.75, shapes: ['SS', 'S', 'SSF', 'SSS', 'SSFS', 'S'], phoneStart: [6.6, 10.8] },
+  refined: { width: 1.75, shapes: ['SS', 'SSS', 'S', 'SSS', 'SSFS', 'S'], phoneStart: [9.5, 2.5] },
+  minimal: { width: 1.25, shapes: ['SS', 'SS', 'SS', 'SSS', 'SSFS', 'S'], phoneStart: [9, 3] },
 };
 
 /**

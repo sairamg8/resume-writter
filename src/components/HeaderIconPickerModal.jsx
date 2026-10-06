@@ -43,11 +43,10 @@ export default function HeaderIconPickerModal({
 
   // Style pack variants for this specific field
   const packVariants = useMemo(() => [
-    { id: 'pack:lucide', label: 'Classic Outline', desc: 'Standard Lucide outline style', packId: 'lucide' },
-    { id: 'pack:refined', label: 'Modern Refined', desc: 'Sleek rounded line style', packId: 'refined' },
+    { id: 'pack:lucide', label: 'Classic Outline', desc: 'Smooth rounded outline style', packId: 'lucide' },
+    { id: 'pack:refined', label: 'Modern Refined', desc: 'Smartphone and soft corners', packId: 'refined' },
     { id: 'pack:filled', label: 'Solid Filled', desc: 'High-contrast filled shape', packId: 'filled' },
-    { id: 'pack:minimal', label: 'Minimalist', desc: 'Ultra-clean geometric line', packId: 'minimal' },
-    { id: 'pack:bold', label: 'Bold Outline', desc: 'Extra heavy outline weight', packId: 'bold' },
+    { id: 'pack:minimal', label: 'Minimalist', desc: 'Light, clean geometric line', packId: 'minimal' },
   ], []);
 
   // Filtered icons based on search

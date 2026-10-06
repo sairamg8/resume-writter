@@ -18,7 +18,7 @@ const customised = (template) => resume({
   template,
   settings: {
     accentColor: '#e11d48', textColor: '#0f172a', sidebarBg: '#14532d', headerTextColor: '#fef3c7', nameColor: '#7c3aed', jobTitleColor: '#0d9488',
-    iconSet: 'bold', iconSize: 17,
+    iconSet: 'minimal', iconSize: 17,
     font: 'lato', fontSize: 'large', fontSizeBase: 13, fontSizeNameDelta: 12, fontSizeSectionDelta: 3, fontSizeEntryDelta: 2, customFont: 'Fictional Grotesk',
     sectionLetterSpacing: 12, fontSizeTitleDelta: 5, nameFont: 'ptserif', headingFont: 'Fictional Grotesk',
     lineHeightValue: 1.8, marginV: 25, marginH: 30, sectionGap: 28, itemGap: 15,

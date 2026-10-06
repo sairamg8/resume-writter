@@ -1,6 +1,6 @@
 /**
  * Contact icons in the editor (Design panel previews, Personal info fields).
- * settings.iconSet: 'filled' | 'lucide' | 'refined' | 'minimal' | 'bold'
+ * settings.iconSet: 'filled' | 'lucide' | 'refined' | 'minimal'
  * settings.customContactIcons: optional per-field overrides — an uploaded image (data URL), or a
  * header icon picker choice (`icon:<id>`, `pack:<id>`)
  * The shapes come from contactIconPaths.js — the table the PDF draws from too.
@@ -14,10 +14,9 @@ export { getCustomContactIcon, getIconSetId };
 /** Global icon style options shown in Design panel */
 export const ICON_SET_OPTIONS = [
   { id: 'filled',  label: 'Filled',   desc: 'Solid marks · premium ATS look' },
-  { id: 'lucide',  label: 'Classic',  desc: 'Standard outline icons' },
-  { id: 'refined', label: 'Modern',   desc: 'Smartphone & refined marks' },
-  { id: 'minimal', label: 'Minimal',  desc: 'Simple geometric icons' },
-  { id: 'bold',    label: 'Bold',     desc: 'Classic shapes, thicker lines' },
+  { id: 'lucide',  label: 'Classic',  desc: 'Smooth rounded outlines' },
+  { id: 'refined', label: 'Modern',   desc: 'Smartphone & soft corners' },
+  { id: 'minimal', label: 'Minimal',  desc: 'Light, clean geometric lines' },
 ];
 
 /**

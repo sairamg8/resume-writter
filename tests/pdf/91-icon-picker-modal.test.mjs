@@ -210,10 +210,10 @@ describe('the header icon picker (R2-157)', () => {
   });
 
   it('Reset to Default takes the field\'s icon off, and only that one', async () => {
-    const view = await editor(cv({ email: 'icon:send', phone: 'pack:bold' }));
+    const view = await editor(cv({ email: 'icon:send', phone: 'pack:minimal' }));
     try {
       view.choose('email');
-      assert.deepEqual(view.click(view.inPicker('Reset to Default')), [['customContactIcons', { phone: 'pack:bold' }]]);
+      assert.deepEqual(view.click(view.inPicker('Reset to Default')), [['customContactIcons', { phone: 'pack:minimal' }]]);
       assert.equal(view.picker(), null);
       view.choose('email');
       assert.ok(view.picker().textContent.includes('Using default template icon'), 'none left to reset');

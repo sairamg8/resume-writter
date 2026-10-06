@@ -100,7 +100,7 @@ describe('Design → Reset keeps the contact icons the user uploaded (R5-6)', ()
     const uploads = { email: PNG_2X2, github: PNG_2X2 };
     for (const template of TEMPLATES) {
       const saved = resume({ template, personal: PERSONAL, settings: {
-        accentColor: '#0d9488', iconSet: 'bold', contactStyle: 'bar', marginH: 30, customContactIcons: uploads,
+        accentColor: '#0d9488', iconSet: 'minimal', contactStyle: 'bar', marginH: 30, customContactIcons: uploads,
       } });
       const r = await afterReset(saved);
       assert.deepEqual(r.settings, { ...defaultSettings(template), customContactIcons: uploads }, template);

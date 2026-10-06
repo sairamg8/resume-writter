@@ -2,83 +2,82 @@
  * The contact-icon packs as data — the one table both the editor (SVG, contactIcons.jsx) and the
  * PDF (react-pdf, PdfIcons.jsx) draw from, so a pack cannot look different in the export.
  *
- * Each icon is a list of [tag, attributes] on a 24×24 view box (Lucide's icon-node shape).
+ * Each icon is a list of [tag, attributes] on a 24×24 view box (the icon-node shape: tag and attributes).
  * An outline pack strokes every shape in the text colour at the pack's stroke width; the filled
  * pack fills them. `paint: 'fill'` fills one shape of an outline pack (the dots of "Modern").
  * Holes (the Filled pack's pin, globe and LinkedIn "in") are even-odd cut-outs, never white
  * shapes, so they show whatever the icon sits on — a white page, the Modern banner, the Sidebar.
  */
 
-/** "Classic": Lucide's mail, phone, map-pin and globe (lucide-react 1.28, ISC) and Lucide-style LinkedIn / GitHub marks. */
+/** "Classic": rounded outlines — an envelope, a long-cord handset, a lollipop marker on a stem, a lens globe and a LinkedIn tile. */
 const LUCIDE = {
   email: [
-    ['path', { d: 'm22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7' }],
-    ['rect', { x: 2, y: 4, width: 20, height: 16, rx: 2 }],
+    ['rect', { x: 2.5, y: 5, width: 19, height: 14, rx: 3 }],
+    ['path', { d: 'M3 6.5l9 6.5 9-6.5' }],
   ],
   phone: [
-    ['path', { d: 'M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384' }],
+    ['path', { d: 'M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.6 3.6a1 1 0 0 1-.25 1z' }],
   ],
   location: [
-    ['path', { d: 'M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0' }],
-    ['circle', { cx: 12, cy: 10, r: 3 }],
-  ],
-  website: [
-    ['circle', { cx: 12, cy: 12, r: 10 }],
-    ['path', { d: 'M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20' }],
-    ['path', { d: 'M2 12h20' }],
-  ],
-  linkedin: [
-    ['path', { d: 'M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z' }],
-    ['rect', { x: 2, y: 9, width: 4, height: 12 }],
-    ['circle', { cx: 4, cy: 4, r: 2 }],
-  ],
-  github: [
-    ['path', { d: 'M15 22v-4a4.8 4.8 0 0 0-1-3.2c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S9 17.44 9 18v4' }],
-    ['path', { d: 'M9 18c-4.51 2-5-2-7-2' }],
-  ],
-};
-
-/** "Modern": refined marks — a smartphone instead of a handset, a rounded LinkedIn tile. */
-const REFINED = {
-  email: [
-    ['rect', { x: 3, y: 5, width: 18, height: 14, rx: 2.5 }],
-    ['path', { d: 'm3.5 7.5 7.6 5.2a1.5 1.5 0 0 0 1.8 0l7.6-5.2' }],
-  ],
-  phone: [
-    ['rect', { x: 7, y: 2.5, width: 10, height: 19, rx: 2.25 }],
-    ['path', { d: 'M10 5.25h4' }],
-    ['circle', { cx: 12, cy: 17.5, r: 0.9, paint: 'fill' }],
-  ],
-  location: [
-    ['path', { d: 'M12 21s-6.5-5.2-6.5-10.2a6.5 6.5 0 1 1 13 0C18.5 15.8 12 21 12 21z' }],
-    ['circle', { cx: 12, cy: 10.5, r: 2.25 }],
+    ['circle', { cx: 12, cy: 9, r: 5.5 }],
+    ['circle', { cx: 12, cy: 9, r: 1.8, paint: 'fill' }],
+    ['path', { d: 'M12 14.5V21' }],
   ],
   website: [
     ['circle', { cx: 12, cy: 12, r: 9 }],
     ['path', { d: 'M3 12h18' }],
-    ['path', { d: 'M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z' }],
+    ['path', { d: 'M12 3c-3.2 3-3.2 15 0 18M12 3c3.2 3 3.2 15 0 18' }],
   ],
   linkedin: [
     ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 3 }],
-    ['path', { d: 'M8 11v6' }],
-    ['circle', { cx: 8, cy: 8, r: 0.9, paint: 'fill' }],
-    ['path', { d: 'M12 17v-4.2c0-1.4.7-2.3 1.9-2.3 1.1 0 1.6.7 1.6 2.2V17' }],
-    ['path', { d: 'M12 11.5V17' }],
+    ['path', { d: 'M8 10.5V16' }],
+    ['circle', { cx: 8, cy: 7.8, r: 0.9, paint: 'fill' }],
+    ['path', { d: 'M12 10.5V16m0-3a2.6 2.6 0 0 1 5.2 0V16' }],
   ],
   github: [
-    ['path', { d: 'M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21' }],
+    ['path', { d: 'M9.2 20.2v-2.3c-3.2.8-3.9-1.5-4.9-2.3M14.8 20.2v-3.2c0-.9.1-1.3-.5-1.9 2.8-.3 5.2-1.4 5.2-5.6 0-1-.4-2-1.1-2.8.3-.9.3-1.9-.1-2.8 0 0-1 0-2.7 1.2a10 10 0 0 0-5.2 0C8 4.8 7 4.8 7 4.8c-.4.9-.4 1.9-.1 2.8-.7.8-1.1 1.8-1.1 2.8 0 4.2 2.4 5.3 5.2 5.6-.6.6-.6 1.1-.5 1.9v3.2' }],
   ],
 };
 
-/** "Minimal": ultra-simple geometric marks. */
-const MINIMAL = {
+/** "Modern": a smartphone instead of a handset, a navigation arrow for location, a globe with latitude lines, generous corners. */
+const REFINED = {
   email: [
-    ['rect', { x: 3.5, y: 6, width: 17, height: 12, rx: 1.5 }],
-    ['path', { d: 'm4 7 8 5.5L20 7' }],
+    ['path', { d: 'M5.5 4.5h13A2.5 2.5 0 0 1 21 7v10a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V7a2.5 2.5 0 0 1 2.5-2.5z' }],
+    ['path', { d: 'M3.6 7.2l7.2 5.1a2 2 0 0 0 2.4 0l7.2-5.1' }],
   ],
   phone: [
-    ['path', { d: 'M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z' }],
-    ['path', { d: 'M10 17.5h4' }],
+    ['rect', { x: 6.5, y: 2.5, width: 11, height: 19, rx: 3 }],
+    ['path', { d: 'M10.5 5.5h3' }],
+    ['path', { d: 'M11 18.5h2' }],
+  ],
+  location: [
+    ['path', { d: 'M20 4L4.5 10.5l6.5 2.5 2.5 6.5z' }],
+  ],
+  website: [
+    ['circle', { cx: 12, cy: 12, r: 9 }],
+    ['path', { d: 'M3.5 9h17M3.5 15h17' }],
+    ['path', { d: 'M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21' }],
+  ],
+  linkedin: [
+    ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 6 }],
+    ['path', { d: 'M8 10.5V16' }],
+    ['circle', { cx: 8, cy: 7.8, r: 0.9, paint: 'fill' }],
+    ['path', { d: 'M12 16v-3.2c0-1.4 1-2.3 2.2-2.3s2 .8 2 2.3V16M12 10.6V16' }],
+  ],
+  github: [
+    ['path', { d: 'M9.2 20.2v-2.3c-3.2.8-3.9-1.5-4.9-2.3M14.8 20.2v-3.2c0-.9.1-1.3-.5-1.9 2.8-.3 5.2-1.4 5.2-5.6 0-1-.4-2-1.1-2.8.3-.9.3-1.9-.1-2.8 0 0-1 0-2.7 1.2a10 10 0 0 0-5.2 0C8 4.8 7 4.8 7 4.8c-.4.9-.4 1.9-.1 2.8-.7.8-1.1 1.8-1.1 2.8 0 4.2 2.4 5.3 5.2 5.6-.6.6-.6 1.1-.5 1.9v3.2' }],
+  ],
+};
+
+/** "Minimal": light geometric outlines — straight flap, tight corners, the original pin for location, a cat without its tail. */
+const MINIMAL = {
+  email: [
+    ['rect', { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+    ['path', { d: 'M3.5 7.5l8.5 5.8 8.5-5.8' }],
+  ],
+  phone: [
+    ['rect', { x: 7, y: 3, width: 10, height: 18, rx: 2 }],
+    ['path', { d: 'M11 18h2' }],
   ],
   location: [
     ['path', { d: 'M12 21s-5.5-4.8-5.5-9.5a5.5 5.5 0 1 1 11 0C17.5 16.2 12 21 12 21z' }],
@@ -86,15 +85,17 @@ const MINIMAL = {
   ],
   website: [
     ['circle', { cx: 12, cy: 12, r: 8.5 }],
-    ['path', { d: 'M3.5 12h17M12 3.5c2.5 2.8 2.5 14.2 0 17M12 3.5c-2.5 2.8-2.5 14.2 0 17' }],
+    ['path', { d: 'M3.5 12h17' }],
+    ['path', { d: 'M12 3.5c2.2 2.3 3.3 5.2 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.2-3.3-8.5S9.8 5.8 12 3.5z' }],
   ],
   linkedin: [
-    ['rect', { x: 3.5, y: 3.5, width: 17, height: 17, rx: 2 }],
-    ['path', { d: 'M8 10.5v6M8 8.2v.01M12 16.5v-4c0-1.2.8-2 1.9-2 1 0 1.6.6 1.6 1.9v4.1' }],
+    ['rect', { x: 3.5, y: 3.5, width: 17, height: 17, rx: 2.5 }],
+    ['path', { d: 'M8 10.5V16' }],
+    ['circle', { cx: 8, cy: 7.8, r: 0.9, paint: 'fill' }],
+    ['path', { d: 'M12 10.5V16m0-3a2.5 2.5 0 0 1 5 0v3' }],
   ],
   github: [
-    ['circle', { cx: 12, cy: 12, r: 8.5 }],
-    ['path', { d: 'M9.5 17.5v-2c0-1 .4-1.5 1-1.8-2.2-.2-3.5-1.2-3.5-3.2 0-.7.2-1.3.7-1.8-.1-.2-.3-1 .1-1.7 0 0 .6-.2 1.9.7.5-.1 1.1-.2 1.8-.2s1.3.1 1.8.2c1.3-.9 1.9-.7 1.9-.7.4.7.2 1.5.1 1.7.5.5.7 1.1.7 1.8 0 2-1.3 3-3.5 3.2.6.3 1 1 1 1.8v2' }],
+    ['path', { d: 'M9.2 20.2v-2.3M14.8 20.2v-3.2c0-.9.1-1.3-.5-1.9 2.8-.3 5.2-1.4 5.2-5.6 0-1-.4-2-1.1-2.8.3-.9.3-1.9-.1-2.8 0 0-1 0-2.7 1.2a10 10 0 0 0-5.2 0C8 4.8 7 4.8 7 4.8c-.4.9-.4 1.9-.1 2.8-.7.8-1.1 1.8-1.1 2.8 0 4.2 2.4 5.3 5.2 5.6-.6.6-.6 1.1-.5 1.9v3.2' }],
   ],
 };
 
@@ -121,13 +122,12 @@ const FILLED = {
   ],
 };
 
-/** Every pack the Design panel offers, by settings.iconSet id. "Bold" is Classic drawn heavier. */
+/** Every pack the Design panel offers, by settings.iconSet id. */
 export const ICON_PACKS = {
   filled:  { paint: 'fill', icons: FILLED },
-  lucide:  { paint: 'stroke', strokeWidth: 2, icons: LUCIDE },
+  lucide:  { paint: 'stroke', strokeWidth: 1.75, icons: LUCIDE },
   refined: { paint: 'stroke', strokeWidth: 1.75, icons: REFINED },
-  minimal: { paint: 'stroke', strokeWidth: 1.5, icons: MINIMAL },
-  bold:    { paint: 'stroke', strokeWidth: 2.6, icons: LUCIDE },
+  minimal: { paint: 'stroke', strokeWidth: 1.25, icons: MINIMAL },
 };
 
 /** The pack in effect: settings.iconSet when it names a pack, else Classic. */

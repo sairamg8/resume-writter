@@ -69,7 +69,7 @@ try {
       lineHeightValue: pick([1.15, 1.3, 1.5, 1.7]), sectionGap: pick([8, 12, 16, 24]), itemGap: pick([4, 8, 12]), marginH: pick([10, 18, 28]), marginV: pick([10, 14, 24]),
       headingStyle: pick(['ruled', 'plain', 'line', 'underline', 'leftbar', 'box']), sectionTitleCase: pick(['upper', 'normal']),
       headerAlign: pick(['left', 'center']), headerLayout: pick(['stack', 'inline']), contactStyle: pick(['icon', 'bullet']), contactLayout: pick(['justify', 'single', '2grid']),
-      iconSet: pick(['filled', 'lucide', 'refined', 'minimal', 'bold']), showHeaderBorder: chance(0.3), pageSize: pick(['A4', 'LETTER']), dateFormat: pick(DATE_FORMATS),
+      iconSet: pick(['filled', 'lucide', 'refined', 'minimal']), showHeaderBorder: chance(0.3), pageSize: pick(['A4', 'LETTER']), dateFormat: pick(DATE_FORMATS),
       photo: chance(0.25), skillsStyle: pick(['inline', 'bullet', 'tags']), titleStyle: pick(['stacked', 'inline', 'sidebyside']),
       extras: many(['projects', 'certifications', 'languages', 'awards', 'volunteering', 'references', 'interests', 'custom'], Math.floor(R() * 5)),
       nExp: 2 + Math.floor(R() * 3), nBul: 2 + Math.floor(R() * 4),

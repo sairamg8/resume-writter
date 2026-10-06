@@ -6,15 +6,14 @@ import * as contactIconPaths from '../../src/utils/contactIconPaths.js';
 const { ICON_PACKS, getIconSetId, getCustomContactIcon, iconShapes } = contactIconPaths;
 
 const FIELDS = ['email', 'phone', 'location', 'website', 'linkedin', 'github'];
-const PACK_IDS = ['filled', 'lucide', 'refined', 'minimal', 'bold'];
+const PACK_IDS = ['filled', 'lucide', 'refined', 'minimal'];
 
-test('ICON_PACKS offers five packs with correct paint mode', () => {
+test('ICON_PACKS offers four packs with correct paint mode', () => {
   assert.deepEqual(Object.keys(ICON_PACKS), PACK_IDS);
   assert.equal(ICON_PACKS.filled.paint, 'fill');
   assert.equal(ICON_PACKS.lucide.paint, 'stroke');
   assert.equal(ICON_PACKS.refined.paint, 'stroke');
   assert.equal(ICON_PACKS.minimal.paint, 'stroke');
-  assert.equal(ICON_PACKS.bold.paint, 'stroke');
 });
 
 test('Filled pack phone icon is pinned to its solid handset path (W3-5.3)', () => {
@@ -37,11 +36,11 @@ test('Every pack defines shapes for all six contact fields', () => {
   }
 });
 
-test('All five packs produce pairwise distinct shapes for phone and every contact field (W3-5.3)', () => {
+test('All four packs produce pairwise distinct shapes for phone and every contact field (W3-5.3)', () => {
   for (const field of FIELDS) {
     const serialized = PACK_IDS.map((p) => JSON.stringify(iconShapes(p, field, { color: '#111827' })));
     const unique = new Set(serialized);
-    assert.equal(unique.size, 5, `field ${field} produces 5 distinct shape definitions across packs`);
+    assert.equal(unique.size, 4, `field ${field} produces 4 distinct shape definitions across packs`);
   }
 });
 
@@ -59,7 +58,7 @@ test('getIconSetId returns known pack id or falls back to lucide', () => {
   assert.equal(getIconSetId({ iconSet: 'lucide' }), 'lucide');
   assert.equal(getIconSetId({ iconSet: 'refined' }), 'refined');
   assert.equal(getIconSetId({ iconSet: 'minimal' }), 'minimal');
-  assert.equal(getIconSetId({ iconSet: 'bold' }), 'bold');
+  assert.equal(getIconSetId({ iconSet: 'bold' }), 'lucide', 'a removed pack falls back to Classic');
   assert.equal(getIconSetId({ iconSet: 'unknown' }), 'lucide');
   assert.equal(getIconSetId(null), 'lucide');
   assert.equal(getIconSetId({}), 'lucide');
@@ -180,7 +179,7 @@ test('every Style Packs choice, on every field, is that pack\'s icon for the fie
 test('a pick the app no longer knows falls back to the global pack icon, never to nothing', () => {
   for (const custom of ['icon:removed-icon', 'pack:removed-pack', 'removed', 'icon:', 'pack:']) {
     for (const field of FIELDS) {
-      assert.deepEqual(iconShapes('bold', field, { color: '#000000', custom }), iconShapes('bold', field, { color: '#000000' }), `${custom} on ${field}`);
+      assert.deepEqual(iconShapes('minimal', field, { color: '#000000', custom }), iconShapes('minimal', field, { color: '#000000' }), `${custom} on ${field}`);
     }
   }
 });
