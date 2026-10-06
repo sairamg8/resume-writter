@@ -17,6 +17,17 @@ const has = (t, id) => t.all().some((el) => attr(el, 'data-testid') === id);
 const designPanels = (t) => t.all().filter((el) => attr(el, 'data-testid') === 'browse-templates').length;
 /** The ATS panel's instances on screen: each has one posting box. */
 const atsPanels = (t) => t.all().filter((el) => el.tagName === 'TEXTAREA' && attr(el, 'placeholder').startsWith('Paste job posting')).length;
+/** Which dock is on screen: 'design', 'ats' or null. */
+const dockOn = (t) => ['design', 'ats'].find((name) => has(t, `dock-${name}`)) ?? null;
+/**
+ * A click on a control, then a wait by what happened (500 x 10 ms, never a fixed tick count) until `done()` holds:
+ * the address change reaches the page as a router transition, and a dock's panels take their time to mount, so a
+ * fixed settle after the click can end before the screen shows it.
+ */
+async function go(t, id, done, what) {
+  await t.press(id);
+  await until(done, what);
+}
 const scrollBoxOf = (t, dockId) => [...elements(t.byTid(dockId))].find((el) => el.tagName === 'DIV' && /\boverflow-y-auto\b/.test(attr(el, 'class')));
 
 describe('the bar opens one dock at a time', () => {
@@ -34,13 +45,13 @@ describe('the bar opens one dock at a time', () => {
   it('the Design button opens the Design dock with ONE DesignPanel, and a second press closes it', async () => {
     const t = await openEditor();
     try {
-      const w = await t.measure(() => t.press('design-button'));
+      const w = await t.measure(() => go(t, 'design-button', () => dockOn(t) === 'design', 'the Design dock opens'));
       assert.ok(has(t, 'dock-design') && !has(t, 'dock-ats'));
       assert.equal(designPanels(t), 1, 'one DesignPanel instance');
       assert.ok(w.count('designPanel') >= 1, `the panel rendered as it opened. ${w.report()}`);
       assert.equal(t.url(), `/resume/${t.id}?dock=design`);
       assert.equal(atsPanels(t), 0);
-      await t.press('design-button');
+      await go(t, 'design-button', () => dockOn(t) === null, 'the Design dock closes');
       assert.ok(!has(t, 'dock-design'));
       assert.equal(designPanels(t), 0, 'the panel is gone with the dock');
       assert.equal(t.url(), `/resume/${t.id}`);
@@ -50,11 +61,11 @@ describe('the bar opens one dock at a time', () => {
   it('the ATS chip opens the ATS dock, mounting the panel only while it is open; a second press closes it', async () => {
     const t = await openEditor();
     try {
-      await t.press('ats-chip');
+      await go(t, 'ats-chip', () => dockOn(t) === 'ats', 'the ATS dock opens');
       assert.ok(has(t, 'dock-ats') && !has(t, 'dock-design'));
       assert.equal(atsPanels(t), 1);
       assert.equal(t.url(), `/resume/${t.id}?dock=ats`);
-      await t.press('ats-chip');
+      await go(t, 'ats-chip', () => dockOn(t) === null, 'the ATS dock closes');
       assert.ok(!has(t, 'dock-ats'));
       assert.equal(atsPanels(t), 0, 'the scan is not mounted once the dock is closed');
     } finally { await t.close(); }
@@ -63,13 +74,13 @@ describe('the bar opens one dock at a time', () => {
   it('one dock at a time: the chip over an open Design dock replaces it, and the Design button over ATS does too', async () => {
     const t = await openEditor();
     try {
-      await t.press('design-button');
-      await t.press('ats-chip');
+      await go(t, 'design-button', () => dockOn(t) === 'design', 'the Design dock opens');
+      await go(t, 'ats-chip', () => dockOn(t) === 'ats', 'the chip replaces it with the ATS dock');
       assert.ok(has(t, 'dock-ats') && !has(t, 'dock-design'));
       assert.equal(designPanels(t), 0, 'the Design panel unmounted');
       assert.equal(atsPanels(t), 1);
       assert.equal(t.all().filter((el) => /^dock-/.test(attr(el, 'data-testid')) && el.tagName === 'ASIDE').length, 1, 'one dock element');
-      await t.press('design-button');
+      await go(t, 'design-button', () => dockOn(t) === 'design', 'the Design button replaces it with the Design dock');
       assert.ok(has(t, 'dock-design') && !has(t, 'dock-ats'));
       assert.equal(atsPanels(t), 0);
       assert.equal(designPanels(t), 1);
@@ -86,7 +97,7 @@ describe('the bar opens one dock at a time', () => {
   it('the dock\'s close X (shown below 1100 px) closes it', async () => {
     const t = await openEditor({ path: '?dock=design' });
     try {
-      await t.press('dock-close');
+      await go(t, 'dock-close', () => dockOn(t) === null, 'the close X closes the dock');
       assert.ok(!has(t, 'dock-design'));
       assert.equal(t.url(), `/resume/${t.id}`);
     } finally { await t.close(); }
@@ -100,11 +111,12 @@ describe('the dock and the document', () => {
       assert.equal(t.preview().activeTab, 'coverletter');
       assert.equal(t.header().exportMenu.letterTab, true);
       for (const id of ['design-button', 'ats-chip']) {
-        await t.press(id);
+        const name = id === 'ats-chip' ? 'ats' : 'design';
+        await go(t, id, () => dockOn(t) === name, `${id}: the dock opens`);
         assert.equal(t.preview().activeTab, 'resume', `${id}: the stage shows the résumé`);
         assert.equal(t.header().exportMenu.letterTab, false, `${id}: Export follows the résumé`);
         assert.equal(t.url(), `/resume/${t.id}?dock=${id === 'ats-chip' ? 'ats' : 'design'}`);
-        await t.press('doc-switch-letter');
+        await go(t, 'doc-switch-letter', () => dockOn(t) === null && t.preview().activeTab === 'coverletter', `${id}: the letter closes the dock`);
         assert.equal(t.preview().activeTab, 'coverletter');
       }
     } finally { await t.close(); }
@@ -114,9 +126,9 @@ describe('the dock and the document', () => {
     for (const id of ['design-button', 'ats-chip']) {
       const t = await openEditor();
       try {
-        await t.press(id);
+        await go(t, id, () => dockOn(t) !== null, `${id}: a dock opens`);
         assert.ok(has(t, 'dock-design') || has(t, 'dock-ats'));
-        await t.press('doc-switch-letter');
+        await go(t, 'doc-switch-letter', () => dockOn(t) === null, `${id}: the letter closes the dock`);
         assert.ok(!has(t, 'dock-design') && !has(t, 'dock-ats'), `${id}: the dock closed`);
         assert.equal(designPanels(t) + atsPanels(t), 0);
         assert.equal(t.preview().activeTab, 'coverletter');
@@ -128,7 +140,7 @@ describe('the dock and the document', () => {
   it('negative twin: the Resume switch opens no dock, and from the letter it shows the résumé', async () => {
     const t = await openEditor({ path: '?tab=coverletter' });
     try {
-      await t.press('doc-switch-resume');
+      await go(t, 'doc-switch-resume', () => t.preview().activeTab === 'resume', 'the Resume switch shows the résumé');
       assert.equal(t.preview().activeTab, 'resume');
       assert.ok(!has(t, 'dock-design') && !has(t, 'dock-ats'));
       assert.equal(t.url(), `/resume/${t.id}`);
@@ -155,7 +167,7 @@ describe('what the dock keeps and drops', () => {
       const panel = t.all().find((el) => el !== box && /\bmax-md:pb-16\b/.test(attr(el, 'class')) && /\boverflow-y-auto\b/.test(attr(el, 'class')));
       assert.ok(panel, 'the editor panel\'s scroll box');
       panel.scrollTop = 300;
-      await t.press('ats-chip');
+      await go(t, 'ats-chip', () => dockOn(t) === 'ats', 'the ATS dock replaces Design');
       assert.equal(scrollBoxOf(t, 'dock-ats').scrollTop, 0, 'ATS opened at its top, not at the offset Design was scrolled to');
       assert.equal(panel.scrollTop, 300, 'the editor panel keeps its scroll');
     } finally { await t.close(); }
@@ -167,8 +179,8 @@ describe('what the dock keeps and drops', () => {
       assert.equal(t.live.dockProps.design.templateOpen, true);
       t.act(() => t.live.dockProps.design.onTemplateOpenChange(false));
       assert.equal(t.live.dockProps.design.templateOpen, false);
-      await t.press('design-button');
-      await t.press('design-button');
+      await go(t, 'design-button', () => dockOn(t) === null, 'the Design dock closes');
+      await go(t, 'design-button', () => dockOn(t) === 'design', 'the Design dock opens again');
       assert.ok(has(t, 'dock-design'));
       assert.equal(t.live.dockProps.design.templateOpen, false, 'the Template section is still closed');
     } finally { await t.close(); }
@@ -192,7 +204,7 @@ describe('what the dock keeps and drops', () => {
       await until(() => shown() === 1, 'the notice shows');
       await sleep(300);
       assert.equal(shown(), 1, 'it stays while the dock is open');
-      await t.press('design-button');
+      await go(t, 'design-button', () => dockOn(t) === null, 'the Design dock closes');
       await until(() => shown() === 0, 'the Design panel went with the dock and took its Undo notice with it');
     } finally { await t.close(); }
   });
