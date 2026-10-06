@@ -18,7 +18,7 @@ import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
-import { useEditorTab } from '@/hooks/useEditorTab';
+import { useEditorTab, EDITOR_DOCKS } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
 import { useStableActions } from '@/hooks/useStableActions';
 import { useStableObject } from '@/hooks/useStableObject';
@@ -33,7 +33,15 @@ export function Editor({ store, auth, sync }) {
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
-  const [activeTab, setActiveTab] = useEditorTab();
+  // The address names a document and a dock; the tab strip (until the dock replaces it) shows one of the two at a time.
+  const { doc, dock, setDoc, setDock } = useEditorTab();
+  const activeTab = dock ?? doc;
+  function setActiveTab(next) {
+    const value = typeof next === 'function' ? next(activeTab) : next;
+    if (EDITOR_DOCKS.includes(value)) setDock(value);
+    else if (value === 'resume' && dock) setDock(null);
+    else setDoc(value);
+  }
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
