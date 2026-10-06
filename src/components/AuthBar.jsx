@@ -1,5 +1,6 @@
 import { Cloud, CloudOff, Loader, CloudAlert, LogOut, X } from 'lucide-react';
 import { signInErrorMessage } from '@/utils/signInError';
+import { useOutsideClose } from '@/hooks/useOutsideClose';
 
 function GoogleIcon() {
   return (
@@ -11,7 +12,7 @@ function GoogleIcon() {
     </svg>
   );
 }
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
 
@@ -24,6 +25,29 @@ function stoppedLabel(held = []) {
   if (held.length === 1) return `“${clip(held[0].name || 'Untitled')}” not synced (a large photo?) — saved in this browser`;
   if (held.length > 1) return `${held.length} résumés not synced (large photos?) — saved in this browser`;
   return 'Sync stopped (a large photo?) — saved in this browser';
+}
+
+/** Chip colours by state (canvas States board): Saved good, Saving brand, Offline and off neutral, paused warn, errors bad. */
+const TONE = {
+  good: 'bg-cv-good-soft text-cv-good', brand: 'bg-cv-brand-soft text-cv-brand-text', neutral: 'bg-cv-sunken text-cv-muted',
+  warn: 'bg-cv-warn-soft text-cv-warn', bad: 'bg-cv-bad-soft text-cv-bad',
+};
+
+/** The sync's icon, chip colours and words: the sync dot and the avatar menu's sync line say the same. Null when there is nothing to say. */
+function syncView(syncStatus, lastSynced, isOnline, heldResumes, heldLabel = stoppedLabel) {
+  if (!isOnline) return [CloudOff, TONE.neutral, 'Offline — changes saved locally'];
+  // The browser says online, but Firestore cannot reach its server (a captive portal, a blocked
+  // host): the sync keeps trying (cloudSyncEngine), and the icon must not vanish meanwhile.
+  if (syncStatus === 'offline') return [CloudOff, TONE.warn, 'Cannot reach your account — changes saved locally, will retry'];
+  if (syncStatus === 'syncing') return [Loader, TONE.brand, 'Syncing…'];
+  if (syncStatus === 'synced') {
+    return [Cloud, TONE.good, lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Synced'];
+  }
+  if (syncStatus === 'error') return [CloudAlert, TONE.bad, 'Sync error — will retry'];
+  if (syncStatus === 'stopped') return [CloudAlert, TONE.bad, heldLabel(heldResumes)];
+  // No access to the cloud (its rules, or no database): nothing is retried until a reload.
+  if (syncStatus === 'off') return [CloudOff, TONE.neutral, 'Sync is off — changes are saved in this browser'];
+  return null;
 }
 
 /** A focus this soon after a pointer press came from that press (a tap or a click), not a keyboard. */
@@ -40,7 +64,7 @@ const PRESS_FOCUS_MS = 1000;
  * R2-140-c): `heldLabel(held)` gives the 'stopped' words for what it holds back (the résumés'
  * by default).
  */
-export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLabel = stoppedLabel }) {
+export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLabel }) {
   const [hover, setHover] = useState(false);     // a mouse is over it
   const [focused, setFocused] = useState(false); // keyboard focus
   const [pinned, setPinned] = useState(false);   // opened by a tap, or Enter / Space
@@ -51,35 +75,12 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
 
   // A tap anywhere else closes words a tap opened (iOS Safari never focuses a tapped button, so
   // no blur comes to close them).
-  useEffect(() => {
-    if (!pinned) return undefined;
-    const away = (e) => { if (!rootRef.current?.contains(e.target)) setPinned(false); };
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, [pinned]);
+  const unpin = useCallback(() => setPinned(false), []);
+  useOutsideClose(rootRef, pinned, unpin);
 
-  let Icon, color, label;
-  if (!isOnline) {
-    Icon = CloudOff; color = '#9ca3af'; label = 'Offline — changes saved locally';
-  } else if (syncStatus === 'offline') {
-    // The browser says online, but Firestore cannot reach its server (a captive portal, a blocked
-    // host): the sync keeps trying (cloudSyncEngine), and the icon must not vanish meanwhile.
-    Icon = CloudOff; color = '#9ca3af'; label = 'Cannot reach your account — changes saved locally, will retry';
-  } else if (syncStatus === 'syncing') {
-    Icon = Loader;    color = '#f59e0b'; label = 'Syncing…';
-  } else if (syncStatus === 'synced') {
-    Icon = Cloud;     color = '#22c55e';
-    label = lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Synced';
-  } else if (syncStatus === 'error') {
-    Icon = CloudAlert; color = '#ef4444'; label = 'Sync error — will retry';
-  } else if (syncStatus === 'stopped') {
-    Icon = CloudAlert; color = '#ef4444'; label = heldLabel(heldResumes);
-  } else if (syncStatus === 'off') {
-    // No access to the cloud (its rules, or no database): nothing is retried until a reload.
-    Icon = CloudOff; color = '#9ca3af'; label = 'Sync is off — changes are saved in this browser';
-  } else {
-    return null;
-  }
+  const view = syncView(syncStatus, lastSynced, isOnline, heldResumes, heldLabel);
+  if (!view) return null;
+  const [Icon, tone, label] = view;
 
   return (
     <div className="relative" ref={rootRef}>
@@ -97,11 +98,10 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
         // A mouse click keeps what its hover shows; a tap, Enter or Space (detail 0) toggles.
         onClick={(e) => { if (!(e.detail > 0 && pointer.current === 'mouse')) setPinned((p) => !p); }}
         onKeyDown={(e) => { if (e.key === 'Escape') { setHover(false); setFocused(false); setPinned(false); } }}
-        className="flex p-1 -m-1 rounded-md hover:bg-gray-100 transition-colors"
+        className={`flex h-7 w-7 items-center justify-center rounded-full ${tone}`}
       >
         <Icon
           size={15}
-          style={{ color }}
           aria-hidden="true"
           className={syncStatus === 'syncing' ? 'animate-spin' : ''}
         />
@@ -109,7 +109,7 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
       {open && (
         <div
           role="tooltip"
-          className="absolute right-0 top-6 w-max max-w-[min(18rem,calc(100vw_-_6rem))] bg-gray-800 text-white text-[11px] leading-snug rounded-lg px-2.5 py-1.5 z-50 shadow-lg"
+          className="absolute right-0 top-8 w-max max-w-[min(18rem,calc(100vw_-_6rem))] bg-cv-ink text-white text-[11px] leading-snug rounded-cv-control px-2.5 py-1.5 z-50 shadow-pop"
         >
           {label}
         </div>
@@ -118,17 +118,33 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   );
 }
 
+/** The account's photo (no-referrer) or its initial: `displayName[0]` as written, "U" for a nameless account. */
+function Avatar({ user, size }) {
+  return user.photoURL ? (
+    <img src={user.photoURL} alt="" className={`${size} rounded-full`} referrerPolicy="no-referrer" />
+  ) : (
+    <div className={`${size} shrink-0 rounded-full bg-cv-brand-soft text-cv-brand-text flex items-center justify-center font-bold`}>
+      {user.displayName?.[0] || 'U'}
+    </div>
+  );
+}
+
 /**
  * `compact` renders the signed-out state as an icon-only button, for narrow headers. `hideName`
  * leaves the first name beside the avatar off the screen: the editor's header, in a 360 px split
  * panel, was left ~60 px for the résumé's name (R4-DVIS-31); it passes it in the split panel only.
+ * `onShortcuts` (optional) adds a "Keyboard shortcuts ?" entry to the avatar menu: only the workspace,
+ * where `?` works, passes it.
  */
 export default function AuthBar({
   user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, heldResumes, compact = false,
-  hideName = false,
+  hideName = false, onShortcuts,
 }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
+  const menuRef = useRef(null);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useOutsideClose(menuRef, menuOpen, closeMenu);
   // What the last sign-in failure was, in words (signInErrorMessage): it used to go to the
   // console only, so a blocked popup or an unauthorized domain looked like nothing (R2-086).
   const [signInError, setSignInError] = useState(null);
@@ -152,31 +168,30 @@ export default function AuthBar({
   if (!cloudAvailable) return null;
 
   if (authLoading) {
-    return <div className="w-6 h-6 rounded-full bg-gray-100 animate-pulse" />;
+    return <div data-testid="account-loading" className="w-9 h-9 rounded-full bg-cv-sunken animate-pulse" />;
   }
 
   if (!user) {
     return (
       <div className="relative shrink-0">
         <button
+          data-testid="sign-in-button"
           onClick={handleSignIn}
           disabled={signingIn}
           title={compact ? 'Sign in with Google' : undefined}
           aria-label={compact ? 'Sign in with Google' : undefined}
-          // The full button sits in the Dashboard's toolbar (from md up): sized as the buttons beside it,
-          // 38 px tall with 14 px text from sm, not 30 px with 12 px (R4-DVIS-27).
-          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 sm:px-4 py-1.5 sm:py-2 sm:text-sm whitespace-nowrap'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
+          className={`cv-field flex items-center justify-center gap-2 h-9 ${compact ? 'w-9' : 'px-3 whitespace-nowrap'} text-[13px] font-semibold hover:bg-cv-sunken transition-colors disabled:opacity-60 shrink-0`}
         >
-          <GoogleIcon />
+          {signingIn ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <GoogleIcon />}
           {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
         </button>
         {signInError && (
           <div
             role="alert"
-            className="absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw_-_2rem)] flex items-start gap-2 bg-white border border-red-200 text-red-700 text-xs leading-snug rounded-lg shadow-lg px-3 py-2"
+            className="cv-notice-bad absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw_-_2rem)] flex items-start gap-2 text-xs leading-snug shadow-pop px-3 py-2"
           >
             <span className="flex-1">{signInError}</span>
-            <button type="button" onClick={() => setSignInError(null)} aria-label="Dismiss" className="p-0.5 -m-0.5 text-red-400 hover:text-red-700 shrink-0">
+            <button type="button" onClick={() => setSignInError(null)} aria-label="Dismiss" className="p-0.5 -m-0.5 shrink-0">
               <X size={12} aria-hidden="true" />
             </button>
           </div>
@@ -185,44 +200,51 @@ export default function AuthBar({
     );
   }
 
+  const [SyncIcon, syncTone, syncText] = syncView(syncStatus, lastSynced, isOnline, heldResumes) ?? [];
+  const item = 'w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-sm font-semibold text-cv-ink hover:bg-cv-sunken transition-colors';
+
   return (
     <div className="flex items-center gap-2">
       <SyncDot syncStatus={syncStatus} lastSynced={lastSynced} isOnline={isOnline} heldResumes={heldResumes} />
 
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <button
+          data-testid="account-button"
           onClick={() => setMenuOpen(o => !o)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-1.5 p-0.5 sm:pr-2 rounded-full hover:bg-cv-sunken transition-colors"
         >
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">
-              {user.displayName?.[0] || 'U'}
-            </div>
-          )}
+          <Avatar user={user} size="w-9 h-9 text-[13px]" />
           {/* hideName: sm:sr-only, not dropped, so from sm up the button still reads out the name as before. */}
-          <span className={`text-xs font-medium text-gray-700 max-w-[100px] truncate hidden sm:block${hideName ? ' sm:sr-only' : ''}`}>
+          <span className={`text-[13px] font-semibold text-cv-body max-w-[100px] truncate hidden sm:block${hideName ? ' sm:sr-only' : ''}`}>
             {user.displayName?.split(' ')[0]}
           </span>
         </button>
 
         {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 top-9 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[180px]">
-              <div className="px-3 py-2 border-b border-gray-100">
-                <p className="text-xs font-semibold text-gray-800 truncate">{user.displayName}</p>
-                <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+          <div data-testid="account-menu" className="cv-card absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw_-_2rem)] p-1.5 shadow-pop">
+            <div className="flex items-center gap-3 p-3">
+              <Avatar user={user} size="w-10 h-10 text-sm" />
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold text-cv-ink truncate">{user.displayName}</p>
+                <p className="text-[13px] text-cv-muted truncate">{user.email}</p>
               </div>
-              <button
-                onClick={() => { setMenuOpen(false); signOut(); }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                <LogOut size={13} /> Sign out
-              </button>
             </div>
-          </>
+            {SyncIcon && (
+              <p data-testid="account-sync-line" className={`mx-1.5 flex items-center gap-2 rounded-cv-control px-3 py-2.5 text-[13px] font-semibold ${syncTone}`}>
+                <SyncIcon size={16} aria-hidden="true" className="shrink-0" />
+                {syncText}
+              </p>
+            )}
+            <div className="h-px bg-cv-hairline mx-1.5 my-2" />
+            {onShortcuts && (
+              <button data-testid="account-shortcuts" onClick={() => { setMenuOpen(false); onShortcuts(); }} className={item}>
+                Keyboard shortcuts <span className="ml-auto text-xs font-medium text-cv-muted">?</span>
+              </button>
+            )}
+            <button data-testid="account-sign-out" onClick={() => { setMenuOpen(false); signOut(); }} className={item}>
+              <LogOut size={16} aria-hidden="true" /> Sign out
+            </button>
+          </div>
         )}
       </div>
     </div>

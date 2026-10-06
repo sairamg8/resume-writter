@@ -1,49 +1,41 @@
 // R4-DVIS-27: from 640 px up, signed out, the Dashboard's toolbar put a 30 px "Sign in with Google"
-// button with 12 px text (AuthBar's full button: px-3 py-1.5 text-xs) beside 38 px buttons with 14 px
-// text (Import, New Cover: py-1.5 sm:py-2, text-xs sm:text-sm; B2 made Job Tracker and Projects the bar's nav links). AuthBar's full
-// button, which only the Dashboard's toolbar shows (from md up), is now sized as they are; the compact
-// icon button of the phone header, the editor and the workspace top bar is unchanged. The fake DOM
-// has no layout, so this pins the classes on the real Dashboard, mounted with react-dom/client over
-// tests/pdf/fake-dom.mjs as tests/pdf/103-r4-dvis-14-dashboard-projects-brand.test.mjs mounts it.
+// button with 12 px text beside 38 px buttons with 14 px text. B2 (UI redesign) restyled the account
+// control in the canvas look: the full button and the compact icon button are one height (36 px, h-9)
+// with 13 px semibold text and the control radius, so the full button no longer sizes itself by the
+// toolbar's py/text classes (the toolbar's Job Tracker and Projects buttons became the bar's nav links).
+// What this still pins: the full button carries the label at the canvas size and the compact icon-only
+// button of the phone header, the editor and the workspace top bar is the same height and has no label.
+// The fake DOM has no layout, so the classes are read from the real component, rendered with
+// react-dom/server.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { elements, mount } from './fake-dom.mjs';
-import { MemoryStorage } from './resume-tab.mjs';
 
 before(setup);
 after(teardown);
 
-const tokens = (el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
-const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
-// What makes the toolbar's buttons 38 px tall with 14 px text from sm up: the padding, the text size and the border.
-const TOOLBAR_SIZE = ['py-1.5', 'sm:py-2', 'text-xs', 'sm:text-sm', 'sm:px-4', 'border'];
+const noop = () => {};
 
-it('signed out, the Dashboard toolbar\'s Sign in with Google is sized as the buttons beside it', async () => {
-  const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
-  globalThis.localStorage = new MemoryStorage([]);
-  const store = { appState: { resumes: [], activeId: null }, persistError: null, recovery: null };
-  const auth = { user: null, authLoading: false, cloudAvailable: true, signInWithGoogle: async () => {}, signOut: () => {} };
-  const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
-  const view = mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
-    createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
-  try {
-    const buttons = [...elements(view.container)].filter((el) => el.tagName === 'BUTTON');
-    const jobTracker = buttons.find((el) => text(el) === 'New Cover');
-    assert.ok(jobTracker, 'the toolbar\'s New Cover button');
-    for (const t of TOOLBAR_SIZE) assert.ok(tokens(jobTracker).includes(t), `New Cover has ${t}: the size the sign-in button must match`);
-    const signIn = buttons.find((el) => text(el) === 'Sign in with Google');
-    assert.ok(signIn, 'the toolbar\'s full Sign in with Google button');
-    for (const t of TOOLBAR_SIZE) assert.ok(tokens(signIn).includes(t), `Sign in with Google has ${t}, as New Cover: ${tokens(signIn).join(' ')}`);
-    // The phone header's icon-only button (AuthBar compact) stays as it was.
-    const compact = buttons.find((el) => el.getAttribute('aria-label') === 'Sign in with Google' && !text(el));
-    assert.ok(compact, 'the compact icon button of the phone header');
-    assert.ok(tokens(compact).includes('p-1.5'), 'the compact button keeps its padding');
-    for (const t of ['sm:py-2', 'sm:text-sm', 'sm:px-4']) assert.ok(!tokens(compact).includes(t), `the compact button is not resized (${t})`);
-  } finally {
-    await view.unmount();
-    delete globalThis.localStorage;
-  }
+/** The signed-out button's opening tag, as its class tokens, and what it holds. */
+function signInButton(AuthBar, compact) {
+  const html = renderToStaticMarkup(createElement(AuthBar, {
+    user: null, authLoading: false, cloudAvailable: true, signInWithGoogle: noop, signOut: noop, compact,
+  }));
+  const m = /<button[^>]*data-testid="sign-in-button"[^>]*>([\s\S]*?)<\/button>/.exec(html);
+  assert.ok(m, `the sign-in button: ${html}`);
+  const tokens = (/class="([^"]*)"/.exec(m[0])?.[1] ?? '').split(/\s+/).filter(Boolean);
+  return { tokens, label: m[1].replace(/<[^>]*>/g, '').trim() };
+}
+
+it('signed out, the full button is the canvas size with its label; the compact one is the same height, icon only', async () => {
+  const { default: AuthBar } = await loadModule('/src/components/AuthBar.jsx');
+  const full = signInButton(AuthBar, false);
+  assert.equal(full.label, 'Sign in with Google');
+  for (const t of ['cv-field', 'h-9', 'text-[13px]', 'font-semibold', 'px-3']) assert.ok(full.tokens.includes(t), `full: ${t} in ${full.tokens.join(' ')}`);
+  const compact = signInButton(AuthBar, true);
+  assert.equal(compact.label, '', 'the compact button has no label');
+  for (const t of ['cv-field', 'h-9', 'w-9']) assert.ok(compact.tokens.includes(t), `compact: ${t} in ${compact.tokens.join(' ')}`);
+  for (const t of ['px-3', 'sm:px-4', 'sm:py-2', 'sm:text-sm']) assert.ok(!compact.tokens.includes(t), `the compact button is not resized (${t})`);
 });
