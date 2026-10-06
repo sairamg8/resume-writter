@@ -26,7 +26,7 @@ export const SUBSETS = {
 const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
 export const SYMBOL_FONTS = [
   { family: 'Noto Sans Math', pkg: 'noto-sans-math', subset: 'math', ranges: 'U+2190-22FF,U+27C0-27FF,U+2900-2AFF,U+1D400-1D7FF' },
-  { family: 'Noto Sans Symbols 2', pkg: 'noto-sans-symbols-2', subset: 'symbols', ranges: 'U+2300-23FF,U+25A0-27BF,U+2B00-2BFF' },
+  { family: 'Noto Sans Symbols 2', pkg: 'noto-sans-symbols-3', subset: 'symbols', ranges: 'U+2300-23FF,U+25A0-27BF,U+2B00-2BFF' },
 ];
 
 const HAN = 'U+2E80-2FDF,U+3000-303F,U+3100-312F,U+31A0-31EF,U+3200-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FE30-FE4F,U+FF00-FF64,U+FFE0-FFEF,U+20000-323AF';

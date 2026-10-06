@@ -45,7 +45,6 @@ const SANS = ['cyrillic', 'cyrillic-ext', 'greek', 'greek-ext', 'latin', 'latin-
  * Math's metadata lists no 'math' subset, though its math files are there) and the characters it draws.
  */
 export const PACKAGES = {
-  gelasio: { family: 'Gelasio', weights: [400, 500, 600, 700], styles: BOTH, subsets: ['latin', 'latin-ext', 'vietnamese'] },
   'bebas-neue': { family: 'Bebas Neue', weights: [400], styles: ['normal'], subsets: ['latin', 'latin-ext'] },
   inter: { family: 'Inter', weights: WEIGHTS, styles: BOTH, subsets: SANS },
   'open-sans': { family: 'Open Sans', weights: [300, 400, 500, 600, 700, 800], styles: BOTH, subsets: [...SANS, 'hebrew', 'math', 'symbols'] },
