@@ -9,7 +9,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createElement } from 'react';
-import { prepare, finish, openEditor, loadModule, elements, MARK, text } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, loadModule, elements, MARK, text } from './180-ui-b3-editor-mount.mjs';
 import { mount } from './fake-dom.mjs';
 
 before(prepare);
@@ -107,9 +107,16 @@ describe('a keystroke and the write that follows it (PERF-4)', () => {
   it('the chip renders at most twice for a burst of keys, shows Saving… then Saved, and no leaf of the header does', async () => {
     const t = await openEditor();
     try {
-      assert.equal(text(t.byTid('save-status')), 'Auto-saved to your browser');
-      // Past the store's coalesced write (SAVE_WAIT_MS, 300 ms): its state changes render the page again.
-      const w = await t.measure(async () => { t.typeInSummary(); t.typeInSummary(); t.typeInSummary(); }, 600);
+      // The store writes the résumé it opened with 300 ms (SAVE_WAIT_MS) after the mount, so on a slow machine the chip
+      // already reads "Saved" by now: the first write is waited for, and the burst is counted after it ("Auto-saved to
+      // your browser" before a write is the four-state test above). Nothing may be held when the burst starts.
+      await until(() => t.store().savedAt && /^Saved /.test(text(t.byTid('save-status'))), 'the write of the opened résumé landed and the chip says so');
+      const first = t.store().savedAt;
+      // Until the burst's own write lands, by what happened (its state changes render the page again), not by a clock.
+      const w = await t.measure(async () => {
+        t.typeInSummary(); t.typeInSummary(); t.typeInSummary();
+        await until(() => t.store().savedAt !== first && /^Saved /.test(text(t.byTid('save-status'))), 'the burst was written and the chip says Saved');
+      });
       assert.ok(t.store().activeResume.personal.summary.includes(MARK), 'the characters reached the store');
       assert.ok(t.store().savedAt, 'the write has happened');
       assert.ok(w.count('save') >= 1 && w.count('save') <= 2, `the chip rendered ${w.count('save')} times. ${w.report()}`);
@@ -133,7 +140,10 @@ describe('a keystroke and the write that follows it (PERF-4)', () => {
     const t = await openEditor();
     try {
       localStorage.setItem = () => { throw Object.assign(new Error('full'), { name: 'QuotaExceededError' }); };
-      const w = await t.measure(() => t.typeInSummary(), 600);
+      const w = await t.measure(async () => {
+        t.typeInSummary();
+        await until(() => text(t.byTid('save-status')) === 'Not saved', 'the failed write reads Not saved');
+      });
       assert.equal(text(t.byTid('save-status')), 'Not saved');
       assert.equal(w.count('header'), 0, `the header rendered. ${w.report()}`);
     } finally { await t.close(); }
