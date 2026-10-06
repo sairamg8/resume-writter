@@ -9,10 +9,13 @@ import { CARD } from '../support/selectors.js';
 
 const PHONE = [375, 812];
 const NAME = 'input[placeholder="John Doe"]';
-/** The Edit | Preview switch: the fixed bar at the foot of the screen. */
-// The Edit / Preview pill (z-40): the editor's notice stack is fixed at the bottom too (R2-139 A4).
-const PILL = 'div.fixed.bottom-4.z-40';
-const switchButton = (label) => cy.contains(`${PILL} button`, new RegExp(`^\\s*${label}\\s*$`));
+/** The Edit | Preview | Design pill: the fixed bar at the foot of the screen (testids editor-pill, pill-editor, pill-preview, pill-design). */
+// The pill (z-40): the editor's notice stack is fixed at the bottom too (R2-139 A4).
+const PILL = '[data-testid="editor-pill"]';
+const PILL_ID = { Edit: 'pill-editor', Preview: 'pill-preview', Design: 'pill-design' };
+const switchButton = (label) => cy.get(`${PILL} [data-testid="${PILL_ID[label]}"]`);
+/** The pill's lit segment is the brand-filled one (bg-cv-brand). */
+const LIT = 'bg-cv-brand';
 const handle = '[title="Drag to resize panel"]';
 
 /** Open the seeded Classic résumé in the editor at a phone's size. */
@@ -29,7 +32,7 @@ const fitsTheScreen = () =>
     expect(doc.documentElement.scrollWidth, 'page width').to.be.at.most(PHONE[0]);
   });
 
-/** The editor's tab box (EditorTabContent): the form, Design and ATS Check scroll in it. */
+/** The editor's scroll boxes: the form (EditorTabContent) and the open dock (EditorDock) scroll in one each. */
 const TAB_BOX = '.overflow-y-auto.overflow-x-hidden';
 /** The preview pane (EditorPreviewPane): the box the PDF's pages sit and scroll in. */
 const previewPane = () => cy.get('[data-preview-status]').parent();
@@ -57,16 +60,18 @@ describe('editor on a phone (375 × 812)', () => {
   beforeEach(visitOnPhone);
 
   it('opens on Edit: the form fills the screen and the preview is hidden, not even built', () => {
-    switchButton('Edit').should('be.visible').and('have.class', 'bg-blue-600');
-    switchButton('Preview').should('be.visible').and('not.have.class', 'bg-blue-600');
+    switchButton('Edit').should('be.visible').and('have.class', LIT);
+    switchButton('Preview').should('be.visible').and('not.have.class', LIT);
+    switchButton('Design').should('be.visible').and('not.have.class', LIT);
 
     cy.get('[data-preview-status]').should('have.attr', 'data-preview-status', 'paused')
       .and('have.attr', 'data-preview-pages', '0') // never built: 'paused' alone is also what a preview built once and then hidden says
       .and('not.be.visible');
     cy.get('#resume-preview').should('not.be.visible');
 
-    // The editor column (the header's parent) spans the screen; the desktop-only controls are not there.
-    cy.get('button[title="Back to dashboard"]').parent().parent().invoke('outerWidth').should('eq', PHONE[0]);
+    // The bar spans the screen; the desktop-only controls are not there (no Design button in it: the pill has Design).
+    cy.get('[data-testid="editor-bar"]').invoke('outerWidth').should('eq', PHONE[0]);
+    cy.get('[data-testid="design-button"]').should('not.be.visible');
     cy.get(handle).should('not.exist');
     cy.get('button[title="Split view"]').should('not.exist');
     cy.get('button[title="Editor only"]').should('not.exist');
@@ -78,7 +83,7 @@ describe('editor on a phone (375 × 812)', () => {
     cy.get(NAME).clear().type('Robin Phone');
 
     switchButton('Preview').click();
-    switchButton('Preview').should('have.class', 'bg-blue-600');
+    switchButton('Preview').should('have.class', LIT);
     cy.previewReady();
     cy.previewPages().should('be.visible');
     cy.get('#resume-preview').should('contain.text', 'Robin Phone');
@@ -95,16 +100,45 @@ describe('editor on a phone (375 × 812)', () => {
     cy.get('[data-preview-status]').should('not.be.visible');
   });
 
-  it('the Design and ATS Check tabs open on the phone, full width', () => {
-    const fullWidth = () => cy.get(`${TAB_BOX}:visible`).should('have.length', 1).invoke('outerWidth').should('eq', PHONE[0]);
-    cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', 'Template').should('be.visible');
-    fullWidth();
+  it('the Design dock (the pill) and the ATS dock (the chip) open on the phone as a sheet, full width', () => {
+    const fullWidth = (dock) => cy.get(`[data-testid="${dock}"]`).invoke('outerWidth').should('eq', PHONE[0]);
+    cy.openDesign(); // the pill's Design: the bar has no Design button on a phone
+    cy.get('[data-testid="dock-design"]').contains('button', 'Template').should('be.visible');
+    fullWidth('dock-design');
+    switchButton('Design').should('have.class', LIT);
     editorFitsTheScreen();
-    cy.contains('button', 'ATS Check').click();
+    cy.openAts(); // the chip stays in the bar, 44 px, above the sheet; one dock at a time
+    cy.get('[data-testid="dock-design"]').should('not.exist');
     cy.contains('h2', 'ATS Score & Parser Checker').should('be.visible');
-    fullWidth();
+    fullWidth('dock-ats');
     editorFitsTheScreen();
+  });
+
+  it('picking Edit, Preview or a document from a dock lands on that view with the dock closed (MOBI-043)', () => {
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').should('exist');
+    switchButton('Preview').click();
+    cy.get('[data-testid="dock-design"]').should('not.exist');
+    switchButton('Preview').should('have.class', LIT);
+    cy.get('#resume-preview').should('exist');
+    // A document pick from the preview lands on Edit, with the letter's form.
+    cy.switchTo('letter');
+    switchButton('Edit').should('have.class', LIT);
+    cy.contains('p', 'Letter Body').should('exist');
+  });
+
+  it('Export, the document switch, the ATS chip, the name and the save chip are in the bar on a phone', () => {
+    cy.get('[data-testid="editor-bar"]').within(() => {
+      cy.contains('button', 'Export').should('be.visible');
+      cy.get('[data-testid="doc-switch-resume"]').should('be.visible').invoke('outerHeight').should('be.gte', 44);
+      cy.get('[data-testid="doc-switch-letter"]').should('be.visible');
+      cy.get('[data-testid="ats-chip"]').should('be.visible').invoke('outerHeight').should('be.gte', 44);
+      cy.get('button[title="Rename resume"]').should('be.visible');
+      cy.get('[data-testid="save-status"]').should('be.visible');
+    });
+    cy.contains('button', 'Export').click();
+    cy.contains('button', 'Import as a new résumé').should('be.visible');
+    cy.contains('button', 'Share a public link').should('not.exist'); // signed out: no Share (EDIT-014 rule)
   });
 
   it('widening past 768 px brings back the split view without a reload, and narrowing hides it again', () => {
