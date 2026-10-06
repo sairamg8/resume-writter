@@ -78,7 +78,10 @@ describe('where the dock sits in the Editor', () => {
     assert.equal(editor.match(/<EditorDock\b/g).length, 1, 'ONE dock element');
   });
 
-  it('the editor root is the flex row the dock joins', () => {
-    assert.match(editor, /className="fixed inset-0 z-20 flex overflow-hidden/);
+  it('the dock joins the flex row under the bar, which is the positioned box its overlay is placed in', () => {
+    assert.match(editor, /className="fixed inset-0 z-20 flex flex-col overflow-hidden/, 'the root stacks the bar over the row');
+    const row = editor.match(/<div className="(relative flex-1 min-h-0 flex overflow-hidden)">/);
+    assert.ok(row, 'the row of the editor panel, the preview and the dock is a relative flex row');
+    assert.ok(editor.indexOf(row[0]) < editor.indexOf('<EditorDock') && editor.indexOf('<EditorDock') < editor.indexOf('{canShare && <ShareLinkModal'), 'the dock is inside that row');
   });
 });
