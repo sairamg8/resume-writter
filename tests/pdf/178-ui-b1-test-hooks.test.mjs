@@ -68,10 +68,10 @@ describe('B1 test hooks: the Resume tab', () => {
 });
 
 describe('B1 test hooks: the editor mode bar', () => {
-  it('has design-open, doc-switch-resume, doc-switch-letter and ats-open once each, on buttons that switch tabs', async () => {
+  it('has design-open, doc-switch-resume, doc-switch-letter and ats-open once each, on buttons that pick a document or toggle a dock', async () => {
     const { EditorModeBar } = await loadModule('/src/components/EditorHeader.jsx');
     const picked = [];
-    const view = mount(EditorModeBar, { activeTab: 'resume', setActiveTab: (t) => picked.push(t) });
+    const view = mount(EditorModeBar, { doc: 'resume', dock: null, onPickDoc: (d) => picked.push(['doc', d]), onToggleDock: (d) => picked.push(['dock', d]) });
     try {
       await settle();
       for (const id of [TID.designOpen, TID.docSwitchResume, TID.docSwitchLetter, TID.atsOpen]) {
@@ -85,8 +85,9 @@ describe('B1 test hooks: the editor mode bar', () => {
       };
       click(TID.docSwitchLetter);
       click(TID.atsOpen);
+      click(TID.designOpen);
       click(TID.docSwitchResume);
-      assert.deepEqual(picked, ['coverletter', 'ats', 'resume']);
+      assert.deepEqual(picked, [['doc', 'coverletter'], ['dock', 'ats'], ['dock', 'design'], ['doc', 'resume']]);
     } finally { await view.unmount(); }
   });
 });
