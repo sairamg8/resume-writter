@@ -4,7 +4,11 @@
 //        2-unit gap below it; `empty:hidden` keeps an empty row from drawing it.
 // H1-6: the stage toolbar is sticky over the scroll box; its background covered only the content box, so at a zoom above 100 %
 //        (or with a dock beside the stage) the pages showed in the 8-16 px at its sides while scrolling. It now runs to the box's
-//        edges (negative margins equal to the box's padding, the same padding back inside) and stays at the left when the box scrolls sideways.
+//        edges (negative margins equal to the box's padding, the same padding back inside). It sticks to the TOP only: a `left-0` could not
+//        act (a sticky box keeps inside its containing block, which is the box's width, so there is no room to slide), and the old
+//        toolbar scrolled sideways with the page too (hunt round 2, H2-8: two skeptics traced it).
+// H2-7 (round 2): a file name with no spaces in an import error ran under the Dismiss button on a phone: the message spans break words.
+// H2-9 (round 2): the resize handle's widened hit area lay under the sticky toolbar (both z-10, the toolbar later in the page): the handle is z-20.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,12 +35,27 @@ describe('the alerts row', () => {
 });
 
 describe('the stage toolbar runs to the edges of the preview box', () => {
-  it('takes the box\'s full width over its padding, keeps sticking to the top, and to the left when the box scrolls sideways', () => {
+  it('takes the box\'s full width over its padding and keeps sticking to the top (no left-0: it cannot act in a box that is as wide as its parent)', () => {
     const on = classesOf('components/EditorPreviewPane.jsx', 'data-testid="stage-toolbar"');
-    for (const token of ['sticky', 'top-0', 'left-0', 'self-stretch', '-mx-2', 'sm:-mx-4', 'px-2', 'sm:px-4']) assert.ok(on.includes(token), `${token}: ${on.join(' ')}`);
+    for (const token of ['sticky', 'top-0', 'self-stretch', '-mx-2', 'sm:-mx-4', 'px-2', 'sm:px-4']) assert.ok(on.includes(token), `${token}: ${on.join(' ')}`);
+    assert.ok(!on.includes('left-0'), 'a sideways stick that cannot work is not claimed');
     assert.ok(!on.includes('w-full'), 'a full width of the content box leaves the padding bare at the sides');
     // The box pads by px-2 sm:px-4: the toolbar's negative margins are the same numbers (pinned together).
     const box = source('components/EditorPreviewPane.jsx').match(/overflow-auto bg-cv-stage[^`]*`/)?.[0] ?? '';
     assert.ok(/\bpx-2 sm:px-4\b/.test(box), `the preview box pads px-2 sm:px-4: ${box}`);
+  });
+});
+
+describe('a long unbroken word in a card breaks instead of running under the Dismiss button', () => {
+  it('the import notice, the export / import error and the Not saved message, and the Preview failed message, break words and may shrink', () => {
+    for (const [file, marker] of [
+      ['components/EditorHeader.jsx', '{importNotice}</span>'],
+      ['components/EditorHeader.jsx', '{exportError}</span>'],
+      ['components/EditorHeader.jsx', "{notSavedMessage('editor', persistError)}</span>"],
+      ['components/PdfPreview.jsx', 'Preview failed to render'],
+    ]) {
+      const on = classesOf(file, marker);
+      for (const token of ['flex-1', 'min-w-0', 'break-words']) assert.ok(on.includes(token), `${marker} ${token}: ${on.join(' ')}`);
+    }
   });
 });

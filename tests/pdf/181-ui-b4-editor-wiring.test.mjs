@@ -63,7 +63,8 @@ describe('the resize handle and the phone notices are in the cv look', () => {
     assert.ok(at > 0, 'the handle takes the separator props');
     const open = editor.slice(editor.lastIndexOf('<div', at), editor.indexOf('/>', at));
     const classes = open.match(/className="([^"]*)"/)[1];
-    for (const token of ['bg-cv-hairline', 'hover:bg-cv-brand', 'active:bg-cv-brand-pressed', 'w-1', 'cursor-col-resize', 'touch-none']) assert.ok(classes.split(/\s+/).includes(token), token);
+    for (const token of ['bg-cv-hairline', 'hover:bg-cv-brand', 'active:bg-cv-brand-pressed', 'w-1', 'cursor-col-resize', 'touch-none', 'z-20']) assert.ok(classes.split(/\s+/).includes(token), token);
+    assert.ok(!classes.split(/\s+/).includes('z-10'), 'the handle is above the sticky stage toolbar (z-10), whose strip would cover its hit area');
     assert.ok(/before:-right-3/.test(classes), 'the hit area over the preview');
     assert.ok(!/\b(bg-gray-\d+|hover:bg-blue-\d+|active:bg-blue-\d+)\b/.test(classes), `raw palette left: ${classes}`);
     assert.match(open, /title="Drag to resize panel"/);

@@ -137,21 +137,21 @@ export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss,
       {importNotice && (
         <div role="status" className={`${ALERT} cv-notice-warn border-cv-warn/25`}>
           <TriangleAlert size={16} className="shrink-0 mt-px" />
-          <span className="flex-1 min-w-0">{importNotice}</span>
+          <span className="flex-1 min-w-0 break-words">{importNotice}</span>
           <button onClick={onDismissImport} className={`${ALERT_BUTTON} hover:bg-cv-surface/60`}>Dismiss</button>
         </div>
       )}
       {exportError && (
         <div role="alert" className={`${ALERT} cv-notice-bad border-cv-bad/25`}>
           <TriangleAlert size={16} className="shrink-0 mt-px" />
-          <span className="flex-1 min-w-0">{exportError}</span>
+          <span className="flex-1 min-w-0 break-words">{exportError}</span>
           <button onClick={onDismiss} className={`${ALERT_BUTTON} hover:bg-cv-surface/60`}>Dismiss</button>
         </div>
       )}
       {persistError && (
         <div role="alert" className={`${ALERT} cv-notice-bad border-cv-bad/25`}>
           <TriangleAlert size={16} className="shrink-0 mt-px" />
-          <span className="flex-1 min-w-0">{notSavedMessage('editor', persistError)}</span>
+          <span className="flex-1 min-w-0 break-words">{notSavedMessage('editor', persistError)}</span>
         </div>
       )}
     </>

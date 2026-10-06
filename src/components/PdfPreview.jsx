@@ -493,7 +493,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     >
       {status === 'error' && (
         <div role="alert" data-testid="preview-error" className="cv-notice-bad mx-auto max-w-md text-xs px-3 py-2 flex items-start gap-2">
-          <span className="flex-1">Preview failed to render{error?.message ? ` (${error.message})` : ''}.</span>
+          <span className="flex-1 min-w-0 break-words">Preview failed to render{error?.message ? ` (${error.message})` : ''}.</span>
           <button onClick={() => setRetry((n) => n + 1)} className="font-semibold underline underline-offset-2">Retry</button>
         </div>
       )}

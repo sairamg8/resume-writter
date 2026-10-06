@@ -19,9 +19,10 @@
 //      the dock closed: "overlays below 1100" and "the stage keeps the width it had" go RED. The stored-640 tests are
 //      not what catches this one (they run from 1100 px). The commit before it is GREEN.
 //   M2 (the clamp gone): in src/pages/Editor.jsx call usePanelResize({ dockOpen: false }) (or with no argument). With the
-//      stored 640 px panel and a dock open the panel is drawn at 640 at 1100 / 1180 and the stage is under its floor:
-//      "the panel is drawn at window - 680" (420 / 500) goes RED, and so does the floor check. M1 alone leaves those
-//      green, M2 alone leaves the six-width tests green: each mutation is caught by its own tests.
+//      stored 640 px panel and a dock open the panel is drawn at 640 at 1100 / 1180 / 1280: the six stored-640 tests go RED on
+//      their exact assertion "the panel is drawn at window - 680" (420 / 500 / 600). (The stage-floor and "static" checks stay
+//      green there: they are not what guards the clamp; the exact drawn width is.) M1 alone leaves the stored-640 tests green,
+//      M2 alone leaves the six-width tests green: each mutation is caught by its own tests.
 import { test, expect } from '@playwright/test';
 import { buildTestState, STORAGE_KEY } from '../helpers.js';
 import { reach } from './pw-helpers.js';

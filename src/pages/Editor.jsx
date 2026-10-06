@@ -230,7 +230,7 @@ export function Editor({ store, auth, sync }) {
         <div
           {...separatorProps}
           title="Drag to resize panel"
-          className="relative w-1 shrink-0 bg-cv-hairline hover:bg-cv-brand active:bg-cv-brand-pressed focus-visible:bg-cv-brand-pressed focus-visible:outline-none cursor-col-resize touch-none transition-colors z-10 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
+          className="relative w-1 shrink-0 bg-cv-hairline hover:bg-cv-brand active:bg-cv-brand-pressed focus-visible:bg-cv-brand-pressed focus-visible:outline-none cursor-col-resize touch-none transition-colors z-20 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
         />
       )}
 
