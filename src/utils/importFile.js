@@ -523,8 +523,7 @@ export function pdfPageBlocks(items) {
   let run = [];
   const endRun = () => {
     if (run.length && isTwoColumns(run, at)) {
-      // Nothing above this run: the columns start the page.
-      const atTop = !blocks.length && !whole.length;
+      const atTop = !blocks.length && !whole.length; // nothing above this run: the columns start the page
       if (whole.length) blocks.push({ items: whole, column: false });
       whole = [];
       const its = run.flatMap((r) => r.items);
@@ -538,7 +537,7 @@ export function pdfPageBlocks(items) {
       // the right column first then, else the main column's summary came before the name and the résumé
       // was named after its first line.
       const tallest = (part) => part.reduce((m, it) => Math.max(m, heightOf(it)), 0);
-      blocks.push(...(atTop && tallest(right) >= tallest(left) * 1.3 ? [...side(right), ...side(left)] : [...side(left), ...side(right)]));
+      blocks.push(...(atTop && tallest(right) >= tallest(left) * 1.3 ? [right, left] : [left, right]).flatMap((part) => side(part)));
     } else for (const r of run) for (const it of r.items) whole.push(it);
     run = [];
   };
