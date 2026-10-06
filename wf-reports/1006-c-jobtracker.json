@@ -1,0 +1,45 @@
+{
+  "cluster": "1006-c-jobtracker",
+  "branch": "claude/wf-1006-c-jobtracker",
+  "base": "3f579152",
+  "rows": [
+    {
+      "id": "C-1",
+      "outcome": "fixed",
+      "commits": ["9ec96fe1", "fb3fb346"],
+      "tests": ["tests/pdf/118-job-search-keystroke-work.test.mjs"],
+      "summary": "A search key no longer folds every job's six fields again (each job's folded search text is kept per job object and re-folded only when a field changes; plain ASCII skips the accent strip) and no longer re-renders every card (KanbanCard and DraggableCard are memoised behind stable handlers, drag-sensor options are constants, the filtered list is memoised). Matches and their order are unchanged. Proved by counts for 3000 jobs: a second key makes 0 normalize calls, and a search that keeps 100 cards re-renders 0 cards.",
+      "remaining": "Not measured in a browser: the work counts are the proof, the 696 ms figure was not re-measured. The first key still folds each non-ASCII job once, and the commit of N new cards when a search widens is still one pass."
+    },
+    {
+      "id": "C-2",
+      "outcome": "partial",
+      "commits": ["0dc58fb9", "633c4abf", "d6ff8e98"],
+      "tests": ["tests/unit/tf-ats-huge-paste-one-pass.unit.mjs", "tests/unit/c2-ats-posting-cap.unit.mjs", "tests/pdf/162-ats-posting-box-cap.test.mjs"],
+      "summary": "The hunt never says which field took the 5.7 MB paste. Measured in node, the rich-editor plain-paste functions and job notes are linear and fast; the only slow path is the ATS job-description box (extractJobKeywords / matchResumeWithJob, about 2 s at 5.7 MB, on the main thread inside a useMemo, plus a whole-value sessionStorage write per change). extractJobKeywords now composes and blanks the posting once, not twice (0dc58fb9). PRODUCT CALL: the box takes at most 200,000 characters (maxLength, so the browser cuts a longer paste at the caret) and shows 'Only the first 200,000 characters of this posting are kept and scanned.' whenever it is full; an older stored posting is scanned only to that limit. A real posting is 5 to 20 kB, so ordinary pastes are unchanged.",
+      "remaining": "Not confirmed that the hunt's paste went into the ATS box. If it was the rich editor, its cost is the browser's insertHTML and the preview build of huge text (hunt row 142), neither measurable in node: needs a browser trace."
+    },
+    {
+      "id": "C-3",
+      "outcome": "not-a-bug",
+      "commits": [],
+      "tests": [],
+      "summary": "Measured in node, no stall: jobsFromText and mergeImport on up to 40,000 jobs (8 MB) take 0.29 s at most and are linear; jobsToCsv on 40,000 jobs 0.26 s; one job with a 5.7 MB note parses in 6 ms and merges in 56 ms (its CSV export is 0.75 s).",
+      "remaining": "Backup restore was not measured."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Posting cap: a posting restored from the session was never capped and showed no notice.",
+      "Posting cap: the notice was local state set only in onChange, so it went stale on a résumé switch or remount.",
+      "Posting cap: a paste into a non-empty box cut the whole new value, dropping the end of the existing text.",
+      "KanbanCard memoisation freezes the DatePill's overdue/today state until the job object changes (minor: stale past midnight).",
+      "The first CI run showed useDeferredValue breaks two existing synchronous tests (R2-156 search, R4-DUX-18), so it was dropped."
+    ],
+    "fixedByReviewer": [
+      "Stored long posting scanned only to the limit, the notice derived from the box's length, and maxLength on the box instead of an onChange cut (d6ff8e98)."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "CI: run 37399867354 (9ec96fe1, failed: stale second word in my test and no card memo across a DndContext sensors change; two old tests broke on useDeferredValue); run 37400032871 (fb3fb346) green: job tests, 71-startup-chunks, lint, failfirst for 9ec96fe1-era 118 (at fb3fb346), 0dc58fb9 and 633c4abf; run 37400589206 (162 crashed on a test setup bug); run 37400834146 (4b56aae3) green: tests/pdf/162, failfirst d6ff8e98, Cypress 06-job-tracker, lint. 71-startup-chunks reports 0.0 kB to spare of the 1,100 kB cap and passes; the brief said 7.9 kB were left, so the coordinator should check the master figure. Accessibility notes (not fixed): none seen. The card DatePill staleness past midnight is a minor follow-up."
+}
