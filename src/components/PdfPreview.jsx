@@ -30,6 +30,13 @@ import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
  *   once it is in, so a reader of that element after 'ready' finds it filled.
  * - Canvases are reused (a pool per preview, filled by the ones that left the screen), not created
  *   per page per render; the pool keeps elements, never pixels (R2-170), and is dropped on unmount.
+ * - Every call to pdf.js has a budget (R2-142, the twin of the PDF worker's watchdog in pdfBuild.js, PERF-6):
+ *   one that never settles (its worker died or hung, a chunk that never loads) held a build for good, and
+ *   with it the one-build-at-a-time slot, so the preview stayed on "Rendering preview…". A stage of a build
+ *   (loading pdf.js, opening the PDF, reading its pages, painting them) that outstays its budget fails the
+ *   build the way any other failure does — the alert, Retry, the next change builds — and whatever pdf.js
+ *   settles late reaches nobody. The pages' text, read after they are up, is let go the same way: those
+ *   pages' text is empty and the status is 'ready', as for a page whose text cannot be read.
  */
 
 const GUTTER_PX = 48;    // breathing room either side of the page
@@ -38,8 +45,93 @@ const DEBOUNCE_MS = 350;
 // preview stayed frozen until typing stopped (R2-142).
 const MAX_WAIT_MS = 1200;
 
+// What a stage of pdf.js work gets before the build is given up on (pdfjsTimeoutMs adds to it).
+const PDFJS_TIMEOUT_MS = 20_000;
+const PER_PAGE_MS = 1_000;  // more for every page, so a long résumé painted on a slow phone is not cut off
+const MAX_PAGES = 100;      // the most pages counted
+// A timer that rings this long after its time was not run because the page itself was asleep (a tab the
+// browser froze in the background, a phone that put the browser away) and pdf.js' worker slept with it:
+// its silence says nothing, so the stage gets its budget again from now (as pdfBuild.js does).
+const ASLEEP_MS = 5_000;
+
+/**
+ * How long a stage of pdf.js work on a document of `pages` pages gets: PDFJS_TIMEOUT_MS and PER_PAGE_MS for
+ * each page; twice the base while `cold` (before a document has opened in this session, when the library
+ * and its worker are still loading over the network).
+ */
+export function pdfjsTimeoutMs(pages = 0, cold = false) {
+  return (cold ? 2 : 1) * PDFJS_TIMEOUT_MS + Math.min(Math.max(pages, 0), MAX_PAGES) * PER_PAGE_MS;
+}
+
+const realClock = {
+  set: (fn, ms) => { const t = setTimeout(fn, ms); t?.unref?.(); return t; },
+  clear: (t) => clearTimeout(t),
+  now: () => globalThis.performance?.now?.() ?? Date.now(),
+};
+let clock = realClock;
+let proven = false; // a document has opened: from then on the library and its worker are loaded
+
+/** For tests/pdf/174-*: `{ set(fn, ms) → handle, clear(handle), now() → ms }` stands in for the watchdog's timers; null goes back to the real ones. */
+export function _setPreviewClockForTest(next) {
+  clock = next || realClock;
+  proven = false;
+}
+
+const tookTooLong = () => Object.assign(new Error('The preview took too long to draw'), { code: 'PREVIEW_TIMEOUT' });
+
+/**
+ * The clock on one run of pdf.js calls (a build's, a repaint's, a text read's). `stage(ms)` starts the
+ * budget of the stage under way in place of the last one: a stage that answered in time restarts it for
+ * the next. `race(promise)` is the promise, or a rejection once a stage outstays its budget; the call
+ * itself cannot be stopped from here, and what it settles late is dropped. `stop()` ends the clock.
+ */
+function pdfjsWatch() {
+  const ring = clock; // the clock this run started on, whatever a test sets meanwhile
+  let timer = null;
+  let expire = null;
+  const expired = new Promise((_, reject) => { expire = reject; });
+  expired.catch(() => {}); // a timeout nothing was waiting for is no unhandled rejection
+  const watch = {
+    timedOut: false,
+    stage(ms) {
+      watch.stop();
+      if (watch.timedOut) return;
+      const due = ring.now() + ms;
+      timer = ring.set(() => {
+        timer = null;
+        if (ring.now() - due >= ASLEEP_MS) { watch.stage(ms); return; }
+        watch.timedOut = true;
+        expire(tookTooLong());
+      }, ms);
+    },
+    stop() {
+      if (timer !== null) ring.clear(timer);
+      timer = null;
+    },
+    race: (promise) => Promise.race([promise, expired]),
+  };
+  return watch;
+}
+
+/** pdf.js loaded, or a rejection when that outlasts its budget (a chunk that never arrives). */
+function loadPdfjsInTime() {
+  const watch = pdfjsWatch();
+  watch.stage(pdfjsTimeoutMs(0, !proven));
+  return watch.race(loadPdfjs()).finally(() => watch.stop());
+}
+
 /** Free a pdf.js document (PDFDocumentProxy has no destroy(); its loading task does). */
 const release = (pdf) => { pdf?.loadingTask?.destroy(); };
+
+/**
+ * A loading task whose document never came in time: destroyed, and a document it still delivers is
+ * let go (pdf.js rejects a destroyed task's promise, but nothing here relies on that).
+ */
+function abandon(task) {
+  if (!task) return;
+  try { Promise.resolve(task.destroy?.()).catch(() => {}); } catch { /* already gone */ }
+  task.promise?.then(release, () => {});
+}
 
 /**
  * Free canvases' pixels now rather than when the garbage collector gets to them: iOS Safari caps
@@ -86,12 +178,15 @@ function pageText(content) {
  * Paint every page into a canvas from `take()` at `cssWidth` (device-pixel sharp); `give(canvases)`
  * takes back the ones of a paint that failed. A failed paint waits for the other pages' paints to
  * end first: a canvas given back while pdf.js still draws into it would be painted into by the
- * next render as well.
+ * next render as well. A paint that outstays its budget (`watch`, pdfjsWatch) is cancelled instead,
+ * and its canvases are let go for good, never given back: pooled, one would be drawn into by a
+ * paint that comes in late and by the next render at once.
  */
-async function paint(pages, cssWidth, take, give) {
+async function paint(pages, cssWidth, take, give, watch) {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const canvases = [];
-  const settled = await Promise.allSettled(pages.map(async ({ page, width, height }) => {
+  const tasks = [];
+  const drawn = Promise.allSettled(pages.map(async ({ page, width, height }) => {
     const scale = (cssWidth * dpr) / width;
     const viewport = page.getViewport({ scale });
     const canvas = take();
@@ -99,9 +194,19 @@ async function paint(pages, cssWidth, take, give) {
     // Sizing resets a reused canvas' context; pdf.js fills the page's white itself.
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas }).promise;
+    const task = page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas });
+    tasks.push(task);
+    await task.promise;
     return { canvas, cssHeight: (cssWidth * height) / width };
   }));
+  let settled;
+  try {
+    settled = await watch.race(drawn);
+  } catch (e) {
+    for (const task of tasks) { try { task.cancel?.(); } catch { /* over already */ } }
+    discard(canvases);
+    throw e;
+  }
   const failed = settled.find((s) => s.status === 'rejected');
   if (failed) { give(canvases); throw failed.reason; }
   return settled.map((s) => s.value);
@@ -109,11 +214,12 @@ async function paint(pages, cssWidth, take, give) {
 
 /**
  * Reading-order text of every page, read after the paint. Never throws: the pages are on screen
- * already, so a page whose text cannot be read (its document was let go for a newer one) is empty.
+ * already, so a page whose text cannot be read (its document was let go for a newer one, or pdf.js
+ * did not answer within `watch`'s budget) is empty.
  */
-async function pagesText(pages) {
+async function pagesText(pages, watch) {
   return Promise.all(pages.map(async ({ page }) => {
-    try { return pageText(await page.getTextContent()); } catch { return ''; }
+    try { return pageText(await watch.race(page.getTextContent())); } catch { return ''; }
   }));
 }
 
@@ -212,20 +318,28 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       building.current += 1;
       built.current = { input, render, retry, gen };
       let pdf = null;
+      let task = null;
+      // The budget of what pdf.js is asked for below (the PDF's own build is pdfBuild.js's: its watchdog).
+      const watch = pdfjsWatch();
       // Unmounted meanwhile (Cover Letter clicked mid-render). `gen < shownGen` is defensive: builds run one at a time.
       const unwanted = () => !mounted.current || gen < shownGen.current;
       try {
-        const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
+        const [blob, pdfjs] = await Promise.all([render(input), loadPdfjsInTime()]);
         if (unwanted()) return;
         const data = new Uint8Array(await blob.arrayBuffer());
-        pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
-        const pages = await Promise.all(Array.from({ length: pdf.numPages }, async (_, i) => {
+        watch.stage(pdfjsTimeoutMs(0, !proven));
+        task = pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false });
+        pdf = await watch.race(task.promise);
+        proven = true;
+        watch.stage(pdfjsTimeoutMs(pdf.numPages));
+        const pages = await watch.race(Promise.all(Array.from({ length: pdf.numPages }, async (_, i) => {
           const page = await pdf.getPage(i + 1);
           const [, , width, height] = page.view;
           return { page, width, height };
-        }));
+        })));
         const width = widthRef.current;
-        const painted = await paint(pages, width, take, give);
+        watch.stage(pdfjsTimeoutMs(pdf.numPages));
+        const painted = await paint(pages, width, take, give, watch);
         if (unwanted()) { release(pdf); give(painted.map((p) => p.canvas)); return; }
         release(docRef.current);
         docRef.current = pdf;
@@ -234,7 +348,9 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         // The pages are up: only now is their text asked for (not awaited: the build is over).
         readText(pages, gen);
       } catch (e) {
-        release(pdf); // opened, then a page or the paint failed: nothing else holds it
+        // Opened, then a page or the paint failed: nothing else holds it. Never opened (it failed, or
+        // outstayed its budget): its loading task is let go, and a document it delivers late with it.
+        if (pdf) release(pdf); else abandon(task);
         if (!mounted.current) return;
         ended.current = { gen, status: 'error', error: e };
         if (gen !== generation.current) return;
@@ -242,6 +358,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         setError(e);
         setStatus('error');
       } finally {
+        watch.stop();
         building.current -= 1;
         // The change that waited for this build, if any (the latest one's: a newer change took the place
         // of an older): it builds now, from the input it has, while this build's page text may still be
@@ -284,11 +401,13 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   useEffect(() => {
     if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
-    paint(view.pages, cssWidth, take, give).then((painted) => {
+    const watch = pdfjsWatch();
+    watch.stage(pdfjsTimeoutMs(view.pages.length));
+    paint(view.pages, cssWidth, take, give, watch).then((painted) => {
       // Cancelled, or a newer render's pages were handed over while this painted: never shown.
       if (cancelled || handed.current !== view) give(painted.map((p) => p.canvas));
       else show({ ...view, painted, cssWidth });
-    }).catch(() => { /* the next render repaints */ });
+    }).catch(() => { /* the next render repaints */ }).finally(() => watch.stop());
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
 
@@ -317,7 +436,9 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   // The text of the pages of build `gen`, asked for once they are painted and on screen. Its status
   // is 'ready' when it is in; dropped when newer pages went up meanwhile (their document is gone).
   async function readText(pages, gen) {
-    const list = await pagesText(pages);
+    const watch = pdfjsWatch();
+    watch.stage(pdfjsTimeoutMs(pages.length));
+    const list = await pagesText(pages, watch).finally(() => watch.stop());
     if (!mounted.current || shownGen.current !== gen) return;
     setTexts({ gen, list });
     // Not over the record of a build that started after these pages went up and ended while the text was

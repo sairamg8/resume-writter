@@ -23,7 +23,11 @@ Helpers the PDF and unit suites share:
   fonts (real WOFF bytes from the bundled Noto Sans, named per face), fails loudly on any URL it does not know and
   refuses every connection beyond this machine, so `05-fonts` cannot fail on a slow CDN
 - `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics (a test can wrap its
-  `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does)
+  `getDocument` to log paint and text requests, as `115-r2-142-perf5-*` does, or hold a call for ever, as
+  `174-preview-pdfjs-watchdog` does)
+- `tests/pdf/call-counts.mjs` — how many times named functions of a library ran while something ran (V8's
+  precise coverage over `node:inspector`): the way a test pins a cost by counting work, never by timing it
+  (`175-plain-field-linear` counts textkit's `computeCost`)
 - `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
   and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
 - `tests/pdf/startup-modules.mjs` — the start-up path by module, walked from `src/main.jsx` through static
@@ -91,8 +95,8 @@ or `all`; only that job runs, and its table is on the run's summary. With `brows
 runs Gate B, `tests/playwright/perf-gate-b.spec.mjs` (PERF-6: the longest main-thread task and key delay
 while typing on a long résumé, with the PDF worker and with it refused; soft targets of 50 ms), which the
 Playwright gate skips unless `PERF_GATE_B=1`; its two result lines are on the summary too.
-The PDF worker's watchdog and the preview's paint-before-text and canvas pool are pinned in the gate by
-`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs` and `tests/pdf/115-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
+The PDF worker's watchdog, the preview's own budget for its pdf.js calls and its paint-before-text and canvas pool are pinned in the gate by
+`tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`, `tests/pdf/174-preview-pdfjs-watchdog.test.mjs` and `tests/pdf/115-r2-142-perf5-preview-paint-order-canvas-reuse.test.mjs`.
 The typing-freeze fixes (2026-10-05, `docs/tracking/TYPING-FREEZE-HUNT-2026-10-05.md`) by
 `tests/pdf/110-dev-pdf-worker-no-refresh.test.mjs` (the dev server serves the worker no Fast Refresh runtime; it
 starts the dev server in-process), `tests/pdf/111-preview-one-build-at-a-time.test.mjs` and

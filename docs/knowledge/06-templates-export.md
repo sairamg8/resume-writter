@@ -99,7 +99,7 @@ on unheard, so it cannot hold the preview's queued build or an export for good. 
 not lay out beside it on the one thread (each slowed the other past its budget): it waits for it — the same
 résumé (Retry) takes its file, another builds once it is done — and one still running 20 s later is taken to be
 hung, so the next starts anyway and no later build waits for it (`tests/pdf/121-main-thread-build-overrun.test.mjs`).
-This is the only watchdog, and
+This is the only watchdog on the build, and
 fonts take room in its budgets, bounded: `pdfFontLoader.js` waits for the CDN `FONT_LOAD_MS` (10 s), one
 deadline shared by every font metadata lookup and every CDN face of a build (bundled Noto Sans faces get the
 whole wait each). A lookup or face whose wait starts with the deadline all but spent (a slow network, a CJK
@@ -118,6 +118,15 @@ keeps it until the next build puts its own in (`landPrepared`), so no build lays
 `tests/pdf/112-pdf-worker-watchdog.test.mjs`); the font wait with `_setFontLoadWaitForTest(ms)`
 (`tests/pdf/113-font-load-stall.test.mjs`, its grace in `tests/pdf/120-font-wait-grace.test.mjs`).
 
+The preview's own calls to pdf.js have a budget of their own (`PdfPreview.jsx`, `pdfjsTimeoutMs`: 20 s, twice that until
+a document has opened, plus a second per page, up to 100 pages). Loading the library, opening the PDF, reading its
+pages and painting them are each a stage with its clock; a stage past its budget fails the build the way any other
+failure does ("Preview failed to render (The preview took too long to draw)" and Retry, the next change builds), its
+loading task is destroyed, its paint is cancelled and its canvases are shrunk and never pooled (a late paint would draw
+into them), and what pdf.js settles late is dropped. A clock that rings 5 s or more late starts the stage again. The
+pages' text, read once they are up, is let go the same way: those pages' text is empty and the status is 'ready'.
+The test sets the clock with `_setPreviewClockForTest` (`tests/pdf/174-preview-pdfjs-watchdog.test.mjs`).
+
 A skill's own level (`skillLevels`, 1–5, edited per skill in the Skills editor; R2-147) is the length of its
 bar in Skills style Bars — the main column of every template and the Sidebar's side column
 (`skillBarWidth`: level / 5; no level keeps the old 80 %). Word prints it as `▰▰▰▱▱` glyphs after the skill,
@@ -127,7 +136,16 @@ in Bars only; every other style, Markdown and the ATS text print nothing of it
 A pasted paragraph of more than 12 000 characters is laid out as several paragraphs of a few thousand
 (`splitHugeBlock.js`, called by `PdfRichText.jsx`; the spaces at the cuts are dropped, every other character
 prints in order): textkit's time on one paragraph grows with its square, and a 200 000-character paste took
-12 s (`tests/unit/tf-sidebar-huge-paragraph.unit.mjs`, `tests/pdf/164-huge-paste-linear.test.mjs`). The
+12 s (`tests/unit/tf-sidebar-huge-paragraph.unit.mjs`, `tests/pdf/164-huge-paste-linear.test.mjs`). A plain text
+field (a company, a skills line, a name: no rich text) is cut the same way by `Text` (`PdfText.jsx`, which every
+template draws its strings with): a string of more than 12 000 characters reaches react-pdf as lines of a few
+thousand, which textkit lays out apart (`breakHugeChildren`); text of 12 000 characters or fewer, and children
+with an element in them, are passed on as they were. The running header's line, drawn from a render prop, is cut
+the same way (`PdfRunningHeader.jsx`). Pinned by counting textkit's line-breaking work, never by timing it
+(`tests/pdf/175-plain-field-linear.test.mjs`, `tests/pdf/call-counts.mjs`, `tests/unit/plain-text-cut.unit.mjs`).
+What is not cut, and costs the layout's own price: thousands of short paragraphs, list items or skills in one
+field, each a node react-pdf lays out again on every page that follows it (the cost grows with pages times
+nodes: 2 000 list items of 100 characters, 23 s on CI). The
 Sidebar's `breakToFit` (`pdfMeasure.js`) cuts a long unbroken token into runs by doubling then halving, not
 character by character (`tests/pdf/164-sidebar-token-break.test.mjs`).
 
