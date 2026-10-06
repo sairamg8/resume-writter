@@ -123,16 +123,21 @@ describe('editor — content', () => {
 describe('editor — shell', () => {
   beforeEach(() => cy.visitEditor('classic'));
 
-  it('Resume, Cover Letter and Design tabs swap both the panel and the preview', () => {
+  it('the Resume | Cover Letter switch swaps the panel and the preview; Design is a dock beside them', () => {
     cy.contains('Résumé · A4').should('be.visible');
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.get('#cover-letter-preview').should('contain.text', 'I am excited to apply');
     cy.contains('Cover Letter · A4').should('be.visible');
-    cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', 'Template').should('be.visible');
+    // Design belongs to the résumé: opened from the letter it switches to the Résumé, with the dock beside it.
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').contains('button', 'Template').should('be.visible');
     cy.contains('Résumé · A4').should('be.visible');
-    cy.get('button[title="Design & Customize"]').click();
     cy.contains('span', 'Personal Info').should('be.visible');
+    // The same button closes it, and the Résumé stays.
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').should('not.exist');
+    cy.contains('span', 'Personal Info').should('be.visible');
+    cy.contains('Résumé · A4').should('be.visible');
   });
 
   it('layout toggle: editor-only hides the preview, preview-only hides the editor', () => {
@@ -168,6 +173,38 @@ describe('editor — shell', () => {
   it('the back arrow returns to the dashboard', () => {
     cy.get('button[title="Back to dashboard"]').click();
     cy.location('hash').should('eq', '#/');
+  });
+
+  it('the bar holds the switch, the ATS chip, the Design button, the save chip, Export and the account, and no tab strip', () => {
+    cy.get('[data-testid="editor-bar"]').within(() => {
+      cy.get('[data-testid="doc-switch-resume"]').should('be.visible');
+      cy.get('[data-testid="doc-switch-letter"]').should('be.visible');
+      cy.get('[data-testid="ats-chip"]').should('be.visible').and('not.contain.text', '/100');
+      cy.get('[data-testid="design-button"]').should('be.visible');
+      cy.get('[data-testid="save-status"]').should('be.visible');
+      cy.contains('button', 'Export').should('be.visible');
+    });
+    cy.get('[data-testid="editor-sidebar"]').should('be.visible');
+    cy.contains('button', 'ATS Check').should('not.exist'); // the old third tab
+  });
+
+  it('the ATS chip opens the ATS dock beside the preview and a second press closes it', () => {
+    cy.openAts();
+    cy.get('[data-testid="dock-ats"]').contains('h2', 'ATS Score & Parser Checker').should('be.visible');
+    cy.previewPages().first().should('be.visible');
+    cy.openAts();
+    cy.get('[data-testid="dock-ats"]').should('not.exist');
+  });
+
+  it('one dock at a time: the Design button replaces the ATS dock, and picking the letter closes it', () => {
+    cy.openAts();
+    cy.get('[data-testid="dock-ats"]').should('exist');
+    cy.openDesign();
+    cy.get('[data-testid="dock-design"]').should('exist');
+    cy.get('[data-testid="dock-ats"]').should('not.exist');
+    cy.switchTo('letter');
+    cy.get('[data-testid="dock-design"]').should('not.exist');
+    cy.get('#cover-letter-preview').should('exist');
   });
 
   it('an unknown resume id redirects to the dashboard', () => {
