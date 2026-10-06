@@ -6,11 +6,13 @@
 // Driven as the browser does: the capture-phase handler of the dock's body, then the chip's click, no pause between.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepare, finish, openEditor, until, attr, text, reactProps, experience } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, sleep, attr, text, reactProps, experience } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
 after(finish);
 
+// The panel shows the tick on an added keyword for 2 s (a timer of its own that sets state): the page stays mounted until it ran.
+const ADDED_TICK_MS = 2000;
 const JD = 'Kubernetes Kubernetes Terraform Terraform GraphQL GraphQL';
 const box = (t) => t.all().find((el) => el.tagName === 'TEXTAREA' && attr(el, 'placeholder').startsWith('Paste job posting'));
 const chips = (t) => t.all().filter((el) => el.tagName === 'BUTTON' && attr(el, 'title') === 'Click to add to Skills');
@@ -25,6 +27,12 @@ async function scanOpen(options) {
   await until(() => chips(t).length >= 2, 'the scan lists the missing keywords');
   const [first, second] = chips(t).map(text);
   return { t, first, second };
+}
+
+/** Closes the page once the panel's own 2 s tick after a "+" has run (a state set after the unmount would reach a window that is gone). */
+async function done(t) {
+  await sleep(ADDED_TICK_MS + 100);
+  await t.close();
 }
 
 /** A tap on the chip of `keyword` with nothing between the taps: the pointerdown the dock sees first, then the click. */
@@ -46,7 +54,7 @@ describe('two quick "+" on missing keywords in the ATS dock', () => {
       const skills = sections[0].items[0].skills;
       assert.ok(skills.includes(first) && skills.includes(second), `the group reads "${skills}"`);
       assert.ok(skills.startsWith('SQL, Excel, Tableau'), 'the skills that were there stay');
-    } finally { await t.close(); }
+    } finally { await done(t); }
   });
 
   it('with no Skills section: one section is made, holding both keywords', async () => {
@@ -60,7 +68,7 @@ describe('two quick "+" on missing keywords in the ATS dock', () => {
       assert.equal(sections.length, 1, `${sections.length} Skills sections`);
       const all = sections[0].items.map((i) => i.skills).join(', ');
       assert.ok(all.includes(first) && all.includes(second), `the section reads "${all}"`);
-    } finally { await t.close(); }
+    } finally { await done(t); }
   });
 
   it('the dock still reads the résumé after the pause: a press with nothing changed renders nothing', async () => {

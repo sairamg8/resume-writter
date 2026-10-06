@@ -153,7 +153,10 @@ export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss,
 // `order`: where the leaf sits in the bar (Editor.jsx). From xl (1280 px) the bar is one row; below it the bar wraps
 // to two (the header's two ends, then the switch, the ATS button, the save chip and Design), and on a phone the save
 // chip has a row of its own between them, so the name keeps the room it needs.
-const CHIP = 'flex items-center justify-center gap-1.5 shrink-0 py-2 px-2.5 max-md:min-h-[44px] max-md:px-3 rounded-cv-control border text-xs font-semibold transition-colors whitespace-nowrap';
+// `flex` is not in the box: the Design button is `hidden` or `flex` by the Editor's flag, and two display utilities on one element
+// would be decided by the stylesheet's order, not by the class list.
+const CHIP_BOX = 'items-center justify-center gap-1.5 shrink-0 py-2 px-2.5 max-md:min-h-[44px] max-md:px-3 rounded-cv-control border text-xs font-semibold transition-colors whitespace-nowrap';
+const CHIP = `flex ${CHIP_BOX}`;
 
 /**
  * The ATS chip: opens the ATS dock, or closes it (`open`: it is the dock that is open). A label, no score:
@@ -185,7 +188,7 @@ export const EditorDesignButton = memo(function EditorDesignButton({ open, onTog
       onClick={() => onToggleDock('design')}
       title="Design & Customize"
       data-testid="design-button"
-      className={`order-8 xl:order-50 ${isMobile ? 'hidden' : ''} ${CHIP} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
+      className={`order-8 xl:order-50 ${isMobile ? 'hidden' : 'flex'} ${CHIP_BOX} ${open ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text' : 'bg-cv-surface border-cv-field text-cv-muted hover:text-cv-ink'}`}
     >
       <Palette size={13} className="shrink-0" /> <span>Design</span>
     </button>
