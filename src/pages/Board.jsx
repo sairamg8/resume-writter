@@ -19,6 +19,11 @@ import { filterIssues, liveFilters, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
 import { COLUMN_CATEGORIES } from '@/constants/boards';
 
+// Constants, not literals in the render: a new options object each time gives DndContext new sensors,
+// and every draggable under it renders again (PERF-4, as in KanbanView).
+const MOUSE_DRAG = { activationConstraint: { distance: 6 } };
+const TOUCH_DRAG = { activationConstraint: { delay: 200, tolerance: 8 } };
+
 /** "+" at the end of the columns: a new column, named at once. */
 function AddColumn({ onAdd }) {
   const [text, setText] = useState(null);
@@ -95,8 +100,8 @@ export function Board() {
   const [preview, setPreview] = useState(null);
   const [columnEdit, setColumnEdit] = useState(null);
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(MouseSensor, MOUSE_DRAG),
+    useSensor(TouchSensor, TOUCH_DRAG),
   );
 
   if (!board) {

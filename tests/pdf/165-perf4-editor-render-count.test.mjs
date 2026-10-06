@@ -229,6 +229,14 @@ describe('typing one character re-renders only the edited field (PERF-4)', () =>
     } finally { await t.close(); }
   });
 
+  it('a bullet of one job: the Personal Info editor does not render either', async () => {
+    const t = await openTab();
+    try {
+      const w = await t.measure(() => t.typeInBullet(1));
+      assertUntouched(w, ['personal'], 'typing in a bullet');
+    } finally { await t.close(); }
+  });
+
   it('the summary: no job and no section renders', async () => {
     const t = await openTab();
     try {

@@ -24,7 +24,7 @@ function PhotoChips({ control, s, set }) {
   );
 }
 
-export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
+export function PhotoSection({ resume: shown, getResume, personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
   const photoInputRef = useRef(null);
   // A photo saved as WebP or GIF, before uploads were converted, prints as a converted copy; one
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
@@ -34,19 +34,19 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
   // The résumé as it is now, for an Undo clicked later: updatePersonal writes to whichever résumé is
   // active, so Undo checks it is still this one and still has no photo.
   const latest = useRef(null);
-  useEffect(() => { latest.current = { id: whole?.id, personal }; });
+  useEffect(() => { latest.current = { id: shown?.id, personal }; });
   // Another résumé opened (or imported) takes this one's Undo away with it.
-  useEffect(() => () => dismiss('photo-removed'), [whole?.id, dismiss]);
+  useEffect(() => () => dismiss('photo-removed'), [shown?.id, dismiss]);
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
-    const resume = { ...whole, personal, settings: s, template, coverLetter };
+    const resume = { ...(getResume ? getResume() : shown), personal, settings: s, template, coverLetter };
     // Written to this résumé by its id: a large photo takes a while to decode and shrink, and by then
     // another résumé may be open, which updatePersonal alone would give it to (R5-HUNT2).
-    readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl, whole?.id), (err) => alert(err.message));
+    readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl, shown?.id), (err) => alert(err.message));
   }
 
   // Remove takes the upload out at once, with a notice whose Undo puts the same photo back, so a
@@ -55,7 +55,7 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
   // nothing once another résumé is open or a new photo was uploaded since: it would land there.
   function removePhoto() {
     const photo = personal.photo;
-    const id = whole?.id;
+    const id = shown?.id;
     updatePersonal('photo', null);
     toast({
       id: 'photo-removed',

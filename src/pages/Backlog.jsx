@@ -15,6 +15,11 @@ import { backlogSections, filterIssues } from '@/utils/boardQuery';
 import { activeSprint, issueKey } from '@/utils/boardModel';
 import { boardCollision } from '@/utils/boardDnd';
 
+// Constants, not literals in the render: a new options object each time gives DndContext new sensors,
+// and every draggable under it renders again (PERF-4, as in KanbanView).
+const MOUSE_DRAG = { activationConstraint: { distance: 6 } };
+const TOUCH_DRAG = { activationConstraint: { delay: 200, tolerance: 8 } };
+
 /**
  * A sprint's (or the backlog's) section, droppable as a whole: a row dropped anywhere in it — its
  * header, its empty space, its "Create issue" row, or the header of a folded section — lands at its
@@ -55,8 +60,8 @@ export function Backlog() {
   }, [completeParam, board, canComplete, setCompleteParam]);
   const stopCompleting = () => { setCompleting(false); setCompleteParam(null); };
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(MouseSensor, MOUSE_DRAG),
+    useSensor(TouchSensor, TOUCH_DRAG),
   );
 
   if (!board) {

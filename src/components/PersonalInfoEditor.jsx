@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { memo, useState, useId } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff, ImagePlus, X, Sparkles } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import HeaderIconPickerModal from '@/components/HeaderIconPickerModal';
@@ -88,7 +88,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
   );
 }
 
-export default function PersonalInfoEditor({ resume: whole, personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, clearSettings, template, coverLetter }) {
+function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, clearSettings, template, coverLetter }) {
   const hidden = new Set(personal.hiddenFields || []);
   const s = settings || {};
   // Where a field's icon prints: the résumé, or only the cover letter, whose own Contact Style
@@ -125,11 +125,12 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
     // its message, as the photo upload is: returning here did nothing, and said nothing (R4-DUX-29).
     const prev = s.customContactIcons || {};
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
+    const whole = getResume ? getResume() : shown;
     const resume = { ...whole, personal, settings: s, template, coverLetter };
     // Written to this résumé by its id, into its icons as they are when the upload is done: another
     // résumé may be open by then, or another icon changed meanwhile, and a map built from this render
     // replaced that résumé's icons, or undid the change (R5-HUNT2).
-    const id = whole?.id;
+    const id = shown?.id;
     readImageFile(file, { kind: 'icon', resume, replacing: prev[field] })
       .then(dataUrl => updateSetting?.('customContactIcons', (icons) => ({ ...(icons || {}), [field]: dataUrl }), id), err => alert(err.message));
   }
@@ -149,7 +150,8 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
       />
 
       <PhotoSection
-        resume={whole}
+        resume={shown}
+        getResume={getResume}
         personal={personal}
         updatePersonal={updatePersonal}
         toggleFieldVisibility={toggleFieldVisibility}
@@ -256,3 +258,6 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
     </div>
   );
 }
+
+// Memoised: a keystroke in a section changes the résumé but not what this editor is given (EditorResumeTab).
+export default memo(PersonalInfoEditor);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus, User, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown,
 } from 'lucide-react';
@@ -29,6 +29,12 @@ export function EditorResumeTab({
 }) {
   // The store's actions as ones that keep their identity, so the memoised sections are not woken by a keystroke elsewhere.
   const actions = useStableActions(store);
+  // The Personal Info editor gets the résumé's id, and reads the whole résumé (for an upload's size budget)
+  // only when a file is picked: given the résumé itself it rendered again at every keystroke in a section.
+  const latestResume = useRef(resume);
+  useLayoutEffect(() => { latestResume.current = resume; });
+  const getResume = useCallback(() => latestResume.current, []);
+  const resumeId = useMemo(() => ({ id: resume.id }), [resume.id]);
   const sectionIds = useSameList(resume.sections.map(s => s.id));
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -74,7 +80,8 @@ export function EditorResumeTab({
         {personalOpen && (
           <div className="p-4 border-t border-gray-100">
             <PersonalInfoEditor
-              resume={resume}
+              resume={resumeId}
+              getResume={getResume}
               personal={resume.personal}
               updatePersonal={actions.updatePersonal}
               toggleFieldVisibility={actions.toggleFieldVisibility}
