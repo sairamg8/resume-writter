@@ -38,12 +38,12 @@ const viewFor = (key) => {
 /** Fetches a piece ahead of its first use, once: in idle time, or when its button is hovered or focused. */
 const warm = (key) => { if (!warmed.has(key)) { warmed.add(key); loaders[key]().catch(() => {}); } };
 
-/** `load`'s piece, props passed on. A failed load shows `fallback(retry)`; retry imports it again. */
+/** `load`'s piece, props passed on. A failed load shows `fallback(retry, tries)` (tries: Try agains so far); retry imports it again. */
 function Lazy({ load, fallback, ...props }) {
   const [tries, setTries] = useState(0);
   const View = useMemo(() => viewFor(load), [load, tries]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <ErrorBoundary key={tries} fallback={fallback(() => setTries(tries + 1))}>
+    <ErrorBoundary key={tries} fallback={fallback(() => setTries(tries + 1), tries)}>
       <Suspense fallback={null}><View {...props} /></Suspense>
     </ErrorBoundary>
   );
@@ -397,10 +397,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             </div>
             <Lazy
               load="career"
-              fallback={(retry) => (
+              fallback={(retry, tries) => (
                 <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-                  <span className="flex-1">Career History could not load. Check your connection.</span>
+                  <span className="flex-1">Career History could not load. Check your connection.{tries > 0 && ' The app may have been updated.'}</span>
                   <button type="button" onClick={retry} className="font-semibold hover:text-red-800 shrink-0">Try again</button>
+                  {/* After a deploy the file is gone for good: a reload the person chooses drops nothing (an automatic one would drop a draft). */}
+                  {tries > 0 && <button type="button" onClick={() => globalThis.location.reload()} className="font-semibold hover:text-red-800 shrink-0">Reload page</button>}
                 </div>
               )}
               resumes={resumes}
