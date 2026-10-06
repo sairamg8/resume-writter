@@ -23,7 +23,8 @@ const loaders = {
   career: () => import('@/components/CareerHistoryPanel').then((m) => ({ default: m.CareerHistoryPanel })),
 };
 const warmed = new Set();
-export const _lazyForTest = { loaders, warmed };
+const clock = { now: () => Date.now() };
+export const _lazyForTest = { loaders, warmed, clock };
 // One lazy() per piece, made once: a new one at each mount suspends once more, so a remount (Back) lost
 // the loaded piece from its first commit. Keyed by the loader, so a replaced loader gets its own.
 const views = new Map();
@@ -133,9 +134,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     open(id);
   }
 
+  // When New Cover was last asked: a picker that fails to arrive long after must not make a letter then.
+  const askedAt = useRef(0);
   // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
   // is, or the one picked when there are several; with none, a blank letter.
   function startLetter() {
+    askedAt.current = clock.now();
     if (letterSourceList.length > 1) { setLetterUsed(true); setLetterModalOpen(true); }
     else newLetter(letterSourceList[0]?.id ?? null);
   }
@@ -427,7 +431,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       {letterUsed && (
         <Lazy
           load="letter"
-          fallback={() => <LetterFallback asked={letterModalOpen} make={() => newLetter(letterSourceList[0]?.id ?? null)} />}
+          fallback={() => <LetterFallback asked={letterModalOpen} make={() => (clock.now() - askedAt.current > 10000 ? setLetterModalOpen(false) : newLetter(letterSourceList[0]?.id ?? null))} />}
           isOpen={letterModalOpen}
           sources={letterSourceList}
           onPick={newLetter}
