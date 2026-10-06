@@ -31,7 +31,7 @@ const viewFor = (key) => {
   const load = loaders[key];
   if (views.get(key)?.load === load) return views.get(key).View;
   // A rejection stays in a lazy() for good: drop it, so the next ask (Try again, a remount) imports again.
-  const View = lazy(() => load());
+  const View = lazy(() => load().catch((e) => { if (views.get(key)?.View === View) views.delete(key); throw e; }));
   views.set(key, { load, View });
   return View;
 };
@@ -97,7 +97,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     const all = () => Object.keys(loaders).forEach(warm);
     const idle = globalThis.requestIdleCallback;
     const id = idle ? idle(all) : setTimeout(all, 1500);
-    return () => {};
+    return () => (idle ? cancelIdleCallback(id) : clearTimeout(id));
   }, []);
 
   function pickImport(keep) {
@@ -139,7 +139,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   useEffect(() => {
     if (!letterModalOpen) return undefined;
     const note = () => { moved.current = true; };
-    const ons = [[document, 'pointerdown', true], [document, 'keydown', true], [window, 'hashchange']];
+    const ons = [[document, 'pointerdown', true], [document, 'keydown', true], [window, 'hashchange'], [window, 'popstate']];
     ons.forEach(([t, e, c]) => t.addEventListener(e, note, c));
     return () => ons.forEach(([t, e, c]) => t.removeEventListener(e, note, c));
   }, [letterModalOpen]);
@@ -147,7 +147,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // is, or the one picked when there are several; with none, a blank letter.
   function startLetter() {
     moved.current = false;
-    if (letterSourceList.length >= 0) { setLetterUsed(true); setLetterModalOpen(true); }
+    if (letterSourceList.length > 1) { setLetterUsed(true); setLetterModalOpen(true); }
     else newLetter(letterSourceList[0]?.id ?? null);
   }
 
