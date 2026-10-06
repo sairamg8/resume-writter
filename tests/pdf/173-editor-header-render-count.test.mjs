@@ -357,7 +357,7 @@ async function openEditor({ jobs = 1, signedIn = false, expand = false, signInAs
     /** The window becomes a phone's: its width query says so to the Editor, as the browser would. */
     goPhone() {
       screen.desktop = false;
-      view.act(() => { for (const listener of [...screen.listeners]) listener({ matches: false }); });
+      view.act(() => { for (const listener of screen.listeners) listener({ matches: false }); });
     },
     /** The phone's floating toggle: Preview, as the Editor's latest render built it. */
     showPreview() {
