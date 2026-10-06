@@ -70,9 +70,11 @@ Word Sidebar band.
   (the Personal Info editor, the editor header, the alerts and mode bar, Board.jsx's and Backlog.jsx's sensors) are done
   (tests/pdf/165, 172, 173; fail-first proven). Batch b (2026-10-06, `claude/batch-b-1006`, see HANDOFF): PdfPreview has a
   budget on every pdf.js call (tests/pdf/174), and a plain text field of 200,000 characters builds in linear time (tests/pdf/175;
-  one rich-text paragraph was already fixed by typing-freeze 7b). Left: thousands of short blocks (paragraphs, list items) in ONE
-  field are laid out again for every page by react-pdf (2,000 bullets of 100 characters take 23 s, over the worker's 20 s budget, so
-  Export fails too): a product call (cap the blocks per field) or a yarn patch of @react-pdf/layout.
+  one rich-text paragraph was already fixed by typing-freeze 7b). Thousands of short blocks (paragraphs, list items) in ONE
+  field are laid out again for every page by react-pdf (2,000 bullets of 100 characters took 23 s, past the worker's 20 s budget, so
+  Export failed too): a paste is now held to 1,500 blocks per field with a line saying so, and the worker budget counts a big résumé's
+  blocks (tests/pdf/176, 177; on `claude/block-cap-1006`, see HANDOFF). Left: an import can still put more blocks in a field, and the
+  real fix (a yarn patch of @react-pdf/layout) is not made.
 - R2-143 (open-source release): only the owner items in section 3 are left.
 - R2-147 (per-section styling): done 2026-10-05 — column layout (details top/left/right, mixed columns, widths:
   Design → Layout, Sidebar template) and a per-skill level (Bars), each fail-first proven. Right-sidebar PDF import done
