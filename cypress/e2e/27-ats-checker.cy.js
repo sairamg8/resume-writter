@@ -1,4 +1,4 @@
-// The ATS Check tab end to end (R2-161): the score card and its six categories, the job
+// The ATS dock end to end (R2-161): the score card and its six categories, the job
 // description scanner (match rate, missing keywords, a keyword added to Skills with one click),
 // and the plain-text version — copied, downloaded from the tab and exported from the Export menu.
 // Smoke level: the checker's rules are pinned in tests/unit/ats-*.unit.mjs; this checks the tab
@@ -13,17 +13,17 @@ const JOB_AD = 'React TypeScript Kubernetes Terraform GraphQL';
 const basename = (file) => file.split(/[\\/]/).pop();
 const jobBox = () => cy.get('textarea[placeholder^="Paste job posting description"]');
 /**
- * Scrolled to within the tab's scroll box, clear of the tab bar above it, and seen: the editor is a
- * fixed layer, so Cypress counts a node under the tab bar as covered.
+ * Scrolled to within the dock's scroll box, clear of the editor bar above it, and seen: the editor is a
+ * fixed layer, so Cypress counts a node under the bar as covered.
  */
 const onScreen = (chain) => chain.scrollIntoView({ offset: { top: -150, left: 0 } }).should('be.visible');
 /** The Skills section's first line in the store. */
 const firstSkills = (s) => s.resumes.find((r) => r.id === s.activeId).sections.find((x) => x.type === 'skills').items[0].skills;
 
-describe('ATS Check tab', () => {
+describe('ATS dock', () => {
   beforeEach(() => {
     cy.visitEditor('classic');
-    cy.contains('button', 'ATS Check').click();
+    cy.openAts();
     cy.contains('h2', 'ATS Score & Parser Checker').should('be.visible');
   });
 
