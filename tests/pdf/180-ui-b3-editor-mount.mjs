@@ -139,10 +139,23 @@ export function find(node, type) {
   return node.type === type ? node : find(node.props.children, type);
 }
 
+/** The first element of a React tree whose `data-testid` prop is `id`. */
+export function findTid(node, id) {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findTid(child, id);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (!node || typeof node !== 'object' || !node.props) return null;
+  return node.props['data-testid'] === id ? node : findTid(node.props.children, id);
+}
+
 /**
  * The editor as the app mounts it, over a saved résumé (`extra`: fields to set on it, such as `{ kind: 'letter' }`),
- * opened at `path` (the part after /resume/:id: '' or '?tab=coverletter'). Mounted: the header, the alerts, the mode
- * bar (the document switch with the ATS chip and the Design button), the save chip, the Résumé tab and, when open, the dock.
+ * opened at `path` (the part after /resume/:id: '' or '?tab=coverletter'). Mounted: the bar whole (the header, the document
+ * switch, the ATS chip, the save chip and the Design button), the alerts, the Résumé tab, the phone's pill and, when open, the dock.
  * Returns what to read and drive, and `measure(fn)`: `fn`'s commits, each as the parts that rendered in it.
  */
 export async function openEditor({ signedIn = false, path = '', extra = {}, toasts = false } = {}) {
@@ -158,10 +171,11 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
   const { EditorTabContent } = await loadModule('/src/components/EditorTabContent.jsx');
   const { EditorPreviewPane } = await loadModule('/src/components/EditorPreviewPane.jsx');
   const { EditorSaveStatus } = await loadModule('/src/components/EditorSaveStatus.jsx');
+  const { EditorMobilePill } = await loadModule('/src/components/EditorMobilePill.jsx');
   probe.parts = [
     ['header', EditorHeader], ['alerts', EditorAlerts], ['modes', EditorModeBar], ['save', EditorSaveStatus],
     ['switch', EditorDocSwitch], ['chip', EditorAtsChip], ['designButton', EditorDesignButton],
-    ['dock', EditorDock], ['designPanel', DesignPanel], ['atsPanel', AtsCheckerPanel],
+    ['pill', EditorMobilePill], ['dock', EditorDock], ['designPanel', DesignPanel], ['atsPanel', AtsCheckerPanel],
   ];
   // The ATS panel keeps the pasted posting for the session.
   const sessionMap = new Map();
@@ -188,8 +202,10 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
     const tab = find(tree, EditorTabContent);
     const preview = find(tree, EditorPreviewPane);
     assert.ok(header && alerts && modes && tab && preview, 'the Editor renders its header, alerts, mode bar, tab area and preview pane');
-    const save = preview.props.saveStatus;
-    assert.ok(save && save.type === EditorSaveStatus, 'the Editor gives the preview its save chip');
+    const bar = findTid(tree, 'editor-bar');
+    const save = find(tree, EditorSaveStatus);
+    assert.ok(bar && save, 'the Editor renders its bar, with the save chip in it');
+    const pill = find(tree, EditorMobilePill);
     const dock = find(tree, EditorDock);
     live.tree = tree;
     live.gallery = find(tree, TemplateGallery)?.props;
@@ -197,7 +213,7 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
     live.headerProps.push(header.props);
     live.previewProps.push(preview.props);
     live.saveProps.push(save.props);
-    const parts = createElement(Fragment, null, header, alerts, modes, save, tab.props.activeTab === 'resume' ? tab : null, dock);
+    const parts = createElement(Fragment, null, bar, alerts, tab.props.activeTab === 'resume' ? tab : null, pill, dock);
     return toasts ? createElement(ToastProvider, null, createElement(ToastProbe), parts) : parts;
   }
   function ToastProbe() { live.toast = useToast().toast; return null; }

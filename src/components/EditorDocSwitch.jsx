@@ -14,7 +14,7 @@ const OFF = 'text-cv-muted hover:text-cv-ink';
  */
 export const EditorDocSwitch = memo(function EditorDocSwitch({ doc, onPick }) {
   return (
-    <div className="flex gap-1 flex-1 min-w-0 bg-cv-sunken rounded-cv-control p-1">
+    <div className="order-5 md:order-20 flex gap-1 flex-1 md:flex-none md:w-60 min-w-0 max-md:min-h-[44px] bg-cv-sunken rounded-cv-control p-1">
       <button onClick={() => onPick('resume')} data-testid="doc-switch-resume" className={`${BUTTON} ${doc === 'resume' ? ON : OFF}`}>
         <User size={13} className="shrink-0" /> <span className="min-w-0 truncate">Resume</span>
       </button>

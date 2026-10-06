@@ -27,12 +27,14 @@ describe('no Resume | Cover Letter | ATS Check tab strip', () => {
     } finally { await t.close(); }
   });
 
-  it('beside it only the ATS chip and the Design button: four controls in the row, none of them a third tab', async () => {
+  it('in the bar beside it only the ATS chip and the Design button: four controls, none of them a third tab', async () => {
     const t = await openEditor();
     try {
-      const row = t.byTid('doc-switch-resume').parentNode.parentNode;
-      assert.deepEqual(buttonsIn(row).map(text), ['Resume', 'Cover Letter', 'ATS check', 'Design']);
-      assert.deepEqual(buttonsIn(row).map((b) => attr(b, 'data-testid')), ['doc-switch-resume', 'doc-switch-letter', 'ats-chip', 'design-button']);
+      const bar = buttonsIn(t.byTid('editor-bar'));
+      const ids = ['doc-switch-resume', 'doc-switch-letter', 'ats-chip', 'design-button'];
+      const row = bar.filter((b) => ids.includes(attr(b, 'data-testid')));
+      assert.deepEqual(row.map(text), ['Resume', 'Cover Letter', 'ATS check', 'Design']);
+      assert.deepEqual(row.map((b) => attr(b, 'data-testid')), ids);
     } finally { await t.close(); }
   });
 

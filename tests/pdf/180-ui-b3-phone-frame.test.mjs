@@ -1,0 +1,193 @@
+// UI rebuild B3 (cluster frame B): the phone frame. The header (back, tap-to-rename name, save chip, Export
+// menu, account) with the Resume | Cover Letter switch and a 44 px ATS button on a row under it, and the
+// floating Edit | Preview | Design pill: Design opens the dock as a full-height sheet and every pick returns to
+// Edit (EDIT-141, MOBI-043), with the desktop as each rule's negative twin. The real Editor page over the real
+// store (tests/pdf/180-ui-b3-editor-mount.mjs); the width query says phone through `goPhone()`.
+import { before, after, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { prepare, finish, openEditor, attr, elements, text, NAME, MARK } from './180-ui-b3-editor-mount.mjs';
+
+before(prepare);
+after(finish);
+
+const source = (file) => fs.readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8');
+const has = (t, id) => t.all().some((el) => attr(el, 'data-testid') === id);
+const lit = (t, id) => /\bbg-cv-brand\b/.test(attr(t.byTid(id), 'class'));
+const phone = async (opts) => { const t = await openEditor(opts); t.goPhone(); await t.press('pill-editor'); return t; };
+
+describe('the Edit | Preview | Design pill', () => {
+  it('on a phone: three segments in order, Edit lit, the form shown (the preview is not built: layout editor)', async () => {
+    const t = await phone();
+    try {
+      const segments = t.all().filter((el) => /^pill-/.test(attr(el, 'data-testid')));
+      assert.deepEqual(segments.map(text), ['Edit', 'Preview', 'Design']);
+      assert.deepEqual(segments.map((el) => attr(el, 'data-testid')), ['pill-editor', 'pill-preview', 'pill-design']);
+      assert.ok(lit(t, 'pill-editor') && !lit(t, 'pill-preview') && !lit(t, 'pill-design'));
+      assert.equal(t.preview().layoutMode, 'editor');
+      assert.match(attr(t.byTid('editor-pill'), 'class'), /\bfixed\b.*\bbottom-4\b.*\bz-40\b/);
+    } finally { await t.close(); }
+  });
+
+  it('negative twin: on a desktop window there is no pill', async () => {
+    const t = await openEditor();
+    try { assert.ok(!has(t, 'editor-pill')); assert.equal(t.preview().layoutMode, 'split'); } finally { await t.close(); }
+  });
+
+  it('Preview shows the preview alone, Edit brings the form back', async () => {
+    const t = await phone();
+    try {
+      await t.press('pill-preview');
+      assert.equal(t.preview().layoutMode, 'preview');
+      assert.ok(lit(t, 'pill-preview') && !lit(t, 'pill-editor'));
+      await t.press('pill-editor');
+      assert.equal(t.preview().layoutMode, 'editor');
+    } finally { await t.close(); }
+  });
+
+  it('Design opens the Design dock as a sheet (full width, over the stage) and lights itself; a second press closes it', async () => {
+    const t = await phone();
+    try {
+      await t.press('pill-design');
+      assert.ok(has(t, 'dock-design'));
+      assert.ok(lit(t, 'pill-design') && !lit(t, 'pill-editor'));
+      assert.equal(t.url(), `/resume/${t.id}?dock=design`);
+      assert.match(attr(t.byTid('dock-design'), 'class'), /max-md:w-full/);
+      assert.match(attr(t.byTid('dock-design'), 'class'), /max-\[1099px\]:absolute/);
+      await t.press('pill-design');
+      assert.ok(!has(t, 'dock-design'));
+      assert.ok(lit(t, 'pill-editor'));
+    } finally { await t.close(); }
+  });
+
+  it('Edit and Preview close an open dock', async () => {
+    const t = await phone();
+    try {
+      await t.press('pill-design');
+      await t.press('pill-editor');
+      assert.ok(!has(t, 'dock-design'));
+      await t.press('pill-design');
+      await t.press('pill-preview');
+      assert.ok(!has(t, 'dock-design'));
+      assert.equal(t.preview().layoutMode, 'preview');
+      assert.equal(t.url(), `/resume/${t.id}`);
+    } finally { await t.close(); }
+  });
+
+  it('a keystroke renders no part of the pill (PERF-4)', async () => {
+    const t = await phone();
+    try {
+      const w = await t.measure(async () => { t.typeInSummary(); }, 400);
+      assert.ok(t.store().activeResume.personal.summary.includes(MARK));
+      assert.equal(w.count('pill'), 0, w.report());
+    } finally { await t.close(); }
+  });
+});
+
+describe('EDIT-141 (CHANGED): any pick returns the phone to Edit', () => {
+  it('from Preview: the Cover Letter switch, the ATS chip and the Design button each land on Edit with their panel', async () => {
+    const t = await phone();
+    try {
+      await t.press('pill-preview');
+      await t.press('doc-switch-letter');
+      assert.equal(t.preview().layoutMode, 'editor');
+      assert.equal(t.preview().activeTab, 'coverletter');
+      await t.press('pill-preview');
+      await t.press('ats-chip');
+      assert.equal(t.preview().layoutMode, 'editor');
+      assert.ok(has(t, 'dock-ats'));
+      await t.press('pill-preview');
+      await t.press('design-button');
+      assert.equal(t.preview().layoutMode, 'editor');
+      assert.ok(has(t, 'dock-design'));
+    } finally { await t.close(); }
+  });
+
+  it('negative twin: on a desktop a pick leaves the layout as it was (split)', async () => {
+    const t = await openEditor();
+    try {
+      await t.press('doc-switch-letter');
+      await t.press('ats-chip');
+      assert.equal(t.preview().layoutMode, 'split');
+    } finally { await t.close(); }
+  });
+
+  it('a document pick on a phone closes the sheet; on a desktop the Resume pick leaves the dock open', async () => {
+    const t = await phone();
+    try {
+      await t.press('pill-design');
+      await t.press('doc-switch-resume');
+      assert.ok(!has(t, 'dock-design'));
+      assert.equal(t.preview().activeTab, 'resume');
+      await t.press('pill-design');
+      await t.press('doc-switch-letter');
+      assert.ok(!has(t, 'dock-design'));
+      assert.equal(t.preview().activeTab, 'coverletter');
+    } finally { await t.close(); }
+    const d = await openEditor({ path: '?dock=design' });
+    try {
+      await d.press('doc-switch-resume');
+      assert.ok(has(d, 'dock-design'), 'the desktop keeps it (EDIT-089\'s rule)');
+    } finally { await d.close(); }
+  });
+});
+
+describe('the header on a phone (EDIT-142, EDIT-143, EDIT-026)', () => {
+  it('the name taps to rename: Enter commits the trimmed name', async () => {
+    const t = await phone();
+    try {
+      const button = t.all().find((el) => el.tagName === 'BUTTON' && attr(el, 'title') === 'Rename resume');
+      assert.equal(text(button), NAME);
+      t.call(button, 'onClick');
+      const box = t.all().find((el) => el.tagName === 'INPUT' && attr(el, 'aria-label') === 'Résumé name');
+      assert.match(attr(box, 'class'), /pointer-coarse:text-base/, '16 px on touch');
+      t.call(box, 'onChange', { target: { value: ' Phone name ' } });
+      t.call(box, 'onKeyDown', { key: 'Enter' });
+      assert.equal(t.store().activeResume.name, 'Phone name');
+    } finally { await t.close(); }
+  });
+
+  it('the account, the sync dot and the Export menu (with Share and Import inside) are in the header; the Share button is not', async () => {
+    const t = await phone({ signedIn: true });
+    try {
+      assert.equal(t.header().isMobile, true);
+      const bar = [...elements(t.byTid('editor-bar'))];
+      for (const id of ['account-button', 'sync-status', 'save-status']) assert.equal(bar.filter((el) => attr(el, 'data-testid') === id).length, 1, id);
+      assert.ok(bar.some((el) => el.tagName === 'BUTTON' && text(el) === 'Export'));
+      assert.ok(!has(t, 'share-button'));
+      assert.equal(t.header().exportMenu.letterTab, false);
+    } finally { await t.close(); }
+  });
+
+  it('the account is signed out: the Google button is in the header', async () => {
+    const t = await phone();
+    try { assert.ok(has(t, 'sign-in-button')); } finally { await t.close(); }
+  });
+});
+
+describe('the phone layout classes', () => {
+  it('the switch and the ATS button are 44 px, the Design button is the pill\'s, the bar wraps to two rows', async () => {
+    const t = await phone();
+    try {
+      assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /max-md:min-h-\[44px\]/);
+      assert.match(attr(t.byTid('ats-chip'), 'class'), /max-md:min-h-\[44px\]/);
+      assert.match(attr(t.byTid('design-button'), 'class'), /max-md:hidden/);
+      assert.match(attr(t.byTid('editor-bar'), 'class'), /max-md:flex-wrap/);
+      assert.match(attr(t.byTid('doc-switch-resume').parentNode, 'class'), /order-5 md:order-20/, 'under the header on a phone, in the bar on a desktop');
+    } finally { await t.close(); }
+  });
+
+  it('hover-only hints show as words on touch: Back, and the pencil beside the name', async () => {
+    const t = await phone();
+    try {
+      const back = t.all().find((el) => el.tagName === 'BUTTON' && attr(el, 'title') === 'Back to dashboard');
+      assert.match(attr([...back.childNodes].find((n) => n.tagName === 'SPAN'), 'class'), /pointer-coarse:inline/);
+      assert.equal(text(t.byTid('design-button')), 'Design');
+    } finally { await t.close(); }
+  });
+
+  it('R4-DPH-31: the form and the dock keep 64 px under them for the pill', () => {
+    assert.match(source('components/EditorTabContent.jsx'), /max-md:pb-16/);
+    assert.match(source('components/EditorDock.jsx'), /max-md:pb-16/);
+  });
+});
