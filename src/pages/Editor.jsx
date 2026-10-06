@@ -19,6 +19,7 @@ import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
+import { useStableActions } from '@/hooks/useStableActions';
 import { useStableObject } from '@/hooks/useStableObject';
 import ShareLinkModal, { firebasePublicIo } from '@/components/ShareLinkModal';
 
@@ -83,6 +84,17 @@ export function Editor({ store, auth, sync }) {
     }
   }
 
+  // The alerts and the mode bar show a message and the open tab, which a keystroke in the résumé does not change,
+  // but their handlers are new functions at every render, each closed over what that render had: the import
+  // notice's Dismiss over the address it was read from (a stale one would send the editor back to the tab it had
+  // then), the tab picker over the address and the window's width (a stale one would drop the notice, and leave a
+  // phone on the preview). Kept as they are, calling the latest ones, neither is rendered at every key (PERF-4).
+  const { dismissExportError, dismissImport, pickTab } = useStableActions({
+    dismissExportError: () => exportMenu.setExportError(null),
+    dismissImport: importNotice.dismiss,
+    pickTab: handleModeTabChange,
+  });
+
   // Warm react-pdf fonts + template chunk so Export PDF feels instant — where PDFs are built, the
   // PDF worker (pdfBuild.js), which leaves the main thread without the PDF engine.
   useEffect(() => {
@@ -126,8 +138,8 @@ export function Editor({ store, auth, sync }) {
           onShare={canShare ? openShare : undefined}
           onBack={goBack}
         />
-        <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} importNotice={importNotice.notice} onDismissImport={importNotice.dismiss} />
-        <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />
+        <EditorAlerts exportError={exportMenu.exportError} onDismiss={dismissExportError} persistError={store.persistReason} importNotice={importNotice.notice} onDismissImport={dismissImport} />
+        <EditorModeBar activeTab={activeTab} setActiveTab={pickTab} />
 
         <EditorTabContent activeTab={activeTab}>
           {activeTab === 'resume' && (

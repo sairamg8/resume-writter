@@ -151,6 +151,83 @@ function withoutFallbacks(xml) {
   return depth ? out : out + xml.slice(from);
 }
 
+/** Word's built-in list styles, List Bullet and List Number and the 2…5 of each, a level deeper apiece (R4-SW-I-02). */
+const LIST_STYLE = /^List\s?(?:Bullet|Number)\s?(\d)?$/i;
+const HEADING_STYLE = /^(?:heading|berschrift|titre)\s*(\d)?/i;
+/** The basedOn links of a paragraph style followed for its list: a chain longer than any real one ends there. */
+const MAX_STYLE_CHAIN = 20;
+const NO_STYLES = new Map();
+const NO_LIST = {};
+const styleOf = (props) => /<w:pStyle w:val="([^"]*)"/.exec(props)?.[1] ?? '';
+
+/**
+ * The list a paragraph's properties, or a style's XML, put it in by their <w:numPr>: `{ numId, ilvl }`, each
+ * undefined where the numPr names none; null with no numPr at all. A numId of 0 is Word's "no list" — how a
+ * paragraph takes off the list its style gives it. Found by indexOf, not a pattern read to an end tag: a file of start
+ * tags that never close is read in linear time (typing-freeze 7a).
+ */
+function numberingOf(xml) {
+  const at = xml.indexOf('<w:numPr>');
+  if (at < 0) return null;
+  const end = xml.indexOf('</w:numPr>', at);
+  const numPr = end < 0 ? xml.slice(at) : xml.slice(at, end);
+  const ilvl = /<w:ilvl w:val="(\d+)"/.exec(numPr)?.[1];
+  const numId = /<w:numId w:val="(\d+)"/.exec(numPr)?.[1];
+  return { numId: numId === undefined ? undefined : Number(numId), ilvl: ilvl === undefined ? undefined : Number(ilvl) };
+}
+
+/**
+ * word/styles.xml's paragraph styles that put their paragraphs in a list, by style id: `{ numId, ilvl }`, as
+ * numberingOf reads a style's own <w:numPr>, each from the nearest style in its chain of basedOn styles to name it (a
+ * style says nothing of what it leaves to the one it is based on). A custom list style keeps its numbering here,
+ * and its paragraphs only name the style (R4-SW-I-02). A Heading style's numbering is left out, and the chain
+ * stops at one: it numbers the sections ("1  Experience"), it is no bullet. The chain ends at a style this part
+ * does not define, at a loop, and after MAX_STYLE_CHAIN links. An empty map for no styles.xml. Each style is
+ * read from its start tag to the next one's, in a well-formed copy: a part of start tags that never close
+ * is read in linear time too.
+ */
+export function docxStyles(xml) {
+  const own = new Map(); // style id → { basedOn, numId, ilvl }, as the style itself names them
+  for (const chunk of xml ? wellFormedXml(String(xml)).split(/<w:style\b/).slice(1) : []) {
+    const gt = chunk.indexOf('>');
+    const tag = gt < 0 ? chunk : chunk.slice(0, gt);
+    const id = /\bw:styleId="([^"]*)"/.exec(tag)?.[1];
+    const type = /\bw:type="([^"]*)"/.exec(tag)?.[1] ?? 'paragraph'; // a table's or a character's numbering is no paragraph's
+    if (id === undefined || type !== 'paragraph') continue;
+    const end = chunk.indexOf('</w:style>');
+    const body = chunk.slice(gt + 1, end < 0 ? undefined : end);
+    own.set(id, { basedOn: /<w:basedOn w:val="([^"]*)"/.exec(body)?.[1], ...numberingOf(body) });
+  }
+  if (!own.size) return NO_STYLES;
+  const styles = new Map();
+  for (const id of own.keys()) {
+    const found = {};
+    const seen = new Set();
+    for (let at = id; own.has(at) && !seen.has(at) && seen.size < MAX_STYLE_CHAIN && !HEADING_STYLE.test(at); at = own.get(at).basedOn) {
+      seen.add(at);
+      found.numId ??= own.get(at).numId;
+      found.ilvl ??= own.get(at).ilvl;
+    }
+    if (found.numId !== undefined || found.ilvl !== undefined) styles.set(id, found);
+  }
+  return styles;
+}
+
+/**
+ * A paragraph's list level — 0 for a top-level item, 1 and more for a nested one — or -1 when it is no list item.
+ * `props`: its <w:pPr>'s content; `style`: its style's id; `named`: the list that style gives (docxStyles), if any.
+ * The paragraph's own <w:numPr> says, its numId and its ilvl each standing over the style's (a numId of 0 is no
+ * list, whatever the style says); else the style's does; else Word's built-in List Bullet and List Number
+ * styles are list items by their names, at the level their number gives where no ilvl says one (R4-SW-I-02).
+ */
+function listLevel(props, style, named = NO_LIST) {
+  const own = numberingOf(props);
+  const builtIn = LIST_STYLE.exec(style);
+  const numId = own?.numId ?? named.numId;
+  if (numId === undefined ? !own && !builtIn : numId === 0) return -1;
+  return own?.ilvl ?? named.ilvl ?? Math.max(0, Number(builtIn?.[1] || 1) - 1);
+}
+
 /**
  * `xml` with an entry header set in a borderless table ("Acme Corp" | "Jan 2020 – Present", "Software
  * Engineer" | "Austin, TX", as many Word templates set one) read as the lines a tab or a PDF's baseline
@@ -160,19 +237,20 @@ function withoutFallbacks(xml) {
  * is read so: a grid of skills or certificates a cell each ("Go" | "Rust", the Word export's Grids)
  * stays a line a cell. A row with a cell of several lines (a layout table's columns), a list item, a
  * nested table or a text box is left as it was too. The joined line takes its first cell's paragraph
- * properties (a heading stays one).
+ * properties (a heading stays one). `listed(props)`: whether a paragraph with these <w:pPr> contents
+ * is a list item, as docxXmlLines reads one (its own numbering, or its style's).
  */
-function joinedRows(xml) {
+function joinedRows(xml, listed) {
   const PARA = /<w:p(?=[\s>/])[^>]*?(?:\/>|>([\s\S]*?)<\/w:p>)/g;
   const textOf = (p) => [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((t) => xmlText(t[1])).join('').trim();
-  const LISTED = /<w:numPr>|<w:pStyle w:val="List\s?(?:Bullet|Number)/i;
+  const propsOf = (p) => /^\s*<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(p[1] ?? '')?.[1] ?? ''; // the paragraph's own, its first child
   const ROW = /<w:tr(?=[\s>])[^>]*>([\s\S]*?)<\/w:tr>/g;
   /** A row's one-line cells' paragraphs, or null for a row read a line a paragraph. */
   const oneLineCells = (inner) => {
     const cells = [...inner.matchAll(/<w:tc(?=[\s>])[^>]*>([\s\S]*?)<\/w:tc>/g)]
       .map((c) => [...c[1].matchAll(PARA)].filter((p) => textOf(p[0])));
     const paras = cells.flat();
-    return paras.length < 2 || cells.some((c) => c.length > 1) || paras.some((p) => LISTED.test(p[0])) ? null : paras;
+    return paras.length < 2 || cells.some((c) => c.length > 1) || paras.some((p) => listed(propsOf(p))) ? null : paras;
   };
   // The innermost tables: a nested one's rows are read, its outer table's left as it was.
   return xml.replace(/<w:tbl(?=[\s>])[^>]*>(?:(?!<w:tbl[\s>])[\s\S])*?<\/w:tbl>/g, (tbl) => {
@@ -205,10 +283,14 @@ function joinedRows(xml) {
  * `links`: the part's hyperlink targets by relationship id (docxLinks). A hyperlink whose text is not
  * its address — a contact shown as its Display label, "My profile" — reads as "My profile (https://…)"
  * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
+ *
+ * `styles`: the paragraph styles' lists (docxStyles). A paragraph in a custom list style, whose numbering is
+ * in styles.xml and not in its own <w:numPr>, is a list item at its style's level (R4-SW-I-02).
  */
-export function docxXmlLines(xml, links = {}) {
+export function docxXmlLines(xml, links = {}, styles = NO_STYLES) {
   const source = wellFormedXml(String(xml));
-  const body = joinedRows(withoutFallbacks(source.split(/<w:body\b[^>]*>/)[1] ?? source));
+  const levelOf = (props, style = styleOf(props)) => listLevel(props, style, styles.get(style));
+  const body = joinedRows(withoutFallbacks(source.split(/<w:body\b[^>]*>/)[1] ?? source), (props) => levelOf(props) >= 0);
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
@@ -268,22 +350,21 @@ export function docxXmlLines(xml, links = {}) {
     } else if (m[0] === '</w:p>') {
       if (!para) continue;
       open.pop();
-      const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
-      // Word's built-in list styles (List Bullet, List Bullet 2 … List Number 5) keep their numbering in
-      // styles.xml: a paragraph in one is a list item with no numPr of its own (R4-SW-I-02). List
-      // Paragraph has none, so it is one only with a numPr.
-      const styled = /^List\s?(?:Bullet|Number)\s?(\d)?$/i.exec(style);
-      const list = /<w:numPr>/.test(para.props) || Boolean(styled);
-      const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
+      const style = styleOf(para.props);
+      // A list item's numbering is its own <w:numPr>, else its style's in styles.xml (a custom list style names
+      // only the style on its paragraphs), else Word's built-in List Bullet … List Number 5 by their names:
+      // they keep theirs in styles.xml too (R4-SW-I-02). List Paragraph has none, so it is one only with a
+      // numPr. Its level: a nested one's is 1 and more (R4-LO-02), its own w:ilvl, else its style's, else
+      // its built-in style's number less one: List Bullet 2 is a level-1 item.
+      const listed = levelOf(para.props, style);
+      const list = listed >= 0;
+      const depth = Math.max(0, listed);
+      const heading = HEADING_STYLE.exec(style);
       // Its own line before its text boxes' lines, read while it was open: a side column's box is
       // anchored to the first paragraph, often the name, and the name comes first. A heading's after
       // them: a box of the name and contacts anchored to the first section's title ("PROFILE") is the
       // page's header, over that title.
       const level = heading ? Number(heading[1] || 1) : 0;
-      // A list item's level: a nested one's is 1 and more (R4-LO-02). Its own w:ilvl, else its list
-      // style's number less one: List Bullet 2 is a level-1 item (R4-SW-I-02).
-      const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
-      const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
       const text = para.pieces.join('');
       const line = { text: list && text.trim() ? `• ${text}` : text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) };
       emit({ line, level, after: Boolean(heading), kids: para.kids }, open[open.length - 1]);
@@ -367,12 +448,12 @@ export function docxLinks(rels) {
   return Object.fromEntries(docxRels(rels).filter((r) => r.type.endsWith('/hyperlink') && r.target).map((r) => [r.id, r.target]));
 }
 
-/** One part of a .docx (word/document.xml, word/header1.xml) as lines, with its own hyperlinks' targets. */
-async function docxPartLines(bytes, part) {
+/** One part of a .docx (word/document.xml, word/header1.xml) as lines, with its own hyperlinks' targets and the file's paragraph styles (docxStyles). */
+async function docxPartLines(bytes, part, styles) {
   const xml = await unzipEntry(bytes, `word/${part}`);
   if (!xml) return null;
   const rels = await unzipEntry(bytes, `word/_rels/${part}.rels`);
-  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
+  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)), styles);
 }
 
 // "page", white space, a number and "of" a number, each part optional: \s*\d*(?:\s*of\s*\d+)? split a long run of white
@@ -395,7 +476,7 @@ const FURNITURE_TAIL = new RegExp(`(?<!\\s)(?:\\s+[-–—|·•]\\s+|(?=[^\\S\\
  * has a different first page with no header on it, its running header ("Name · Page 2") on the others:
  * none of that is read.
  */
-async function docxHeaderLines(bytes, xml) {
+async function docxHeaderLines(bytes, xml, styles) {
   // (Without an end tag no start is worth trying: each read to the end.)
   const sect = xml.includes('</w:sectPr>') ? /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(xml)?.[0] ?? '' : '';
   const titlePage = /<w:titlePg(?:\s+w:val="(?:1|true|on)")?\s*\/>/.test(sect);
@@ -405,7 +486,7 @@ async function docxHeaderLines(bytes, xml) {
   if (!id) return [];
   const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
   const target = docxRels(rels && decode(rels)).find((r) => r.id === id)?.target.replace(/^\/?word\//, '');
-  const lines = (target && await docxPartLines(bytes, target)) || [];
+  const lines = (target && await docxPartLines(bytes, target, styles)) || [];
   // A header's furniture is no name: "Curriculum Vitae", "Confidential", "Page 1"; and "Robin Vale –
   // Resume" is the name alone.
   return lines
@@ -422,9 +503,12 @@ export async function docxLines(bytes) {
   if (!xml) throw new Error('That Word file has no document in it.');
   const text = wellFormedXml(decode(xml));
   const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
-  const body = docxXmlLines(text, docxLinks(rels && decode(rels)));
+  // The styles' lists are best-effort: a styles part that cannot be read costs the lists its styles give, not the import.
+  const stylesXml = await unzipEntry(bytes, 'word/styles.xml').catch(() => null);
+  const styles = docxStyles(stylesXml && decode(stylesXml));
+  const body = docxXmlLines(text, docxLinks(rels && decode(rels)), styles);
   const opening = new Set(body.map((l) => l.text.trim()).filter(Boolean).slice(0, 12));
-  const header = (await docxHeaderLines(bytes, text)).filter((l) => !l.text.trim() || !opening.has(l.text.trim()));
+  const header = (await docxHeaderLines(bytes, text, styles)).filter((l) => !l.text.trim() || !opening.has(l.text.trim()));
   return header.some((l) => l.text.trim()) ? [...header, { text: '', hint: undefined }, ...body] : body;
 }
 

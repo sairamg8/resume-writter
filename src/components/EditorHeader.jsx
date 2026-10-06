@@ -76,8 +76,12 @@ export const EditorHeader = memo(function EditorHeader({ name, rename, layoutMod
 /**
  * A failed export or import (dismissable), browser storage that is full, and after a PDF, Word or
  * text import the reminder that it was read best-effort (`importNotice`, dismissable, R2-148).
+ * `persistError`: why saving failed, 'full' or 'blocked' (the store's persistReason; its error object
+ * reads the same, but a failed write makes a new one each time).
+ * Memoised, as the header is: given the same messages and handlers that keep their identity (the Editor's),
+ * a keystroke renders none of it (PERF-4). No router hook, for the header's reason.
  */
-export function EditorAlerts({ exportError, onDismiss, persistError, importNotice, onDismissImport }) {
+export const EditorAlerts = memo(function EditorAlerts({ exportError, onDismiss, persistError, importNotice, onDismissImport }) {
   return (
     <>
       {importNotice && (
@@ -99,7 +103,7 @@ export function EditorAlerts({ exportError, onDismiss, persistError, importNotic
       )}
     </>
   );
-}
+});
 
 /**
  * Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé).
@@ -107,8 +111,10 @@ export function EditorAlerts({ exportError, onDismiss, persistError, importNotic
  * narrow split panel (240–360 px) they kept their full width, spilled past the group and slid
  * under the Design button. A phone keeps each tab whole (min-w-max on the tab and the group) and
  * scrolls the row instead: with min-w-0 there, equal thirds of a 375 px row cut "Cover Letter".
+ * Memoised over the open tab and a `setActiveTab` that keeps its identity (the Editor's): a keystroke
+ * renders none of it (PERF-4). No router hook, for the header's reason.
  */
-export function EditorModeBar({ activeTab, setActiveTab }) {
+export const EditorModeBar = memo(function EditorModeBar({ activeTab, setActiveTab }) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-3 border-b border-gray-200 bg-gray-50/60 overflow-x-auto no-scrollbar">
       <div className="flex gap-1 flex-1 min-w-max sm:min-w-0 bg-white border border-gray-200 rounded-xl p-1">
@@ -140,4 +146,4 @@ export function EditorModeBar({ activeTab, setActiveTab }) {
       </button>
     </div>
   );
-}
+});
