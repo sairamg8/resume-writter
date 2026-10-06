@@ -67,18 +67,44 @@ const ASLEEP_MS = 5_000;
 export const PDF_WORKER_TIMEOUT_MS = 20_000;
 const PER_ENTRY_MS = 250;   // more for every entry of a résumé, so a long one on a slow phone is not cut off
 const MAX_ENTRIES = 200;    // the most entries counted
+// Paragraphs and bullets: react-pdf lays each out again for every page after it, so a résumé's time grows with
+// its pages times its blocks (2 000 bullets of 100 characters: 23 s on CI). A résumé of ordinary length counts
+// none; past FREE_BLOCKS each adds PER_BLOCK_MS, up to MAX_BLOCKS of them (R2-142).
+const FREE_BLOCKS = 300;
+const PER_BLOCK_MS = 15;
+const MAX_BLOCKS = 4000;
+
+/** The paragraphs and list items in a résumé's text: a `<p` or an `<li` opens each. Anything unreadable counts none. */
+function blocksOf(resume) {
+  let n = 0;
+  const count = (v) => {
+    if (typeof v !== 'string' || !v.includes('<')) return;
+    const open = /<(?:p|li)[\s>]/gi;
+    while (open.exec(v)) n += 1;
+  };
+  count(resume?.personal?.summary);
+  for (const s of Array.isArray(resume?.sections) ? resume.sections : []) {
+    for (const item of Array.isArray(s?.items) ? s.items : []) {
+      if (item && typeof item === 'object') for (const v of Object.values(item)) count(v);
+    }
+  }
+  return n;
+}
 
 /**
  * How long the worker gets to answer `job`: PDF_WORKER_TIMEOUT_MS and PER_ENTRY_MS for each entry of
- * the résumé it prints; twice the base while `cold` (before its first reply, when it is still loading
- * the PDF engine, the template and the fonts over the network).
+ * the résumé it prints, and PER_BLOCK_MS for each paragraph or bullet past FREE_BLOCKS; twice the base
+ * while `cold` (before its first reply, when it is still loading the PDF engine, the template and the
+ * fonts over the network).
  */
 export function pdfBuildTimeoutMs(job, cold = false) {
   let entries = 0;
+  let blocks = 0;
   if (job?.kind !== 'letter' && Array.isArray(job?.resume?.sections)) {
     for (const s of job.resume.sections) entries += Array.isArray(s?.items) ? s.items.length : 0;
+    blocks = Math.min(Math.max(blocksOf(job.resume) - FREE_BLOCKS, 0), MAX_BLOCKS);
   }
-  return (cold ? 2 : 1) * PDF_WORKER_TIMEOUT_MS + Math.min(entries, MAX_ENTRIES) * PER_ENTRY_MS;
+  return (cold ? 2 : 1) * PDF_WORKER_TIMEOUT_MS + Math.min(entries, MAX_ENTRIES) * PER_ENTRY_MS + blocks * PER_BLOCK_MS;
 }
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');

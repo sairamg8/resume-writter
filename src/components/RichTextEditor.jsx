@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
 import { hasDataUrlInTag } from '@/utils/dataUrlInTag';
+import { MAX_FIELD_BLOCKS, countBlocks, capBlocks } from '@/utils/richTextCap';
 import { useFieldIds } from '@/hooks/useFieldIds';
 import BulletOptimizerModal from '@/components/BulletOptimizerModal';
 
@@ -30,7 +31,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   const ids = useFieldIds(label);
   const isComposing = useRef(false);
   const [optimizerOpen, setOptimizerOpen] = useState(false);
-  const [pasteCut, setPasteCut] = useState(false); // the last paste was cut to MAX_PASTE_CHARS
+  const [pasteCut, setPasteCut] = useState(false); // the last paste was cut: to MAX_PASTE_CHARS ('chars') or to MAX_FIELD_BLOCKS ('blocks')
   // The STAR Optimizer's statement as it opened (optimizerText), and the Range its result replaces:
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
@@ -167,8 +168,15 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (!html && !text) return false;
     // A paste past the limit goes in as its first part, as plain text (the markup of a cut page is no use).
     const huge = (html || '').length > MAX_PASTE_HTML || (text || '').length > MAX_PASTE_CHARS;
-    setPasteCut(huge);
-    const clean = huge ? plainTextToHtml(cutPaste(text || html)) : html ? sanitizeForInsert(html) : plainTextToHtml(text);
+    let clean = huge ? plainTextToHtml(cutPaste(text || html)) : html ? sanitizeForInsert(html) : plainTextToHtml(text);
+    let cut = huge ? 'chars' : false;
+    // Pasted paragraphs and bullets that would take the field past MAX_FIELD_BLOCKS stop where it does
+    // (plain text, one block with a line break per line, is never more). The field's own blocks count.
+    if (!huge && html) {
+      const capped = capBlocks(clean, Math.max(0, MAX_FIELD_BLOCKS - countBlocks(value)));
+      if (capped.cut) { clean = capped.html; cut = 'blocks'; }
+    }
+    setPasteCut(cut);
     document.execCommand('insertHTML', false, clean);
     emit();
     return true;
@@ -388,7 +396,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
         />
         {pasteCut && (
           <p role="status" data-testid="paste-cut" className="px-3 pb-2 text-xs text-amber-700">
-            The pasted text was cut to its first {MAX_PASTE_CHARS.toLocaleString('en-US')} characters.
+            {pasteCut === 'blocks'
+              ? `The pasted text was cut: a field holds at most ${MAX_FIELD_BLOCKS.toLocaleString('en-US')} paragraphs and bullets.`
+              : `The pasted text was cut to its first ${MAX_PASTE_CHARS.toLocaleString('en-US')} characters.`}
           </p>
         )}
       </div>

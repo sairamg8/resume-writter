@@ -89,7 +89,8 @@ export), `exportToPDFReact` / `exportCoverLetterPDFReact` (download), `warmPdfEx
 In the browser these steps run in a Web Worker (`pdfWorker.js` → `pdfWorkerJobs.js`), asked through
 `src/utils/pdfBuild.js`; Node and a browser with no module worker build on the main thread. A worker that
 never replies is let go by a watchdog (`pdfBuildTimeoutMs`: 20 s, twice that before its first reply, plus
-250 ms per entry): a worker that never answered anything hands its jobs to the main thread, one that had
+250 ms per entry, plus 15 ms for each paragraph or bullet past the first 300, up to 4,000 of them:
+`tests/pdf/177-pdf-build-budget-blocks.test.mjs`): a worker that never answered anything hands its jobs to the main thread, one that had
 built before fails that build with a retryable "took too long" error and its queue goes to a fresh worker;
 what a let-go worker sends late is ignored. A clock that rings 5 s or more past its time slept with the page
 (a tab frozen in the background, a phone that put the browser away) and the worker with it, so it starts
@@ -117,6 +118,7 @@ keeps it until the next build puts its own in (`landPrepared`), so no build lays
 `_setPdfWorkerForTest(create, { timers })` (`tests/pdf/97-pdf-worker.test.mjs`, `tests/pdf/126-r2-142-pdf-worker-watchdog.test.mjs`,
 `tests/pdf/112-pdf-worker-watchdog.test.mjs`); the font wait with `_setFontLoadWaitForTest(ms)`
 (`tests/pdf/113-font-load-stall.test.mjs`, its grace in `tests/pdf/120-font-wait-grace.test.mjs`).
+The budget counts blocks, and a paste is held to a number of them, because react-pdf lays each paragraph and list item out again for every page after it, so a field's build time follows its pages times its blocks (2,000 bullets of 100 characters took 23 s on CI). A paste that would take a rich-text field past `MAX_FIELD_BLOCKS` (1,500, `src/utils/richTextCap.js`) paragraphs and bullets, the field's own counted, is cut where the limit falls and a line under the field says so (`tests/pdf/176-rich-text-block-cap.test.mjs`); typing is not held, and a stored or imported field is left as it is.
 
 The preview's own calls to pdf.js have a budget of their own (`PdfPreview.jsx`, `pdfjsTimeoutMs`: 20 s, twice that until
 a document has opened, plus a second per page, up to 100 pages). Loading the library, opening the PDF, reading its
