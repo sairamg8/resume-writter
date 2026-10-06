@@ -113,7 +113,6 @@ function AtsCheck({ resume, store }) {
   // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
   // the box and its results, which is the loop the scanner is for (R4-CL-03).
   const [jobDescription, setJobDescription] = useSessionState(`cpwtcv_ats_jd:${resume?.id ?? ''}`, '', isText);
-  const [postingCapped, setPostingCapped] = useState(false);
   // Copy Text's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copiedText, setCopiedText] = useState(null);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
@@ -132,8 +131,9 @@ function AtsCheck({ resume, store }) {
   // The report reads the résumé alone; only the job match reads the posting. Each key typed in the
   // box redid the whole report with it, and now redoes the match (typing-freeze 6).
   const report = useMemo(() => analyzeAtsScore(resume), [resume]);
+  // A posting kept from an earlier session may be longer than the box takes now: scan the first part.
   const jobMatch = useMemo(
-    () => (jobDescription.trim() ? matchResumeWithJob(resume, jobDescription) : null),
+    () => (jobDescription.trim() ? matchResumeWithJob(resume, capPosting(jobDescription).text) : null),
     [resume, jobDescription],
   );
   const analysis = useMemo(() => ({ ...report, jobMatch }), [report, jobMatch]);
@@ -449,16 +449,14 @@ function AtsCheck({ resume, store }) {
         <textarea
           rows={3}
           value={jobDescription}
-          onChange={e => {
-            const { text, capped } = capPosting(e.target.value);
-            setPostingCapped(capped);
-            setJobDescription(text);
-          }}
+          // The browser cuts a longer paste to what fits, at the caret, before it reaches the page.
+          maxLength={MAX_POSTING_CHARS}
+          onChange={e => setJobDescription(e.target.value)}
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
           className="w-full text-xs pointer-coarse:text-base p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
 
-        {postingCapped && (
+        {jobDescription.length >= MAX_POSTING_CHARS && (
           <p className="text-xs text-amber-700" data-testid="jd-capped">
             Only the first {MAX_POSTING_CHARS.toLocaleString('en-US')} characters of this posting are kept and scanned.
           </p>
