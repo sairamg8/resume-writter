@@ -40,10 +40,15 @@ function remember(width) {
   try { localStorage.setItem(KEY, String(width)); } catch { /* storage full or blocked: this visit only */ }
 }
 
-/** The width the panel is drawn at: the remembered one, kept off the stage's floor while a dock beside the stage is open (never under 240). */
+/** The most the panel may be drawn at: the remembered range's top, or, with a dock beside the stage, what the window leaves it (never under 240). */
+function capFor(dockOpen, viewport) {
+  if (!dockOpen || !Number.isFinite(viewport) || viewport < DOCK_BESIDE_FROM_PX) return MAX;
+  return Math.max(MIN, viewport - DOCK_PX - STAGE_FLOOR_PX);
+}
+
+/** The width the panel is drawn at: the remembered one, kept off the stage's floor while a dock beside the stage is open. */
 function appliedWidth(width, dockOpen, viewport) {
-  if (!dockOpen || !Number.isFinite(viewport) || viewport < DOCK_BESIDE_FROM_PX) return width;
-  return Math.min(width, Math.max(MIN, viewport - DOCK_PX - STAGE_FLOOR_PX));
+  return Math.min(width, capFor(dockOpen, viewport));
 }
 
 /**
@@ -65,7 +70,7 @@ export function usePanelResize({ dockOpen = false } = {}) {
   function onPointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
-    dragState.current = { startX: e.clientX, startW: panelWidth, pointerId: e.pointerId };
+    dragState.current = { startX: e.clientX, startW: panelWidth, startStored: storedPx, pointerId: e.pointerId };
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     // The handle holds the pointer until it is released: the drag keeps following it over the
@@ -76,10 +81,13 @@ export function usePanelResize({ dockOpen = false } = {}) {
 
     const ours = (e) => dragState.current && (e.pointerId === undefined || e.pointerId === dragState.current.pointerId);
 
+    // The width the pointer asks for, held to what the window leaves while a dock is open: the handle follows the pointer
+    // up to that and stays there (the remembered width never runs ahead of the one drawn).
+    const asked = (clientX) => clamp(Math.min(dragState.current.startW + (clientX - dragState.current.startX), capFor(dockOpen, window.innerWidth)));
+
     function onPointerMove(e) {
       if (!ours(e)) return;
-      const delta = e.clientX - dragState.current.startX;
-      setPanelWidth(clamp(dragState.current.startW + delta));
+      setPanelWidth(asked(e.clientX));
     }
 
     // A release, a touch the browser took over (pointercancel) or a capture lost: the drag ends
@@ -87,6 +95,7 @@ export function usePanelResize({ dockOpen = false } = {}) {
     function onPointerUp(e) {
       if (dragState.current && !ours(e)) return;
       const drag = dragState.current;
+      const final = drag ? asked(e.clientX) : null; // before the drag state goes
       // Let go of the drag first: remembering the width is best-effort, and a full storage
       // (QuotaExceededError) must not leave the panel following the pointer with text selection off.
       dragState.current = null;
@@ -97,7 +106,8 @@ export function usePanelResize({ dockOpen = false } = {}) {
       window.removeEventListener('pointercancel', onPointerUp);
       handle?.removeEventListener?.('lostpointercapture', onPointerUp);
       if (!drag) return;
-      const final = clamp(drag.startW + (e.clientX - drag.startX));
+      // A press that changed nothing (a click, a drag at the dock's limit) remembers nothing: a width chosen up to 640 stays.
+      if (final === drag.startW) { setPanelWidth(drag.startStored); return; }
       setPanelWidth(final);
       remember(final);
     }
@@ -117,6 +127,8 @@ export function usePanelResize({ dockOpen = false } = {}) {
     if (next === undefined) return;
     e.preventDefault();
     const width = clamp(next);
+    // An arrow that would change nothing on screen (at the dock's limit) remembers nothing; Home and End always do.
+    if (e.key.startsWith('Arrow') && appliedWidth(width, dockOpen, viewport) === panelWidth) return;
     setPanelWidth(width);
     remember(width);
   }
