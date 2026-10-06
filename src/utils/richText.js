@@ -735,13 +735,13 @@ export function sanitizeRichText(html) {
   // characters with 1 000 bold and plain words in it wrote 10 MB (typing-freeze 7a). A link a block carries on into
   // many more blocks still writes it for each, so what the addresses may add up to, counted as written (escaped), is
   // 16 times the input and a little over; a link past that is its text alone, which no ordinary document reaches.
-  // Each address is checked and escaped once however often it comes back.
+  // Runs of one link share its address string, so a run is told from the one before it by a pointer compare.
   let budget = 16 * String(html).length + 4096;
-  const written = new Map();
   const runsHtml = (runs) => {
     let line = '';
     let group = '';
     let cur = ''; // the address the group is inside
+    let was; // the run's address as typed, before it is checked and escaped
     const flush = () => { line += cur ? `<a href="${cur}">${group}</a>` : group; group = ''; };
     for (const r of runs) {
       let t = esc(r.text).replace(/\n/g, '<br>');
@@ -749,13 +749,11 @@ export function sanitizeRichText(html) {
       if (r.underline) t = `<u>${t}</u>`;
       if (r.italic) t = `<em>${t}</em>`;
       if (r.bold) t = `<strong>${t}</strong>`;
-      let h = written.get(r.href);
-      if (h === undefined) {
-        const a = r.href && safeHref(r.href);
-        written.set(r.href, h = a ? esc(a) : '');
-      }
-      if (h !== cur) {
+      if (r.href !== was) {
         flush();
+        was = r.href;
+        const a = was && safeHref(was);
+        const h = a ? esc(a) : '';
         budget -= (cur = h.length <= budget ? h : '').length;
       }
       group += t;
