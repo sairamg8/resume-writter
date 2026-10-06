@@ -26,12 +26,12 @@ function shareOf(canvas, mm, hex) {
   return row.filter((px) => px.every((v, i) => Math.abs(v - want[i]) < 8)).length / row.length;
 }
 
-/** Pick a template in the Design tab (by its description), then go back to the Cover Letter tab. */
+/** Pick a template in the Design dock (by its description), then go back to the Cover Letter (picking it closes the dock). */
 function pickTemplate(template) {
-  cy.get('button[title="Design & Customize"]').click();
+  cy.openDesign();
   cy.contains('p', "The cover letter's header takes the template's look too.").scrollIntoView().should('be.visible');
   cy.get(`[data-testid="template-${template}"]`).click();
-  cy.contains('button', 'Cover Letter').click();
+  cy.switchTo('letter');
 }
 
 describe('cover letter', () => {
@@ -133,7 +133,7 @@ describe('cover letter', () => {
 
   it('cover letter edits do not leak into the resume preview', () => {
     field('Closing Phrase').clear().type('Only in the letter');
-    cy.contains('button', 'Resume').click();
+    cy.switchTo('resume');
     cy.preview().should('not.contain.text', 'Only in the letter');
   });
 
@@ -165,11 +165,11 @@ describe('cover letter', () => {
     cy.contains('p', 'Fields Position').should('be.visible');
     cy.contains('p', 'Centred like your résumé').should('not.exist');
     // Resume → Personal Info → Header Customization → Text Alignment: Center.
-    cy.contains('button', 'Resume').click();
+    cy.switchTo('resume');
     cy.contains('button', 'Header Customization').click();
     cy.contains('button', /^Center$/).click();
     cy.store().should((s) => expect(active(s).settings.headerAlign).to.eq('center'));
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.contains('p', 'Header style follows your résumé template').should('contain.text', 'Classic');
     cy.contains('p', 'Centred like your résumé').should('be.visible');
     cy.contains('p', 'Fields Position').should('not.exist');

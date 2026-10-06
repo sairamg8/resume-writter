@@ -33,7 +33,7 @@ describe('regressions — letters saved with the old "Hiring Manager" default (R
     cy.location('hash').should('match', /^#\/resume\//);
     // Wait for the editor: the dashboard has a "Cover Letter" button of its own (a new letter).
     cy.preview().should('contain.text', 'Alex Johnson');
-    cy.contains('button', 'Cover Letter').click();
+    cy.switchTo('letter');
     cy.previewReady();
   };
   // Exported by a build that stamped no data version on its résumés.
