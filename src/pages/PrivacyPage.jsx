@@ -166,7 +166,7 @@ function Footer() {
   // of the same page (Back needed one more press to leave) and kept the scroll (R4-APP-08).
   const open = (to) => (to === pathname ? window.scrollTo(0, 0) : navigate(to));
   return (
-    <div className="border-t border-cv-hairline bg-cv-surface mt-12 pb-0">
+    <div className="border-t border-cv-hairline bg-cv-surface mt-12 pb-[72px] md:pb-0">
       <div className="max-w-[680px] mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-cv-faint">© 2026 CPWT-CV. All rights reserved.</p>
         <div className="flex gap-4 text-xs text-cv-faint">
