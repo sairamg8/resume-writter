@@ -8,13 +8,15 @@ const MODES = [
 
 export function LayoutToggle({ layoutMode, setLayoutMode }) {
   return (
-    <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 shrink-0">
+    <div data-testid="layout-toggle" className="inline-flex gap-0.5 bg-cv-surface border border-cv-hairline rounded-cv-control p-0.5 shrink-0">
       {MODES.map(({ mode, Icon, title }) => (
         <button
           key={mode}
           title={title}
+          data-testid={`layout-${mode}`}
+          data-active={layoutMode === mode}
           onClick={() => setLayoutMode(mode)}
-          className={`p-1.5 rounded-md transition-all ${layoutMode === mode ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          className={`p-1.5 rounded-[7px] transition-colors ${layoutMode === mode ? 'bg-cv-sunken text-cv-ink' : 'text-cv-faint hover:text-cv-ink'}`}
         >
           <Icon size={13} />
         </button>
