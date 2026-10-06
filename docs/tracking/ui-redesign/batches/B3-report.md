@@ -57,7 +57,7 @@ B3 adds NO bytes to the start-up path: the Editor and all its new parts are in t
 ## Other CI reads
 - Related node tests (137 files, run 37519961910 at c7391ba1): 136 pass; the one red was 103-r4-dvis-12 (the stale tab-strip test, restated in d4e7a89e and green in run 37521101254's neighbours and the gate).
 - Playwright: phone-reach + picker (run 37521101254) all passed; pdf-typography-spacing + parity-ui-controls (run 37521105081, 16 min: parity-ui-controls walks every design control of every template) passed. Cypress 02, 04 x2, 05, 21, 22, 23, 26 (after e2a464e6), 27, 30 passed (runs 37519323495 shards 1-3, 37519961910, 37522197837).
-- Performance: PERF_RUN
+- Performance (run 37523523921, `perf: all`, same code as the gate): PASS, 17 of 17 budgets met (CI ceilings): PDF build Classic 76.7-103 ms, large résumé 367-398 ms, keystroke to painted pages 486-518 ms (build 357, open 53, paint 89), browser last key to the pages 482-587 ms (505-528 ms with every entry open), longest main-thread task while typing 0 ms. B2's baseline was 61, 270, 338 and 440 ms on a different runner: the PDF build code is untouched by B3 and moved by the same ~1.4x, so it is runner variance, not the editor frame. Gate B (information): the PDF worker 0 long tasks; the main thread 3, longest 189 ms.
 - Lessons: a layout test that mirrors Tailwind variants must treat `hidden` plus `flex` as one display (the stylesheet decides, not the class order); a `setTimeout` inside a panel keeps a page alive in tests (wait for its tick before unmounting); the fake DOM mounts notices in `document.body`, not in the page; `get_job_logs` of a multi-file job is ~25k tokens a call: filter the saved file with python.
 
 ## Bug hunt (5 rounds)
@@ -91,4 +91,4 @@ Score number on the ATS chip and Documents cards; a letter-specific Design; Shar
 None needed an answer. `ci.yml` unchanged. No master push, no deploy.
 
 ## Full gate
-GATE_LINE
+**GREEN.** Run 37523513415 on `7da17de8` (the later commits change only docs): 15 jobs all green (lint, build, suite 1-6, Playwright 1-3, Cypress 1-4). Read from the logs: suite shard 1 = 1924 tests, shard 2 = 2142 (2 todo), shard 3 = 2415, shard 5 = 1543, all pass, 0 fail; shards 4 and 6 also 0 fail with 1 skipped each (the suite's own skips: pdfminer.six not installed; the owner's private résumé file absent) but their totals were not read; Playwright 3/3 green (shard 2 ran 15 min: parity-ui-controls walks every design control of every template); Cypress 4/4 green (counts not read this time). The earlier red runs of this batch (37514338790, 37514345969 at df28b00e; the proof runs above) were read and fixed first.
