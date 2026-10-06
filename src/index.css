@@ -130,7 +130,7 @@ body {
   --color-neutral-fill-hover: #091e4224;
   --color-brand: #2b59ff;
   --color-brand-hover: #1e45d6;
-  --color-brand-pressed: #1e45d6;
+  --color-brand-pressed: #112778;
   --color-brand-subtle: #e8eeff;
   --color-brand-subtle-hover: #c9d3f5;
   --color-loz-todo: #dcdfe4;
@@ -160,6 +160,7 @@ body {
   --color-cv-faint: #6b7385;
   --color-cv-brand: #2b59ff;
   --color-cv-brand-text: #1e45d6;
+  --color-cv-brand-pressed: #112778;
   --color-cv-brand-soft: #e8eeff;
   --color-cv-brand-soft-border: #c9d3f5;
   --color-cv-good: #0b7a55;

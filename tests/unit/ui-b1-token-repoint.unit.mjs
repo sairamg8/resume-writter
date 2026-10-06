@@ -18,7 +18,7 @@ test('legacy kit token values equal the cv values', () => {
   const MAP = {
     'ink': 'ink', 'ink-subtle': 'muted', 'ink-subtlest': 'faint',
     'line': 'hairline', 'line-subtle': 'sunken', 'sunken': 'sunken', 'hovered': 'stage',
-    'brand': 'brand', 'brand-hover': 'brand-text', 'brand-pressed': 'brand-text',
+    'brand': 'brand', 'brand-hover': 'brand-text', 'brand-pressed': 'brand-pressed',
     'brand-subtle': 'brand-soft', 'brand-subtle-hover': 'brand-soft-border',
   };
   for (const [legacy, canvas] of Object.entries(MAP)) {
