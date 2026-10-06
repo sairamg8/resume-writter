@@ -6,18 +6,34 @@
     {
       "id": "C-1",
       "outcome": "fixed",
-      "commits": ["9ec96fe1", "fb3fb346"],
-      "tests": ["tests/pdf/118-job-search-keystroke-work.test.mjs"],
-      "summary": "A search key no longer folds every job's six fields again (each job's folded search text is kept per job object and re-folded only when a field changes; plain ASCII skips the accent strip) and no longer re-renders every card (KanbanCard and DraggableCard are memoised behind stable handlers, drag-sensor options are constants, the filtered list is memoised). Matches and their order are unchanged. Proved by counts for 3000 jobs: a second key makes 0 normalize calls, and a search that keeps 100 cards re-renders 0 cards.",
-      "remaining": "Not measured in a browser: the work counts are the proof, the 696 ms figure was not re-measured. The first key still folds each non-ASCII job once, and the commit of N new cards when a search widens is still one pass."
+      "commits": [
+        "9ec96fe1",
+        "fb3fb346",
+        "0061e899"
+      ],
+      "tests": [
+        "tests/pdf/118-job-search-keystroke-work.test.mjs"
+      ],
+      "summary": "A search key no longer folds every job's six fields again (each job's folded search text is kept per job object and re-folded only when a field changes; plain ASCII skips the accent strip) and no longer re-renders every card (KanbanCard and DraggableCard are memoised behind stable handlers, drag-sensor options are constants, the filtered list is memoised). Matches and their order are unchanged. Proved by counts for 3000 jobs: a second key makes 0 normalize calls, and a search that keeps 100 cards re-renders 0 cards. A new day is passed to every card as a prop, so the memoised cards draw again past midnight and a deadline pill never keeps yesterday's state (test in 118, failfirst 0061e899 green).",
+      "remaining": "Not measured in a browser: the work counts are the proof, the 696 ms figure was not re-measured. The first key still folds each non-ASCII job once."
     },
     {
       "id": "C-2",
-      "outcome": "partial",
-      "commits": ["0dc58fb9", "633c4abf", "d6ff8e98"],
-      "tests": ["tests/unit/tf-ats-huge-paste-one-pass.unit.mjs", "tests/unit/c2-ats-posting-cap.unit.mjs", "tests/pdf/162-ats-posting-box-cap.test.mjs"],
-      "summary": "The hunt never says which field took the 5.7 MB paste. Measured in node, the rich-editor plain-paste functions and job notes are linear and fast; the only slow path is the ATS job-description box (extractJobKeywords / matchResumeWithJob, about 2 s at 5.7 MB, on the main thread inside a useMemo, plus a whole-value sessionStorage write per change). extractJobKeywords now composes and blanks the posting once, not twice (0dc58fb9). PRODUCT CALL: the box takes at most 200,000 characters (maxLength, so the browser cuts a longer paste at the caret) and shows 'Only the first 200,000 characters of this posting are kept and scanned.' whenever it is full; an older stored posting is scanned only to that limit. A real posting is 5 to 20 kB, so ordinary pastes are unchanged.",
-      "remaining": "Not confirmed that the hunt's paste went into the ATS box. If it was the rich editor, its cost is the browser's insertHTML and the preview build of huge text (hunt row 142), neither measurable in node: needs a browser trace."
+      "outcome": "fixed",
+      "commits": [
+        "0dc58fb9",
+        "633c4abf",
+        "d6ff8e98",
+        "d2e064b6"
+      ],
+      "tests": [
+        "tests/unit/tf-ats-huge-paste-one-pass.unit.mjs",
+        "tests/unit/c2-ats-posting-cap.unit.mjs",
+        "tests/pdf/162-ats-posting-box-cap.test.mjs",
+        "tests/pdf/163-rich-text-paste-cap.test.mjs"
+      ],
+      "summary": "Measured once on CI in Chromium on the production bundle (run 37401585716, long-task observer, 5.7 MB plain-text paste, throwaway spec, since deleted): resume summary 1880 ms (one long task), job notes 604 ms, ATS box 153 ms (already capped), resume bullet not reachable by the spec (same RichTextEditor as the summary). The stall was the rich-text paste itself. PRODUCT CALL: one paste into a rich-text field now takes in at most 200,000 characters, inserted as plain text (a huge HTML page goes in as its plain-text part), with the line 'The pasted text was cut to its first 200,000 characters.' under the field; ordinary pastes are unchanged. Re-measured after the fix (run 37401887625): summary 188 ms, job notes 120 ms, ATS box 175 ms. The ATS job-description box has the same limit (200,000, maxLength, line shown while full, older stored postings scanned only to it), and its keyword scan composes the posting once.",
+      "remaining": "The hunt's 6.8 s figure was on its own machine; CI's slower-than-1-s number was 1.9 s. Resume bullet editor was not exercised separately."
     },
     {
       "id": "C-3",
@@ -41,5 +57,5 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "CI: run 37399867354 (9ec96fe1, failed: stale second word in my test and no card memo across a DndContext sensors change; two old tests broke on useDeferredValue); run 37400032871 (fb3fb346) green: job tests, 71-startup-chunks, lint, failfirst for 9ec96fe1-era 118 (at fb3fb346), 0dc58fb9 and 633c4abf; run 37400589206 (162 crashed on a test setup bug); run 37400834146 (4b56aae3) green: tests/pdf/162, failfirst d6ff8e98, Cypress 06-job-tracker, lint. 71-startup-chunks reports 0.0 kB to spare of the 1,100 kB cap and passes; the brief said 7.9 kB were left, so the coordinator should check the master figure. Accessibility notes (not fixed): none seen. The card DatePill staleness past midnight is a minor follow-up."
+  "notes": "CI: run 37399867354 (9ec96fe1, failed: stale second word in my test and no card memo across a DndContext sensors change; two old tests broke on useDeferredValue); run 37400032871 (fb3fb346) green: job tests, 71-startup-chunks, lint, failfirst for 9ec96fe1-era 118 (at fb3fb346), 0dc58fb9 and 633c4abf; run 37400589206 (162 crashed on a test setup bug); run 37400834146 (4b56aae3) green: tests/pdf/162, failfirst d6ff8e98, Cypress 06-job-tracker, lint. 71-startup-chunks reports 0.0 kB to spare of the 1,100 kB cap and passes; the brief said 7.9 kB were left, so the coordinator should check the master figure. Accessibility notes (not fixed): none seen. The card DatePill staleness past midnight is a minor follow-up. Second round (coordinator request): runs 37401585716 (measurement + failfirst 0061e899 green) and 37401887625 (head d2e064b6: failfirst d2e064b6, rich-text editor tests, 71-startup-chunks, lint green; post-fix measurement: summary 188 ms, notes 120 ms, ATS 175 ms). Measured numbers before the fix: summary 1880 ms, notes 604 ms, ATS box (capped) 153 ms."
 }
