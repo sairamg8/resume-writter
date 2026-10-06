@@ -68,7 +68,8 @@ export function Editor({ store, auth, sync }) {
   const exportMenu = useEditorExports({
     resume, letterTab: doc === 'coverletter', authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
   });
-  const { panelWidth, separatorProps } = usePanelResize();
+  // With a dock open the panel is drawn no wider than the window less the dock and the stage's floor (what is remembered stays).
+  const { panelWidth, separatorProps } = usePanelResize({ dockOpen: Boolean(dock) });
   // The dock sits beside the preview only where the preview keeps its floor next to the (dragged) panel; else it overlays.
   const dockBeside = useMediaQuery(`(min-width: ${dockBesideFrom(!isMobile && layoutMode === 'split' ? panelWidth : 0)}px)`);
   const importNotice = useImportNotice();
@@ -229,7 +230,7 @@ export function Editor({ store, auth, sync }) {
         <div
           {...separatorProps}
           title="Drag to resize panel"
-          className="relative w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 focus-visible:bg-blue-500 focus-visible:outline-none cursor-col-resize touch-none transition-colors z-10 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
+          className="relative w-1 shrink-0 bg-cv-hairline hover:bg-cv-brand active:bg-cv-brand-pressed focus-visible:bg-cv-brand-pressed focus-visible:outline-none cursor-col-resize touch-none transition-colors z-10 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
         />
       )}
 
