@@ -18,6 +18,7 @@ import { resume, section, experience, render, read, allText, loadModule } from '
 import { elements, mount, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
+import { cardAction } from './card-menu.mjs';
 
 // The Export menu is placed by the kit's useFloating (R4-DVIS-22), which cancels its animation frame
 // when the menu closes; Node has none (tests/unit/ui-dom-harness.mjs gives the kit's tests the same two).
@@ -201,12 +202,10 @@ describe('deleting a résumé takes its public copy down', () => {
     const view = mount(Page, {});
     try {
       await settle();
-      const card = [...elements(view.container)].find((el) => el.tagName === 'DIV' && el.className.startsWith('group bg-white rounded-2xl')
+      const card = [...elements(view.container)].find((el) => el.getAttribute('data-testid') === 'resume-card'
         && el.textContent.includes('Shared CV'));
       assert.ok(card, 'the card of the shared résumé');
-      const del = [...elements(card)].find((el) => el.tagName === 'BUTTON'
-        && [el.textContent.trim(), el.getAttribute('title'), el.getAttribute('aria-label')].includes('Delete'));
-      click(view, del);
+      await cardAction(view, card, 'Delete'); // in the card's ⋯ menu
       await until(() => cloud.doc(`public/${shareId}`) === undefined);
       assert.equal(cloud.doc(`public/${shareId}`), undefined, 'the copy is gone');
       assert.equal(cloud.doc(`users/uid_owner/shares/${r.id}`), undefined);

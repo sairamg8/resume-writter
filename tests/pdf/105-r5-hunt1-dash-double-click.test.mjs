@@ -14,6 +14,7 @@ import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage, settle } from './resume-tab.mjs';
+import { cardMenuItem, plainButton } from './card-menu.mjs';
 
 before(async () => {
   patchFakeDom();
@@ -25,9 +26,14 @@ const KEY = 'cpwtcv_v1';
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
 const cv = (id, name, extra = {}) => ({ ...resume({ personal: { name: 'Wren Calloway', title: 'Harbor Pilot' } }), id, name, updatedAt: 1000, ...extra });
 
-async function dashboard(resumes) {
+const offline = () => Promise.reject(new TypeError('Failed to fetch dynamically imported module'));
+
+/** `plain`: the card menu's code cannot be had, so a card shows plain Edit / Copy / Delete buttons (ResumeCard). */
+async function dashboard(resumes, { plain = false } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
-  const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
+  const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
+  const realMenu = _lazyForTest.loaders.menu;
+  if (plain) _lazyForTest.loaders.menu = offline;
   globalThis.localStorage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle() {}, signOut() {} };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
@@ -52,7 +58,7 @@ async function dashboard(resumes) {
     return found;
   };
   const card = (name) => {
-    const found = all().find((el) => el.tagName === 'DIV' && el.className.startsWith('group bg-white rounded-2xl')
+    const found = all().find((el) => el.getAttribute('data-testid') === 'resume-card'
       && all(el).some((p) => p.tagName === 'P' && p.getAttribute('title') === name));
     assert.ok(found, `no card "${name}"`);
     return found;
@@ -64,8 +70,25 @@ async function dashboard(resumes) {
     view.act(() => reactProps(el).onClick(event));
     await settle();
   };
+  // A card's menu item pressed twice in a row, before anything settles. The menu closes on the first press, so the
+  // second goes to the item's handler as it stood (the guard under test is the Dashboard's, not the menu's).
+  const doubleAction = async (name, label) => {
+    const item = await cardMenuItem(view, card(name), label);
+    const event = { preventDefault() {}, stopPropagation() {}, target: item, currentTarget: item };
+    view.act(() => reactProps(item).onClick(event));
+    view.act(() => reactProps(item).onClick(event));
+    await settle();
+  };
+  // The plain buttons, once the menu's failed import has put them on the card.
+  const plainCopy = async (name) => {
+    for (let i = 0; i < 500 && !all(card(name)).some((el) => el.tagName === 'BUTTON' && text(el) === 'Copy'); i += 1) {
+      await new Promise((r) => { setTimeout(r, 10); });
+      view.act(() => {});
+    }
+    return plainButton(card(name), 'Copy');
+  };
   return {
-    button, card, doubleClick,
+    button, card, doubleClick, doubleAction, plainCopy,
     resumes: () => box.store.appState.resumes,
     where: () => box.where,
     // The browser's Back while the editor's code is still on its way: the dashboard never went away.
@@ -75,15 +98,27 @@ async function dashboard(resumes) {
     },
     async close() {
       await view.unmount();
+      _lazyForTest.loaders.menu = realMenu;
       delete globalThis.localStorage;
     },
   };
 }
 
-it("a double-click on a card's Copy makes one copy, and opens it", async () => {
+it("a double-click on a card's Copy (in its menu) makes one copy, and opens it", async () => {
   const page = await dashboard([cv('resume_a', 'Harbor Pilot CV')]);
   try {
-    await page.doubleClick(page.button('Copy', page.card('Harbor Pilot CV')));
+    await page.doubleAction('Harbor Pilot CV', 'Copy');
+    const copies = page.resumes().filter((r) => r.name === 'Harbor Pilot CV (Copy)');
+    assert.equal(copies.length, 1, `one copy: ${page.resumes().map((r) => r.name).join(' | ')}`);
+    assert.equal(page.resumes().length, 2);
+    assert.equal(page.where(), `/resume/${copies[0].id}`);
+  } finally { await page.close(); }
+});
+
+it("a double-click on a card's plain Copy button (the menu's code unreachable) makes one copy, and opens it", async () => {
+  const page = await dashboard([cv('resume_a', 'Harbor Pilot CV')], { plain: true });
+  try {
+    await page.doubleClick(await page.plainCopy('Harbor Pilot CV'));
     const copies = page.resumes().filter((r) => r.name === 'Harbor Pilot CV (Copy)');
     assert.equal(copies.length, 1, `one copy: ${page.resumes().map((r) => r.name).join(' | ')}`);
     assert.equal(page.resumes().length, 2);
@@ -128,11 +163,11 @@ it('a double-click on the dashed New Cover Letter card makes one letter', async 
 it("Back to the dashboard before the editor opens: a card's Copy works again, once", async () => {
   const page = await dashboard([cv('resume_a', 'Harbor Pilot CV')]);
   try {
-    await page.doubleClick(page.button('Copy', page.card('Harbor Pilot CV')));
+    await page.doubleAction('Harbor Pilot CV', 'Copy');
     assert.equal(page.resumes().length, 2, 'one copy');
     await page.back();
     assert.equal(page.where(), '/');
-    await page.doubleClick(page.button('Copy', page.card('Harbor Pilot CV')));
+    await page.doubleAction('Harbor Pilot CV', 'Copy');
     const copies = page.resumes().filter((r) => r.name === 'Harbor Pilot CV (Copy)');
     assert.equal(copies.length, 2, `a second copy after Back, and only one: ${page.resumes().map((r) => r.name).join(' | ')}`);
     assert.equal(page.where(), `/resume/${copies[1].id}`);

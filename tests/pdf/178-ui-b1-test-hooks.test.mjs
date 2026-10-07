@@ -3,8 +3,8 @@
 // working. The real EditorResumeTab (over the real store, as tests/pdf/resume-tab.mjs wires it), the real
 // EditorModeBar and the real ResumeCard are mounted with react-dom/client over fake-dom.mjs, and each id
 // must be on screen, once per thing it names: one section-card-<id> and one section-title-input per section,
-// one entry-header and one entry-title per entry, one of each tab button, one resume-card and one
-// resume-card-rename per card. Fictional people.
+// one entry-header and one entry-title per entry, one of each tab button, one resume-card, one
+// resume-card-rename and (B5a) one resume-card-more per card. Fictional people.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -106,6 +106,9 @@ describe('B1 test hooks: the dashboard card', () => {
       assert.equal(count(view.container, TID.resumeCard), 1, 'one resume-card');
       assert.ok(card.contains(withTid(elements(view.container), TID.resumeCardRename)[0]), 'the rename button is inside the card');
       assert.equal(count(view.container, TID.resumeCardRename), 1, 'one resume-card-rename');
+      assert.equal(count(view.container, TID.resumeCardMore), 1, 'one resume-card-more (the ⋯ button, whether or not the menu\'s code has arrived)');
+      const [more] = withTid(elements(view.container), TID.resumeCardMore);
+      assert.ok(card.contains(more) && more.tagName === 'BUTTON' && more.getAttribute('aria-label') === 'More', 'a button named More, inside the card');
       const rename = withTid(elements(view.container), TID.resumeCardRename)[0];
       view.act(() => reactProps(rename).onClick({ preventDefault() {}, stopPropagation() {} }));
       assert.equal(count(view.container, TID.resumeCardRename), 0, 'the rename box replaces the pencil');
@@ -126,6 +129,7 @@ describe('B1 test hooks: the dashboard card', () => {
       await settle();
       assert.equal(count(view.container, TID.resumeCard), 2);
       assert.equal(count(view.container, TID.resumeCardRename), 2);
+      assert.equal(count(view.container, TID.resumeCardMore), 2);
     } finally { await view.unmount(); }
   });
 });

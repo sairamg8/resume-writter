@@ -2,8 +2,9 @@
 // logo on a tablet, so the compact (icon-only) sign-in sat beside the logo until lg and the full one came
 // from lg. B2 (UI rebuild): the header is the shared AppBar (src/components/AppBar.jsx): the brand, the
 // three areas (below md the phone tab bar replaces them) and the account at the right, the compact
-// sign-in shown until lg and the full one from lg; the page's actions (Import, New Cover, New Resume) are
-// one row under the bar, and "Job Tracker" and "Projects" are the bar's nav links, same destinations. The
+// sign-in shown until lg and the full one from lg. B5a (Documents page): the page's actions (Import, New Cover,
+// New Resume) sit in the page's own header beside the "Documents" heading (not under the bar), and "Job Tracker"
+// and "Projects" are the bar's nav links, same destinations. The
 // fake DOM has no layout, so this pins the breakpoint classes on the real Dashboard, mounted with
 // react-dom/client over tests/pdf/fake-dom.mjs, signed out with no résumés; cypress/e2e/26-mobile-layout.cy.js
 // checks the phone header's actions are in reach.
@@ -46,18 +47,21 @@ async function dashboard() {
   };
 }
 
-it('the header is the AppBar: the compact sign-in shows until lg, the full one from lg, the actions are one row under the bar', async () => {
+it('the header is the AppBar: the compact sign-in shows until lg, the full one from lg; the actions are a wrapping row in the page header beside "Documents"', async () => {
   const page = await dashboard();
   try {
     const all = page.all();
     const header = all.find((el) => el.getAttribute('data-testid') === 'app-bar');
     assert.ok(header, 'the app bar');
     const newResume = all.find((el) => el.tagName === 'BUTTON' && text(el) === 'New Resume');
-    assert.ok(newResume && header.contains(newResume), 'New Resume is in the header, under the bar row');
-    const [bar, actionsBox] = header.childNodes;
-    assert.ok(!bar.contains(newResume) && actionsBox.contains(newResume), 'the actions are a second row, not squeezed beside the logo');
-    const row = actionsBox.childNodes[0];
+    assert.ok(newResume && !header.contains(newResume), 'New Resume is in the page, not squeezed into the bar');
+    const [bar] = header.childNodes;
+    const row = newResume.parentNode;
     assert.ok(tokens(row).includes('flex-wrap'), 'the row wraps rather than overflows');
+    const pageHeader = row.parentNode;
+    assert.ok(tokens(pageHeader).includes('flex-wrap'), 'the heading and the actions wrap onto two rows on a narrow screen');
+    const heading = [...elements(pageHeader)].find((el) => el.tagName === 'H1');
+    assert.equal(heading && text(heading), 'Documents', 'the page header holds the page\'s heading');
 
     // The compact sign-in shows until lg; the full one from lg.
     const wrappers = [...elements(bar)].filter((el) => tokens(el).includes('lg:hidden') || tokens(el).includes('lg:block'));

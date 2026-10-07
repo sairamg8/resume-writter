@@ -1,9 +1,11 @@
 // UI rebuild B1 (start-up headroom): the start-up path had about 0 kB to spare (71-startup-chunks), and
-// every later batch adds bars and pages to it. The Dashboard imported two pieces it only shows on demand:
+// every later batch adds bars and pages to it. The Dashboard imported two pieces it only shows on demand
+// (B5a adds a third: a card's more menu, CardMenu with the kit's Menu, fetched on the first hover, focus or press
+// of a card's ⋯ button, and in idle time):
 // New Cover's picker (NewLetterModal and the kit's Dialog with its focus trap, placement, scroll lock,
 // presence and portal) and the Career History panel (with careerHistory.js). Both load apart from the
 // start-up path now, each in its own boundary (Dashboard.jsx, Lazy), and are fetched ahead of use, once:
-// in idle time after the first paint, and when New Cover or the Career History sidebar is hovered or
+// in idle time after the first paint, and when New Cover or the Career History section is hovered or
 // focused. The start-up path is walked from the source (startup-modules.mjs); the lazy boundaries are
 // checked on the real Dashboard over tests/pdf/fake-dom.mjs.
 import { before, after, describe, it } from 'node:test';
@@ -23,7 +25,6 @@ before(async () => {
 after(teardown);
 
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
-const tokens = (el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
 /** Waits (real time: a module is loaded through Vite) until `check()` holds. */
 async function until(check, what) {
   for (let i = 0; i < 500; i += 1) {
@@ -54,7 +55,7 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   await loadModule('/src/components/CareerHistoryPanel.jsx');
   const { loaders, warmed } = _lazyForTest;
   const real = { ...loaders };
-  const calls = { letter: 0, career: 0 };
+  const calls = { letter: 0, career: 0, menu: 0 };
   warmed.clear();
   for (const key of Object.keys(real)) loaders[key] = () => { calls[key] += 1; return real[key](); };
   globalThis.localStorage = new MemoryStorage([]);
@@ -67,9 +68,10 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
   const view = mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
     createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
-  // The Career History sidebar is on screen from the first render, so its own boundary asks for its code at
-  // once (React.lazy); only the prefetch's fetches are counted below, so that first ask is set aside.
+  // The Career History section and the cards' ⋯ menus are on screen from the first render, so their own boundaries
+  // ask for their code at once (React.lazy); only the prefetch's fetches are counted below, so that first ask is set aside.
   calls.career = 0;
+  calls.menu = 0;
   const all = () => [...elements(view.document.body)];
   let unmounted = false;
   return {
@@ -77,7 +79,10 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
     /** Unmounts now, keeping the counting loaders: close() then skips the unmount. */
     async unmountNow() { unmounted = true; await view.unmount(); },
     button: (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label),
-    sidebar: () => all().find((el) => tokens(el).includes('lg:sticky')),
+    /** The Career History section (below the documents since B5a: no sidebar), the one with the prefetch handlers. */
+    sidebar: () => all().find((el) => el.tagName === 'SECTION' && el.contains(all().find((h) => h.tagName === 'H2' && text(h) === 'Career History'))),
+    /** The cards' ⋯ buttons. */
+    mores: () => all().filter((el) => el.tagName === 'BUTTON' && el.getAttribute('data-testid') === 'resume-card-more'),
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
     async close() {
       if (!unmounted) await view.unmount();
@@ -91,7 +96,7 @@ const cv = (id, name, updatedAt) => ({ ...resume({ personal: { name: `${name} Pe
 const two = () => [cv('resume_a', 'Older CV', 1000), cv('resume_b', 'Newest CV', 3000)];
 
 describe('the pieces open through their lazy boundaries', () => {
-  it('Career History appears in the sidebar once its code has loaded, and New Cover opens the picker', async () => {
+  it('Career History appears in its section once its code has loaded, and New Cover opens the picker', async () => {
     const page = await dashboard(two());
     try {
       await until(() => page.all().some((el) => el.tagName === 'BUTTON' && text(el) === 'Open Job Tracker →'), 'the Career History panel');
@@ -107,10 +112,10 @@ describe('the pieces open through their lazy boundaries', () => {
 });
 
 describe('the prefetch', () => {
-  it('nothing is fetched at mount; hovering or focusing New Cover fetches the picker once, the sidebar the panel once', async () => {
+  it('nothing is fetched at mount; hovering or focusing New Cover fetches the picker once, the Career History section the panel once, a card\'s ⋯ button the menu once', async () => {
     const page = await dashboard(two());
     try {
-      assert.deepEqual(page.calls, { letter: 0, career: 0 }, 'nothing at first paint (idle time comes later)');
+      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0 }, 'nothing at first paint (idle time comes later)');
       const card = page.all().find((el) => el.tagName === 'BUTTON' && text(el) === 'New Cover Letter');
       const buttons = [page.button('New Cover'), card];
       for (const el of buttons) {
@@ -124,11 +129,18 @@ describe('the prefetch', () => {
         page.view.act(() => reactProps(sidebar).onMouseEnter({}));
         page.view.act(() => reactProps(sidebar).onFocus({}));
       }
-      assert.deepEqual(page.calls, { letter: 1, career: 1 }, 'once each');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 0 }, 'the picker and the panel, once each');
+      const mores = page.mores();
+      assert.equal(mores.length, 2, 'a ⋯ button on each card');
+      for (const el of mores) {
+        page.view.act(() => reactProps(el).onMouseEnter({}));
+        page.view.act(() => reactProps(el).onFocus({}));
+      }
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'the cards\' menu once for both cards, hover and focus alike');
     } finally { await page.close(); }
   });
 
-  it('after the first paint, in idle time, both are fetched, once; a timer stands in where there is no requestIdleCallback', async () => {
+  it('after the first paint, in idle time, all three are fetched, once; a timer stands in where there is no requestIdleCallback', async () => {
     const saved = { idle: globalThis.requestIdleCallback, cancel: globalThis.cancelIdleCallback };
     const queued = [];
     globalThis.requestIdleCallback = (fn) => queued.push(fn);
@@ -136,11 +148,11 @@ describe('the prefetch', () => {
     const page = await dashboard(two());
     try {
       assert.equal(queued.length, 1, 'one idle callback asked for');
-      assert.deepEqual(page.calls, { letter: 0, career: 0 }, 'not before the browser is idle');
+      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0 }, 'not before the browser is idle');
       queued[0]();
-      assert.deepEqual(page.calls, { letter: 1, career: 1 }, 'both, when it is');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'all three, when it is');
       page.view.act(() => reactProps(page.button('New Cover')).onMouseEnter({}));
-      assert.deepEqual(page.calls, { letter: 1, career: 1 }, 'a hover after it adds none');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'a hover after it adds none');
     } finally {
       await page.close();
       for (const [key, value] of [['requestIdleCallback', saved.idle], ['cancelIdleCallback', saved.cancel]]) {
@@ -156,7 +168,7 @@ describe('the prefetch', () => {
     try {
       assert.equal(timers.length, 1, 'a timer where there is no idle callback');
       timers[0]();
-      assert.deepEqual(plain.calls, { letter: 1, career: 1 });
+      assert.deepEqual(plain.calls, { letter: 1, career: 1, menu: 1 });
     } finally {
       globalThis.setTimeout = realSet;
       await plain.close();
@@ -187,7 +199,7 @@ describe('the prefetch', () => {
       assert.deepEqual(asked.cancelled, asked.ids, 'the id asked for is the one cancelled');
       // A cancelled callback never runs in a browser: run only those the page did not cancel.
       asked.fns.filter((_, i) => !asked.cancelled.includes(asked.ids[i])).forEach((fn) => fn());
-      assert.deepEqual(idle.calls, { letter: 0, career: 0 }, 'no callback is left to fetch after leaving');
+      assert.deepEqual(idle.calls, { letter: 0, career: 0, menu: 0 }, 'no callback is left to fetch after leaving');
     } finally {
       restore();
       await idle.close();
@@ -212,7 +224,7 @@ describe('the prefetch', () => {
       assert.deepEqual(asked.cleared, timers.handles, 'the timer asked for is the one cleared');
       // A cleared timer never fires: run only those the page did not clear.
       timers.fns.filter((_, i) => !asked.cleared.includes(timers.handles[i])).forEach((fn) => fn());
-      assert.deepEqual(plain.calls, { letter: 0, career: 0 }, 'no timer is left to fetch after leaving');
+      assert.deepEqual(plain.calls, { letter: 0, career: 0, menu: 0 }, 'no timer is left to fetch after leaving');
     } finally {
       restore();
       await plain.close();

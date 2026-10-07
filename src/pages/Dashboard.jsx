@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, Plus, Upload, Mail as MailIcon } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import AppBar from '@/components/AppBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { ResumeCard } from '@/components/ResumeCard';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Lazy, loaders, warm, warmed } from '@/components/lazyPiece';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
 import { firebasePublicIo } from '@/utils/firebasePublicIo';
@@ -17,39 +17,8 @@ import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
 
-// The letter picker (with the kit's Dialog) and Career History load apart from the start-up path, so the
-// dashboard paints without them. Not lazyPage: its reload on a failed load would drop a draft, and a
-// piece here is not a page — each has its own boundary and a fallback in this file (Lazy).
-const loaders = {
-  letter: () => import('@/components/NewLetterModal'),
-  career: () => import('@/components/CareerHistoryPanel').then((m) => ({ default: m.CareerHistoryPanel })),
-};
-const warmed = new Set();
+// The letter picker, Career History and a card's more menu load apart from the start-up path (lazyPiece.jsx).
 export const _lazyForTest = { loaders, warmed };
-// One lazy() per piece, made once: a new one at each mount suspends once more, so a remount (Back) lost
-// the loaded piece from its first commit. Keyed by the loader, so a replaced loader gets its own.
-const views = new Map();
-const viewFor = (key) => {
-  const load = loaders[key];
-  if (views.get(key)?.load === load) return views.get(key).View;
-  // A rejection stays in a lazy() for good: drop it, so the next ask (Try again, a remount) imports again.
-  const View = lazy(() => load().catch((e) => { if (views.get(key)?.View === View) views.delete(key); throw e; }));
-  views.set(key, { load, View });
-  return View;
-};
-/** Fetches a piece ahead of its first use, once: in idle time, or when its button is hovered or focused. */
-const warm = (key) => { if (!warmed.has(key)) { warmed.add(key); loaders[key]().catch(() => {}); } };
-
-/** `load`'s piece, props passed on. A failed load shows `fallback(retry, tries)` (tries: Try agains so far); retry imports it again. */
-function Lazy({ load, fallback, ...props }) {
-  const [tries, setTries] = useState(0);
-  const View = useMemo(() => viewFor(load), [load, tries]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <ErrorBoundary key={tries} fallback={fallback(() => setTries(tries + 1), tries)}>
-      <Suspense fallback={null}><View {...props} /></Suspense>
-    </ErrorBoundary>
-  );
-}
 
 /** The letter picker's code did not arrive: each New Cover makes the letter from the first résumé, as with one. */
 function LetterFallback({ asked, make }) {
@@ -57,7 +26,12 @@ function LetterFallback({ asked, make }) {
   return null;
 }
 
-const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
+const BUTTON = 'inline-flex items-center gap-2 h-[38px] px-3.5 rounded-[10px] text-sm font-semibold whitespace-nowrap transition-colors';
+const IMPORT_BUTTON = `${BUTTON} border border-cv-hairline bg-cv-surface text-cv-ink hover:bg-cv-sunken`;
+const PRIMARY_BUTTON = `${BUTTON} bg-cv-brand text-white hover:bg-cv-brand-text`;
+const TILE = 'min-h-[266px] sm:min-h-[376px] border-[1.5px] border-dashed border-cv-field rounded-2xl flex flex-col items-center justify-center gap-3 text-center p-4 text-cv-ink hover:border-cv-brand hover:bg-cv-brand-soft/40 transition-colors cursor-pointer';
+const GRID = 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5';
+const NOTICE = 'text-[13px] px-3.5 py-2.5';
 
 /**
  * What Delete asks: an original in a demo account is not gone for good (useDemoSeed). The last
@@ -239,177 +213,126 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f3ef] pb-20 md:pb-0">
-      {/* The bar (AppBar): brand, the three areas, the account (full sign-in from lg, compact below: R4-DVIS-26).
-          The page's actions stay in a row under it, and the notices under that, until the body is rebuilt. */}
+    <div className="min-h-screen bg-cv-ground pb-20 md:pb-0">
+      {/* The bar (AppBar): brand, the three areas, the account (full sign-in from lg, compact below: R4-DVIS-26). */}
       <AppBar account={(
         <>
           <div className="lg:hidden flex items-center gap-2"><AuthBar {...auth} {...sync} compact /></div>
           <div className="hidden lg:block"><AuthBar {...auth} {...sync} /></div>
         </>
-      )}>
-        <div className="border-t border-cv-hairline">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      )} />
+
+      <main className="max-w-[1160px] mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-12">
+        <div className="flex items-end justify-between gap-x-6 gap-y-4 flex-wrap">
+          <div>
+            <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-tight text-cv-ink">Documents</h1>
+            <p className="mt-1 text-sm text-cv-muted">{resumes.length} resume{resumes.length !== 1 ? 's' : ''}</p>
+          </div>
+          <div className="flex items-center gap-2.5 flex-wrap">
             <input ref={importRef} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={handleImport} />
             {keeps ? <ImportMenu onPick={pickImport} busy={importing} className={IMPORT_BUTTON} /> : (
               <button onClick={() => pickImport(false)} disabled={importing} className={`${IMPORT_BUTTON} disabled:opacity-60`} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
-                <Upload size={14} /> {importing ? 'Reading…' : 'Import'}
+                <Upload size={16} /> {importing ? 'Reading…' : 'Import'}
               </button>
             )}
-            <button
-              onClick={startLetter}
-              onMouseEnter={() => warm('letter')}
-              onFocus={() => warm('letter')}
-              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
-            >
-              <MailIcon size={14} /> New Cover
+            <button onClick={startLetter} onMouseEnter={() => warm('letter')} onFocus={() => warm('letter')} className={IMPORT_BUTTON}>
+              <MailIcon size={16} /> New Cover
             </button>
-            <button
-              onClick={newResume}
-              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
-            >
-              <Plus size={14} /> New Resume
+            <button onClick={newResume} className={PRIMARY_BUTTON}>
+              <Plus size={16} /> New Resume
             </button>
           </div>
         </div>
-        {store.persistError && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
-            <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {notSavedMessage('dashboard', store.persistError)}
-            </p>
-          </div>
-        )}
-        {store.recovery && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
-            <RecoveryNotice what="résumés" recovery={store.recovery} onDismiss={store.dismissRecovery} />
-          </div>
-        )}
-        {importError && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-              <span className="flex-1">{importError}</span>
-              <button type="button" onClick={() => setImportError(null)} className="font-semibold hover:text-red-800 shrink-0">Dismiss</button>
-            </div>
-          </div>
-        )}
-        {originalsWaiting && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
-            <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              Your originals come back as soon as your account can be reached again.
-            </p>
-          </div>
-        )}
-      </AppBar>
 
-      {/* Body: main + sidebar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-7 items-start">
-
-          {/* Main — resumes grid */}
-          <div className="flex-1 min-w-0 w-full">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resumes</h1>
-              <p className="text-xs sm:text-sm text-gray-400">
-                {resumes.length} resume{resumes.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-
-            {resumes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-200 p-6">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                  <FileText size={28} className="text-gray-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-700 mb-2">No resumes yet</h2>
-                <p className="text-gray-400 text-sm mb-6">Create your first resume to get started</p>
-                <button
-                  onClick={newResume}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
-                >
-                  <Plus size={15} /> Create Resume
-                </button>
-              </div>
-            ) : (
-              // Three to a row only from xl (R4-DVIS-28): at lg the Career History sidebar leaves ~645 px, and
-              // three ~200 px cards cut every name past ~21 characters, so a résumé and its "(Copy)" looked alike.
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-                {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
-                <button
-                  onClick={newResume}
-                  className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
-                >
-                  <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
-                    <Plus size={22} />
-                  </div>
-                  <span className="text-sm font-medium">New Resume</span>
-                </button>
+        {(store.persistError || store.recovery || importError || originalsWaiting) && (
+          <div className="mt-5 space-y-2.5">
+            {store.persistError && (
+              <p role="alert" className={`cv-notice-bad ${NOTICE}`}>{notSavedMessage('dashboard', store.persistError)}</p>
+            )}
+            {store.recovery && <RecoveryNotice what="résumés" recovery={store.recovery} onDismiss={store.dismissRecovery} />}
+            {importError && (
+              <div className={`cv-notice-bad ${NOTICE} flex items-start gap-2`}>
+                <span className="flex-1">{importError}</span>
+                <button type="button" onClick={() => setImportError(null)} className="font-semibold shrink-0">Dismiss</button>
               </div>
             )}
-
-            {/* Cover letters: a group of their own, each opening on its letter (R2-135) */}
-            {(resumes.length > 0 || letters.length > 0) && (
-              <section aria-labelledby="dashboard-letters" className="mt-8 sm:mt-10">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h2 id="dashboard-letters" className="text-lg sm:text-xl font-bold text-gray-900">Cover Letters</h2>
-                  <p className="text-xs sm:text-sm text-gray-400">
-                    {letters.length} letter{letters.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-                  {letters.map(r => card(r, openLetter))}
-                  <button
-                    onClick={startLetter}
-                    onMouseEnter={() => warm('letter')}
-                    onFocus={() => warm('letter')}
-                    className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
-                  >
-                    <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
-                      <MailIcon size={22} />
-                    </div>
-                    <span className="text-sm font-medium">New Cover Letter</span>
-                  </button>
-                </div>
-              </section>
+            {originalsWaiting && (
+              <p role="status" className={`cv-notice-warn ${NOTICE}`}>Your originals come back as soon as your account can be reached again.</p>
             )}
           </div>
+        )}
 
-          {/* Sidebar — career history. Pinned from lg, it is never taller than the window (R4-DVIS-29): a
-              long history scrolls inside the panel's timeline, so the panel's end and "Open Job Tracker →"
-              stay on screen instead of below the fold until the page's end. */}
-          <div onMouseEnter={() => warm('career')} onFocus={() => warm('career')} className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]">
-            <div className="mb-3 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-bold text-gray-700">Career History</h2>
-              <button
-                onClick={() => navigate('/jobs')}
-                className="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium"
-              >
-                Job Tracker →
+        {resumes.length === 0 ? (
+          <section className="mt-8 sm:mt-9 flex flex-col items-center justify-center py-16 sm:py-20 text-center cv-card rounded-[20px] p-6">
+            <div className="w-14 h-14 bg-cv-brand-soft text-cv-brand rounded-full flex items-center justify-center mb-4">
+              <FileText size={26} />
+            </div>
+            <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-cv-ink mb-2">No resumes yet</h2>
+            <p className="text-cv-muted text-sm mb-6">Create your first resume to get started</p>
+            <button onClick={newResume} className={PRIMARY_BUTTON}>
+              <Plus size={16} /> Create Resume
+            </button>
+          </section>
+        ) : (
+          // Four to a row from xl, two on a phone (the canvas); a card's name keeps two lines whatever the width (R4-DVIS-28).
+          <div className={`${GRID} mt-6 sm:mt-7`}>
+            <button onClick={newResume} className={TILE}>
+              <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-cv-brand-soft text-cv-brand flex items-center justify-center"><Plus size={22} /></span>
+              <span className="font-semibold text-base">New Resume</span>
+              <span className="text-cv-muted text-[13px] leading-snug max-w-[170px]">Start from a template, import a file, or begin blank.</span>
+            </button>
+            {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
+          </div>
+        )}
+
+        {/* Cover letters: a group of their own, each opening on its letter (R2-135) */}
+        {(resumes.length > 0 || letters.length > 0) && (
+          <section aria-labelledby="dashboard-letters" className="mt-10 sm:mt-11">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 id="dashboard-letters" className="text-xl font-semibold tracking-tight text-cv-ink">Cover Letters</h2>
+              <p className="text-sm text-cv-muted">{letters.length} letter{letters.length !== 1 ? 's' : ''}</p>
+            </div>
+            <div className={GRID}>
+              {letters.map(r => card(r, openLetter))}
+              <button onClick={startLetter} onMouseEnter={() => warm('letter')} onFocus={() => warm('letter')} className={TILE}>
+                <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-cv-brand-soft text-cv-brand flex items-center justify-center"><MailIcon size={22} /></span>
+                <span className="font-semibold text-base">New Cover Letter</span>
               </button>
             </div>
-            <Lazy
-              load="career"
-              fallback={(retry, tries) => (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-                  <span className="flex-1">Career History could not load. Check your connection.{tries > 0 && ' The app may have been updated.'}</span>
-                  <button type="button" onClick={retry} className="font-semibold hover:text-red-800 shrink-0">Try again</button>
-                  {/* After a deploy the file is gone for good: a reload the person chooses drops nothing (an automatic one would drop a draft). */}
-                  {tries > 0 && <button type="button" onClick={() => globalThis.location.reload()} className="font-semibold hover:text-red-800 shrink-0">Reload page</button>}
-                </div>
-              )}
-              resumes={resumes}
-              activeId={store.appState.activeId}
-              showJobTrackerLink={true}
-            />
+          </section>
+        )}
+
+        {/* Career history, below the documents. A long history scrolls inside the panel's timeline (R4-DVIS-29). */}
+        <section onMouseEnter={() => warm('career')} onFocus={() => warm('career')} className="mt-10 sm:mt-11 max-w-xl">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-xl font-semibold tracking-tight text-cv-ink">Career History</h2>
+            <button onClick={() => navigate('/jobs')} className="text-sm font-semibold text-cv-brand-text hover:underline">
+              Job Tracker →
+            </button>
           </div>
+          <Lazy
+            load="career"
+            fallback={(retry, tries) => (
+              <div className={`cv-notice-bad ${NOTICE} flex items-start gap-2`}>
+                <span className="flex-1">Career History could not load. Check your connection.{tries > 0 && ' The app may have been updated.'}</span>
+                <button type="button" onClick={retry} className="font-semibold shrink-0">Try again</button>
+                {/* After a deploy the file is gone for good: a reload the person chooses drops nothing (an automatic one would drop a draft). */}
+                {tries > 0 && <button type="button" onClick={() => globalThis.location.reload()} className="font-semibold shrink-0">Reload page</button>}
+              </div>
+            )}
+            resumes={resumes}
+            activeId={store.appState.activeId}
+            showJobTrackerLink={true}
+          />
+        </section>
+      </main>
 
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 bg-white mt-8">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-gray-400">© 2026 CPWT-CV. All rights reserved.</p>
-          <div className="flex gap-4 text-xs text-gray-400">
-            <button onClick={() => navigate('/terms')} className="hover:text-gray-700 transition-colors">Terms &amp; Conditions</button>
-            <button onClick={() => navigate('/privacy')} className="hover:text-gray-700 transition-colors">Privacy Policy</button>
+      <div className="border-t border-cv-hairline bg-cv-surface">
+        <div className="max-w-[1160px] mx-auto px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-xs text-cv-muted">© 2026 CPWT-CV. All rights reserved.</p>
+          <div className="flex gap-4 text-xs text-cv-muted">
+            <button onClick={() => navigate('/terms')} className="hover:text-cv-ink transition-colors">Terms &amp; Conditions</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-cv-ink transition-colors">Privacy Policy</button>
           </div>
         </div>
       </div>

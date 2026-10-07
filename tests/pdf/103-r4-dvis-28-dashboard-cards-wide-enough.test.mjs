@@ -5,6 +5,9 @@
 // only from xl (1280 px, ~292 px cards), two at lg (~312 px), and a card's name shows in full on hover
 // (its title). The fake DOM has no layout, so this pins the classes and the title on the real Dashboard
 // and ResumeCards, mounted with react-dom/client over tests/pdf/fake-dom.mjs, with fictional résumés.
+// B5a (Documents page): Career History moved below the documents, so the cards have the whole row: both
+// grids are two to a row on a phone, three from md (~307 px cards at 1024 px) and four from xl (~250 px at
+// 1280, the canvas), and the dashed New Resume tile is the first cell of the résumés' grid.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -49,17 +52,22 @@ async function dashboard() {
   };
 }
 
-it('the résumé and cover-letter grids are three to a row only from xl, two at lg beside the sidebar', async () => {
+it('the résumé and cover-letter grids are two to a row on a phone, three from md and four from xl, with no sidebar beside them', async () => {
   const page = await dashboard();
   try {
     const all = page.all();
     for (const label of ['New Resume', 'New Cover Letter']) {
-      const tile = all.find((el) => el.tagName === 'BUTTON' && tokens(el).includes('border-dashed') && text(el) === label);
+      const tile = all.find((el) => el.tagName === 'BUTTON' && tokens(el).includes('border-dashed') && text(el).startsWith(label));
       assert.ok(tile, `the dashed "${label}" tile`);
       const grid = tile.parentNode;
       assert.ok(tokens(grid).includes('grid'), `${label}: its grid`);
-      for (const t of ['grid-cols-1', 'sm:grid-cols-2', 'xl:grid-cols-3']) assert.ok(tokens(grid).includes(t), `${label}'s grid has ${t}: ${tokens(grid).join(' ')}`);
-      assert.ok(!tokens(grid).includes('lg:grid-cols-3'), `${label}'s grid is not three to a row at lg: ~200 px cards beside the sidebar cut names at ~21 characters`);
+      for (const t of ['grid-cols-2', 'md:grid-cols-3', 'xl:grid-cols-4']) assert.ok(tokens(grid).includes(t), `${label}'s grid has ${t}: ${tokens(grid).join(' ')}`);
+      assert.ok(!tokens(grid).includes('lg:grid-cols-4'), `${label}'s grid is not four to a row at lg: narrower cards cut names`);
+      assert.ok(!all.some((el) => el.tagName === 'ASIDE'), 'no sidebar takes a column from the cards');
+      if (label === 'New Resume') {
+        assert.equal(grid.childNodes[0], tile, 'the dashed New Resume tile is the first cell of the grid');
+        assert.equal(grid.childNodes.length, 3, 'the tile and the two cards');
+      } else assert.equal(grid.childNodes.at(-1), tile, 'the New Cover Letter tile follows the letters');
     }
   } finally { await page.close(); }
 });

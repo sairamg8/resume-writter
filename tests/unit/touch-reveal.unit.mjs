@@ -24,7 +24,7 @@ const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 // so a touch screen loses nothing. Matched by file and a snippet of the line, not by line number.
 const DECORATIVE = [
   { file: 'src/components/ResumeCard.jsx', snippet: 'group-hover:bg-black/5',
-    why: 'the "Open" overlay on the thumbnail; the thumbnail and the Edit button both open the résumé' },
+    why: 'the "Open" overlay on the thumbnail (hidden outright on a touch screen, no-hover:hidden); the thumbnail and the ⋯ menu\'s Edit both open the résumé' },
   { file: 'src/components/BulletOptimizerModal.jsx', snippet: 'Use Template →',
     why: 'the "Use Template →" hint inside a template button that is always visible' },
 ];

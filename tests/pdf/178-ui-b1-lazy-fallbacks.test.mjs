@@ -3,7 +3,9 @@
 // offline chunk must not remove a function, and must not reload the tab (lazyPage's reload would drop a
 // draft): New Cover makes a letter from the first source (the most recently edited résumé, as with one),
 // still once per visit; Career History shows a notice with a Try again button that imports it again.
-// The real Dashboard over tests/pdf/fake-dom.mjs, its two import()s replaced by ones that reject.
+// B5a adds the third: a card's more menu (CardMenu, the kit's Menu). When its code cannot be had the card shows
+// plain Edit / Copy / Delete buttons that do what the menu does.
+// The real Dashboard over tests/pdf/fake-dom.mjs, its import()s replaced by ones that reject.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -12,6 +14,7 @@ import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage } from './resume-tab.mjs';
+import { cardAction, menuLabels, moreButton, plainButton } from './card-menu.mjs';
 
 before(async () => {
   patchFakeDom();
@@ -47,10 +50,15 @@ async function dashboard(resumes, fail, custom = {}) {
   const savedError = console.error;
   console.error = () => {};
   const made = [];
+  const copied = [];
+  const deleted = [];
+  const savedConfirm = globalThis.confirm;
+  globalThis.confirm = () => true;
   const noop = () => {};
   const store = {
     appState: { resumes, activeId: resumes[0]?.id }, persistError: null, recovery: null,
-    duplicateResume: noop, deleteResume: noop, renameResume: noop,
+    duplicateResume: (id) => { copied.push(id); return `copy_${copied.length}`; },
+    deleteResume: (id) => { deleted.push(id); }, renameResume: noop,
     createLetter: (fromId) => { made.push(fromId); return `letter_${made.length}`; },
   };
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: noop, signOut: noop };
@@ -61,7 +69,8 @@ async function dashboard(resumes, fail, custom = {}) {
   let unmounted = false;
   const button = (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label);
   const page = {
-    made, loaders, real, all, button, view,
+    made, copied, deleted, loaders, real, all, button, view,
+    cards: () => all().filter((el) => el.getAttribute('data-testid') === 'resume-card'),
     reloads: () => reloaded,
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
     /** True when no dialog shows for `ms`: polled, as a check right after an action runs before a lazy piece could arrive. */
@@ -81,6 +90,7 @@ async function dashboard(resumes, fail, custom = {}) {
       if (!unmounted) await view.unmount();
       Object.assign(loaders, real);
       console.error = savedError;
+      if (savedConfirm === undefined) delete globalThis.confirm; else globalThis.confirm = savedConfirm;
       globalThis.location = savedLocation;
       if (savedLocation === undefined) delete globalThis.location;
       delete globalThis.localStorage;
@@ -121,7 +131,7 @@ it('Career History with its code unreachable: the notice and Try again; Try agai
   const page = await dashboard(several(), ['career']);
   try {
     await until(() => page.all().some((el) => text(el).startsWith('Career History could not load')), 'the notice');
-    assert.ok(page.all().some((el) => el.tagName === 'H2' && text(el) === 'Career History'), 'the sidebar\'s heading stays');
+    assert.ok(page.all().some((el) => el.tagName === 'H2' && text(el) === 'Career History'), 'the section\'s heading stays');
     assert.ok(page.button('Job Tracker →'), 'and its Job Tracker link');
     assert.equal(page.button('Open Job Tracker →'), undefined, 'no panel');
     const retry = page.button('Try again');
@@ -184,4 +194,39 @@ it('the same loader fails once: a later visit (remount) shows the panel with no 
     if (second) await second.close();
     await first.close();
   }
+});
+
+// A card's more menu (B5a): its code is the third piece that loads apart. With it, a ⋯ button opens the menu; without
+// it, plain buttons do the same things, so no card function is lost to a failed chunk.
+it('a card\'s menu code unreachable: plain Edit, Copy and Delete buttons stand in for the ⋯ button, and do the same', async () => {
+  const page = await dashboard(several(), ['menu']);
+  try {
+    await until(() => page.cards().length === 3 && page.cards().every((c) => !moreButton(c) && [...elements(c)].some((el) => el.tagName === 'BUTTON' && text(el) === 'Copy')), 'the plain buttons on every card');
+    const [older, newest] = [page.cards().find((c) => text(c).includes('Older CV')), page.cards().find((c) => text(c).includes('Newest CV'))];
+    for (const card of page.cards()) {
+      for (const label of ['Edit', 'Copy', 'Delete']) assert.ok(plainButton(card, label), `${label} on every card`);
+    }
+    page.view.act(() => reactProps(plainButton(older, 'Copy')).onClick({}));
+    assert.deepEqual(page.copied, ['resume_a'], 'Copy copies that card\'s résumé');
+    page.view.act(() => reactProps(plainButton(newest, 'Delete')).onClick({}));
+    assert.deepEqual(page.deleted, ['resume_b'], 'Delete deletes that card\'s résumé (after the question)');
+    assert.equal(page.reloads(), 0, 'the page was not reloaded');
+  } finally { await page.close(); }
+});
+
+it('a card\'s menu code reachable: a ⋯ button on every card opens a menu with Edit, Rename, Copy and Delete, and no plain buttons', async () => {
+  const page = await dashboard(several(), []);
+  try {
+    await until(() => page.cards().length === 3 && page.cards().every((c) => moreButton(c)), 'the ⋯ button on every card');
+    const [card] = page.cards();
+    assert.equal(moreButton(card).getAttribute('aria-label'), 'More');
+    assert.ok(![...elements(card)].some((el) => el.tagName === 'BUTTON' && ['Edit', 'Copy', 'Delete'].includes(text(el))), 'no row of plain buttons');
+    await cardAction(page.view, card, 'Copy');
+    assert.equal(page.copied.length, 1, 'Copy in the menu copies');
+    // The menu lists its actions in order, with Delete last.
+    const again = page.cards()[0];
+    page.view.act(() => reactProps(moreButton(again)).onClick({ detail: 1 }));
+    await until(() => menuLabels(page.view).length > 0, 'the menu open');
+    assert.deepEqual(menuLabels(page.view), ['Edit', 'Rename', 'Copy', 'Delete']);
+  } finally { await page.close(); }
 });

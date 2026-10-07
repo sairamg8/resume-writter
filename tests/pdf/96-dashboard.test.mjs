@@ -14,6 +14,7 @@ import { setup, teardown, resume, section, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage, settle } from './resume-tab.mjs';
+import { cardAction, cardMenuItem, closeCardMenu, itemDisabled } from './card-menu.mjs';
 
 // The demo accounts of this test's build (VITE_DEMO_ACCOUNTS): a made-up one, never the owner's.
 // Read when setup() starts Vite, as in 18-cloud-sync-waiting-notice.
@@ -116,7 +117,7 @@ async function dashboard(resumes = [], { user = null } = {}) {
     click(el) {
       view.act(() => reactProps(el).onClick({ preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el }));
     },
-    cards: () => all().filter((el) => el.tagName === 'DIV' && el.className.startsWith('group bg-white rounded-2xl')),
+    cards: () => all().filter((el) => el.getAttribute('data-testid') === 'resume-card'),
     card(name) {
       const found = page.cards().find((c) => nameOf(c)?.textContent === name);
       assert.ok(found, `no card "${name}": the dashboard shows ${page.names().join(' | ')}`);
@@ -488,7 +489,7 @@ describe("the dashboard: a card's Copy, rename and Delete (R2-167)", () => {
     try {
       const source = page.resumes()[1];
       const t0 = Date.now();
-      page.click(page.button('Copy', page.card('Lighthouse CV')));
+      await cardAction(page.view, page.card('Lighthouse CV'), 'Copy');
       await settle();
       const resumes = page.resumes();
       assert.equal(resumes.length, 4);
@@ -580,7 +581,7 @@ describe("the dashboard: a card's Copy, rename and Delete (R2-167)", () => {
     let pilot;
     try {
       pilot = page.resumes()[0];
-      page.click(page.button('Delete', page.card('Harbor Pilot CV')));
+      await cardAction(page.view, page.card('Harbor Pilot CV'), 'Delete');
       assert.deepEqual(confirm.asked, ['Delete "Harbor Pilot CV"? This cannot be undone.']);
       assert.equal(page.resumes().length, 3, 'Cancel keeps it');
       assert.deepEqual(page.store().appState.deletedIds, []);
@@ -588,7 +589,7 @@ describe("the dashboard: a card's Copy, rename and Delete (R2-167)", () => {
 
       answer = true;
       const t0 = Date.now();
-      page.click(page.button('Delete', page.card('Harbor Pilot CV')));
+      await cardAction(page.view, page.card('Harbor Pilot CV'), 'Delete');
       assert.equal(confirm.asked.length, 2);
       const state = page.store().appState;
       assert.deepEqual(state.resumes.map((r) => r.name), ['Lighthouse CV', 'Chart Maker CV']);
@@ -614,7 +615,7 @@ describe("the dashboard: a card's Copy, rename and Delete (R2-167)", () => {
     const page = await dashboard(list);
     const confirm = confirming(() => true);
     try {
-      for (let i = 0; i < list.length; i += 1) page.click(page.button('Delete', page.cards()[0]));
+      for (let i = 0; i < list.length; i += 1) await cardAction(page.view, page.cards()[0], 'Delete');
       assert.equal(confirm.asked.length, 3);
       const state = page.store().appState;
       assert.deepEqual(state.resumes, []);
@@ -714,40 +715,47 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
     const page = await dashboard(list, { user: DEMO });
     const confirm = confirming(() => true);
     try {
-      const deleteOf = (name) => page.button('Delete', page.card(name));
+      // The card's actions are in its ⋯ menu: peeked at (and closed again), or pressed.
+      const deleteDisabled = async (name) => {
+        const item = await cardMenuItem(page.view, page.card(name), 'Delete');
+        const disabled = itemDisabled(item);
+        closeCardMenu(page.view);
+        return disabled;
+      };
+      const offers = async (name, label) => { await cardMenuItem(page.view, page.card(name), label); closeCardMenu(page.view); return true; };
       const pilot = () => page.resumes().find((r) => r.id === list[0].id);
-      assert.ok(page.button('Keep as my original', page.card('Harbor Pilot CV')));
+      assert.ok(await offers('Harbor Pilot CV', 'Keep as my original'));
       // The badge is its own element: the fake DOM runs a card's texts together ("OriginalStop keeping").
       const badged = (name) => [...elements(page.card(name))].some((el) => el.tagName === 'SPAN' && el.textContent.trim() === 'Original');
       assert.equal(badged('Harbor Pilot CV'), false);
 
       const t0 = Date.now();
-      page.click(page.button('Keep as my original', page.card('Harbor Pilot CV')));
+      await cardAction(page.view, page.card('Harbor Pilot CV'), 'Keep as my original');
       assert.equal(pilot().keep, true);
       assert.ok(pilot().updatedAt >= t0, 'an edit: the sync sends it');
       assert.equal(page.resumes()[1].keep, undefined, 'only that one');
       assert.equal(badged('Harbor Pilot CV'), true, 'the Original badge');
-      assert.ok(page.button('Stop keeping', page.card('Harbor Pilot CV')));
-      assert.equal(reactProps(deleteOf('Harbor Pilot CV')).disabled, true, 'the last original: deleted, it would come straight back');
+      assert.ok(await offers('Harbor Pilot CV', 'Stop keeping'));
+      assert.equal(await deleteDisabled('Harbor Pilot CV'), true, 'the last original: deleted, it would come straight back');
       assert.match(page.card('Harbor Pilot CV').textContent, /Your last original always comes back/);
-      assert.equal(reactProps(deleteOf('Lighthouse CV')).disabled, false);
+      assert.equal(await deleteDisabled('Lighthouse CV'), false);
 
-      page.click(page.button('Keep as my original', page.card('Lighthouse CV')));
+      await cardAction(page.view, page.card('Lighthouse CV'), 'Keep as my original');
       assert.equal(page.resumes()[1].keep, true);
-      assert.equal(reactProps(deleteOf('Harbor Pilot CV')).disabled, false, 'two originals: either can go');
+      assert.equal(await deleteDisabled('Harbor Pilot CV'), false, 'two originals: either can go');
 
-      page.click(deleteOf('Harbor Pilot CV'));
+      await cardAction(page.view, page.card('Harbor Pilot CV'), 'Delete');
       assert.deepEqual(confirm.asked, ['Delete "Harbor Pilot CV"? It is kept as your original, so it comes back once none of your originals is left. To delete it for good, choose "Stop keeping" first.']);
       const state = page.store().appState;
       assert.deepEqual(state.resumes.map((r) => r.name), ['Lighthouse CV']);
       assert.equal(state.deletedInfo[list[0].id].owner, DEMO.uid, 'the signed-in account\'s deletion');
       assert.equal(state.deletedInfo[list[0].id].keep, true);
-      assert.equal(reactProps(deleteOf('Lighthouse CV')).disabled, true, 'the last original now');
+      assert.equal(await deleteDisabled('Lighthouse CV'), true, 'the last original now');
 
-      page.click(page.button('Stop keeping', page.card('Lighthouse CV')));
+      await cardAction(page.view, page.card('Lighthouse CV'), 'Stop keeping');
       assert.equal(page.resumes()[0].keep, undefined);
-      assert.equal(reactProps(deleteOf('Lighthouse CV')).disabled, false);
-      assert.ok(page.button('Keep as my original', page.card('Lighthouse CV')));
+      assert.equal(await deleteDisabled('Lighthouse CV'), false);
+      assert.ok(await offers('Lighthouse CV', 'Keep as my original'));
     } finally { confirm.restore(); await page.close(); }
   });
 

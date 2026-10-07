@@ -16,6 +16,7 @@ import { setup, teardown, loadModule, renderCover, render, read, readDocx, allTe
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { PNG_2X2 as PNG } from './extractors.mjs';
+import { cardAction } from './card-menu.mjs';
 
 // New Cover's picker is the kit's Dialog (R4-DVIS-07): patchFakeDom for its focus trap.
 before(async () => {
@@ -147,12 +148,19 @@ async function openApp(resumes, dataVersion = 13) {
       return openDialog();
     },
     /** Every card on the dashboard: its text, and whether it is in the Cover Letters group. */
-    cards: () => all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className))
+    cards: () => all().filter((el) => el.getAttribute('data-testid') === 'resume-card')
       .map((el) => ({ el, text: text(el), letter: inside(el, 'SECTION') })),
     card: (name) => {
-      const found = all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className)).filter((el) => text(el).includes(name));
+      const found = all().filter((el) => el.getAttribute('data-testid') === 'resume-card').filter((el) => text(el).includes(name));
       assert.equal(found.length, 1, `one card shows "${name}"`);
       return found[0];
+    },
+    /** Presses `label` in the menu of the card showing `name` (Edit, Copy, Delete: its ⋯ menu), then lets it settle. */
+    async action(name, label) {
+      const card = all().filter((el) => el.getAttribute('data-testid') === 'resume-card').filter((el) => text(el).includes(name));
+      assert.equal(card.length, 1, `one card shows "${name}"`);
+      await cardAction(view, card[0], label);
+      await settle();
     },
     heading: (level) => all().filter((el) => el.tagName === level).map(text),
     counts: () => all().filter((el) => el.tagName === 'P' && /^\d+ (resume|letter)s?$/.test(text(el))).map(text),
@@ -302,11 +310,11 @@ describe('the dashboard lists letters as letters (R2-135)', () => {
   it('each letter opens on its letter, copies as a letter, renames and deletes like a résumé', async () => {
     const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000), letter('resume_l1', 'Contoso letter', 2000)]);
     try {
-      await app.click(app.button('Edit', app.card('Contoso letter')));
+      await app.action('Contoso letter', 'Edit');
       assert.equal(app.where(), '/resume/resume_l1?tab=coverletter', 'Edit opens the letter on its tab');
       await app.press('Back to dashboard');
 
-      await app.click(app.button('Copy', app.card('Contoso letter')));
+      await app.action('Contoso letter', 'Copy');
       const copy = app.active();
       assert.equal(copy.name, 'Contoso letter (Copy)');
       assert.equal(copy.kind, 'letter', 'a copy of a letter is a letter');
@@ -321,7 +329,7 @@ describe('the dashboard lists letters as letters (R2-135)', () => {
       await app.fire(input, 'onKeyDown', { key: 'Enter' });
       assert.equal(app.store().appState.resumes.find((r) => r.id === copy.id).name, 'Fabrikam letter');
 
-      await app.click(app.button('Delete', app.card('Fabrikam letter')));
+      await app.action('Fabrikam letter', 'Delete');
       assert.deepEqual(app.store().appState.resumes.map((r) => r.id), ['resume_a', 'resume_l1']);
       assert.deepEqual(app.counts(), ['1 resume', '1 letter']);
     } finally { await app.close(); }
@@ -350,7 +358,7 @@ describe('the dashboard lists letters as letters (R2-135)', () => {
     assert.equal(made.kind, 'letter');
   });
 
-  it('the career panel beside the lists reads a résumé, not a letter', async () => {
+  it('the career panel below the lists reads a résumé, not a letter', async () => {
     const app = await openApp([letter('resume_l1', 'Contoso letter', 2000), cv('resume_b', 'Data CV', SAM, 3000)]);
     try {
       // The panel's code loads apart from the start-up path (Dashboard.jsx, Lazy): wait until it is on screen.
@@ -414,7 +422,7 @@ describe('a \'Cover Letter\' résumé an older build saved (R2-135, data version
     const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000), await oldLetter()], 12);
     try {
       assert.deepEqual(app.counts(), ['1 resume', '1 letter'], 'before: "2 resumes"');
-      await app.click(app.button('Edit', app.card('Cover Letter')));
+      await app.action('Cover Letter', 'Edit');
       assert.equal(app.where(), '/resume/resume_old?tab=coverletter');
     } finally { await app.close(); }
   });

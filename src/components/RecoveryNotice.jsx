@@ -44,7 +44,7 @@ export function RecoveryNotice({ what, recovery, onDismiss }) {
   // (J-39). From sm up they sit beside it again, in at most half the row, wrapping there too. The
   // backup key is one long word: it may break.
   return (
-    <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+    <p role="alert" className="cv-notice-bad text-[13px] px-3.5 py-2.5 flex flex-col gap-2 sm:flex-row sm:items-start">
       <span className="min-w-0 sm:flex-1 [overflow-wrap:anywhere]">
         Your saved {what} could not be read in full, so what could not be read was left out.{' '}
         {copy}
@@ -53,12 +53,12 @@ export function RecoveryNotice({ what, recovery, onDismiss }) {
       </span>
       <span className="flex flex-wrap gap-x-3 gap-y-1 sm:max-w-[50%] sm:justify-end">
         {kept && (
-          <button type="button" onClick={() => download(backupKey)} className="font-semibold hover:text-red-800 whitespace-nowrap">Download the copy</button>
+          <button type="button" onClick={() => download(backupKey)} className="font-semibold hover:underline whitespace-nowrap">Download the copy</button>
         )}
         {earlier.map((k, i) => (
-          <button key={k} type="button" onClick={() => download(k)} className="font-semibold hover:text-red-800 whitespace-nowrap">{earlierLabel(i)}</button>
+          <button key={k} type="button" onClick={() => download(k)} className="font-semibold hover:underline whitespace-nowrap">{earlierLabel(i)}</button>
         ))}
-        <button type="button" onClick={onDismiss} className="font-semibold hover:text-red-800">Dismiss</button>
+        <button type="button" onClick={onDismiss} className="font-semibold hover:underline">Dismiss</button>
       </span>
     </p>
   );
