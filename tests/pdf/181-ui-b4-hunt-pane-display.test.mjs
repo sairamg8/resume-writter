@@ -4,6 +4,7 @@
 // Mounted over tests/pdf/fake-dom.mjs as tests/pdf/181-ui-b4-stage-toolbar mounts the pane.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { mount, elements } from './fake-dom.mjs';
@@ -40,4 +41,31 @@ describe('the preview column holds one display utility in every layout (L7)', ()
       assert.deepEqual(display, [want], `the display utilities on the column: ${display.join(' ')}`);
     });
   }
+});
+
+// T4 (test strength): the bar's layout mirror (180-ui-b3-bar-layout) decides visibility by the LAST display utility in a class
+// list, but the stylesheet decides by its own order, so two display utilities of one variant on one element are a defect whatever
+// order they are written in. Scanned in the editor's own files: each static class list (a quoted one, or the fixed parts of a
+// template one; what a `${}` adds is a branch of its own) holds at most one display utility per variant.
+const EDITOR_FILES = fs.readdirSync(new URL('../../src/components/', import.meta.url)).filter((f) => /^Editor.*\.jsx$/.test(f)).map((f) => `components/${f}`)
+  .concat(['pages/Editor.jsx', 'components/LayoutToggle.jsx', 'components/PdfPreview.jsx', 'components/AtsDock.jsx', 'components/DesignDock.jsx']);
+
+describe('no element of the editor\'s files holds two display utilities of one variant (T4)', () => {
+  it('each static class list has at most one per variant', () => {
+    const bad = [];
+    for (const file of EDITOR_FILES) {
+      const text = fs.readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8');
+      const lists = [...text.matchAll(/className="([^"]*)"/g)].map((m) => m[1])
+        .concat([...text.matchAll(/className=\{`([^`]*)`/g)].map((m) => m[1].replace(/\$\{[^}]*\}/g, ' ')));
+      for (const list of lists) {
+        const by = new Map();
+        for (const token of list.split(/\s+/).filter(Boolean)) {
+          const at = token.lastIndexOf(':');
+          if (DISPLAY.test(token.slice(at + 1))) by.set(token.slice(0, at + 1), [...(by.get(token.slice(0, at + 1)) ?? []), token]);
+        }
+        for (const tokens of by.values()) if (tokens.length > 1) bad.push(`${file}: ${tokens.join(' ')} in "${list.slice(0, 80)}"`);
+      }
+    }
+    assert.deepEqual(bad, []);
+  });
 });
