@@ -71,6 +71,21 @@ async function openDashboard(page) {
   await page.getByTestId('resume-card').first().waitFor({ timeout: 20_000 });
 }
 
+/**
+ * The dashboard's first card with its ⋯ menu opened by a tap (B5a: Edit, Rename, Copy and Delete are one menu away,
+ * no longer a row of buttons on the card). The menu's list is placed after it is measured; wait until it is painted.
+ */
+async function openDashboardCardMenu(page) {
+  await openDashboard(page);
+  await page.getByTestId('resume-card-more').first().tap();
+  const menu = page.getByRole('menu');
+  await menu.waitFor({ state: 'attached', timeout: 15_000 });
+  await menu.evaluate((el) => new Promise((resolve) => {
+    const check = () => (getComputedStyle(el).opacity !== '0' ? resolve() : requestAnimationFrame(check));
+    check();
+  }));
+}
+
 /** The Export menu of the editor bar, opened by a tap: the entries are one menu away, and reachable there. */
 async function openEditorExportMenu(page) {
   await openEditor(page);
@@ -84,7 +99,12 @@ async function openEditorExportMenu(page) {
  * APPEND here: a later batch lists the testids it adds (or moves behind a menu: `open` taps the opener).
  */
 const SURFACES = [
-  { name: 'dashboard', open: openDashboard, testids: ['resume-card', 'resume-card-rename', 'bottom-tab-documents', 'bottom-tab-applications', 'bottom-tab-projects'] }, // B2: the nav moves to the phone tab bar (the top bar's nav is hidden below md)
+  { name: 'dashboard', open: openDashboard, testids: ['resume-card', 'resume-card-rename', 'resume-card-more', 'bottom-tab-documents', 'bottom-tab-applications', 'bottom-tab-projects'] }, // B2: the nav moves to the phone tab bar (the top bar's nav is hidden below md)
+  {
+    name: 'dashboard card menu',
+    open: openDashboardCardMenu,
+    testids: ['Edit', 'Rename', 'Copy', 'Delete'].map((label) => ({ name: `the card menu's ${label}`, locate: (page) => page.getByRole('menuitem', { name: new RegExp(`^${label}`) }) })),
+  },
   {
     name: 'editor',
     open: openEditor,

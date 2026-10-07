@@ -7,9 +7,10 @@
 // Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js. Last, what
 // a shared browser keeps when two accounts delete the same id.
 import {
-  OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteButton, deleteCard, openCard, stopKeeping, backToDashboard,
+  OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteCard, openCard, stopKeeping, backToDashboard,
   expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
+import { offers, offersNoKeep } from '../support/cardMenu.js';
 import { CARD, SYNC_STATUS } from '../support/selectors.js';
 
 describe('demo account — the owner\'s originals come back, never the samples', () => {
@@ -63,11 +64,12 @@ describe('demo account — the owner\'s originals come back, never the samples',
     okEveryConfirm();
     deleteCard('First');
     expectCards(['Second', 'Other']);
-    deleteButton('Second').should('be.disabled'); // the last original; before: deleted, both came back
+    offers('Second', 'Delete', { enabled: false }); // the last original; before: deleted, both came back
     stopKeeping('Second');
     expectCards(['Second', 'Other', 'First']);
-    cy.contains(CARD, 'First').should('contain.text', 'Stop keeping');
-    deleteButton('First').should('be.disabled');
+    cy.contains(CARD, 'First').should('contain.text', 'Original'); // the badge
+    offers('First', 'Stop keeping');
+    offers('First', 'Delete', { enabled: false });
   });
 
   it('a résumé not kept as an original does not come back', () => {
@@ -105,7 +107,8 @@ describe('demo account — nobody else gets anything back', () => {
   it('another account and a signed-out visitor get no keep controls, and the plain Import', () => {
     [OTHER, null].forEach((user) => {
       visitAs(user, stateWith(['My CV', { keep: true }]));
-      cy.contains(CARD, 'My CV').should('not.contain.text', 'Original').and('not.contain.text', 'Keep as my original');
+      cy.contains(CARD, 'My CV').should('not.contain.text', 'Original');
+      offersNoKeep('My CV'); // the keep controls are in the card's ⋯ menu
       cy.contains('button', /^\s*Import\s*$/).should('not.have.attr', 'aria-expanded');
     });
   });

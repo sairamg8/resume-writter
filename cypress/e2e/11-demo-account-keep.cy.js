@@ -2,9 +2,10 @@
 // keeping" on a card, "Import as my original", and what Delete does to an original. What comes
 // back, and to whom: 11-demo-account.cy.js. The e2e build's fake sign-in, no Firebase.
 import {
-  OWNER, OTHER, LAST_ORIGINAL_HINT, visitAs, stateWith, file, chooseFile, importFile, okEveryConfirm, deleteButton,
+  OWNER, OTHER, LAST_ORIGINAL_HINT, visitAs, stateWith, file, chooseFile, importFile, okEveryConfirm,
   deleteCard, openCard, stopKeeping, backToDashboard, expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
+import { cardAction, closeMenu, menuItem, offers } from '../support/cardMenu.js';
 import { CARD } from '../support/selectors.js';
 
 describe('demo account — "Keep as my original" and "Import as my original"', () => {
@@ -13,7 +14,8 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     importFile(file('My real CV'), { asOriginal: true });
     cy.contains('label', 'Full Name').parent().next('input').clear().type('Sam Owner');
     backToDashboard();
-    cy.contains(CARD, 'My real CV').should('contain.text', 'Original').and('contain.text', 'Stop keeping');
+    cy.contains(CARD, 'My real CV').should('contain.text', 'Original'); // the badge
+    offers('My real CV', 'Stop keeping');
     okEveryConfirm();
     deleteCard('Classic CV');
     deleteCard('My real CV');
@@ -32,20 +34,21 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     visitAs(OWNER);
     importFile(file('Exported CV', { keep: true }), { asOriginal: false });
     backToDashboard();
-    cy.contains(CARD, 'Exported CV').should('not.contain.text', 'Stop keeping').contains('button', 'Keep as my original');
+    cy.contains(CARD, 'Exported CV').should('not.contain.text', 'Original'); // no badge
+    offers('Exported CV', 'Keep as my original');
     cy.store().should((s) => expect(s.resumes[0]).not.to.have.property('keep'));
   });
 
   it('"Keep as my original" on a card makes it an original; after "Stop keeping" it is deleted for good', () => {
     visitAs(OWNER, stateWith(['Classic CV'], ['Other CV']));
-    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original').click();
+    cardAction('Classic CV', 'Keep as my original');
     cy.contains(CARD, 'Classic CV').should('contain.text', 'Original').and('contain.text', LAST_ORIGINAL_HINT);
-    deleteButton('Classic CV').should('be.disabled'); // it would come straight back
+    offers('Classic CV', 'Delete', { enabled: false }); // it would come straight back
     okEveryConfirm();
     deleteCard('Other CV');
     expectCards(['Classic CV']);
     stopKeeping('Classic CV');
-    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original');
+    offers('Classic CV', 'Keep as my original');
     deleteCard('Classic CV');
     cy.contains('No resumes yet').should('be.visible');
     newResumeAndBack();
@@ -56,16 +59,18 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Classic CV']));
     cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(true); });
     // Before: enabled, and OK put the card straight back, last — nothing deleted.
-    deleteButton('My CV').should('be.disabled').and('have.attr', 'title', LAST_ORIGINAL_HINT)
-      .invoke('attr', 'aria-describedby')
-      .then((id) => cy.get(`[id="${id}"]`).should('have.text', LAST_ORIGINAL_HINT).and('be.visible'));
-    deleteButton('My CV').click({ force: true });
+    // The card says why under its name, and its menu's Delete is disabled and carries the same words.
+    cy.contains(CARD, 'My CV').contains('p', LAST_ORIGINAL_HINT).should('be.visible');
+    menuItem('My CV', 'Delete').should('have.attr', 'aria-disabled', 'true').and('contain.text', LAST_ORIGINAL_HINT);
+    cy.contains('[role="menuitem"]', /^\s*Delete/).click({ force: true });
     cy.get('@confirm').should('not.have.been.called');
+    closeMenu();
     expectCards(['My CV', 'Classic CV']);
     cy.store().its('deletedIds').should('deep.eq', []);
-    deleteButton('Classic CV').should('be.enabled');
+    offers('Classic CV', 'Delete');
     stopKeeping('My CV'); // then it is a résumé like any other: deleted for good
-    deleteButton('My CV').should('be.enabled').click();
+    offers('My CV', 'Delete');
+    cardAction('My CV', 'Delete');
     cy.get('@confirm').should('have.been.calledWith', 'Delete "My CV"? This cannot be undone.');
     expectCards(['Classic CV']);
     cy.contains(LAST_ORIGINAL_HINT).should('not.exist');
@@ -74,7 +79,7 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
   it('with another original left, Delete says this one comes back, and how to delete it for good', () => {
     visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Spare CV', { keep: true }], ['Classic CV']));
     cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
-    deleteButton('Spare CV').should('be.enabled');
+    offers('Spare CV', 'Delete');
     deleteCard('My CV');
     cy.get('@confirm').should('have.been.calledWithMatch', /kept as your original, so it comes back .* choose "Stop keeping" first/);
     deleteCard('Classic CV');
@@ -87,21 +92,22 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     const state = stateWith(['Odd CV'], ['Other CV']);
     state.resumes[0].keep = 'yes'; // a hand-edited file or cloud document: the restore ignores it
     visitAs(OWNER, state);
-    cy.contains(CARD, 'Odd CV').should('not.contain.text', 'Stop keeping'); // before: the Original badge
+    cy.contains(CARD, 'Odd CV').should('not.contain.text', 'Original'); // before: the Original badge
     cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
     deleteCard('Odd CV');
     cy.get('@confirm').should('have.been.calledWith', 'Delete "Odd CV"? This cannot be undone.');
-    cy.contains(CARD, 'Odd CV').contains('button', 'Keep as my original').click();
-    cy.contains(CARD, 'Odd CV').should('contain.text', 'Stop keeping');
+    cardAction('Odd CV', 'Keep as my original');
+    cy.contains(CARD, 'Odd CV').should('contain.text', 'Original');
+    offers('Odd CV', 'Stop keeping');
     cy.store().should((s) => expect(s.resumes[0].keep).to.eq(true));
   });
 
   it('a copy of an original is a new résumé, not an original', () => {
     visitAs(OWNER, stateWith(['My CV', { keep: true }]));
-    cy.contains(CARD, 'My CV').contains('button', 'Copy').click();
+    cardAction('My CV', 'Copy');
     cy.contains('button', 'Export').should('be.visible');
     backToDashboard();
-    cy.contains(CARD, 'My CV (Copy)').contains('button', 'Keep as my original');
+    offers('My CV (Copy)', 'Keep as my original');
   });
 });
 
@@ -124,8 +130,9 @@ describe('demo account — the editor\'s Export → Import', () => {
       expect(s.activeId).to.eq(imported.id);
     });
     backToDashboard();
-    cy.contains(CARD, 'From the editor').should('contain.text', 'Stop keeping');
-    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original');
+    cy.contains(CARD, 'From the editor').should('contain.text', 'Original'); // the badge
+    offers('From the editor', 'Stop keeping');
+    offers('Classic CV', 'Keep as my original');
   });
 
   it('its Import JSON stays a plain import, even from a file that says it is an original', () => {

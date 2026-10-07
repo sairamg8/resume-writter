@@ -26,7 +26,7 @@ Cypress.Commands.add('visitEditor', (template = 'classic', opts = {}) => {
 /** Open the dashboard with `state` in localStorage (null = a first visit: empty store). */
 Cypress.Commands.add('visitDashboard', (state = null) => {
   cy.seedAndVisit('/#/', state);
-  cy.contains('h1', 'My Resumes').should('be.visible');
+  cy.contains('h1', 'Documents').should('be.visible');
 });
 
 /** Wait until the PDF preview has painted (it renders the exported PDF with pdf.js). */

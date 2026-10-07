@@ -36,11 +36,11 @@ async function until(check, what) {
 
 describe('the picker and Career History are off the start-up path', () => {
   const OFF = [
-    'src/components/NewLetterModal.jsx', 'src/components/CareerHistoryPanel.jsx', 'src/utils/careerHistory.js',
+    'src/components/NewLetterModal.jsx', 'src/components/CareerHistoryPanel.jsx', 'src/utils/careerHistory.js', 'src/components/CardMenu.jsx',
     'src/components/ui/Dialog.jsx', 'src/components/ui/useFocusTrap.js', 'src/components/ui/placement.js',
     'src/components/ui/useScrollLock.js', 'src/components/ui/usePresence.js', 'src/components/ui/Portal.jsx',
   ];
-  it('the Dashboard is on it; the picker, the panel and the Dialog\'s closure are not (no other start-up module imports them)', () => {
+  it('the Dashboard is on it; the picker, the panel, the card menu and the Dialog\'s closure are not (no other start-up module imports them)', () => {
     const startup = startupModules();
     assert.ok(startup.has('src/pages/Dashboard.jsx'), 'the Dashboard is on the start-up path');
     assert.deepEqual(OFF.filter((m) => startup.has(m)), [], 'reached by a static import from the start-up path');
@@ -58,6 +58,9 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   const calls = { letter: 0, career: 0, menu: 0 };
   warmed.clear();
   for (const key of Object.keys(real)) loaders[key] = () => { calls[key] += 1; return real[key](); };
+  // The cards' menu is held back for good: its ⋯ buttons then stay the ones the card draws until the code arrives
+  // (the handlers the prefetch test presses), whatever the speed of this machine's loader.
+  loaders.menu = () => { calls.menu += 1; return new Promise(() => {}); };
   globalThis.localStorage = new MemoryStorage([]);
   const noop = () => {};
   const store = {

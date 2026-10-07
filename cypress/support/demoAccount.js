@@ -3,6 +3,7 @@
 // résumés, and the dashboard's and editor's clicks.
 import { STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD, IMPORT_INPUT } from './selectors.js';
+import { cardAction, menuItem } from './cardMenu.js';
 import { dashboardState } from './state.js';
 
 // Its e-mail is the e2e build's demo account (VITE_DEMO_ACCOUNTS in .env.e2e).
@@ -28,7 +29,7 @@ export function visitAs(user, state = null) {
       if (user) win.localStorage.setItem('cpwtcv_e2e_user', JSON.stringify(user));
     },
   });
-  cy.contains('h1', 'My Resumes').should('be.visible');
+  cy.contains('h1', 'Documents').should('be.visible');
   if (user) accountButton(user).should('be.visible');
 }
 
@@ -63,11 +64,14 @@ export function importFile(resume, { asOriginal }) {
 }
 
 export const okEveryConfirm = () => cy.window().then((win) => { cy.stub(win, 'confirm').returns(true); });
-/** The Delete button of the card named `name`. */
-export const deleteButton = (name) => cy.contains(CARD, name).contains('button', 'Delete');
-export const deleteCard = (name) => deleteButton(name).click();
-export const openCard = (name) => cy.contains(CARD, name).contains('button', 'Edit').click();
-export const stopKeeping = (name) => cy.contains(CARD, name).contains('button', 'Stop keeping').click();
+/**
+ * The Delete item of the card named `name`: its ⋯ menu is opened, and left open (a disabled one has aria-disabled="true";
+ * closeMenu in support/cardMenu.js closes it). The card's actions are in that menu since B5a.
+ */
+export const deleteButton = (name) => menuItem(name, 'Delete');
+export const deleteCard = (name) => cardAction(name, 'Delete');
+export const openCard = (name) => cardAction(name, 'Edit');
+export const stopKeeping = (name) => cardAction(name, 'Stop keeping');
 /** What the last original's card says, and its disabled Delete (V2OWNER-DATA-4). */
 export const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
 export const backToDashboard = () => cy.get('button[title="Back to dashboard"]').click();

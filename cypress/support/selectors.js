@@ -7,6 +7,15 @@ export const CARD = '[data-testid="resume-card"]';
 /** The pencil button next to a card's resume name (it shows on hover, always on touch). */
 export const CARD_RENAME = '[data-testid="resume-card-rename"]';
 
+/**
+ * A card's ⋯ button (aria-label More). Its menu holds Edit, Rename, Copy, Keep as my original / Stop keeping (demo
+ * accounts) and Delete, as role="menuitem"s in a portal at the end of <body> (support/cardMenu.js presses them).
+ */
+export const MORE = '[data-testid="resume-card-more"]';
+
+/** An item of an open menu (the card's, the Export menu, ...). */
+export const MENU_ITEM = '[role="menuitem"]';
+
 /** The hidden import input of the dashboard and the editor: .json first, then the documents (R2-148). */
 export const IMPORT_INPUT = 'input[type="file"][accept^=".json"]';
 

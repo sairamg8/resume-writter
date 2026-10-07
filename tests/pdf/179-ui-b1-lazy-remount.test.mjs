@@ -28,7 +28,7 @@ async function until(check, what) {
 }
 const cv = (id, name, updatedAt) => ({ ...resume({ personal: { name: `${name} Person`, title: 'Analyst' } }), id, name, updatedAt });
 
-it('a second mount shows Career History in its first commit, with no waiting', async () => {
+it('a second mount shows Career History and the cards\' menus in its first commit, with no waiting', async () => {
   const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
@@ -42,15 +42,19 @@ it('a second mount shows Career History in its first commit, with no waiting', a
   };
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: noop, signOut: noop };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
+  // A card's ⋯ button once its menu's code is in (the kit's Menu gives it aria-expanded); until then the card draws its own.
+  const menus = (view) => [...elements(view.document.body)].filter((el) => el.getAttribute('data-testid') === 'resume-card-more');
+  const menusIn = (view) => menus(view).length === 2 && menus(view).every((el) => el.hasAttribute('aria-expanded'));
   const open = () => mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
     createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
   const panel = (view) => [...elements(view.document.body)].some((el) => el.tagName === 'BUTTON' && text(el) === 'Open Job Tracker →');
   try {
     const first = open();
-    await until(() => panel(first), 'the panel on the first mount');
+    await until(() => panel(first) && menusIn(first), 'the panel and the cards\' menus on the first mount');
     await first.unmount();
     const second = open();
     assert.ok(panel(second), 'the panel is in the first commit of the second mount');
+    assert.ok(menusIn(second), 'and so is the menu of each card (B5a): no ⋯ button redrawn once the loaded menu is in');
     await second.unmount();
   } finally {
     delete globalThis.localStorage;

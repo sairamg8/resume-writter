@@ -3,6 +3,7 @@
 // when it opened, so a page only knew what storage held at that moment.
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD } from '../support/selectors.js';
+import { cardAction } from '../support/cardMenu.js';
 
 const JOBS_KEY = 'cpwtcv_jobs_v1';
 // The e2e build's demo account (VITE_DEMO_ACCOUNTS in .env.e2e).
@@ -140,12 +141,12 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       });
       cy.stub(win, 'confirm').returns(true);
     });
-    cy.contains(CARD, 'My CV').contains('button', 'Delete').click(); // Classic CV is still an original
+    cardAction('My CV', 'Delete'); // Classic CV is still an original
     cy.get(CARD).should('have.length', 1);
     // "Stop keeping" on the last original leaves none: My CV comes back; then Classic CV can go.
-    cy.contains(CARD, 'Classic CV').contains('button', 'Stop keeping').click();
+    cardAction('Classic CV', 'Stop keeping');
     cy.contains(CARD, 'My CV').should('be.visible');
-    cy.contains(CARD, 'Classic CV').contains('button', 'Delete').click();
+    cardAction('Classic CV', 'Delete');
     cy.get(CARD).should('have.length', 1).and('contain.text', 'My CV');
     cy.store().its('resumes').should('have.length', 2); // storage: the list from before
 

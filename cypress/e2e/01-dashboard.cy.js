@@ -1,6 +1,7 @@
 import { buildTestState } from '../../tests/helpers.js';
 import { CARD, CARD_RENAME, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
+import { cardAction } from '../support/cardMenu.js';
 
 const NAMES = ['Classic CV', 'Modern CV', 'Minimal CV'];
 
@@ -13,7 +14,7 @@ describe('dashboard — first visit', () => {
   it('is blank: no résumés and nobody else\'s data', () => {
     cy.get(CARD).should('have.length', 0);
     cy.contains('No resumes yet').should('be.visible');
-    cy.contains('h1', 'My Resumes').next().should('have.text', '0 resumes');
+    cy.contains('h1', 'Documents').next().should('have.text', '0 resumes');
     cy.contains('Your Name').should('be.visible'); // career panel placeholder
   });
 
@@ -47,7 +48,7 @@ describe('dashboard — first visit', () => {
       expect(active(s).personal.name).to.eq('');
     });
     cy.go('back');
-    cy.contains('h1', 'My Resumes').next().should('have.text', '0 resumes');
+    cy.contains('h1', 'Documents').next().should('have.text', '0 resumes');
     cy.contains('No resumes yet').should('be.visible');
     cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
     cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
@@ -60,7 +61,7 @@ describe('dashboard — with résumés', () => {
   it('lists every stored résumé', () => {
     cy.get(CARD).should('have.length', NAMES.length);
     NAMES.forEach((name) => cy.contains(CARD, name).should('be.visible'));
-    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
+    cy.contains('h1', 'Documents').next().should('have.text', '3 resumes');
   });
 
   it('New Resume → Start from Scratch creates an untitled blank résumé and opens it', () => {
@@ -97,7 +98,7 @@ describe('dashboard — with résumés', () => {
       expect(modern.kind).to.eq(undefined);
     });
     cy.go('back');
-    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
+    cy.contains('h1', 'Documents').next().should('have.text', '3 resumes');
     cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
     cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
     cy.get(CARD).should('have.length', NAMES.length + 1);
@@ -108,10 +109,10 @@ describe('dashboard — with résumés', () => {
     cy.get('[role="dialog"]').contains('button', 'Classic CV').click();
     cy.location('hash').should('match', /\?tab=coverletter$/);
     cy.go('back');
-    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Edit').click();
+    cardAction('Cover Letter', 'Edit'); // in the card's ⋯ menu
     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
     cy.go('back');
-    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Copy').click();
+    cardAction('Cover Letter', 'Copy');
     cy.location('hash').should('match', /\?tab=coverletter$/);
     cy.store().should((s) => {
       expect(active(s).name).to.eq('Cover Letter (Copy)');
@@ -119,11 +120,11 @@ describe('dashboard — with résumés', () => {
     });
     cy.go('back');
     cy.contains('h2', 'Cover Letters').next().should('have.text', '2 letters');
-    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
+    cy.contains('h1', 'Documents').next().should('have.text', '3 resumes');
   });
 
   it('Copy duplicates a résumé as "<name> (Copy)" and opens the copy', () => {
-    cy.contains(CARD, 'Modern CV').contains('button', 'Copy').click();
+    cardAction('Modern CV', 'Copy');
     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.store().should((s) => {
       expect(s.resumes).to.have.length(4);
@@ -157,7 +158,7 @@ describe('dashboard — with résumés', () => {
   it('Delete removes the card and records the id — and the version deleted — for cloud sync (R8-0)', () => {
     cy.store().then((s) => {
       const modern = s.resumes.find((r) => r.name === 'Modern CV');
-      cy.contains(CARD, 'Modern CV').contains('button', 'Delete').click();
+      cardAction('Modern CV', 'Delete');
       cy.get(CARD).should('have.length', 2).and('not.contain.text', 'Modern CV');
       const recorded = (after) => {
         expect(after.resumes.map((r) => r.id)).not.to.include(modern.id);
@@ -173,7 +174,8 @@ describe('dashboard — with résumés', () => {
   });
 
   it('deleting every résumé leaves the empty dashboard', () => {
-    NAMES.forEach(() => cy.get(CARD).first().contains('button', 'Delete').click());
+    // The first card each time, by its name (its menu is a portal, found by the card's text).
+    NAMES.forEach((name) => cardAction(name, 'Delete'));
     cy.contains('No resumes yet').should('be.visible');
     cy.store().should((s) => {
       expect(s.resumes).to.have.length(0);

@@ -3,6 +3,7 @@
 import { buildTestState, DATA_VERSION, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
+import { cardAction } from '../support/cardMenu.js';
 
 /** The résumé-store backups in localStorage, as { key: value }. */
 const resumeBackups = (win) => Object.fromEntries(Object.keys(win.localStorage)
@@ -20,7 +21,7 @@ const visitWithRawStore = (raw) =>
 describe('regressions — resume store', () => {
   it('M1: creating, duplicating or importing a resume keeps the deleted-ids list', () => {
     cy.visitDashboard(dashboardState());
-    cy.contains(CARD, 'Minimal CV').contains('button', 'Delete').click();
+    cardAction('Minimal CV', 'Delete'); // in the card's ⋯ menu
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.contains('button', 'New Resume').click();
@@ -29,7 +30,7 @@ describe('regressions — resume store', () => {
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();
-    cy.contains(CARD, 'Modern CV').contains('button', 'Copy').click();
+    cardAction('Modern CV', 'Copy');
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();

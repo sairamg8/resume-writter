@@ -5,7 +5,8 @@
 // phone, and nothing wider than the screen. Widening the window past 768 px brings the split view
 // back without a reload. The hook itself is tested in tests/unit/media-query.unit.mjs.
 import { buildTestState } from '../../tests/helpers.js';
-import { CARD } from '../support/selectors.js';
+import { CARD, MORE, MENU_ITEM } from '../support/selectors.js';
+import { closeMenu } from '../support/cardMenu.js';
 
 const PHONE = [375, 812];
 const NAME = 'input[placeholder="John Doe"]';
@@ -160,15 +161,21 @@ describe('editor on a phone (375 × 812)', () => {
 });
 
 describe('dashboard on a phone (375 × 812)', () => {
-  it('lists the résumés one to a row with every action in reach, and no sideways scroll', () => {
+  it('lists the résumés two to a row with every action in reach (the card actions in its ⋯ menu), and no sideways scroll', () => {
     cy.viewport(...PHONE);
     cy.visitDashboard(buildTestState('classic'));
     cy.contains('Test Classic').should('be.visible');
-    // One column: the card spans the row (two to a row start at sm, 640 px).
-    cy.get(CARD).first().invoke('outerWidth').should('be.greaterThan', PHONE[0] * 0.8);
+    // Two columns on a phone (Documents page, B5a): a card is about half the row, never the whole of it.
+    cy.get(CARD).first().invoke('outerWidth').should('be.within', PHONE[0] * 0.35, PHONE[0] * 0.55);
     ['Import', 'New Cover', 'New Resume'].forEach((label) => {
       cy.contains('button', label).should('be.visible');
     });
+    // A card's actions are one tap away: its ⋯ button opens Edit, Rename, Copy and Delete.
+    cy.get(CARD).first().find(MORE).should('be.visible').click();
+    ['Edit', 'Rename', 'Copy', 'Delete'].forEach((label) => {
+      cy.contains(MENU_ITEM, new RegExp(`^\\s*${label}`)).should('be.visible');
+    });
+    closeMenu();
     // The top bar's nav hides below md; the bottom tab bar carries the three areas, /boards as "Projects" (R4-DVIS-14).
     ['documents', 'applications', 'projects'].forEach((tab) => {
       cy.get(`[data-testid="bottom-tab-${tab}"]`).should('be.visible');
