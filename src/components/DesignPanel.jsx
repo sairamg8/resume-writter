@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { contactIconHint, drawsContactIcons, templateId, templateSwitchNote } from '@/constants/templates';
 import { pickerCards } from '@/utils/templatePicker';
-import { usePickCard } from '@/hooks/usePickCard';
+import { pickCard } from '@/hooks/usePickCard';
 import { designSnapshot } from '@/utils/templateSwitch';
 import { useToast } from '@/components/ui/Toast';
 import { LetterheadNote, SavedDesigns, templateCard } from '@/components/DesignPanelTemplate';
@@ -60,7 +60,7 @@ const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].la
  * offered.
  */
 export default function DesignPanel({
-  resume, updateSetting, clearSettings, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
+  resume, getLatest, updateSetting, clearSettings, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
   onBrowseTemplates, templateOpen, onTemplateOpenChange,
 }) {
   const settings = resume.settings || {};
@@ -75,8 +75,11 @@ export default function DesignPanel({
   const fitRun = useRef(false); // a fit is measuring: a second click waits for it, not starts another
   // The settings the fit's notice describes, and whether the résumé has shown them yet (R4-DUX-25).
   const noticeFor = useRef({ key: '', reached: false });
+  // `resume` is what the panel draws (the Design dock gives it only the id, template, settings and cover letter);
+  // `getLatest`, when given, is the whole résumé as it is NOW: what a click reads and writes from (as the ATS panel's).
   const latest = useRef(resume);
   latest.current = resume;
+  const now = () => (getLatest ? getLatest() : latest.current);
   const mounted = useRef(true);
   // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -97,31 +100,33 @@ export default function DesignPanel({
     fitRun.current = true;
     setFitting(true);
     setFitNotice('');
-    const before = designSnapshot(resume);
+    const clicked = now();
+    const clickedSettings = clicked.settings || {};
+    const before = designSnapshot(clicked);
     let edited = false;
     // The preset, but never looser than a number the résumé already has tighter (fitLadder).
-    const preset = fitLadder(settings)[0];
+    const preset = fitLadder(clickedSettings)[0];
     Object.entries(preset).forEach(([k, v]) => updateSetting(k, v));
-    const id = resume.id;
-    const measured = { ...resume, settings: { ...settings, ...preset } };
+    const id = clicked.id;
+    const measured = { ...clicked, settings: { ...clickedSettings, ...preset } };
     // As clicked (the preset's writes not rendered yet) or with the preset: anything else is an edit.
-    const keys = new Set([printedKey(resume), printedKey(measured)]);
-    const stopped = () => !mounted.current || latest.current?.id !== id || !keys.has(printedKey(latest.current));
+    const keys = new Set([printedKey(clicked), printedKey(measured)]);
+    const stopped = () => !mounted.current || now()?.id !== id || !keys.has(printedKey(now()));
     let notice = '';
     let printed = measured.settings; // what the notice speaks of
     try {
       const fit = await fitOnePage(measured, { stopped });
-      if (!fit || stopped()) { edited = mounted.current && latest.current?.id === id; return; }
+      if (!fit || stopped()) { edited = mounted.current && now()?.id === id; return; }
       Object.entries(fit.settings).forEach(([k, v]) => { if (preset[k] !== v) updateSetting(k, v); });
       printed = { ...measured.settings, ...fit.settings };
-      notice = fitSizeNotice(settings, fit); // still over a page, or a smaller text size: said, never done silently
+      notice = fitSizeNotice(clickedSettings, fit); // still over a page, or a smaller text size: said, never done silently
     } catch {
       notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
     } finally {
       fitRun.current = false;
       noticeFor.current = { key: printedKey({ settings: printed }), reached: false };
       if (mounted.current) { setFitting(false); setFitNotice(notice); }
-      if (restoreDesign && !edited && mounted.current && latest.current?.id === id) {
+      if (restoreDesign && !edited && mounted.current && now()?.id === id) {
         toast({
           id: 'spacing-preset',
           title: 'Spacing: 1-Page Fit',
@@ -149,7 +154,7 @@ export default function DesignPanel({
    * Undo does).
    */
   function applySpacing({ label, values }) {
-    const before = designSnapshot(resume);
+    const before = designSnapshot(now());
     setFitNotice('');
     Object.entries(values).forEach(([k, v]) => updateSetting(k, v));
     toast({
@@ -169,13 +174,15 @@ export default function DesignPanel({
    * nothing (and the notice is dismissed then).
    */
   function resetSection(keys) {
-    const updated = sectionReset(resume.template, keys, settings);
+    const clicked = now();
+    const clickedSettings = clicked.settings || {};
+    const updated = sectionReset(clicked.template, keys, clickedSettings);
     keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
     // Nothing moved (already at the defaults): no notice, nothing to undo.
-    const changed = keys.filter(k => k in updated && updated[k] !== settings[k]);
+    const changed = keys.filter(k => k in updated && updated[k] !== clickedSettings[k]);
     if (!changed.length) return;
-    const before = changed.map(k => [k, settings[k]]);
-    const id = resume.id;
+    const before = changed.map(k => [k, clickedSettings[k]]);
+    const id = clicked.id;
     toast({
       id: 'design-section-reset',
       title: `${SECTION_NAMES.get(keys) || 'Section'} reset`,
@@ -183,7 +190,7 @@ export default function DesignPanel({
       action: {
         label: 'Undo',
         onClick: () => {
-          if (!mounted.current || latest.current?.id !== id) return;
+          if (!mounted.current || now()?.id !== id) return;
           const unset = before.filter(([, v]) => v === undefined).map(([k]) => k);
           before.forEach(([k, v]) => { if (v !== undefined || !clearSettings) updateSetting(k, v); });
           if (unset.length) clearSettings?.(unset);
@@ -194,9 +201,12 @@ export default function DesignPanel({
 
   // Every card, from the data (utils/templatePicker.js): the templates — the Sidebar's single column a
   // card of its own (A9) — the app's designs (R2-138) and the user's (B4). The one the résumé is on is
-  // marked, a design's and not its engine's; picking one goes through the store (usePickCard).
+  // marked, a design's and not its engine's; picking one goes through the store (pickCard).
   const cards = pickerCards(settings, designs);
-  const { pick, selected } = usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign });
+  // What is marked is what is drawn; a pick reads the résumé as it is at the click (its Undo, its "already on this card").
+  const pickActions = { setTemplate, updateSetting, applyDesign, restoreDesign };
+  const { selected } = pickCard(resume, pickActions, toast);
+  const pick = (c) => pickCard(now(), pickActions, toast).pick(c);
   const card = (c) => templateCard(c, { on: selected(c), onPick: pick });
   const onCard = cards.find(selected) || cards.find((c) => c.engine === current && !c.preset);
 

@@ -1,4 +1,4 @@
-import { useDeferredValue, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { DesignDock } from '@/components/DesignDock';
 import { AtsDock } from '@/components/AtsDock';
@@ -28,12 +28,16 @@ export function dockBesideFrom(panelWidth) {
  * dragged wide the preview would be left a sliver between 1100 px and `dockBesideFrom(panelWidth)`: there the Editor
  * says `overlay`, which gives the same classes at any width.
  * It has a scroll box of its own that goes back to the top when the dock changes, as the editor panel's does
- * for a document. It reads the résumé through a deferred value: the panels are memoised, so a keystroke in
- * a section renders them 0 times in its own commit. Opened by the bar's chip and button, `?dock=` and the
+ * for a document. The panels are memoised and drawn from what they show (the Design panel from the résumé's id,
+ * template, settings and cover letter, the ATS panel from the résumé after a pause), so a keystroke in a section
+ * renders neither; their buttons act on the LATEST résumé (`getLatest`, a stable function over a ref), never on
+ * the one they were last drawn with. Opened by the bar's chip and button, `?dock=` and the
  * phone's pill; the Editor owns what it shows (`design`, `store`), no router hook here.
  */
 export function EditorDock({ dock, resume, design, store, onClose, overlay = false }) {
-  const shown = useDeferredValue(resume);
+  const latest = useRef(resume);
+  useEffect(() => { latest.current = resume; });
+  const getLatest = useCallback(() => latest.current, []);
   const box = useRef(null);
   useLayoutEffect(() => {
     if (box.current) box.current.scrollTop = 0;
@@ -52,7 +56,7 @@ export function EditorDock({ dock, resume, design, store, onClose, overlay = fal
       </div>
       {/* Below md a phone's Edit | Preview pill floats over the foot of this box: 64px clear, as the editor panel's. */}
       <div ref={box} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 max-md:pb-16" style={{ overscrollBehavior: 'contain' }}>
-        {dock === 'design' && <DesignDock resume={shown} design={design} />}
+        {dock === 'design' && <DesignDock resume={resume} design={design} getLatest={getLatest} />}
         {dock === 'ats' && <AtsDock key={resume.id} resume={resume} store={store} />}
       </div>
     </aside>
