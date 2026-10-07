@@ -129,6 +129,18 @@ describe('useOutsideClose: the closing press\'s click, and an input method\'s Es
     } finally { await p.view.unmount(); }
   });
 
+  it('a press or a key that comes before the click ends the swallowing (a drag has no click; a key\'s click is the page\'s)', async () => {
+    for (const next of [{ type: 'pointerdown' }, { type: 'keydown', key: 'Enter' }]) {
+      const p = await probe({ active: true, onClose() {}, swallowClick: true });
+      try {
+        const away = outside(p);
+        p.press(away);
+        p.view.act(() => { p.view.document.dispatchEvent({ ...next, target: away }); });
+        assert.deepEqual(click(p, away), { prevented: 0, stopped: 0 }, `a click after a ${next.type} is the page's`);
+      } finally { await p.view.unmount(); }
+    }
+  });
+
   it('without swallowClick no click is touched', async () => {
     const p = await probe({ active: true, onClose() {} });
     try {

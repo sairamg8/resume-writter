@@ -4,16 +4,20 @@ import { isImeKey } from '@/components/ui/compose.js';
 /**
  * The click that ends a press which just closed a menu goes nowhere: it must not also press what is under the
  * pointer (a card's Delete, a button of the page), as the full-screen backdrop the account menu had did. It is
- * removed with that click, or after a second if none comes (a press that became a drag); it outlives the effect
- * below, which the close itself tears down.
+ * dropped with that click, or when the next press or key comes first (a press that became a drag has no click;
+ * a key starts its own click, which is the page's). No timer: it outlives the effect below, which the close
+ * itself tears down.
  */
-const SWALLOW_MS = 1000;
-function swallowNextClick() {
-  let timer = null;
-  const done = () => { clearTimeout(timer); document.removeEventListener('click', swallow, true); };
+function swallowNextClick(pressed) {
+  const events = ['pointerdown', 'keydown'];
+  const done = () => {
+    document.removeEventListener('click', swallow, true);
+    for (const type of events) document.removeEventListener(type, cancel, true);
+  };
   function swallow(e) { e.preventDefault?.(); e.stopPropagation?.(); done(); }
+  const cancel = (e) => { if (e !== pressed) done(); }; // not the very press that is being answered
   document.addEventListener('click', swallow, true);
-  timer = setTimeout(done, SWALLOW_MS);
+  for (const type of events) document.addEventListener(type, cancel, true);
 }
 
 /**
@@ -29,7 +33,7 @@ export function useOutsideClose(ref, active, onClose, onEscape, { swallowClick =
     const away = (e) => {
       if (ref.current?.contains(e.target)) return;
       onClose();
-      if (swallowClick) swallowNextClick();
+      if (swallowClick) swallowNextClick(e);
     };
     const key = (e) => { if (e.key === 'Escape' && !isImeKey(e)) onEscape(); };
     // Capture phase: a page element that stops pointerdown cannot keep this control open.

@@ -9,8 +9,9 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
-import { mount } from './fake-dom.mjs';
+// The editor harness first: it installs the render probe before react-dom is loaded.
 import { prepare, finish, openEditor, loadModule, resume, elements, reactProps } from './180-ui-b3-editor-mount.mjs';
+import { mount } from './fake-dom.mjs';
 
 before(prepare); // the harness, the patched fake DOM (the toast region's focus and selectors), a PDF worker that answers at once
 after(finish);
