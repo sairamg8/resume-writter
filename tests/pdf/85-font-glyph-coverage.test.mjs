@@ -3,22 +3,20 @@
 // said "Latin", so no fallback font was ever asked, and the face drew its .notdef glyph. Now a
 // dash or space the face lacks is drawn with the face's own stand-in ('-', ' '), and an arrow
 // brings in Noto Sans Math like any other arrow.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, read, allText, allItems } from './harness.mjs';
 import { pdftotext, wordGaps } from './extractors.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
 
-const CDN = 'https://cdn.jsdelivr.net/npm/@fontsource';
-let online = null;
-async function isOnline() {
-  if (online === null) {
-    online = await fetch(`${CDN}/lato@5/metadata.json`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-  }
-  return online;
-}
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 const fontsOf = (pages) => [...new Set(allItems(pages).map((t) => t.font.replace(/^[A-Z]{6}\+/, '')))];
 
@@ -54,8 +52,7 @@ describe('dashes and spaces the Latin face lacks print as its own stand-ins (R2-
     }
   });
 
-  it('a Fontsource font (Lato)', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('a Fontsource font (Lato)', async () => {
     await assertDashesAndSpaces({ font: 'lato' });
   });
 });
@@ -82,8 +79,7 @@ describe('offline, arrows print as the bundled font\'s arrowheads and read as ar
 });
 
 describe('arrows in the Latin range print as arrows (R2-045)', () => {
-  it('↑ and ↓ bring in Noto Sans Math, as → does', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('↑ and ↓ bring in Noto Sans Math, as → does', async () => {
     const pages = await read(await renderLine('Revenue ↑ 40%, churn ↓ 12%, 3∕4 time'));
     const text = allText(pages);
     for (const s of ['Revenue ↑ 40%', 'churn ↓ 12%', '3∕4']) assert.ok(text.includes(s), `${s} in: ${text}`);

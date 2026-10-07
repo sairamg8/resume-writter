@@ -3,16 +3,22 @@
 // letter's — in the PDF (= the preview) on every template and in the Word export, the item's text where
 // Bullet puts it. Unset, a résumé prints the '•' and Word's own bullets it always has. Every résumé
 // printed '•' whatever it wanted.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, renderCover, read, allItems, loadModule, unzipEntry, TEMPLATES } from './harness.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
 
-// Circle's ◦ is in no Latin face: its symbol font comes from jsDelivr, as in the app, so offline Circle is not checked.
-const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-symbols-2@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-const STYLES = online ? ['dash', 'circle', 'none', 'bullet'] : ['dash', 'none', 'bullet'];
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
+
+// Circle's ◦ is in no Latin face: its symbol font (Noto Sans Symbols 2) comes from the CDN stand-in, as it does from jsDelivr in the app.
+const STYLES = ['dash', 'circle', 'none', 'bullet'];
 
 const ITEMS = ['Designed the event ledger', 'Mentored six engineers'];
 const LIST = `<ul>${ITEMS.map((t) => `<li>${t}</li>`).join('')}</ul>`;

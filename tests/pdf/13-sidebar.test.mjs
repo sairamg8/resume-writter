@@ -1,11 +1,18 @@
 // The Sidebar template: links, fields, spacing, colours and styles of its two columns.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, renderDocx, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
 import { hasPdftotext, splitWords } from './extractors.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
+
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 const sidebar = (sections, extra = {}) => resume({ template: 'sidebar', sections, ...extra });
 const linksOf = (pages) => pages.flatMap((p) => p.links.map((l) => l.url));
@@ -143,9 +150,7 @@ describe('Sidebar labels extract as whole words (FIDB-68)', () => {
     assert.deepEqual(found, []);
   });
 
-  it('every offered font family keeps them whole, at the smallest and largest base size (fonts from jsDelivr; skipped offline)', async (t) => {
-    const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-    if (!online) return t.skip('offline');
+  it('every offered font family keeps them whole, at the smallest and largest base size (fonts from the CDN stand-in)', async (t) => {
     if (!hasPdftotext) t.diagnostic('pdftotext not installed: Poppler not checked');
     const { FONT_MAP } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const found = [];

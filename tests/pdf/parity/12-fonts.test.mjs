@@ -1,12 +1,13 @@
 // Parity matrix: every template × every Font Family the Design panel offers — each prints the whole
-// résumé in its own face (registry-design.mjs). The faces come from jsDelivr (Fontsource), as in the
-// app; offline they cannot load and these skip (Noto Sans, the default, is offline-safe: 05-fonts).
+// résumé in its own face (registry-design.mjs). The faces come from the CDN stand-in (fake-fontsource.mjs).
+import { after, before } from 'node:test';
 import { parityFamily } from './run.mjs';
+import { fakeFontsource } from '../fake-fontsource.mjs';
 
-let online = null;
-const isOnline = async () => {
-  if (online === null) online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-  return online;
-};
+// The faces come from the CDN stand-in (../fake-fontsource.mjs), never the network: a URL it does not know, or a
+// connection beyond this machine, fails the run after it.
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => { cdn?.restore(); cdn?.assertClean(); });
 
-await parityFamily(['fonts'], { skip: async () => (await isOnline() ? null : 'offline: the fonts come from jsDelivr') });
+await parityFamily(['fonts']);
