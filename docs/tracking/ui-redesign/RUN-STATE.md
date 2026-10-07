@@ -1,3 +1,5 @@
+**2026-10-07: B5a DONE except bug-hunt and screenshots: full gate 37636926781 green on `01653718`; report `batches/B5a-report.md`. B5b in progress (committed locally, tests being updated; see HANDOFF).**
+
 # UI rebuild: run state and cadence (the resume point; keep it current)
 
 Worktree `/home/user/resume-writter/.claude/worktrees/ui-rebuild`, local branch `worktree-ui-rebuild`, pushed to the session's
