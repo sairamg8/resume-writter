@@ -1,6 +1,6 @@
 # B4 report: Editor frame B (stage toolbar, preview states, alert cards, panel clamp, phone notices, browser geometry proof)
 
-**STATUS: NOT DONE. Code and hunt are finished and proven; the final full gate (run 37535123642 on `a1040d1c`) was dispatched but NOT READ when work stopped at the owner's order. B4 is done only when that gate is green.**
+**STATUS: DONE. Code and hunt are finished and proven; the final full gate is GREEN: run 37535123642 on `a1040d1c` (read in the job logs 2026-10-07).**
 
 Branch `claude/wonderful-maxwell-vu8xqw`. Base `8056a8ea` (B3 done). Code head `a1040d1c` (src identical to `2d12594b`; later commits are docs). UI only: every live function stays (PARITY-RULE). Owned parity rows: editor-content, editor-design-templates and mobile rows listed in `batches/B4.md`; the drawn-but-not-live items are PARKED (below).
 
@@ -35,7 +35,7 @@ The earlier build commits were proven in runs 37528143027 (red, read and fixed) 
 |---|---|---|---|
 | M1: the dock is a flex sibling below 1100 px (the five `max-[1099px]:` utilities removed, `overlay={false}`) | f34bf825 / 04275d9b | 37532126208 | the 1024, 768 and 390 px frame tests (dock `static` where it must overlay; the stage 44 px at 768; the sidebar 30 px at 390) and "390 px: the dock is the whole screen"; the six stored-640 tests stay green (they run from 1100 px) |
 | M2: the clamp off (`usePanelResize({ dockOpen: false })`) | d781dce3 / cbd8dbb4 | 37532195382 | all six stored-640 browser tests (panel 640 where 420 / 500 / 600 is required) and 3 of the 5 cases of 181-ui-b4-editor-wiring; the six-width tests stay green |
-| M3: the Updating chip above the dock (`z-50` on the chip span) | c33ef9b1 / a1040d1c | 37535078126 | NOT READ when work stopped (expected: the chip tests at 1024 and 768 px red, because the dock is no longer on top at the chip's centre) |
+| M3: the Updating chip above the dock (`z-50` on the chip span) | c33ef9b1 / a1040d1c | 37535078126 | READ: `2 failed, 17 passed` in ui-b4-editor-layout: exactly "1024 px, dock open: an edit shows the chip behind the dock" and "768 px, dock open: ..."; the 1440, 1100 and both 390 px chip cases stayed green (lint, build and the named node tests green) |
 The two chip tests at 1024 and 768 px were red in both runs and in the first proof run: not the mutations' doing but a real mismatch of mine (below), fixed in `d39ccd83`.
 
 ## Proof runs read RED, fixed without weakening
@@ -79,4 +79,6 @@ PASS, 17 of 17 budgets met (CI ceilings): PDF build Classic 1 page median 46.8-6
 None needed an answer. `ci.yml` unchanged. No master push, no deploy.
 
 ## Full gate
-**NOT READ.** Run 37535123642 was dispatched on `a1040d1c` (no inputs: lint, build, suite 1-6, Playwright 1-3, Cypress 1-4) and was still queued when work stopped at the owner's order (21:38Z). Earlier gates were cancelled on purpose because the source changed after them (37534278003 on 19d6201b, 37535008227 on 2d12594b). To finish B4: read 37535123642 (every job; suite counts; the 71 start-up line; Playwright 3/3; Cypress 4/4) and the M3 run 37535078126, fill the two lines above, then send the owner's summary with the screenshots (`shots/b4-pair-1..4`, built at `cbd8dbb4`; the later source changes are class tweaks with no visible change on those screens). If a job is red: read it, fix without weakening, prove with failfirst, and re-gate.
+**GREEN, read 2026-10-07.** Run 37535123642 on `a1040d1c` (no inputs): all 15 jobs succeeded (lint, build, suite 1-6, Playwright 1-3, Cypress 1-4; the failfirst, tests and perf jobs are skipped by design). Node suite `# tests` / `# pass` / `# fail` per shard: 1927/1927/0, 2147/2145/0, 2420/2420/0, 2178/2177/0, 1548/1548/0, 1891/1889/0 = 12,111 tests, 12,106 pass, 0 fail (the 5 not passed are skips or todos, not failures). Playwright 66 + 39 + 49 = 154 passed. Cypress 74 + 50 + 90 + 72 = 286 passed (all specs passed on each shard). Start-up line (71-startup-chunks): `start-up path 1083.8 kB of the 1,100 kB cap: 16.2 kB to spare`, unchanged since B2.
+Earlier gates were cancelled on purpose because the source changed after them (37534278003 on 19d6201b, 37535008227 on 2d12594b). The owner's summary uses the screenshots `shots/b4-pair-1..4` (built at `cbd8dbb4`; the later source changes are class tweaks with no visible change on those screens).
+Status of the re-verification (Phase 1 of AGENT-PROMPT.md): not started when this was written; its section is appended below when done.
