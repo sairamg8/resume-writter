@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Dialog } from '@/components/ui/Dialog';
 import { TemplateThumb } from '@/components/TemplateThumb';
-import { usePickCard } from '@/hooks/usePickCard';
+import { pickCard } from '@/hooks/usePickCard';
+import { useToast } from '@/components/ui/Toast';
 import { categoriesOf, filterCards, pickerCards, PICKER_FILTERS } from '@/utils/templatePicker';
 
 /**
@@ -11,8 +12,11 @@ import { categoriesOf, filterCards, pickerCards, PICKER_FILTERS } from '@/utils/
  * its page 1 (A1) with its letterhead beside it (F1), filtered by category (B3) and by what the page
  * prints (A3). A pick applies at once, as in the panel, with Undo (usePickCard); Done closes. On a phone
  * it is a full-screen sheet, two cards to a row, with Done always in view (E1).
+ * Memoised, and always mounted: it draws from the résumé's template and settings only (the Editor gives it just
+ * those, `resume`), so a keystroke in a section does not run its body; a pick reads the whole résumé at the click
+ * through `getLatest` when given (a stable function), as the Design panel's does.
  */
-export function TemplateGallery({ open, onClose, resume, designs = [], setTemplate, updateSetting, applyDesign, restoreDesign }) {
+export const TemplateGallery = memo(function TemplateGallery({ open, onClose, resume, getLatest, designs = [], setTemplate, updateSetting, applyDesign, restoreDesign }) {
   const [category, setCategory] = useState('');
   const [filters, setFilters] = useState([]);
   const cards = pickerCards(resume.settings || {}, designs);
@@ -22,7 +26,10 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
   // …and forgotten, so a design saved later does not open the gallery on My designs again.
   if (cat !== category) setCategory('');
   const shown = filterCards(cards, { category: cat, filters });
-  const { pick, selected } = usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign });
+  const { toast } = useToast();
+  const pickActions = { setTemplate, updateSetting, applyDesign, restoreDesign };
+  const { selected } = pickCard(resume, pickActions, toast);
+  const pick = (c) => pickCard(getLatest ? getLatest() : resume, pickActions, toast).pick(c);
   const toggle = (id) => setFilters((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
 
   return (
@@ -78,5 +85,4 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
         </div>
       </div>
     </Dialog>
-  );
-}
+  );});

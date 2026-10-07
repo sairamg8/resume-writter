@@ -36,6 +36,40 @@ describe('a keystroke with the Design dock open (R1)', () => {
   });
 });
 
+describe('a keystroke with the template gallery closed (R2)', () => {
+  it('the gallery, always mounted, renders 0 times for text typed in a section, and once for a setting', async () => {
+    const t = await openEditor();
+    try {
+      const w = await t.measure(async () => { t.typeInSummary(); t.typeInSummary(); t.typeInSummary(); }, PAUSE);
+      assert.ok(w.commits.length >= 1 && w.commits[0].size >= 1, `the keys rendered their own part. ${w.report()}`);
+      assert.equal(w.count('gallery'), 0, `the gallery's body ran for text typed in a section. ${w.report()}`);
+      const live = await t.measure(() => t.act(() => t.store().updateSetting('fontSize', 11)), 100);
+      assert.ok(live.count('gallery') >= 1, `the count is live: a look change reaches the gallery. ${live.report()}`);
+    } finally { await t.close(); }
+  });
+
+  it('a pick reads the latest résumé at the click: its Undo hands back the settings written since the gallery was drawn', async () => {
+    const { TemplateGallery } = await loadModule('/src/components/TemplateGallery.jsx');
+    const { ToastProvider } = await loadModule('/src/components/ui/Toast.jsx');
+    const calls = [];
+    const drawn = resume({ settings: { marginV: 9 } });
+    const newer = { ...drawn, settings: { marginV: 31, fontSize: 12 } };
+    const props = { open: true, onClose() {}, resume: drawn, getLatest: () => newer, designs: [], setTemplate() {}, updateSetting() {}, applyDesign() {}, restoreDesign: (snap) => calls.push(snap) };
+    const view = mount(() => createElement(ToastProvider, null, createElement(TemplateGallery, props)), {});
+    try {
+      const card = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && /^gallery-/.test(el.getAttribute('data-testid') || '') && !/Selected/.test(el.textContent));
+      assert.ok(card, 'a card that is not the one on');
+      view.act(() => reactProps(card).onClick());
+      const region = [...elements(view.document.body)].find((el) => el.getAttribute?.('role') === 'status');
+      const undo = [...elements(region)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Undo');
+      assert.ok(undo, 'the notice offers Undo');
+      view.act(() => reactProps(undo).onClick({ preventDefault() {}, stopPropagation() {} }));
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].settings, newer.settings, 'the settings the latest résumé had');
+    } finally { await view.unmount(); }
+  });
+});
+
 describe('the Design panel acts on the latest résumé (P-1)', () => {
   it('a preset\'s Undo hands back the look the latest résumé had, not the one the panel was last drawn with', async () => {
     const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');

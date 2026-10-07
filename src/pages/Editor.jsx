@@ -59,11 +59,8 @@ export function Editor({ store, auth, sync }) {
   // template gallery (A2).
   const [templateOpen, setTemplateOpen] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  // The designs the user saved, from every résumé that holds one (B4), and the store's look actions (the gallery's).
+  // The designs the user saved, from every résumé that holds one (B4): the Design dock's and the gallery's.
   const designs = savedDesigns(store.appState.resumes);
-  const lookActions = {
-    setTemplate: store.setTemplate, updateSetting: store.updateSetting, applyDesign: store.applyDesign, restoreDesign: store.restoreDesign,
-  };
 
   const exportMenu = useEditorExports({
     resume, letterTab: doc === 'coverletter', authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
@@ -92,6 +89,12 @@ export function Editor({ store, auth, sync }) {
   // résumé as it was), the saved designs (a new array at every render) and the Template state, in one object.
   const acts = useStableActions(store);
   const keptDesigns = useKept(designs);
+  // The gallery draws from the template and settings only, and a pick reads the whole résumé at the click (getResume).
+  const galleryResume = useMemo(() => ({ id: resume.id, template: resume.template, settings: resume.settings }), [resume.id, resume.template, resume.settings]);
+  const latestResume = useRef(resume);
+  useEffect(() => { latestResume.current = resume; });
+  const getResume = useCallback(() => latestResume.current, []);
+  const closeGallery = useCallback(() => setGalleryOpen(false), []);
   const design = useMemo(() => ({
     setTemplate: acts.setTemplate, updateSetting: acts.updateSetting, applyDesign: acts.applyDesign, restoreDesign: acts.restoreDesign,
     resetSettings: acts.resetSettings, clearSettings: acts.clearSettings, saveDesign: acts.saveDesign, deleteDesign: acts.deleteDesign,
@@ -252,7 +255,10 @@ export function Editor({ store, auth, sync }) {
 
       {/* Floating Mobile Toggle Switch: Edit | Preview | Design */}
       {isMobile && <EditorMobilePill view={dock ? (dock === 'design' ? 'design' : null) : mobileTab} onPick={onPickView} />}
-      <TemplateGallery open={galleryOpen} onClose={() => setGalleryOpen(false)} resume={resume} designs={designs} {...lookActions} />
+      <TemplateGallery
+        open={galleryOpen} onClose={closeGallery} resume={galleryResume} getLatest={getResume} designs={keptDesigns}
+        setTemplate={acts.setTemplate} updateSetting={acts.updateSetting} applyDesign={acts.applyDesign} restoreDesign={acts.restoreDesign}
+      />
     </div>
     </ToastProvider>
   );
