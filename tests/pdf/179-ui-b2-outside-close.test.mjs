@@ -135,6 +135,7 @@ describe('useOutsideClose: the closing press\'s click, and an input method\'s Es
       try {
         const away = outside(p);
         p.press(away);
+        p.view.update({ active: false, onClose() {}, swallowClick: true }); // the menu is closed now: a second press is no closing press
         p.view.act(() => { p.view.document.dispatchEvent({ ...next, target: away }); });
         assert.deepEqual(click(p, away), { prevented: 0, stopped: 0 }, `a click after a ${next.type} is the page's`);
       } finally { await p.view.unmount(); }

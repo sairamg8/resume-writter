@@ -176,7 +176,7 @@ export async function openEditor({ signedIn = false, path = '', extra = {}, toas
     ['header', EditorHeader], ['alerts', EditorAlerts], ['modes', EditorModeBar], ['save', EditorSaveStatus],
     ['switch', EditorDocSwitch], ['chip', EditorAtsChip], ['designButton', EditorDesignButton],
     ['pill', EditorMobilePill], ['dock', EditorDock], ['designPanel', DesignPanel], ['atsPanel', AtsCheckerPanel],
-    ['gallery', TemplateGallery],
+    ['gallery', TemplateGallery.type ?? TemplateGallery], // memo: the probe counts its function
   ];
   // The ATS panel keeps the pasted posting for the session.
   const sessionMap = new Map();
