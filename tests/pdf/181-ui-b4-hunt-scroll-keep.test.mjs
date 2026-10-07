@@ -4,7 +4,7 @@
 // element at the same offset, and the Cover Letter, opened from the bar, starts at its own top.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepare, finish, openEditor, attr } from './180-ui-b3-editor-mount.mjs';
+import { prepare, finish, openEditor, until, attr } from './180-ui-b3-editor-mount.mjs';
 
 before(prepare);
 after(finish);
@@ -21,7 +21,8 @@ describe('the real Editor keeps the Résumé\'s scroll box and offset through th
       box.scrollTop = 500;
       for (const [id, open] of [['design-button', 'dock-design'], ['ats-chip', 'dock-ats'], ['ats-chip', null], ['design-button', 'dock-design'], ['design-button', null]]) {
         await t.press(id);
-        assert.equal(Boolean(t.byTid('dock-design')) + Boolean(t.byTid('dock-ats')), open ? 1 : 0, `${id}: the dock state`);
+        // A dock's panel may arrive after the press (lazy): wait for the dock state, not a count of ticks.
+        await until(() => Boolean(t.byTid('dock-design')) + Boolean(t.byTid('dock-ats')) === (open ? 1 : 0), `${id}: the dock state`);
         if (open) assert.ok(t.byTid(open), `${id} opens ${open}`);
         assert.ok(t.all().includes(box), `${id} replaced the Résumé's scroll box`);
         assert.equal(box.scrollTop, 500, `${id} moved the Résumé's scroll`);

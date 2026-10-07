@@ -211,12 +211,13 @@ const screen = { width: 1600, listeners: new Map() };
     const pill = find(tree, EditorMobilePill);
     const dock = find(tree, EditorDock);
     live.tree = tree;
-    live.gallery = find(tree, TemplateGallery)?.props;
+    const gallery = find(tree, TemplateGallery);
+    live.gallery = gallery?.props;
     live.dockProps = dock?.props ?? null;
     live.headerProps.push(header.props);
     live.previewProps.push(preview.props);
     live.saveProps.push(save.props);
-    const parts = createElement(Fragment, null, bar, alerts, tab.props.activeTab === 'resume' ? tab : null, pill, dock);
+    const parts = createElement(Fragment, null, bar, alerts, tab.props.activeTab === 'resume' ? tab : null, pill, dock, gallery);
     return toasts ? createElement(ToastProvider, null, createElement(ToastProbe), parts) : parts;
   }
   function ToastProbe() { live.toast = useToast().toast; return null; }
