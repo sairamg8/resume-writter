@@ -1,4 +1,6 @@
-import { Cloud, CloudOff, Loader, CloudAlert, LogOut, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Cloud, CloudOff, Loader, CloudAlert, LogOut, Map as MapIcon, X } from 'lucide-react';
+import { useJobMapAccess } from '@/hooks/useJobMapAccess';
 import { signInErrorMessage } from '@/utils/signInError';
 
 function GoogleIcon() {
@@ -129,6 +131,7 @@ export default function AuthBar({
 }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
+  const jobMap = useJobMapAccess(user);
   // What the last sign-in failure was, in words (signInErrorMessage): it used to go to the
   // console only, so a blocked popup or an unauthorized domain looked like nothing (R2-086).
   const [signInError, setSignInError] = useState(null);
@@ -215,6 +218,11 @@ export default function AuthBar({
                 <p className="text-xs font-semibold text-gray-800 truncate">{user.displayName}</p>
                 <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
               </div>
+              {jobMap && (
+                <Link to="/job-map" onClick={() => setMenuOpen(false)} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors">
+                  <MapIcon size={13} /> Job Map
+                </Link>
+              )}
               <button
                 onClick={() => { setMenuOpen(false); signOut(); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
