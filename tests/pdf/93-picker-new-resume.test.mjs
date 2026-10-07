@@ -64,7 +64,7 @@ describe('New Resume: the content and the look in one step (D1)', () => {
         assert.ok(b, c.testid);
         assert.ok([...elements(b)].some((el) => el.getAttribute('data-look-thumb') === 'page'), `${c.testid}: its picture`);
       }
-      assert.match(v.byTestid('look-own').className, /border-blue-500/);
+      assert.match(v.byTestid('look-own').className, /border-cv-brand/);
     } finally { await v.view.unmount(); }
   });
 

@@ -230,3 +230,25 @@ it('a card\'s menu code reachable: a ⋯ button on every card opens a menu with 
     assert.deepEqual(menuLabels(page.view), ['Edit', 'Rename', 'Copy', 'Delete']);
   } finally { await page.close(); }
 });
+
+// Import's dialog (B5b) is the fourth piece that loads apart. Without its code Import opens the file picker straight
+// away, as it did before the dialog, so importing is not lost to a failed chunk. A demo account's "Import as my
+// original" is only in the dialog; the plain Import there is the same plain pick.
+it('Import with the dialog\'s code unreachable: the file picker opens straight away, once, with no dialog and no reload', async () => {
+  const page = await dashboard(several(), ['import']);
+  try {
+    const input = page.all().find((el) => el.tagName === 'INPUT' && (el.type === 'file' || el.getAttribute('type') === 'file'));
+    assert.ok(input, 'the file input stays in the Dashboard');
+    let opened = 0;
+    input.click = () => { opened += 1; };
+    page.press('Import');
+    await until(() => opened > 0, 'the file picker opened');
+    assert.equal(opened, 1, 'once');
+    assert.ok(await page.dialogNever(), 'no dialog');
+    assert.equal(page.reloads(), 0, 'the page was not reloaded');
+    // A second press opens the picker again.
+    page.press('Import');
+    await until(() => opened > 1, 'the file picker opened again');
+    assert.equal(opened, 2);
+  } finally { await page.close(); }
+});

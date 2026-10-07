@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
-import { elements, mount } from './fake-dom.mjs';
+import { elements, mount, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage } from './resume-tab.mjs';
 
@@ -28,10 +28,11 @@ async function until(check, what) {
 }
 const cv = (id, name, updatedAt) => ({ ...resume({ personal: { name: `${name} Person`, title: 'Analyst' } }), id, name, updatedAt });
 
-it('a second mount shows Career History and the cards\' menus in its first commit, with no waiting', async () => {
+it('a second mount shows Career History, the cards\' menus and (once Import is pressed) the import dialog in its first commit, with no waiting', async () => {
   const { Dashboard, _lazyForTest } = await loadModule('/src/pages/Dashboard.jsx');
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
+  await loadModule('/src/components/ImportDialog.jsx');
   _lazyForTest.warmed.clear();
   globalThis.localStorage = new MemoryStorage([]);
   const noop = () => {};
@@ -51,10 +52,17 @@ it('a second mount shows Career History and the cards\' menus in its first commi
   try {
     const first = open();
     await until(() => panel(first) && menusIn(first), 'the panel and the cards\' menus on the first mount');
+    // The fourth piece: Import's dialog loads when Import is first pressed; a remount keeps it loaded.
+    const dialogOf = (view) => [...elements(view.document.body)].find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed');
+    const pressImport = (view) => view.act(() => reactProps([...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && text(el) === 'Import')).onClick({}));
+    pressImport(first);
+    await until(() => dialogOf(first), 'the import dialog on the first mount');
     await first.unmount();
     const second = open();
     assert.ok(panel(second), 'the panel is in the first commit of the second mount');
     assert.ok(menusIn(second), 'and so is the menu of each card (B5a): no ⋯ button redrawn once the loaded menu is in');
+    pressImport(second);
+    assert.ok(dialogOf(second), 'the import dialog is in the commit of the press itself on the second mount: no waiting for its code');
     await second.unmount();
   } finally {
     delete globalThis.localStorage;

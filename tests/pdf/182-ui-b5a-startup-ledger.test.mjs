@@ -15,15 +15,15 @@ before(async () => {
 after(teardown);
 
 const read = (p) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
-const LAZY = /^import\s[^;]*from\s+'@\/components\/(CardMenu|NewLetterModal|CareerHistoryPanel)'/m;
+const LAZY = /^import\s[^;]*from\s+'@\/components\/(CardMenu|NewLetterModal|CareerHistoryPanel|ImportDialog)'/m;
 
-it('no start-up file imports the card menu, the letter picker or Career History statically', () => {
+it('no start-up file imports the card menu, the letter picker, Career History or the import dialog statically', () => {
   for (const file of ['src/pages/Dashboard.jsx', 'src/components/ResumeCard.jsx', 'src/components/lazyPiece.jsx']) {
     assert.doesNotMatch(read(file), LAZY, `${file} imports a lazy piece statically`);
   }
   assert.doesNotMatch(read('src/components/ResumeCard.jsx'), /from\s+'@\/components\/ui\/Menu'/, 'the kit Menu never joins the entry');
   const piece = read('src/components/lazyPiece.jsx');
-  for (const name of ['CardMenu', 'NewLetterModal', 'CareerHistoryPanel']) assert.match(piece, new RegExp(`import\\('@/components/${name}'\\)`), `${name} is an import()`);
+  for (const name of ['CardMenu', 'NewLetterModal', 'CareerHistoryPanel', 'ImportDialog']) assert.match(piece, new RegExp(`import\\('@/components/${name}'\\)`), `${name} is an import()`);
 });
 
 it('the menu\'s code is asked for a fixed number of times, however many cards are hovered and however often', async () => {

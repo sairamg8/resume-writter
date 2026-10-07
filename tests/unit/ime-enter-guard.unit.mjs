@@ -53,7 +53,6 @@ const NOT_TYPED_ESCAPE = new Set([
   'components/shell/Sidebar.jsx',      // the phone drawer: links only
   'components/ShareLinkModal.jsx',     // a read-only link
   'components/NewLetterModal.jsx',     // buttons only
-  'components/ImportMenu.jsx',         // a menu of buttons
 ]);
 
 it('every Escape a text field acts on checks for an input method first (R4-LO-24)', () => {

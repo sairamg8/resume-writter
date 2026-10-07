@@ -36,11 +36,11 @@ async function until(check, what) {
 
 describe('the picker and Career History are off the start-up path', () => {
   const OFF = [
-    'src/components/NewLetterModal.jsx', 'src/components/CareerHistoryPanel.jsx', 'src/utils/careerHistory.js', 'src/components/CardMenu.jsx',
+    'src/components/NewLetterModal.jsx', 'src/components/CareerHistoryPanel.jsx', 'src/utils/careerHistory.js', 'src/components/CardMenu.jsx', 'src/components/ImportDialog.jsx',
     'src/components/ui/Dialog.jsx', 'src/components/ui/useFocusTrap.js', 'src/components/ui/placement.js',
     'src/components/ui/useScrollLock.js', 'src/components/ui/usePresence.js', 'src/components/ui/Portal.jsx',
   ];
-  it('the Dashboard is on it; the picker, the panel, the card menu and the Dialog\'s closure are not (no other start-up module imports them)', () => {
+  it('the Dashboard is on it; the picker, the panel, the card menu, the import dialog and the Dialog\'s closure are not (no other start-up module imports them)', () => {
     const startup = startupModules();
     assert.ok(startup.has('src/pages/Dashboard.jsx'), 'the Dashboard is on the start-up path');
     assert.deepEqual(OFF.filter((m) => startup.has(m)), [], 'reached by a static import from the start-up path');
@@ -53,9 +53,10 @@ async function dashboard(resumes, createLetter = () => 'letter_new') {
   // Both pieces loaded once here, so what the tests wait for is React's boundary, not Vite's first transform.
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
+  await loadModule('/src/components/ImportDialog.jsx');
   const { loaders, warmed } = _lazyForTest;
   const real = { ...loaders };
-  const calls = { letter: 0, career: 0, menu: 0 };
+  const calls = { letter: 0, career: 0, menu: 0, import: 0 };
   warmed.clear();
   for (const key of Object.keys(real)) loaders[key] = () => { calls[key] += 1; return real[key](); };
   // The cards' menu is held back for good: its ⋯ buttons then stay the ones the card draws until the code arrives
@@ -114,11 +115,25 @@ describe('the pieces open through their lazy boundaries', () => {
   });
 });
 
-describe('the prefetch', () => {
-  it('nothing is fetched at mount; hovering or focusing New Cover fetches the picker once, the Career History section the panel once, a card\'s ⋯ button the menu once', async () => {
+describe('Import opens its dialog through its lazy boundary', () => {
+  it('nothing is drawn (nor asked for) before Import; pressing it opens the dialog once its code has loaded', async () => {
     const page = await dashboard(two());
     try {
-      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0 }, 'nothing at first paint (idle time comes later)');
+      assert.equal(page.dialog(), undefined, 'no dialog before Import');
+      assert.equal(page.calls.import, 0, 'its code is not asked for before Import is hovered, focused or pressed');
+      page.view.act(() => reactProps(page.button('Import')).onClick({}));
+      await until(() => page.dialog(), 'the import dialog');
+      assert.ok(text(page.dialog()).includes('Import a file'));
+      assert.ok(page.all().some((el) => el.tagName === 'BUTTON' && text(el) === 'Choose a file' && page.dialog().contains(el)), 'with its "Choose a file" choice');
+    } finally { await page.close(); }
+  });
+});
+
+describe('the prefetch', () => {
+  it('nothing is fetched at mount; hovering or focusing New Cover fetches the picker once, the Career History section the panel once, a card\'s ⋯ button the menu once, Import the dialog once', async () => {
+    const page = await dashboard(two());
+    try {
+      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0, import: 0 }, 'nothing at first paint (idle time comes later)');
       const card = page.all().find((el) => el.tagName === 'BUTTON' && text(el) === 'New Cover Letter');
       const buttons = [page.button('New Cover'), card];
       for (const el of buttons) {
@@ -132,18 +147,26 @@ describe('the prefetch', () => {
         page.view.act(() => reactProps(sidebar).onMouseEnter({}));
         page.view.act(() => reactProps(sidebar).onFocus({}));
       }
-      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 0 }, 'the picker and the panel, once each');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 0, import: 0 }, 'the picker and the panel, once each');
       const mores = page.mores();
       assert.equal(mores.length, 2, 'a ⋯ button on each card');
       for (const el of mores) {
         page.view.act(() => reactProps(el).onMouseEnter({}));
         page.view.act(() => reactProps(el).onFocus({}));
       }
-      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'the cards\' menu once for both cards, hover and focus alike');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1, import: 0 }, 'the cards\' menu once for both cards, hover and focus alike');
+      // Import's dialog (a fourth piece) is fetched by its own button, once.
+      const importButton = page.button('Import');
+      assert.ok(importButton, 'the Import button');
+      for (let i = 0; i < 2; i += 1) {
+        page.view.act(() => reactProps(importButton).onMouseEnter({}));
+        page.view.act(() => reactProps(importButton).onFocus({}));
+      }
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1, import: 1 }, 'the import dialog once, hover and focus alike');
     } finally { await page.close(); }
   });
 
-  it('after the first paint, in idle time, all three are fetched, once; a timer stands in where there is no requestIdleCallback', async () => {
+  it('after the first paint, in idle time, all four are fetched, once; a timer stands in where there is no requestIdleCallback', async () => {
     const saved = { idle: globalThis.requestIdleCallback, cancel: globalThis.cancelIdleCallback };
     const queued = [];
     globalThis.requestIdleCallback = (fn) => queued.push(fn);
@@ -151,11 +174,11 @@ describe('the prefetch', () => {
     const page = await dashboard(two());
     try {
       assert.equal(queued.length, 1, 'one idle callback asked for');
-      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0 }, 'not before the browser is idle');
+      assert.deepEqual(page.calls, { letter: 0, career: 0, menu: 0, import: 0 }, 'not before the browser is idle');
       queued[0]();
-      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'all three, when it is');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1, import: 1 }, 'all four, when it is');
       page.view.act(() => reactProps(page.button('New Cover')).onMouseEnter({}));
-      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1 }, 'a hover after it adds none');
+      assert.deepEqual(page.calls, { letter: 1, career: 1, menu: 1, import: 1 }, 'a hover after it adds none');
     } finally {
       await page.close();
       for (const [key, value] of [['requestIdleCallback', saved.idle], ['cancelIdleCallback', saved.cancel]]) {
@@ -171,7 +194,7 @@ describe('the prefetch', () => {
     try {
       assert.equal(timers.length, 1, 'a timer where there is no idle callback');
       timers[0]();
-      assert.deepEqual(plain.calls, { letter: 1, career: 1, menu: 1 });
+      assert.deepEqual(plain.calls, { letter: 1, career: 1, menu: 1, import: 1 });
     } finally {
       globalThis.setTimeout = realSet;
       await plain.close();
@@ -202,7 +225,7 @@ describe('the prefetch', () => {
       assert.deepEqual(asked.cancelled, asked.ids, 'the id asked for is the one cancelled');
       // A cancelled callback never runs in a browser: run only those the page did not cancel.
       asked.fns.filter((_, i) => !asked.cancelled.includes(asked.ids[i])).forEach((fn) => fn());
-      assert.deepEqual(idle.calls, { letter: 0, career: 0, menu: 0 }, 'no callback is left to fetch after leaving');
+      assert.deepEqual(idle.calls, { letter: 0, career: 0, menu: 0, import: 0 }, 'no callback is left to fetch after leaving');
     } finally {
       restore();
       await idle.close();
@@ -227,7 +250,7 @@ describe('the prefetch', () => {
       assert.deepEqual(asked.cleared, timers.handles, 'the timer asked for is the one cleared');
       // A cleared timer never fires: run only those the page did not clear.
       timers.fns.filter((_, i) => !asked.cleared.includes(timers.handles[i])).forEach((fn) => fn());
-      assert.deepEqual(plain.calls, { letter: 0, career: 0, menu: 0 }, 'no timer is left to fetch after leaving');
+      assert.deepEqual(plain.calls, { letter: 0, career: 0, menu: 0, import: 0 }, 'no timer is left to fetch after leaving');
     } finally {
       restore();
       await plain.close();

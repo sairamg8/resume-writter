@@ -48,17 +48,26 @@ export function stateWith(...list) {
 /** A résumé file to import, named `name`. */
 export const file = (name, extra = {}) => ({ ...dashboardState(['sidebar']).resumes[0], id: 'from_the_file', name, ...extra });
 
-/** Pick `resume` as a file in the page's Import JSON input (a menu item opened it). */
+/** Pick `resume` as a file in the page's Import file input (a choice in the Import dialog started the picker). */
 export function chooseFile(resume) {
   cy.get(IMPORT_INPUT).selectFile({
     contents: Cypress.Buffer.from(JSON.stringify(resume)), fileName: 'mine.json', mimeType: 'application/json',
   }, { force: true });
 }
 
-/** Import `resume` from the dashboard, as the account's original or as a plain import. */
-export function importFile(resume, { asOriginal }) {
+/** The Import dialog (the kit's Dialog, in a portal; its code is a lazy chunk, so Cypress retries until it is there). */
+export const importDialog = () => cy.get('[role="dialog"]').contains('h2', 'Import a file').closest('[role="dialog"]');
+
+/** Press the dashboard's Import and wait for its dialog. */
+export function openImportDialog() {
   cy.contains('button', /^\s*Import\s*$/).click();
-  cy.contains('button', asOriginal ? 'Import as my original' : 'Import JSON').click();
+  return importDialog().should('be.visible');
+}
+
+/** Import `resume` from the dashboard, as the account's original ("Import as my original") or as a plain import ("Choose a file"). */
+export function importFile(resume, { asOriginal }) {
+  openImportDialog().contains('button', asOriginal ? 'Import as my original' : 'Choose a file').click();
+  cy.get('[role="dialog"]').should('not.exist'); // choosing closes the dialog and starts the file picker
   chooseFile(resume);
   cy.contains('button', 'Export').should('be.visible'); // the editor opens it
 }

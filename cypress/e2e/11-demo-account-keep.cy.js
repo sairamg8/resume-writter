@@ -2,13 +2,25 @@
 // keeping" on a card, "Import as my original", and what Delete does to an original. What comes
 // back, and to whom: 11-demo-account.cy.js. The e2e build's fake sign-in, no Firebase.
 import {
-  OWNER, OTHER, LAST_ORIGINAL_HINT, visitAs, stateWith, file, chooseFile, importFile, okEveryConfirm,
+  OWNER, OTHER, LAST_ORIGINAL_HINT, visitAs, stateWith, file, chooseFile, importFile, okEveryConfirm, openImportDialog,
   deleteCard, openCard, stopKeeping, backToDashboard, expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
 import { cardAction, closeMenu, menuItem, offers } from '../support/cardMenu.js';
 import { CARD } from '../support/selectors.js';
 
 describe('demo account — "Keep as my original" and "Import as my original"', () => {
+  it('the Import dialog offers both choices, with what "original" means under the second', () => {
+    visitAs(OWNER, stateWith(['Classic CV']));
+    openImportDialog().within(() => {
+      cy.contains('button', 'Choose a file').should('be.visible');
+      cy.contains('button', 'Import as my original').should('be.visible');
+      cy.contains('Your originals come back whenever none of them is left.').should('be.visible');
+      cy.contains('button', 'Cancel').click();
+    });
+    cy.get('[role="dialog"]').should('not.exist');
+    expectCards(['Classic CV']); // nothing was imported
+  });
+
   it('imported as the original, the file comes back once no original is left, with its latest edits', () => {
     visitAs(OWNER, stateWith(['Spare CV', { keep: true }], ['Classic CV']));
     importFile(file('My real CV'), { asOriginal: true });

@@ -31,6 +31,7 @@ export async function dashboard(resumes, { fail = [], custom = {}, answer = true
   await loadModule('/src/components/NewLetterModal.jsx');
   await loadModule('/src/components/CareerHistoryPanel.jsx');
   await loadModule('/src/components/CardMenu.jsx');
+  await loadModule('/src/components/ImportDialog.jsx');
   const { loaders, warmed } = _lazyForTest;
   const real = { ...loaders };
   warmed.clear();

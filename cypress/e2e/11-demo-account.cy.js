@@ -4,11 +4,11 @@
 // --mode e2e`) signs in the fake account these specs put in localStorage and runs that page
 // without Firebase, so this is the local-only path; the cloud side (flags, the latest copy from
 // another device) runs in tests/pdf/18-cloud-sync-*.test.mjs, the rules in tests/unit/demo-seed.
-// Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js. Last, what
+// Marking one — the cards' menus' and the Import dialog's controls: 11-demo-account-keep.cy.js. Last, what
 // a shared browser keeps when two accounts delete the same id.
 import {
   OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteCard, openCard, stopKeeping, backToDashboard,
-  expectCards, newResumeAndBack,
+  expectCards, newResumeAndBack, openImportDialog,
 } from '../support/demoAccount.js';
 import { offers, offersNoKeep } from '../support/cardMenu.js';
 import { CARD, SYNC_STATUS } from '../support/selectors.js';
@@ -109,7 +109,14 @@ describe('demo account — nobody else gets anything back', () => {
       visitAs(user, stateWith(['My CV', { keep: true }]));
       cy.contains(CARD, 'My CV').should('not.contain.text', 'Original');
       offersNoKeep('My CV'); // the keep controls are in the card's ⋯ menu
-      cy.contains('button', /^\s*Import\s*$/).should('not.have.attr', 'aria-expanded');
+      // Import opens its dialog, with the one plain choice: no "Import as my original", no hint about originals.
+      openImportDialog().within(() => {
+        cy.contains('button', 'Choose a file').should('be.visible');
+        cy.contains('button', 'Import as my original').should('not.exist');
+        cy.contains('Your originals come back').should('not.exist');
+        cy.contains('button', 'Cancel').click();
+      });
+      cy.get('[role="dialog"]').should('not.exist');
     });
   });
 

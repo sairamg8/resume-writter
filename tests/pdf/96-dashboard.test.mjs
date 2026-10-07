@@ -15,6 +15,7 @@ import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage, settle } from './resume-tab.mjs';
 import { cardAction, cardMenuItem, closeCardMenu, itemDisabled } from './card-menu.mjs';
+import { importDialogGone, importVia, openImportDialog, pressInDialog } from './import-dialog.mjs';
 
 // The demo accounts of this test's build (VITE_DEMO_ACCOUNTS): a made-up one, never the owner's.
 // Read when setup() starts Vite, as in 18-cloud-sync-waiting-notice.
@@ -64,6 +65,8 @@ async function dashboard(resumes = [], { user = null } = {}) {
   // The picker's code loads when New Cover first opens it (Dashboard.jsx, Lazy): loaded here already, so
   // settle() waits for React's boundary, not for Vite's first transform of the Dialog.
   await loadModule('/src/components/NewLetterModal.jsx');
+  // Import's dialog likewise (Dashboard.jsx, Lazy): the choice is polled for, never waited a fixed time.
+  await loadModule('/src/components/ImportDialog.jsx');
   const storage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   globalThis.localStorage = storage;
   const auth = { user, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
@@ -638,8 +641,12 @@ describe('the dashboard: Import (R2-167)', () => {
       const input = page.fileInput();
       let opened = 0;
       input.click = () => { opened += 1; };
-      page.click(page.button('Import'));
-      assert.equal(opened, 1, 'Import opens the file picker');
+      // Import opens its dialog first (ImportDialog); the file picker starts from "Choose a file" in it.
+      await openImportDialog(page.view, page.button('Import'));
+      assert.equal(opened, 0, 'Import alone does not start the file picker: the dialog explains what can be imported first');
+      pressInDialog(page.view, 'Choose a file');
+      assert.equal(opened, 1, '"Choose a file" opens the file picker');
+      await importDialogGone(page.view);
 
       const t0 = Date.now();
       const event = await page.pick(file);
@@ -759,7 +766,7 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
     } finally { confirm.restore(); await page.close(); }
   });
 
-  it('Import → Import as my original keeps the imported résumé as an original; Import JSON, PDF, Word or text does not', async () => {
+  it('Import → Import as my original keeps the imported résumé as an original; Choose a file does not', async () => {
     const [, , chart] = samples();
     const file = { name: 'chart-maker.json', text: JSON.stringify({ ...chart, keep: true }) };
     const page = await dashboard(samples().slice(0, 2), { user: DEMO });
@@ -767,15 +774,14 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
     try {
       let opened = 0;
       page.fileInput().click = () => { opened += 1; };
-      page.click(page.button('Import'));
-      page.click(page.button('Import as my original'));
+      await importVia(page.view, page.button('Import'), 'Import as my original');
       assert.equal(opened, 1);
+      await importDialogGone(page.view);
       await page.pick(file);
       assert.equal(page.resumes()[2].keep, true);
 
       // The plain import: it reads a PDF, Word or text file as well as JSON since R2-148, and says so.
-      page.click(page.button('Import'));
-      page.click(page.button('Import JSON, PDF, Word or text'));
+      await importVia(page.view, page.button('Import'), 'Choose a file');
       assert.equal(opened, 2);
       await page.pick(file);
       assert.equal(page.resumes().length, 4);

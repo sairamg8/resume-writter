@@ -1,6 +1,6 @@
 // R4-DVIS-13: New Resume's "Your details from" picker was a hand-rolled <select> at 14 px, so on a phone
 // or a tablet iOS zoomed the page into it when it was tapped, and it looked unlike the kit Chips right
-// below it; the page was also narrower than the Dashboard it opens from (max-w-6xl against max-w-7xl),
+// below it; the page was also narrower than the Dashboard it opens from (max-w-6xl against max-w-7xl; since the UI rebuild both are the Documents page's max-w-[1160px]),
 // so the content edge jumped 64 px in on a wide screen. The picker is now the kit's Select (16 px on a
 // touch screen, pointer-coarse:text-base, as tests/pdf/81-job-inputs-touch-text.test.mjs checks the
 // tracker's fields), and both of the page's rows are max-w-7xl. The fake DOM has no layout, so this
@@ -48,17 +48,23 @@ it('"Your details from" is 16 px on a touch screen, so iOS does not zoom the pag
   } finally { await view.unmount(); }
 });
 
-it('the page is as wide as the Dashboard (max-w-7xl), header and body alike', async () => {
+it('the page is as wide as the Documents page (max-w-[1160px]), its Back link and its body in one column', async () => {
   const { view, byTestId } = await newResumePage();
   try {
     const page = byTestId('new-resume-page');
     assert.ok(page, 'the New Resume page');
-    const narrow = [...elements(page)].filter((el) => tokens(el).includes('max-w-6xl'));
-    assert.equal(narrow.length, 0, 'no row narrower than the Dashboard');
-    const [header, body] = page.childNodes;
-    const headerRow = header.childNodes[0];
-    for (const [name, row] of [['header', headerRow], ['body', body]]) {
-      assert.ok(tokens(row).includes('max-w-7xl') && tokens(row).includes('mx-auto'), `the ${name} row is centred at the Dashboard's max-w-7xl`);
+    for (const old of ['max-w-6xl', 'max-w-7xl']) {
+      const stale = [...elements(page)].filter((el) => tokens(el).includes(old));
+      assert.equal(stale.length, 0, `no row at ${old}: the Documents page is 1160 px wide`);
     }
+    assert.equal(page.childNodes.length, 1, 'one centred column: no full-width header row of its own');
+    const column = page.childNodes[0];
+    assert.ok(tokens(column).includes('max-w-[1160px]') && tokens(column).includes('mx-auto'), `the column is centred at the Documents page's width: ${tokens(column).join(' ')}`);
+    const back = column.childNodes.find((el) => el.tagName === 'BUTTON');
+    assert.ok(back, 'the Back link is the column\'s first element, inside it');
+    assert.equal(back.getAttribute('aria-label'), 'Back');
+    assert.equal(back.getAttribute('title'), 'Back');
+    assert.equal(back.textContent.trim(), 'Documents');
+    assert.equal(column.childNodes.indexOf(back), 0, 'above the heading');
   } finally { await view.unmount(); }
 });
