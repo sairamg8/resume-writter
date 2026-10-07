@@ -658,6 +658,8 @@ describe('the dashboard: Import (R2-167)', () => {
     const restore = readingFiles();
     try {
       await page.pick(file);
+      // The JSON Resume reader loads when such a file is picked (R2-142): wait, bounded, for it to arrive.
+      for (let i = 0; i < 300 && page.resumes().length < 4; i += 1) { await new Promise((r) => { setTimeout(r, 10); }); await settle(); }
       assert.equal(page.resumes().length, 4);
       const made = page.resumes()[3];
       assert.equal(made.name, 'Tamsin Rook Resume');
@@ -677,6 +679,8 @@ describe('the dashboard: Import (R2-167)', () => {
     const restore = readingFiles();
     try {
       await page.pick({ name: 'not-a-resume.json', text: JSON.stringify({ hello: 'world' }) });
+      // Telling a JSON Resume from anything else needs its reader, which loads on demand: wait, bounded, for the answer.
+      for (let i = 0; i < 300 && !/Invalid resume file/.test(page.view.container.textContent); i += 1) { await new Promise((r) => { setTimeout(r, 10); }); await settle(); }
       assert.match(page.view.container.textContent, /Invalid resume file — must be a CPWT-CV backup or standard JSON Resume \(\.json\)\./);
       assert.equal(page.resumes().length, 3);
       await page.pick({ name: 'broken.json', text: '{ this is not json' });
