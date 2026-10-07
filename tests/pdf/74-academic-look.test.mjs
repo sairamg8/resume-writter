@@ -5,13 +5,20 @@
 // right in the Text grey, and pages that break cleanly. Read from the PDF itself: pdf.js text positions,
 // fonts and the painted operator list. How it parses: 74-academic-ats; its letter, Word files and
 // starter: 74-academic-letter.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, allText, allItems, overlaps, drawState, loadModule, MM } from './harness.mjs';
 import { paintedPages } from './banner-paint.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
+
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 const ACCENT = '#7f1d1d';
 const PERSONAL = { name: 'Maya Okafor', title: 'Postdoctoral Research Fellow', email: 'maya@example.edu', phone: '+1 555 0171', summary: '<p>Studies gene-regulatory networks.</p>' };
@@ -47,12 +54,6 @@ const hairlinesUnder = (paints, colour, t, page) => paints.filter((p) => p.paint
 /** The item that prints exactly `str`. */
 const exactly = (pages, str) => allItems(pages).find((i) => i.str === str);
 
-let online = null;
-const isOnline = async () => {
-  online ??= await fetch('https://cdn.jsdelivr.net/npm/@fontsource/source-serif-4@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-  return online;
-};
-
 describe('Academic prints every section type (T8)', () => {
   it('every fact of every section type, every title over its hairline, no text overprinting another or off the paper', async () => {
     const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
@@ -74,8 +75,7 @@ describe('Academic prints every section type (T8)', () => {
 });
 
 describe('its type and header: the serif, the centred name, the position in italic (T8)', () => {
-  it('a new Academic résumé prints in Source Serif 4, where the font can be fetched', async (t) => {
-    if (!(await isOnline())) return t.skip('offline: the serif falls back to Noto Sans');
+  it('a new Academic résumé prints in Source Serif 4, from the CDN stand-in', async () => {
     const pages = await read(await render(academic([experience([JOB])])));
     const fonts = new Set(allItems(pages).map((i) => i.font.replace(/^[A-Z]{6}\+/, '')));
     assert.ok([...fonts].every((f) => /^SourceSerif4/.test(f)), [...fonts].join(', '));

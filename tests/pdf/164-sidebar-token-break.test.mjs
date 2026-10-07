@@ -5,19 +5,19 @@
 // of characters measured grows in step with the token. These tests pin (1) that scaling, counted in
 // measured characters, not milliseconds, and (2) that what breakToFit cuts is what it always cut:
 // the old loop is kept below as the reference, compared on a seeded corpus.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule, render, read, allText } from './harness.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
 
-const CDN = 'https://cdn.jsdelivr.net/npm/@fontsource';
-let online = null;
-async function isOnline() {
-  if (online === null) online = await fetch(`${CDN}/inter@5/metadata.json`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-  return online;
-}
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 /** The loop breakToFit used before the fix: one measure per character, of the run so far plus it. */
 function oldRunsThatFit(part, fits) {
@@ -61,8 +61,7 @@ const sample = (rand, alphabet, length) => {
 };
 
 describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', () => {
-  it('measures a number of characters that grows with the token, not with its square', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('measures a number of characters that grows with the token, not with its square', async () => {
     const { runsThatFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
     // A width that is a count: 0.5 pt a character, a 100 pt column fits 200.
     const measured = (length, fn) => {
@@ -82,8 +81,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     assert.ok(before.chars > big.chars * 5, 'the reference loop measures far more (the test reads the defect)');
   });
 
-  it('cuts every token into the runs the old loop cut, on a seeded corpus', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('cuts every token into the runs the old loop cut, on a seeded corpus', async () => {
     const r = resume({ template: 'sidebar', personal: { name: Object.values(ALPHABETS).map((a) => [].concat(...[a]).join('')).join(' ') } });
     const { resolvePdfFonts, collectText, BREAK_AFTER, BREAK_MARK } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const { textWidth, fitsOnLine, breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
@@ -123,8 +121,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     assert.deepEqual(differences, [], 'every token is cut where the old loop cut it');
   });
 
-  it('breaks a 20 000-character token of one unbreakable run with every run inside its box', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('breaks a 20 000-character token of one unbreakable run with every run inside its box', async () => {
     const r = resume({ template: 'sidebar' });
     const { resolvePdfFonts, collectText } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const { textWidth, breakToFit } = await loadModule('/src/templates/pdf/shared/pdfMeasure.js');
@@ -137,8 +134,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     for (const part of parts.slice(0, -1)) assert.ok(textWidth(part, style) <= 145, 'a run fits the box');
   });
 
-  it('lays a 20 000-character token out in about two characters of layout per character, never the token whole', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('lays a 20 000-character token out in about two characters of layout per character, never the token whole', async () => {
     // Review of the first fix: halving still laid out ~5-6 characters per character at a real width
     // (a run is ~30 characters, and each probe is up to twice that). The run's end is now predicted
     // from per-character advances and confirmed by two layouts. Review round 2: the token itself was
@@ -171,8 +167,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     }
   });
 
-  it('builds a Sidebar resume whose contact is one long token, its layout work in step with the token', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('builds a Sidebar resume whose contact is one long token, its layout work in step with the token', async () => {
     // Counted over the whole build (textkit lays the broken text out through the same faces), at 5 000
     // and 20 000 characters: 4x the token is at most ~5x the characters laid out, and the build time
     // of each size is logged for the commit's profile.
@@ -200,8 +195,7 @@ describe('Sidebar: breaking a long token to fit its column (typing-freeze 7a)', 
     assert.ok(big <= small * 5.5, `4x the token laid out ${(big / small).toFixed(1)}x the characters (${small} -> ${big})`);
   });
 
-  it('builds a Sidebar resume whose contact is one 20 000-character token, every character printed', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('builds a Sidebar resume whose contact is one 20 000-character token, every character printed', async () => {
     const token = 'x'.repeat(20000);
     const r = resume({ template: 'sidebar', personal: { location: token } });
     const started = Date.now();

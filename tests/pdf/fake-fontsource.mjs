@@ -12,8 +12,13 @@
  *   whose `name` table is rewritten to the face asked for — "Gelasio-BoldItalic" for Gelasio's 700 italic — so
  *   the PDF embeds the font by that name, and a bold run that printed the regular face would show in it. The
  *   tests read what the PDF says (its text, the embedded fonts' names), never a glyph's shape;
+ * - the script fonts (Hebrew, Thai, Arabic, Chinese, Japanese, Korean, Noto Emoji) answer with a REAL file of
+ *   the script, kept in fixtures/fonts (whole when small, cut to the characters the tests print when not;
+ *   make-fixtures.py makes them), so shaping, marks and ligatures are the font's own. A character a test
+ *   prints that the cut file lacks prints as .notdef and fails the case that printed it: add it and re-run
+ *   the script;
  * - the two symbol fonts (Noto Sans Math, Noto Sans Symbols 2) answer with a font that draws only the few
- *   characters the tests print in them (← ↑ → ↓ and ✓ ✔ ✗ ✘ ★ ☆ ☎), each on a glyph of its own, so the PDF's text
+ *   characters the tests print in them (← ↑ → ↓ ∕, the bold letters 𝗕𝗼𝗹𝗱, and ✓ ✔ ✗ ✘ ★ ☆ ☎ ◦), each on a glyph of its own, so the PDF's text
  *   layer reads each back as typed;
  * - the harness's own server (the bundled Noto Sans, public/) and data: URLs go through to the real fetch;
  * - anything else FAILS LOUDLY: the fetch rejects naming the URL, the URL is listed in `unexpected`, and
@@ -34,6 +39,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NOTO = path.join(ROOT, 'node_modules/@fontsource/noto-sans/files');
+const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/fonts');
 
 const WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 const BOTH = ['italic', 'normal'];
@@ -58,13 +64,24 @@ export const PACKAGES = {
   'source-serif-4': { family: 'Source Serif 4', weights: WEIGHTS.slice(1), styles: BOTH, subsets: ['cyrillic', 'cyrillic-ext', 'greek', 'latin', 'latin-ext', 'vietnamese'] },
   'pt-serif': { family: 'PT Serif', weights: [400, 700], styles: BOTH, subsets: ['cyrillic', 'cyrillic-ext', 'latin', 'latin-ext'] },
   literata: { family: 'Literata', weights: WEIGHTS.slice(1), styles: BOTH, subsets: SANS },
+  // The script fonts: the subset the app asks for is a REAL file (fixtures/fonts, made by make-fixtures.py), the
+  // others (latin, cyrillic…) are Noto Sans' under the package's name, as for every text font above.
+  'noto-sans-hebrew': { family: 'Noto Sans Hebrew', weights: WEIGHTS, styles: ['normal'], subsets: ['cyrillic-ext', 'greek-ext', 'hebrew', 'latin', 'latin-ext'], fixtures: ['hebrew'] },
+  'noto-sans-thai': { family: 'Noto Sans Thai', weights: WEIGHTS, styles: ['normal'], subsets: ['latin', 'latin-ext', 'thai'], fixtures: ['thai'] },
+  'noto-sans-arabic': { family: 'Noto Sans Arabic', weights: WEIGHTS, styles: ['normal'], subsets: ['arabic', 'latin', 'latin-ext', 'math', 'symbols'], fixtures: ['arabic'] },
+  'ibm-plex-sans-arabic': { family: 'IBM Plex Sans Arabic', weights: WEIGHTS.slice(0, 7), styles: ['normal'], subsets: ['arabic', 'cyrillic-ext', 'latin', 'latin-ext'], fixtures: ['arabic'] },
+  'noto-sans-sc': { family: 'Noto Sans SC', weights: WEIGHTS, styles: ['normal'], subsets: ['chinese-simplified', 'cyrillic', 'latin', 'latin-ext', 'vietnamese'], fixtures: ['chinese-simplified'] },
+  'noto-sans-tc': { family: 'Noto Sans TC', weights: WEIGHTS, styles: ['normal'], subsets: ['chinese-traditional', 'cyrillic', 'latin', 'latin-ext', 'vietnamese'], fixtures: ['chinese-traditional'] },
+  'noto-sans-jp': { family: 'Noto Sans JP', weights: WEIGHTS, styles: ['normal'], subsets: ['cyrillic', 'japanese', 'latin', 'latin-ext', 'vietnamese'], fixtures: ['japanese'] },
+  'noto-sans-kr': { family: 'Noto Sans KR', weights: WEIGHTS, styles: ['normal'], subsets: ['cyrillic', 'korean', 'latin', 'latin-ext', 'vietnamese'], fixtures: ['korean'] },
+  'noto-emoji': { family: 'Noto Emoji', weights: [300, 400, 500, 600, 700], styles: ['normal'], subsets: ['emoji'], fixtures: ['emoji'] },
   'noto-sans-math': {
     family: 'Noto Sans Math', weights: [400], styles: ['normal'], subsets: ['latin'],
-    symbols: { subset: 'math', chars: '←↑→↓' },
+    symbols: { subset: 'math', chars: '←↑→↓∕𝗕𝗼𝗹𝗱' },
   },
   'noto-sans-symbols-2': {
     family: 'Noto Sans Symbols 2', weights: [400], styles: ['normal'], subsets: ['braille', 'latin', 'latin-ext', 'math', 'mayan-numerals', 'symbols'],
-    symbols: { subset: 'symbols', chars: '✓✔✗✘★☆☎' },
+    symbols: { subset: 'symbols', chars: '✓✔✗✘★☆☎◦' },
   },
 };
 
@@ -235,6 +252,9 @@ function faceBytes(pkg, subset, weight, style) {
     let bytes = null;
     if (meta.symbols) {
       if (subset === meta.symbols.subset && weight === 400 && style === 'normal') bytes = symbolFace(meta);
+    } else if (meta.fixtures?.includes(subset) && style === 'normal' && meta.weights.includes(weight)) {
+      // the one real file of the script, for every weight (its name table says Regular)
+      bytes = fs.readFileSync(path.join(FIXTURES, `${pkg}-${subset}-400-normal.woff`));
     } else if (DONOR_SUBSETS.has(subset) && meta.subsets.includes(subset) && meta.weights.includes(weight) && meta.styles.includes(style)) {
       bytes = textFace(meta, subset, weight, style);
     }

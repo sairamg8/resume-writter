@@ -1,10 +1,17 @@
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, allText, loadModule, TEMPLATES } from './harness.mjs';
 import { hasPdftotext, splitWords } from './extractors.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
+
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 // Every render in a session shares react-pdf's font objects, so the order below matters: the
 // first document embeds composite glyphs ("·" is built from the period, "é" from "e") before
@@ -45,9 +52,7 @@ describe('spaced capitals extract as whole words at every size the Design panel 
     assert.deepEqual(found, []);
   });
 
-  it('every offered font family at 6 and 7 pt (fonts from jsDelivr; skipped offline)', async (t) => {
-    const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-    if (!online) return t.skip('offline');
+  it('every offered font family at 6 and 7 pt (fonts from the CDN stand-in)', async (t) => {
     if (!hasPdftotext) t.diagnostic('pdftotext not installed: Poppler not checked');
     const { FONT_MAP } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const found = [];
