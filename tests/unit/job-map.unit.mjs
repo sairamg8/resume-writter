@@ -48,7 +48,9 @@ test('no e-mail address of an allowed account is in the app or the rules; the ap
   for (const f of sources) {
     const text = readFileSync(f, 'utf8');
     assert.doesNotMatch(text, /gudiputi/i, `${f} names an account`);
-    assert.doesNotMatch(text, /tools\/job-map|jobs-agg|careers-results|discovered\.json/, `${f} reaches the crawl data`);
+    // Comments may name the tool; code (an import, a fetch, a path string) may not reach the crawl.
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.doesNotMatch(code, /tools\/job-map|jobs-agg|careers-results|discovered\.json/, `${f} reaches the crawl data`);
   }
 });
 
