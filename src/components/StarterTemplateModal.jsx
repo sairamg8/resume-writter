@@ -60,15 +60,15 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
         className="w-full text-left p-3.5 rounded-xl border-2 border-dashed border-cv-hairline hover:border-cv-brand hover:bg-cv-brand-soft/40 transition-all flex items-center justify-between group"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-cv-sunken group-hover:bg-blue-100 flex items-center justify-center text-cv-muted group-hover:text-blue-600 transition-colors">
+          <div className="w-9 h-9 rounded-lg bg-cv-sunken group-hover:bg-cv-brand-soft flex items-center justify-center text-cv-muted group-hover:text-cv-brand-text transition-colors">
             <FileText size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-cv-ink group-hover:text-blue-700 transition-colors">Start from Scratch (Blank)</h3>
+            <h3 className="text-sm font-bold text-cv-ink group-hover:text-cv-brand-text transition-colors">Start from Scratch (Blank)</h3>
             <p className="text-xs text-cv-faint">Empty sections to fill with your own custom experience.</p>
           </div>
         </div>
-        <ArrowRight size={15} className="text-cv-faint group-hover:text-blue-600 transition-colors" />
+        <ArrowRight size={15} className="text-cv-faint group-hover:text-cv-brand-text transition-colors" />
       </button>
 
       <div className="flex items-center gap-2 pt-2">
@@ -87,13 +87,13 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
             {/* On a phone a long name and its badge do not fit one line (R4-DPH-39): the badge moves under
                 the name, whole, instead of being squeezed until its pill breaks in two. */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className="text-sm font-bold text-cv-ink group-hover:text-blue-700 transition-colors">{t.name}</h3>
+              <h3 className="text-sm font-bold text-cv-ink group-hover:text-cv-brand-text transition-colors">{t.name}</h3>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cv-brand-soft text-cv-brand-text border border-cv-brand-soft-border whitespace-nowrap shrink-0">{t.badge}</span>
             </div>
             <p className="text-xs text-cv-muted mt-0.5 line-clamp-1">{t.description}</p>
             <p className="text-[11px] text-cv-faint mt-0.5">Template: {templateOf(t)}</p>
           </div>
-          <ArrowRight size={15} className="text-cv-faint group-hover:text-blue-600 shrink-0 transition-colors" />
+          <ArrowRight size={15} className="text-cv-faint group-hover:text-cv-brand-text shrink-0 transition-colors" />
         </button>
       ))}
     </div>
@@ -101,7 +101,7 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
 
   if (inline) {
     return (
-      <section data-testid="starter-chooser" className="bg-white rounded-2xl border border-cv-hairline overflow-hidden">
+      <section data-testid="starter-chooser" className="cv-card rounded-2xl border border-cv-hairline overflow-hidden">
         <div className="px-5 py-4 border-b border-cv-hairline bg-cv-ground/70">
           <h2 className="text-sm sm:text-base font-bold text-cv-ink">Or start blank, or from a role example</h2>
           <p className="text-[11px] text-cv-muted">Empty sections, or pre-filled, ATS-optimized role templates to make your own</p>
@@ -112,8 +112,8 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm" {...overlay}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-cv-hairline max-w-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cv-ink/60 backdrop-blur-sm" {...overlay}>
+      <div className="bg-cv-surface rounded-2xl shadow-2xl border border-cv-hairline max-w-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-5 py-4 border-b border-cv-hairline flex items-center justify-between bg-cv-ground/70">
           <div className="flex items-center gap-2.5">

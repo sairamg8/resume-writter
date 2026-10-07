@@ -92,7 +92,7 @@ export function NewResume({ store }) {
                 type="button"
                 data-testid={`new-${c.testid}`}
                 onClick={() => start(c)}
-                className="flex flex-col gap-2 p-2 rounded-xl border border-cv-hairline bg-white text-left transition-all hover:border-cv-brand hover:shadow-sm"
+                className="flex flex-col gap-2 p-2 rounded-[14px] border border-cv-hairline bg-cv-surface text-left transition-all hover:border-cv-brand hover:shadow-sm"
               >
                 <div className="rounded-md ring-1 ring-cv-hairline bg-cv-sunken overflow-hidden">
                   <TemplateThumb card={c} size="lg" picture source={source} />
@@ -100,7 +100,7 @@ export function NewResume({ store }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium truncate text-cv-ink">{c.label}</p>
-                    {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-cv-good-soft text-cv-good">ATS</span>}
+                    {c.ats && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-cv-good-soft text-cv-good">ATS</span>}
                   </div>
                   <p className="text-[11px] leading-snug text-cv-muted line-clamp-2">{c.desc}</p>
                 </div>
