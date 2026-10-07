@@ -70,7 +70,7 @@ export default function JobMap({ auth }) {
           <input ref={file} type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
         </div>
         {status && <p className="text-xs text-gray-500 mb-3">{status}</p>}
-        {meta === false && <p className="text-sm text-gray-600">No data yet. Build it with tools/job-map (<code>node build-data.mjs</code>) and choose jobmap-data.json above.</p>}
+        {meta === false && <p className="text-sm text-gray-600">No data yet. Build it with the job-map tool (<code>node build-data.mjs</code>) and choose jobmap-data.json above.</p>}
         {meta && (
           <>
             <p className="text-xs text-gray-500 mb-3">{companies.length} companies · crawled {meta.crawled}</p>
