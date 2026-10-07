@@ -9,7 +9,8 @@
  *   italic, Lato no 500, Gelasio no 100 — and a package named in `missing` answers 404, a name that is no font;
  * - a face's file answers with real font bytes: the Noto Sans that ships with the app (@fontsource/noto-sans,
  *   the only Fontsource package installed), its glyphs under the package's names. Each file is a real WOFF
- *   whose `name` table is rewritten to the face asked for — "Gelasio-BoldItalic" for Gelasio's 700 italic — so
+ *   whose advance widths are scaled to the package's own (0.5% wider for each place in PACKAGES, so every family
+ *   lays out differently) and whose `name` table is rewritten to the face asked for — "Gelasio-BoldItalic" for Gelasio's 700 italic — so
  *   the PDF embeds the font by that name, and a bold run that printed the regular face would show in it. The
  *   tests read what the PDF says (its text, the embedded fonts' names), never a glyph's shape;
  * - the script fonts (Hebrew, Thai, Arabic, Chinese, Japanese, Korean, Noto Emoji) answer with a REAL file of
@@ -217,11 +218,36 @@ const SHAPES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const readDonor = (subset, weight, style) => readWoff(fs.readFileSync(path.join(NOTO, `noto-sans-${subset}-${weight}-${style}.woff`)));
 
-/** A text font's face: Noto Sans' own, named for the package and the weight and style asked ("Inter-BoldItalic"). */
+/**
+ * How much wider than Noto Sans a package's text is: 0.5% for each place of the package among the text fonts,
+ * so no two families lay a line out alike (the parity matrix asserts that two fonts print different PDFs, and
+ * with Noto's own widths under every name they would not) and none is narrower than Noto (the word-gap
+ * checks were written against its spaces).
+ */
+const TEXT_PACKAGES = Object.keys(PACKAGES).filter((id) => !PACKAGES[id].symbols && !PACKAGES[id].fixtures);
+const widthScale = (family) => 1 + 0.005 * Math.max(0, TEXT_PACKAGES.findIndex((id) => PACKAGES[id].family === family) + 1);
+
+/** An `hmtx` table with every advance width times `scale` (the side bearings stay), for `numberOfHMetrics` of them. */
+function scaledHmtx(body, count, scale) {
+  const out = Buffer.from(body);
+  for (let i = 0; i < count; i += 1) out.writeUInt16BE(Math.min(0xffff, Math.round(out.readUInt16BE(4 * i) * scale)), 4 * i);
+  return out;
+}
+
+/** A text font's face: Noto Sans' own glyphs, named for the package and the weight and style asked ("Inter-BoldItalic"), at its own widths. */
 function textFace({ family }, subset, weight, style) {
   const donor = readDonor(subset, weight, style);
   const words = weight === 400 ? (style === 'italic' ? 'Italic' : 'Regular') : `${WEIGHT_WORDS[weight]}${style === 'italic' ? ' Italic' : ''}`;
-  return writeWoff({ ...donor, tables: donor.tables.map((t) => (t.tag === 'name' ? { ...t, body: nameTable(family, words) } : t)) });
+  const metrics = donor.tables.find((t) => t.tag === 'hhea').body.readUInt16BE(34);
+  const scale = widthScale(family);
+  return writeWoff({
+    ...donor,
+    tables: donor.tables.map((t) => {
+      if (t.tag === 'name') return { ...t, body: nameTable(family, words) };
+      if (t.tag === 'hmtx' && scale !== 1) return { ...t, body: scaledHmtx(t.body, metrics, scale) };
+      return t;
+    }),
+  });
 }
 
 /** A symbol font's only face: it draws `symbols.chars` and nothing else, each on a glyph of its own. */
