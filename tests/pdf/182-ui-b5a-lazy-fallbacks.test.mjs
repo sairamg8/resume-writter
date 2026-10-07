@@ -3,7 +3,7 @@
 // function still works, the tab is not reloaded, and Copy still keeps its once-per-visit guard.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown } from './harness.mjs';
+import { setup, teardown, loadModule } from './harness.mjs';
 import { elements } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { cv, dashboard, text, until } from './182-ui-b5a-mount.mjs';
@@ -40,7 +40,7 @@ it('before the menu\'s code arrives the card shows its own ⋯ button; a press m
   let release;
   const gate = new Promise((r) => { release = r; });
   const page = await dashboard([cv('resume_a', 'A CV', 1000)], {
-    custom: { menu: async () => { await gate; const m = await import('../../src/components/CardMenu.jsx'); return { default: m.CardMenu }; } },
+    custom: { menu: async () => { await gate; const m = await loadModule('/src/components/CardMenu.jsx'); return { default: m.CardMenu }; } },
   });
   try {
     assert.ok(page.more(page.cards()[0]), 'the ⋯ button is there while the code is on its way');

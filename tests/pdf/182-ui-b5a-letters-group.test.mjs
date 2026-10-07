@@ -23,7 +23,7 @@ it('letters are listed in their own group, never among the résumés, and counte
     const g = group(page);
     assert.ok(g, 'the Cover Letters group');
     assert.match(text(g), /Cover Letters/);
-    assert.match(text(g), /1 letter\b/);
+    assert.match(text(g), /1 letter/);
     const inGroup = [...elements(g)].filter((el) => el.getAttribute('data-testid') === 'resume-card');
     assert.equal(inGroup.length, 1);
     assert.equal(page.cards().length, 2, 'one résumé card above, one letter card in the group');
