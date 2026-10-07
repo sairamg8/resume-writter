@@ -13,7 +13,9 @@ import { startupModules } from './startup-modules.mjs';
 describe('the JSON Resume export is off the start-up path (R2-142)', () => {
   it('the Dashboard\'s import is on it; the export half (jsonResumeExport.js, entryPrints.js) is not', () => {
     const startup = startupModules();
-    assert.ok(startup.has('src/pages/Dashboard.jsx') && startup.has('src/utils/jsonResumeImport.js'), 'the Dashboard and its JSON Resume import are');
+    // The Dashboard reads a JSON Resume file with import() when one is picked (offsetting the Job Map's start-up bytes), so the reader is off it too.
+    assert.ok(startup.has('src/pages/Dashboard.jsx'), 'the Dashboard is on it');
+    assert.ok(!startup.has('src/utils/jsonResumeImport.js'), 'its JSON Resume reader is not: loaded when such a file is picked');
     assert.deepEqual(['src/utils/jsonResumeExport.js', 'src/utils/entryPrints.js', 'src/utils/jsonResume.js'].filter((m) => startup.has(m)), [],
       'modules only the editor and the PDF/Word code use, reached by a static import from the start-up path');
   });
