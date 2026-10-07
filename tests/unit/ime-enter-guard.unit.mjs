@@ -50,7 +50,6 @@ const NOT_TYPED_ESCAPE = new Set([
   'components/ui/Tooltip.jsx',         // a tooltip's trigger
   'components/ui/MenuList.jsx',        // a menu's items
   'components/AuthBar.jsx',            // the account button's hover card
-  'hooks/useOutsideClose.js',          // a menu's outside-click hook: Escape on a menu, no text field
   'components/shell/Sidebar.jsx',      // the phone drawer: links only
   'components/ShareLinkModal.jsx',     // a read-only link
   'components/NewLetterModal.jsx',     // buttons only

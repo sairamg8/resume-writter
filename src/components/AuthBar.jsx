@@ -144,7 +144,7 @@ export default function AuthBar({
   const [menuOpen, setMenuOpen]   = useState(false);
   const menuRef = useRef(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  useOutsideClose(menuRef, menuOpen, closeMenu);
+  useOutsideClose(menuRef, menuOpen, closeMenu, undefined, { swallowClick: true }); // the first press outside only closes, as the backdrop it replaced
   // What the last sign-in failure was, in words (signInErrorMessage): it used to go to the
   // console only, so a blocked popup or an unauthorized domain looked like nothing (R2-086).
   const [signInError, setSignInError] = useState(null);

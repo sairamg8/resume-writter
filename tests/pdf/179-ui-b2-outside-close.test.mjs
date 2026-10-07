@@ -13,9 +13,9 @@ after(teardown);
 
 async function probe(props) {
   const { useOutsideClose } = await loadModule('/src/hooks/useOutsideClose.js');
-  function Probe({ active, onClose, onEscape }) {
+  function Probe({ active, onClose, onEscape, swallowClick }) {
     const ref = useRef(null);
-    useOutsideClose(ref, active, onClose, onEscape);
+    useOutsideClose(ref, active, onClose, onEscape, { swallowClick });
     return createElement('div', { ref, 'data-testid': 'box' }, createElement('span', { 'data-testid': 'inner' }, 'in'));
   }
   const view = mount(Probe, props);
@@ -91,5 +91,63 @@ describe('useOutsideClose', () => {
       assert.equal(document.listeners('pointerdown'), 0, 'unmount left the pointer listener');
       assert.equal(document.listeners('keydown'), 0, 'unmount left the key listener');
     }
+  });
+});
+
+// UI rebuild B4 re-verification (parity P-2, test strength T7). The avatar menu used to close behind a full-screen
+// backdrop, so the press outside only closed it; the hook let the click through to what was under the pointer (a
+// card's Delete). `swallowClick` ends that for the one click of the closing press. An input method's Escape is
+// not the menu's: the hook guards it itself (isImeKey) now that no allow-list entry excuses the file.
+describe('useOutsideClose: the closing press\'s click, and an input method\'s Escape', () => {
+  const click = (p, target) => {
+    const seen = { prevented: 0, stopped: 0 };
+    p.view.act(() => { p.view.document.dispatchEvent({ type: 'click', target, preventDefault() { seen.prevented += 1; }, stopPropagation() { seen.stopped += 1; } }); });
+    return seen;
+  };
+  const outside = (p) => p.view.document.body.appendChild(p.view.document.createElement('div'));
+
+  it('with swallowClick the click that follows the closing press is stopped, once; the next one is not', async () => {
+    const p = await probe({ active: true, onClose() {}, swallowClick: true });
+    try {
+      const away = outside(p);
+      p.press(away);
+      const first = click(p, away);
+      assert.deepEqual(first, { prevented: 1, stopped: 1 }, 'the click under the closing press reached the page');
+      assert.deepEqual(click(p, away), { prevented: 0, stopped: 0 }, 'a later click is the page\'s');
+    } finally { await p.view.unmount(); }
+  });
+
+  it('the swallowing click outlives the close (the effect is gone when it arrives) and a press inside swallows nothing', async () => {
+    const p = await probe({ active: true, onClose() {}, swallowClick: true });
+    try {
+      p.press(p.by('inner'));
+      assert.deepEqual(click(p, p.by('inner')), { prevented: 0, stopped: 0 }, 'a press inside is no closing press');
+      const away = outside(p);
+      p.press(away);
+      p.view.update({ active: false, onClose() {}, swallowClick: true });
+      assert.deepEqual(click(p, away), { prevented: 1, stopped: 1 }, 'closed already, the click is still the closing press\'s');
+    } finally { await p.view.unmount(); }
+  });
+
+  it('without swallowClick no click is touched', async () => {
+    const p = await probe({ active: true, onClose() {} });
+    try {
+      const away = outside(p);
+      p.press(away);
+      assert.deepEqual(click(p, away), { prevented: 0, stopped: 0 });
+    } finally { await p.view.unmount(); }
+  });
+
+  it('an input method\'s Escape (isComposing, or keyCode 229) does not call onEscape; a plain one does', async () => {
+    let escaped = 0;
+    const p = await probe({ active: true, onClose() {}, onEscape: () => { escaped += 1; } });
+    try {
+      for (const flag of [{ isComposing: true }, { keyCode: 229 }]) {
+        p.view.act(() => { p.view.document.dispatchEvent({ type: 'keydown', key: 'Escape', ...flag }); });
+      }
+      assert.equal(escaped, 0, 'a composing Escape closed the control');
+      p.key('Escape');
+      assert.equal(escaped, 1, 'a plain Escape did not');
+    } finally { await p.view.unmount(); }
   });
 });
