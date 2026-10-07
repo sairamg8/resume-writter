@@ -60,9 +60,9 @@ test('the menu item and the page wait for the server: no access means no button 
   assert.match(hook, /useState\(null\)/, 'unknown until the server answers');
   assert.match(hook, /catch|, \(\) => \{ if \(live\) setOk\(false\)/, 'a refusal is false');
   const bar = readFileSync(join(root, 'src/components/AuthBar.jsx'), 'utf8');
-  assert.match(bar, /lazy\(\(\) => import\('@\/components\/JobMapMenuItem'\)/, 'the item and its check are a lazy chunk, off the start-up path');
+  assert.match(bar, /lazy\(\(\) => import\('@\/pages\/JobMap'\)/, 'the item and its check share the page's lazy chunk, off the start-up path');
   assert.doesNotMatch(bar, /useJobMapAccess|lucide-react'.*Map/, 'the entry holds neither the hook nor the icon');
-  const item = readFileSync(join(root, 'src/components/JobMapMenuItem.jsx'), 'utf8');
+  const item = readFileSync(join(root, 'src/pages/JobMap.jsx'), 'utf8');
   assert.match(item, /allowed !== true\) return null/, 'the item shows only when access is true');
   const page = readFileSync(join(root, 'src/pages/JobMap.jsx'), 'utf8');
   assert.match(page, /!auth\.user \|\| allowed === false\) return <Navigate to="\/" replace \/>/);

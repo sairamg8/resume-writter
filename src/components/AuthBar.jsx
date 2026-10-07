@@ -14,7 +14,7 @@ function GoogleIcon() {
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
 // A failed load shows no item: the menu works without it.
-const JobMapMenuItem = lazy(() => import('@/components/JobMapMenuItem').catch(() => ({ default: () => null })));
+const JobMapMenuItem = lazy(() => import('@/pages/JobMap').then((m) => ({ default: m.JobMapMenuItem }), () => ({ default: () => null })));
 
 const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
 

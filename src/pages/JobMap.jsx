@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Upload } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Map as MapIcon, Upload } from 'lucide-react';
 import { useJobMapAccess } from '@/hooks/useJobMapAccess';
 import { ROW, FUNCTION_LABELS, checkData, filterRows, distinct } from '@/utils/jobMapData';
+
+/**
+ * The account menu's Job Map item (AuthBar loads this page's code only when the menu opens, so the page and the item
+ * are ONE chunk and one start-up import map entry): shown once the server lets the account use the Job Map.
+ */
+export function JobMapMenuItem({ user, onPick }) {
+  const allowed = useJobMapAccess(user);
+  if (allowed !== true) return null;
+  return (
+    <Link to="/job-map" onClick={onPick} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors">
+      <MapIcon size={13} /> Job Map
+    </Link>
+  );
+}
 
 const SHOWN = 100;
 const field = 'border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white min-w-0';
