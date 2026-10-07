@@ -12,9 +12,9 @@ export const menuItem = (name, label) => {
   return cy.contains(MENU_ITEM, new RegExp(`^\\s*${label}`));
 };
 
-/** Closes the open menu with Escape. */
+/** Closes the open menu with Escape, typed to the page: typing to the menu itself first clicks its middle, which presses an item. */
 export const closeMenu = () => {
-  cy.get('[role="menu"]').type('{esc}');
+  cy.get('body').type('{esc}');
   cy.get('[role="menu"]').should('not.exist');
 };
 

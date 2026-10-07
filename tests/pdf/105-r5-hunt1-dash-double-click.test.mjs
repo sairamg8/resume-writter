@@ -75,8 +75,10 @@ async function dashboard(resumes, { plain = false } = {}) {
   const doubleAction = async (name, label) => {
     const item = await cardMenuItem(view, card(name), label);
     const event = { preventDefault() {}, stopPropagation() {}, target: item, currentTarget: item };
-    view.act(() => reactProps(item).onClick(event));
-    view.act(() => reactProps(item).onClick(event));
+    // Its handler is taken before the first press: the menu closes on it, and the item leaves the page.
+    const { onClick } = reactProps(item);
+    view.act(() => onClick(event));
+    view.act(() => onClick(event));
     await settle();
   };
   // The plain buttons, once the menu's failed import has put them on the card.
