@@ -11,3 +11,9 @@ node build-data.mjs            # -> jobmap-data.json; open Job Map in the app an
 ```
 
 `jobs.mjs "Razorpay" --region india --track java` looks one company up. `lib.mjs` holds the function / position / stack / level / country rules, `ats.mjs` the readers (Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Workday, Atlassian). Boards that block bots, and logged-in ATSs (Taleo, SuccessFactors, Oracle), are linked, not read. Moved from sairamg8/devbible (docs/_project/job-map); its Express login app was left behind, Firebase sign-in replaces it.
+
+## Keeping it current
+
+`node refresh.mjs` re-reads every known board, rebuilds the data and uploads it to the `jobmap/*` documents (`FIREBASE_SERVICE_ACCOUNT` = the service-account JSON). `--discover` looks for new companies first, `--dry` uploads nothing, `--force` skips the guard that refuses a crawl with 40% fewer roles than are stored.
+
+`.github/workflows/job-map-refresh.yml` does it for you: Mondays the roles, the 1st of the month new companies too (committed with `[skip ci]`). It needs the repository secret `FIREBASE_SERVICE_ACCOUNT` (Firebase console, Project settings, Service accounts, Generate new private key); only the owner can add it.
