@@ -7,7 +7,6 @@ import BottomTabBar from '@/components/BottomTabBar';
 import { ResumeCard } from '@/components/ResumeCard';
 import { Lazy, loaders, warm, warmed } from '@/components/lazyPiece';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
-import { ImportMenu } from '@/components/ImportMenu';
 import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
@@ -19,6 +18,12 @@ import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentF
 
 // The letter picker, Career History and a card's more menu load apart from the start-up path (lazyPiece.jsx).
 export const _lazyForTest = { loaders, warmed };
+
+/** The import dialog's code did not arrive: Import opens the file picker straight away, as it did before the dialog. */
+function ImportFallback({ asked, pick }) {
+  useEffect(() => { if (asked) pick(); }, [asked]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
 
 /** The letter picker's code did not arrive: each New Cover makes the letter from the first résumé, as with one. */
 function LetterFallback({ asked, make }) {
@@ -54,9 +59,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // The picker's code is asked for when it is first opened (or ahead of that: warm); it then stays mounted for its exit.
   const [letterUsed, setLetterUsed] = useState(false);
+  // The import dialog likewise: asked for when Import is first pressed (or ahead of that: warm).
+  const [importOpen, setImportOpen] = useState(false);
+  const [importUsed, setImportUsed] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
-  // Whether the file being picked is imported as an original (ImportMenu).
+  // Whether the file being picked is imported as an original (ImportDialog).
   const importAsOriginal = useRef(false);
   // A document being read (R4-IMP-12): pdf.js can take seconds to arrive, so Import says "Reading…"
   // and is disabled, and a second pick meanwhile is ignored — the ref catches two in the same tick.
@@ -230,11 +238,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <input ref={importRef} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={handleImport} />
-            {keeps ? <ImportMenu onPick={pickImport} busy={importing} className={IMPORT_BUTTON} /> : (
-              <button onClick={() => pickImport(false)} disabled={importing} className={`${IMPORT_BUTTON} disabled:opacity-60`} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
-                <Upload size={16} /> {importing ? 'Reading…' : 'Import'}
-              </button>
-            )}
+            <button
+              onClick={() => { setImportUsed(true); setImportOpen(true); }}
+              onMouseEnter={() => warm('import')}
+              onFocus={() => warm('import')}
+              disabled={importing}
+              className={`${IMPORT_BUTTON} disabled:opacity-60`}
+              title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}
+            >
+              <Upload size={16} /> {importing ? 'Reading…' : 'Import'}
+            </button>
             <button onClick={startLetter} onMouseEnter={() => warm('letter')} onFocus={() => warm('letter')} className={IMPORT_BUTTON}>
               <MailIcon size={16} /> New Cover
             </button>
@@ -337,6 +350,17 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
         </div>
       </div>
 
+      {importUsed && (
+        <Lazy
+          load="import"
+          fallback={() => <ImportFallback asked={importOpen} pick={() => { setImportOpen(false); pickImport(false); }} />}
+          isOpen={importOpen}
+          keeps={keeps}
+          busy={importing}
+          onPick={pickImport}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
       {letterUsed && (
         <Lazy
           load="letter"

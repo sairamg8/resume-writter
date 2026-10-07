@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Chip } from '@/components/ui/Chip';
 import { Select } from '@/components/ui/Select';
 import StarterTemplateModal from '@/components/StarterTemplateModal';
@@ -47,35 +47,24 @@ export function NewResume({ store }) {
     : store.createResume(NEW_RESUME_NAME, null, cardLook(card))));
 
   return (
-    <div className="min-h-screen bg-[#f5f3ef]" data-testid="new-resume-page">
-      {/* The Dashboard's width (max-w-7xl), so the content edge stays put between the two pages. */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-          <button onClick={goBack} aria-label="Back" title="Back" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <FileText size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-900">New Resume</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="min-h-screen bg-cv-ground" data-testid="new-resume-page">
+      {/* The Documents page's width (1160 px), so the content edge stays put between the two pages. */}
+      <div className="max-w-[1160px] mx-auto px-4 sm:px-8 pt-6 sm:pt-7 pb-12 space-y-6">
+        <button onClick={goBack} aria-label="Back" title="Back" className="inline-flex items-center gap-1.5 text-sm font-medium text-cv-muted hover:text-cv-ink transition-colors">
+          <ArrowLeft size={16} /> Documents
+        </button>
         <section className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Pick a look to start</h1>
-              <p className="text-sm text-gray-500" data-testid="new-resume-from">
+              <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-tight text-cv-ink">Pick a look to start</h1>
+              <p className="text-sm text-cv-muted" data-testid="new-resume-from">
                 {source
                   ? `Each page is your résumé "${source.name}" in that look. Pick one: a new résumé with your details opens on it, to make your own.`
                   : 'Pick one: a blank résumé opens on it. Each page shows a sample résumé in that look.'}
               </p>
             </div>
             {sources.length > 1 && (
-              <label className="flex items-center gap-2 text-sm text-gray-600">
+              <label className="flex items-center gap-2 text-sm text-cv-muted">
                 Your details from
                 {/* The kit's select, as the Chips below are the kit's: 16 px on a touch screen, where a
                     smaller field makes iOS zoom the page when it is tapped. */}
@@ -103,17 +92,17 @@ export function NewResume({ store }) {
                 type="button"
                 data-testid={`new-${c.testid}`}
                 onClick={() => start(c)}
-                className="flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white text-left transition-all hover:border-blue-400 hover:shadow-sm"
+                className="flex flex-col gap-2 p-2 rounded-xl border border-cv-hairline bg-white text-left transition-all hover:border-cv-brand hover:shadow-sm"
               >
-                <div className="rounded-md ring-1 ring-gray-200 bg-gray-50 overflow-hidden">
+                <div className="rounded-md ring-1 ring-cv-hairline bg-cv-sunken overflow-hidden">
                   <TemplateThumb card={c} size="lg" picture source={source} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium truncate text-gray-800">{c.label}</p>
-                    {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
+                    <p className="text-sm font-medium truncate text-cv-ink">{c.label}</p>
+                    {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-cv-good-soft text-cv-good">ATS</span>}
                   </div>
-                  <p className="text-[11px] leading-snug text-gray-500 line-clamp-2">{c.desc}</p>
+                  <p className="text-[11px] leading-snug text-cv-muted line-clamp-2">{c.desc}</p>
                 </div>
               </button>
             ))}

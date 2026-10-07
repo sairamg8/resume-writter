@@ -9,6 +9,7 @@ export const loaders = {
   letter: () => import('@/components/NewLetterModal'),
   career: () => import('@/components/CareerHistoryPanel').then((m) => ({ default: m.CareerHistoryPanel })),
   menu: () => import('@/components/CardMenu').then((m) => ({ default: m.CardMenu })),
+  import: () => import('@/components/ImportDialog'),
 };
 export const warmed = new Set();
 

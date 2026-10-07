@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson, Globe } from 'lucide-react';
-import { ORIGINALS_HINT } from '@/components/ImportMenu';
+import { ORIGINALS_HINT } from '@/constants/cardHints';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
 import { useFloating } from '@/components/ui/useFloating';
