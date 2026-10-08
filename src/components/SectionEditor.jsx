@@ -14,6 +14,15 @@ import { useToast } from '@/components/ui/Toast';
 import { Menu } from '@/components/ui/Menu';
 import { useSameList } from '@/hooks/useSameList';
 
+// The Section style popover loads apart from the start-up path. A failed import is forgotten so the next
+// open tries again; meanwhile the card shows the customizer inline, as before the popover existed.
+export const _lazyForTest = { load: () => import('@/components/SectionStylePopover') };
+let stylePopover = null;
+const loadStylePopover = () => {
+  stylePopover ||= _lazyForTest.load().catch((e) => { stylePopover = null; throw e; });
+  return stylePopover;
+};
+
 // One options object for the life of the page: useSensor makes a new sensor from a new one, and dnd-kit
 // wakes every sortable under it for a new list of sensors (PERF-4).
 const KEYBOARD_SENSOR = { coordinateGetter: sortableKeyboardCoordinates };
@@ -59,6 +68,8 @@ export const SortableSection = memo(function SortableSection({
   settings,
 }) {
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [StylePopover, setStylePopover] = useState(null);
+  const [popoverFailed, setPopoverFailed] = useState(false);
   const [sectionOpen, setSectionOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const { toast } = useToast();
@@ -66,6 +77,14 @@ export const SortableSection = memo(function SortableSection({
   useEffect(() => {
     if (forceOpenKey > 0) setSectionOpen(forceOpen);
   }, [forceOpenKey]);
+
+  useEffect(() => {
+    if (!customizerOpen) { setPopoverFailed(false); return undefined; }
+    if (StylePopover) return undefined;
+    let live = true;
+    loadStylePopover().then((m) => { if (live) setStylePopover(() => m.default); }, () => { if (live) setPopoverFailed(true); });
+    return () => { live = false; };
+  }, [customizerOpen, StylePopover]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const itemSensors = useSensors(
@@ -191,9 +210,16 @@ export const SortableSection = memo(function SortableSection({
         >
           {sectionOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
+        {customizerOpen && StylePopover && !popoverFailed && (
+          <StylePopover
+            open
+            onClose={() => setCustomizerOpen(false)}
+            section={section} template={template} updateSectionSettings={updateSectionSettings} settings={settings}
+          />
+        )}
       </div>
 
-      {customizerOpen && (
+      {customizerOpen && popoverFailed && (
         <SectionCustomizer section={section} template={template} updateSectionSettings={updateSectionSettings} settings={settings} />
       )}
 
