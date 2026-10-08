@@ -4482,6 +4482,150 @@
       "ats": "ashby",
       "slug": "writer",
       "sector": "ai and robotics"
+    },
+    {
+      "name": "Apollo GraphQL",
+      "ats": "ashby",
+      "slug": "apollo-graphql",
+      "sector": "software"
+    },
+    {
+      "name": "Armory",
+      "ats": "ashby",
+      "slug": "armory",
+      "sector": "software"
+    },
+    {
+      "name": "Artsy",
+      "ats": "ashby",
+      "slug": "artsy",
+      "sector": "software"
+    },
+    {
+      "name": "Attio",
+      "ats": "ashby",
+      "slug": "attio",
+      "sector": "software"
+    },
+    {
+      "name": "Clockwise",
+      "ats": "recruitee",
+      "slug": "clockwise",
+      "sector": "software"
+    },
+    {
+      "name": "Datafold",
+      "ats": "ashby",
+      "slug": "datafold",
+      "sector": "software"
+    },
+    {
+      "name": "Dune Analytics",
+      "ats": "ashby",
+      "slug": "dune",
+      "sector": "software"
+    },
+    {
+      "name": "Fieldguide",
+      "ats": "ashby",
+      "slug": "fieldguide",
+      "sector": "software"
+    },
+    {
+      "name": "Front",
+      "ats": "ashby",
+      "slug": "frontcareers",
+      "sector": "software"
+    },
+    {
+      "name": "Gong.io",
+      "ats": "recruitee",
+      "slug": "gong",
+      "sector": "software"
+    },
+    {
+      "name": "Headway",
+      "ats": "ashby",
+      "slug": "headway",
+      "sector": "software"
+    },
+    {
+      "name": "Hinge Health",
+      "ats": "ashby",
+      "slug": "hinge-health",
+      "sector": "software"
+    },
+    {
+      "name": "Ibotta",
+      "ats": "ashby",
+      "slug": "ibotta",
+      "sector": "software"
+    },
+    {
+      "name": "Namely",
+      "ats": "smartrecruiters",
+      "slug": "namely",
+      "sector": "software"
+    },
+    {
+      "name": "Nuna",
+      "ats": "ashby",
+      "slug": "nuna",
+      "sector": "software"
+    },
+    {
+      "name": "Orbital",
+      "ats": "ashby",
+      "slug": "orbital",
+      "sector": "software"
+    },
+    {
+      "name": "Quizlet Inc",
+      "ats": "ashby",
+      "slug": "quizlet-inc",
+      "sector": "software"
+    },
+    {
+      "name": "Scribd",
+      "ats": "ashby",
+      "slug": "scribdinc",
+      "sector": "software"
+    },
+    {
+      "name": "SurveyMonkey Inc",
+      "ats": "ashby",
+      "slug": "surveymonkey",
+      "sector": "software"
+    },
+    {
+      "name": "Sweep",
+      "ats": "ashby",
+      "slug": "sweep",
+      "sector": "software"
+    },
+    {
+      "name": "Thatgamecompany",
+      "ats": "ashby",
+      "slug": "thatgamecompany",
+      "sector": "software"
+    },
+    {
+      "name": "WorkOS",
+      "ats": "ashby",
+      "slug": "workos",
+      "sector": "software"
+    },
+    {
+      "name": "Zenefits",
+      "ats": "smartrecruiters",
+      "slug": "zenefits",
+      "sector": "software"
+    },
+    {
+      "name": "Ziplines",
+      "ats": "ashby",
+      "slug": "ziplines",
+      "sector": "software"
     }
   ]
 }
