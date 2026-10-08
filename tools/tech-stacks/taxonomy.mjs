@@ -33,6 +33,9 @@ const defs = [
   ['Elixir', 'backend', String.raw`\belixir\b`, 'i'],
   ['Spring', 'backend', String.raw`\bspring(?:\s+(?:boot|framework|cloud|mvc))\b|\bspring\b(?=.{0,20}\bjava\b)`, 'i'],
   ['Django/Flask/FastAPI', 'backend', String.raw`\b(?:django|flask|fastapi)\b`, 'i'],
+  ['Express/NestJS', 'backend', String.raw`\b(?:express(?:\.js|js)?|nest(?:\.js|js))\b(?=.{0,60}(?:node|api|backend|server|typescript|javascript))|\b(?:node|api|backend|server).{0,60}\b(?:express(?:\.js|js)?|nestjs)\b`, 'i'],
+  ['Laravel/Symfony', 'backend', String.raw`\b(?:laravel|symfony)\b`, 'i'],
+  ['Phoenix', 'backend', String.raw`\bphoenix\b(?=.{0,40}(?:elixir|framework|liveview))`, 'i'],
   ['gRPC', 'backend', String.raw`\bgrpc\b`, 'i'],
   ['Kafka', 'backend', String.raw`\bkafka\b`, 'i'],
   // mobile

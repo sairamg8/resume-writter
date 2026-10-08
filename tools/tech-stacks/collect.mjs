@@ -13,6 +13,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TECH, CATEGORIES } from './taxonomy.mjs'
+import { classifyRole, ROLES } from './roles.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -63,7 +64,7 @@ function htmlToText(s) {
 async function fetchGreenhouse(slug) {
   const r = await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs?content=true`)
   if (r.notFound) return null
-  return (r.data.jobs || []).map((j) => ({ title: j.title || '', text: htmlToText(j.content), location: j.location?.name || '' }))
+  return (r.data.jobs || []).map((j) => ({ title: j.title || '', text: htmlToText(j.content), location: j.location?.name || '', url: j.absolute_url || '' }))
 }
 
 async function fetchLever(slug) {
@@ -74,6 +75,7 @@ async function fetchLever(slug) {
     title: j.text || '',
     text: [j.descriptionPlain, ...(j.lists || []).map((l) => `${l.text}\n${htmlToText(l.content)}`), j.additionalPlain].filter(Boolean).join('\n'),
     location: j.categories?.location || '',
+    url: j.hostedUrl || '',
   }))
 }
 
@@ -81,13 +83,23 @@ const FETCHERS = { greenhouse: fetchGreenhouse, lever: fetchLever }
 
 function analyse(jobs) {
   const counts = new Map()
+  const byRole = {}
+  const postings = []
   for (const job of jobs) {
     const hay = `${job.title}\n${job.text}`
+    const role = classifyRole(job.title)
+    const r = (byRole[role] ??= { postings: 0, techs: {} })
+    r.postings++
+    const hits = []
     for (const t of TECH) {
-      if (t.re.test(hay)) counts.set(t.name, (counts.get(t.name) || 0) + 1)
+      if (!t.re.test(hay)) continue
+      hits.push(t.name)
+      counts.set(t.name, (counts.get(t.name) || 0) + 1)
+      r.techs[t.name] = (r.techs[t.name] || 0) + 1
     }
+    postings.push({ title: job.title, role, location: job.location, url: job.url, techs: hits })
   }
-  return counts
+  return { counts, byRole, postings }
 }
 
 async function processCompany(c, opts) {
@@ -97,8 +109,8 @@ async function processCompany(c, opts) {
     const all = await fetcher(c.slug)
     if (all === null) return { ...c, status: 'not found' }
     const jobs = (opts.allRoles ? all : all.filter((j) => ENGINEERING_TITLE.test(j.title))).slice(0, opts.maxJobs)
-    const counts = analyse(jobs)
-    return { ...c, status: 'ok', totalPostings: all.length, analysedPostings: jobs.length, counts }
+    const { counts, byRole, postings } = analyse(jobs)
+    return { ...c, status: 'ok', totalPostings: all.length, analysedPostings: jobs.length, counts, byRole, postings }
   } catch (e) {
     return { ...c, status: `error: ${e.message}` }
   }
@@ -142,18 +154,23 @@ async function main() {
 
   const rows = []
   const out = []
+  const postingRows = []
   for (const r of ok) {
     const techs = [...r.counts.entries()]
       .map(([tech, postings]) => ({ category: catOf.get(tech), tech, postings, share: r.analysedPostings ? +(postings / r.analysedPostings).toFixed(3) : 0 }))
       .sort((a, b) => b.postings - a.postings)
     for (const t of techs) rows.push([r.name, r.sector || '', r.ats, r.analysedPostings, t.category, t.tech, t.postings, t.share])
-    out.push({ company: r.name, sector: r.sector || null, ats: r.ats, slug: r.slug, totalPostings: r.totalPostings, analysedPostings: r.analysedPostings, techs })
+    out.push({ company: r.name, sector: r.sector || null, ats: r.ats, slug: r.slug, totalPostings: r.totalPostings, analysedPostings: r.analysedPostings, techs, byRole: r.byRole })
+    for (const p of r.postings) postingRows.push([r.name, r.sector || '', p.title, p.role, p.location, p.url, p.techs.join('; ')])
   }
 
   await mkdir(opts.out, { recursive: true })
   const stamp = new Date().toISOString()
   await writeFile(join(opts.out, 'tech-stacks.json'), JSON.stringify({ generatedAt: stamp, engineeringRolesOnly: !opts.allRoles, companies: out, skipped: results.filter((r) => r.status !== 'ok').map((r) => ({ company: r.name, slug: r.slug, ats: r.ats, reason: r.status })) }, null, 2))
   await writeFile(join(opts.out, 'tech-stacks.csv'), ['company,sector,ats,analysed_postings,category,tech,postings,share', ...rows.map((r) => r.map(csv).join(','))].join('\n') + '\n')
+
+  await writeFile(join(opts.out, 'postings.csv'), ['company,sector,title,role,location,url,techs', ...postingRows.map((r) => r.map(csv).join(','))].join('\n') + '\n')
+  await writeFile(join(opts.out, 'roles.csv'), ['company,' + ROLES.join(','), ...out.map((c) => [c.company, ...ROLES.map((x) => c.byRole[x]?.postings || 0)].join(','))].join('\n') + '\n')
 
   const wideHead = ['company', 'sector', 'analysed_postings', ...CATEGORIES.map((c) => `top_${c}`)]
   const wide = out.map((c) => [
