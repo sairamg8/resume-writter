@@ -20,7 +20,7 @@ it('the sticky Details column is capped to the window under the header and scrol
   // dvh, so a phone-style collapsing address bar does not leave it taller than the visible window.
   assert.match(cap, /100dvh/, `the cap follows the window's height: ${cap}`);
   // 3.5rem top bar + the 10rem (lg:top-40) offset must both come off the window.
-  const sub = /-(\d+(?:\.\d+)?)rem\]/.exec(cap);
+  const sub = /-(\d+(?:\.\d+)?)rem\)/.exec(cap);
   assert.ok(sub && Number(sub[1]) >= 13.5, `the cap leaves room for the top bar and the 160 px offset: ${cap}`);
   assert.ok(tokens.includes('lg:overflow-y-auto'), 'and the column scrolls inside the cap');
 });
