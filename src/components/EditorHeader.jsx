@@ -110,7 +110,7 @@ export const EditorHeader = memo(function EditorHeader({ name, rename, layoutMod
       <div className="order-2 xl:order-60 shrink-0 flex items-center gap-1.5">
         <EditorExportMenu exportMenu={exportMenu} onShare={isMobile ? onShare : undefined} />
         {!isMobile && onShare && <EditorShareButton onShare={onShare} />}
-        <div className="w-px h-4 bg-cv-hairline self-center hidden sm:block" />
+        <div className="w-px h-4 bg-cv-hairline self-center hidden sm:block last:hidden" />
         {/* No first name beside the avatar in the split panel (R4-DVIS-31): the rule is kept. */}
         <EditorAccount auth={auth} sync={sync} hideName={!isMobile && layoutMode === 'split'} />
       </div>

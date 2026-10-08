@@ -218,7 +218,7 @@ export function TopBar({ projects = [], onCreate, search, auth }) {
                   <button
                     type="button"
                     className={cx(
-                      'flex h-8 items-center gap-1 rounded-cv-control px-2.5 text-sm font-medium transition-colors',
+                      'flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-cv-control px-2.5 text-sm font-medium transition-colors',
                       pathname.startsWith('/boards') ? 'bg-cv-sunken text-cv-ink' : 'text-cv-muted hover:bg-cv-sunken hover:text-cv-ink',
                       FOCUS,
                     )}
