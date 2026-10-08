@@ -280,7 +280,7 @@ after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an i
 1 MiB is held back on its own and named on the page (`SyncHeldNotice`); a batch of several refused
 for good (an imported id the cloud cannot name, a list inside a list) goes to a first sync, which
 takes it apart and holds only the item refused on its own (`commitApart`, R5-HUNT7). Deleting such a held item (or clearing the list with it) sends no deletion for an id the cloud cannot name (`cloudCanName`: it was never there), so the other deletions go and the sync ends synced (R5-HUNT8). An item whose id the cloud cannot name is held before it is sent, as one too large is: with two "/" ("greenhouse/acme/12345") the SDK took it as a document nested under the list, never read back, and the next first sync dropped the job here; a version an older build recorded for such an id is ignored (R5-HUNT8 review). What each list's sync is
-doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
+doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar (the AppBar's right slot)
 as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
 the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning
 (`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. It reads

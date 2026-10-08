@@ -18,9 +18,10 @@ resume-writter/
 │   ├── main.jsx               # StrictMode + createHashRouter (a data router) + RouterProvider
 │   ├── App.jsx                # the app's state: store, account, sync, demo restore
 │   ├── AppRoutes.jsx          # the routes, and what each page gets from App
-│   ├── index.css
+│   ├── index.css              # Tailwind + the cv-* design tokens (colours, radii, --shadow-pop, --font-cv)
 │   ├── assets/
 │   ├── components/
+│   │   ├── AppBar.jsx, BottomTabBar.jsx  # the shared top bar (brand, Documents · Applications · Projects tabs, slots) and the phone's three-tab bar
 │   │   ├── AtsCheckerPanel.jsx, AuthBar.jsx, CareerHistoryPanel.jsx
 │   │   ├── CoverLetterPanel*.jsx, CoverLetterGeneratorModal.jsx, BulletOptimizerModal.jsx
 │   │   ├── DesignPanel*.jsx, HeaderIconPickerModal.jsx, HeaderSpacingControls.jsx
@@ -33,7 +34,7 @@ resume-writter/
 │   │   ├── ErrorBoundary.jsx, RecoveryNotice.jsx
 │   │   ├── job/               # Job Tracker pieces (kanban, list, detail tabs)
 │   │   ├── board/             # Boards pieces (cards, columns, labels)
-│   │   ├── shell/             # the workspace shell around the Job Tracker and Boards
+│   │   ├── shell/             # the workspace shell around the Job Tracker and Boards (TopBar fills the AppBar's slots)
 │   │   └── ui/                # the shared UI kit (dialogs, menus, toasts, fields…)
 │   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
 │   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js,
@@ -102,3 +103,10 @@ resume-writter/
 | `playwright.config.js` | serves a built `./dist` (`PW_DIST`) on port 4173 (`PW_PORT`) for `tests/playwright/` |
 | `cypress.config.js` | the e2e build on 4173; tasks that read downloaded PDFs and .docx files |
 | `.github/workflows/ci.yml` | the CI gate and its dispatch inputs, and the perf job a `perf` dispatch runs (08-testing.md) |
+
+## Design tokens and the shell (UI rebuild on `revamp-ui`)
+- Colours, radii and the pop shadow are `cv-*` tokens in `src/index.css` (`bg-cv-surface`, `text-cv-muted`,
+  `rounded-cv-card`, `shadow-pop`). The older kit names (`text-ink`, `bg-brand`, `border-line`) carry the same
+  values. A unit test checks that every `cv-*` class names a defined token.
+- The workspace top bar is the shared `AppBar` (Documents · Applications · Projects tabs); "Your work" is in the
+  project switcher. Phones get `BottomTabBar` and 72 px of bottom padding on `<main>`.
