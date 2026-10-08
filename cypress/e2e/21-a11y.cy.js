@@ -37,7 +37,7 @@ function richState(template = 'classic') {
 const ACME = {
   id: 'job_acme', company: 'Acme', role: 'Engineer', status: 'applied', stage: 'Phone Screen',
   url: 'https://acme.example.com/jobs/1', location: 'Remote', salary: '$150k', contact: 'Sam',
-  resumeId: 'test_classic', notes: '<p>Call back</p>', appliedDate: '2026-09-01', deadline: '2026-12-01',
+  resumeId: 'test_classic', notes: '<p>Call back</p>', appliedDate: '2026-09-01', deadline: '2099-12-01',
   todos: [{ id: 't1', text: 'Prepare', done: false }, { id: 't2', text: 'Apply', done: true }],
   statusHistory: [{ status: 'applied', changedAt: 1757000000000 }], createdAt: 1757000000000, updatedAt: 1757000000000,
 };
