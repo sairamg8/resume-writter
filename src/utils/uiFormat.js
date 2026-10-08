@@ -169,7 +169,7 @@ export const AVATAR_TONES = Object.freeze([
 ].map((t) => Object.freeze(t)));
 
 /** The colour of a nameless avatar: neutral, so it does not look like someone's. */
-export const AVATAR_NEUTRAL = Object.freeze({ bg: 'bg-slate-100', text: 'text-slate-600' });
+export const AVATAR_NEUTRAL = Object.freeze({ bg: 'bg-cv-sunken', text: 'text-cv-muted' });
 
 /** 32-bit FNV-1a: a small, well-spread string hash (the same everywhere, unlike Math.random). */
 function hash(text) {

@@ -45,7 +45,7 @@ export function Sidebar({ projects, collapsed, onToggleCollapsed, drawerOpen, on
             <div
               aria-hidden="true"
               onClick={onCloseDrawer}
-              className={cx('absolute inset-0 bg-slate-900/40', state === 'open' ? 'animate-ui-fade-in' : 'animate-ui-fade-out')}
+              className={cx('absolute inset-0 bg-cv-ink/40', state === 'open' ? 'animate-ui-fade-in' : 'animate-ui-fade-out')}
             />
             <div
               ref={drawerRef}
