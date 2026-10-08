@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Download, FileSpreadsheet, LayoutDashboard, List, MoreHorizontal, Plus, SquareKanban, Upload } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
@@ -67,7 +67,11 @@ export function JobTracker({ store }) {
   const { toast } = useToast();
   const { appState } = store;
   const { resumes } = appState;
-  const [view, setView] = useUrlState('view', 'kanban', { parse: knownView });
+  // The view last open in this tab is the one a bare /jobs opens: the breadcrumb, the sidebar and the page a
+  // deleted job goes back to carry no ?view=, and they dropped a user from the List or the Summary onto the Board.
+  const [lastView, setLastView] = useSessionState('cpwtcv_jobs_view', 'kanban', v => knownView(v) !== undefined);
+  const [view, setView] = useUrlState('view', lastView, { parse: knownView });
+  useEffect(() => { setLastView(view); }, [view, setLastView]);
   // Kept for the tab's session: opening a job and coming back cleared them (J-30).
   const [search, setSearch] = useSessionState('cpwtcv_jobs_search', '', v => typeof v === 'string');
   const [filterStatus, setFilterStatus] = useSessionState('cpwtcv_jobs_status', '', v => v === '' || JOB_STATUSES.some(s => s.id === v));
