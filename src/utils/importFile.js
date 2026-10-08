@@ -10,7 +10,10 @@ const SCANNED = 'That PDF looks like a scanned image: its pages have no text lay
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
 const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
-const LOCKED = 'That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
+/** The most pages of a PDF the import reads: far past any résumé, short of a file made to stall the page. */
+export const MAX_PDF_PAGES = 200;
+const TOO_MANY_PAGES = `That PDF has more than ${MAX_PDF_PAGES} pages, far more than a résumé. Import the résumé itself as a PDF, Word, text or JSON file.`;
+const LOCKED ='That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
 
 // ── Word (.docx) ─────────────────────────────────────────────────────────────
 
@@ -981,6 +984,8 @@ export async function pdfLines(bytes, lib) {
   try {
     // A PDF that needs a password to open: pdf.js's own words are "No password given".
     const doc = await task.promise.catch((e) => { throw e?.name === 'PasswordException' ? new Error(LOCKED) : e; });
+    // A résumé is a few pages; a file whose page tree lists hundreds of thousands (a few MB can) would keep the tab reading for minutes.
+    if (doc.numPages > MAX_PDF_PAGES) throw new Error(TOO_MANY_PAGES);
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
       const page = await doc.getPage(i);
