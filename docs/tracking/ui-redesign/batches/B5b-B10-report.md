@@ -1,6 +1,6 @@
-# B5b to B10 report: Import dialog and New page, editor content, Design, letter, ATS, export and share
+# B5b to B16 report: Import dialog and New page, editor content, Design, letter, ATS, export and share, Applications, Boards and Projects, Section style popover
 
-**STATUS (2026-10-08): code pushed on `revamp-ui`; the full gate on `9d8bd27` is run 37722106416 (result to be written here when read). B5b, B6, B7 (step 1), B8, B9 and B10 are restyles onto the `cv-*` design tokens with every live function kept; the new lazy Section style popover (B7 step 2) and B11 to B17 are NOT built.**
+**STATUS (2026-10-08): code pushed on `revamp-ui` (head `d4ca9c4`). FULL GATE GREEN on `9d8bd27` (run 37722106416, 19 of 19 jobs: editor, Design, letter, ATS, export/share work). Full gate on `70d732a` (run 37723659495): node suite 6/6 (0 failures), Playwright 3/3 (160 tests), Cypress 3/4; its one red (21-a11y: the Add Section click closed the options popover) was fixed in `d4ca9c4` and read green in run 37725149165; a final full gate on `d4ca9c4` is dispatched (result below when read). B5b, B6, B7 (steps 1 and 2), B8, B9, B10, B12, B13, B14, B15 and B16 are restyles onto the `cv-*` design tokens with every live function kept, plus the lazy Section style popover; B11 (workspace shell redesign), the new Applications/Projects drawers and B17 (integration sweep) are NOT built.**
 
 UI only: every label, aria name, `data-testid`, prop contract and `memo` stays (PARITY-RULE). Tokens are in `src/index.css`; the class mapping used throughout is in `git show 1299f35`.
 
@@ -31,3 +31,13 @@ UI only: every label, aria name, `data-testid`, prop contract and `memo` stays (
 - `AtsCheckerPanel.jsx` (about 600 lines) and `CoverLetterPanel.jsx` (about 370) were already over 300 lines; only restyled.
 - Playwright and Cypress specs whose class pins were edited were run only inside the full gates, not alone.
 - No bug-hunt rounds and no screenshots next to the canvas boards for B5b to B10.
+
+## Added 2026-10-08 (later): B7 step 2, B12 to B16
+- B7 step 2: `5e421c1` + `70d732a` Section style opens in a lazy popover (`SectionStylePopover.jsx`) around the unchanged `SectionCustomizer`, with Done, outside-press and Escape closing; the inline customizer stays as the fallback when the chunk cannot load. Start-up spare after it: 17.7 kB (run 37723239628, 71-startup-chunks). Test: `184-ui-b7-section-style-popover`. One popover is open at a time (the old inline panels could be open together); `21-a11y.cy.js` now opens the Add Section picker first (`d4ca9c4`).
+- B12/B13 Applications (the Job Tracker): `a9dd0db`, `ec1d966` pages `Job*.jsx`, `components/job/*`, `components/tracker/*`, `CareerHistoryPanel`, `PublicResume` on the tokens; test `184-ui-b12-applications`; pins updated in 103-r4-dvis-01/09/32 and 103-r4-dph-20. Runs read: 37722474227 (one red: the Notes card pin), 37722711598 green.
+- B14 to B16 Boards/Projects: `ab2c98e`, `88f3154` pages `Board*`, `Backlog`, `BoardSettings`, `YourWork` and `components/board/*` on the tokens; test `184-ui-b14-boards`; pins updated in 103-r4-dvis-06/11 and 103-r4-dph-06. Runs read: 37722391177 (671 of 673; the two reds fixed), 37722943348 green.
+- The shared kit (`components/ui`) and shell still use the older token NAMES (`text-ink`, `bg-brand`, `border-line`) whose colours are the SAME as the `cv-*` ones (`#151922`, `#2b59ff`, `#e2e5eb`): there is no visible difference, so they were left (renaming only churns kit tests).
+
+## Process notes
+- A shared git branch name between two agent worktrees mixed their commits (no content was lost: the diff was checked against the owned file lists). Each agent now uses its own branch name (`work-<area>`).
+- Failing in the first full gate on the repaired head were only old-class pins (selected chips, `rounded-2xl`, `rounded-xl`, label colours): always match WHOLE class names (`bg-cv-brand-soft` contains `bg-cv-brand`).

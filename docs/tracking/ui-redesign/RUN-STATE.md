@@ -1,4 +1,4 @@
-**2026-10-08: B5b, B6, B7 (step 1), B8, B9, B10 restyled and pushed (head `9d8bd27`); full gate run 37722106416 to be read; report `batches/B5b-B10-report.md`. Next: B7 step 2 (SectionStylePopover), B11 to B17. Cadence: continuous, no pauses (owner, 2026-10-08).**
+**2026-10-08: B5b, B6, B7 (steps 1+2), B8, B9, B10, B12 to B16 restyled and pushed (head `d4ca9c4`); full gates green on `9d8bd27` (37722106416) and, but for one Cypress spec fixed in `d4ca9c4`, on `70d732a` (37723659495); a final gate on `d4ca9c4` is dispatched; report `batches/B5b-B10-report.md`. Next: B11, new drawers, B17. Cadence: continuous, no pauses (owner, 2026-10-08).**
 
 **2026-10-07: B5a DONE except bug-hunt and screenshots: full gate 37636926781 green on `01653718`; report `batches/B5a-report.md`. B5b in progress (committed locally, tests being updated; see HANDOFF).**
 
