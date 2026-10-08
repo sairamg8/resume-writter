@@ -33,8 +33,10 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
   const look = LOOKS[variant] ?? LOOKS.dashboard;
   const navigate = useNavigate();
   // The open résumé; with a letter open (not among `resumes` on the Dashboard), the résumé edited last,
-  // not the oldest in the list (R5-HUNT6-DASH-CAREER-AFTER-LETTER).
-  const active = resumes?.find(r => r.id === activeId) || letterSources(resumes)[0] || resumes?.[0];
+  // not the oldest in the list (R5-HUNT6-DASH-CAREER-AFTER-LETTER). The Job Tracker hands over letters
+  // too: a letter is a copy made when it was started, so its jobs are not the résumé's as they are now.
+  const sources = letterSources(resumes);
+  const active = sources.find(r => r.id === activeId) || sources[0] || resumes?.[0];
   // What the résumé prints: every visible experience section's visible entries (AUD-29).
   const items = careerItems(active);
   const personal = active?.personal || {};
