@@ -269,6 +269,11 @@ body {
   body:has([data-testid="editor-pill"]) [aria-label="Notifications"] {
     bottom: 5rem;
   }
+  /* The workspace's phone tab bar (BottomTabBar: 72 px, md:hidden, so the same complement): a notice (an Undo after a
+     delete, "marked done") covered its tabs. */
+  body:has([data-testid="bottom-tab-bar"]) [aria-label="Notifications"] {
+    bottom: 5rem;
+  }
 }
 
 /* Reduced motion: the workspace shell and every kit layer (Portal) carry data-ui-motion; there,
