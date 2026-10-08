@@ -52,7 +52,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
       <div className={`px-5 pt-5 pb-4 border-b ${look.rule} shrink-0`}>
         <div className="flex items-center gap-3 mb-1">
           <div className={`w-9 h-9 ${look.avatar} bg-cv-brand flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-            {(personal.name || '?')[0].toUpperCase()}
+            {Array.from((personal.name || '').trim())[0]?.toUpperCase() ?? '?'}
           </div>
           <div className="min-w-0">
             <p className={`text-sm ${look.name} truncate`}>{personal.name || 'Your Name'}</p>

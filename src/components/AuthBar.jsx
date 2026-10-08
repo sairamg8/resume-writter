@@ -17,7 +17,8 @@ import { Suspense, lazy, useCallback, useRef, useState } from 'react';
 // A failed load shows no item: the menu works without it.
 const JobMapMenuItem = lazy(() => import('@/pages/JobMap').then((m) => ({ default: m.JobMapMenuItem }), () => ({ default: () => null })));
 
-const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
+/** `name` cut to 32 characters, by whole characters: an emoji at the cut is not split into a broken half. */
+export const clip = (name) => { const c = Array.from(name); return c.length > 32 ? `${c.slice(0, 31).join('')}…` : name; };
 
 /**
  * While the cloud will not take a résumé — most often one over 1 MB, a large photo — it alone is
@@ -121,13 +122,13 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   );
 }
 
-/** The account's photo (no-referrer) or its initial: `displayName[0]` as written, "U" for a nameless account. */
+/** The account's photo (no-referrer) or its initial: the name's first character as written (a whole emoji, not half of one; spaces first are skipped), "U" for a nameless account. */
 function Avatar({ user, size }) {
   return user.photoURL ? (
     <img src={user.photoURL} alt="" className={`${size} rounded-full`} referrerPolicy="no-referrer" />
   ) : (
     <div className={`${size} shrink-0 rounded-full bg-cv-brand-soft text-cv-brand-text flex items-center justify-center font-bold`}>
-      {user.displayName?.[0] || 'U'}
+      {Array.from(user.displayName?.trim() ?? '')[0] || 'U'}
     </div>
   );
 }
