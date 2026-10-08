@@ -1,7 +1,8 @@
 // The real Dashboard over tests/pdf/fake-dom.mjs for the cyc3 tests (as 178-ui-b1-lazy-fallbacks does): `custom`
-// replaces loaders for the run; `made` lists the letters the store was asked for, by source résumé id.
+// replaces loaders for the run; `made` lists the letters the store was asked for, by source résumé id; `location()` is
+// where the router is now (the Dashboard stays drawn in this harness whatever the address, so the address is what proves a move).
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { loadModule } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
 import { MemoryStorage } from './resume-tab.mjs';
@@ -35,12 +36,14 @@ export async function dashboard(resumes, custom = {}) {
   };
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: noop, signOut: noop };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
+  const seen = [];
+  const Where = () => { seen.push(useLocation()); return null; };
   const view = mount(() => createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
-    createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
+    createElement(Where), createElement(Dashboard, { store, auth, sync, publicLinks: null })), {});
   const all = () => [...elements(view.document.body)];
   const button = (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label);
   return {
-    made, all, button, view,
+    made, all, button, view, location: () => seen.at(-1),
     dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
     press(label) { view.act(() => reactProps(button(label)).onClick({})); },
     async close() {

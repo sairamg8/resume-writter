@@ -144,9 +144,10 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     else newLetter(letterSourceList[0]?.id ?? null);
   }
 
-  function newLetter(fromId) {
+  // `note`: what the editor says over the letter (its import notice: this page is gone by then).
+  function newLetter(fromId, note) {
     setLetterModalOpen(false);
-    once(() => store.createLetter(fromId), openLetter);
+    once(() => store.createLetter(fromId), note ? (id) => navigate(`/resume/${id}?tab=coverletter`, { state: { importNotice: note } }) : openLetter);
   }
 
   /** A résumé's or a letter's card; `open` is where Edit and a new copy go. */
@@ -385,8 +386,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           fallback={() => <LetterFallback asked={letterModalOpen} make={() => {
             if (moved.current) { setLetterModalOpen(false); return; }
             const from = letterSourceList[0];
-            newLetter(from?.id ?? null);
-            if (from) setImportError(`Made from ${from.name}: the picker could not load.`);
+            newLetter(from?.id ?? null, from && `Made from ${from.name}: the picker could not load.`);
           }} />}
           isOpen={letterModalOpen}
           sources={letterSourceList}
