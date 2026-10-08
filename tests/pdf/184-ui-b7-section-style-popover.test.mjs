@@ -37,6 +37,7 @@ async function card({ fail = false } = {}) {
     view.act(() => reactProps(trigger).onClick(ev()));
     view.act(() => reactProps(button('Customize layout')).onClick());
     for (let i = 0; i < 100 && !all().some((el) => el.textContent === 'Section Options'); i += 1) await wait(10);
+    await wait(30); // the popover's passive effects (its outside-press listener) run after the commit
   };
   const shown = () => all().some((el) => el.tagName === 'P' && el.textContent.trim() === 'Section Options');
   return { view, button, cardEl, openFromMenu, shown, all, restore: () => { mod._lazyForTest.load = real; } };
