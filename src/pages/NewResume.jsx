@@ -55,9 +55,10 @@ export function NewResume({ store }) {
         </button>
         <section className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
+            {/* min-w-0 and break-words: a résumé named like its file (Jane_Doe_Product_Manager_CV_2026_final) is one long word, which a flex item will not shrink below. */}
+            <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-tight text-cv-ink">Pick a look to start</h1>
-              <p className="text-sm text-cv-muted" data-testid="new-resume-from">
+              <p className="text-sm text-cv-muted break-words" data-testid="new-resume-from">
                 {source
                   ? `Each page is your résumé "${source.name}" in that look. Pick one: a new résumé with your details opens on it, to make your own.`
                   : 'Pick one: a blank résumé opens on it. Each page shows a sample résumé in that look.'}
