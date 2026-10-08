@@ -2898,6 +2898,228 @@
       "ats": "greenhouse",
       "slug": "ziprecruiter",
       "sector": "fintech more"
+    },
+    {
+      "name": "Aircall",
+      "ats": "lever",
+      "slug": "aircall",
+      "sector": "software"
+    },
+    {
+      "name": "Amperity",
+      "ats": "greenhouse",
+      "slug": "amperity",
+      "sector": "software"
+    },
+    {
+      "name": "Cameo",
+      "ats": "greenhouse",
+      "slug": "cameo",
+      "sector": "software"
+    },
+    {
+      "name": "Cohere Health",
+      "ats": "greenhouse",
+      "slug": "coherehealth",
+      "sector": "software"
+    },
+    {
+      "name": "Collective Health",
+      "ats": "greenhouse",
+      "slug": "collectivehealth",
+      "sector": "software"
+    },
+    {
+      "name": "Dagster",
+      "ats": "greenhouse",
+      "slug": "dagsterlabs",
+      "sector": "software"
+    },
+    {
+      "name": "Earnest",
+      "ats": "greenhouse",
+      "slug": "earnest",
+      "sector": "software"
+    },
+    {
+      "name": "Elation Health",
+      "ats": "greenhouse",
+      "slug": "elationhealth",
+      "sector": "software"
+    },
+    {
+      "name": "Emburse",
+      "ats": "lever",
+      "slug": "emburse",
+      "sector": "software"
+    },
+    {
+      "name": "Enigma",
+      "ats": "greenhouse",
+      "slug": "enigmaio",
+      "sector": "software"
+    },
+    {
+      "name": "Fanatics",
+      "ats": "greenhouse",
+      "slug": "fanaticsinc",
+      "sector": "software"
+    },
+    {
+      "name": "Fetch Rewards",
+      "ats": "greenhouse",
+      "slug": "fetch",
+      "sector": "software"
+    },
+    {
+      "name": "Forward Networks",
+      "ats": "greenhouse",
+      "slug": "forwardnetworks",
+      "sector": "software"
+    },
+    {
+      "name": "GumGum",
+      "ats": "greenhouse",
+      "slug": "gumgum",
+      "sector": "software"
+    },
+    {
+      "name": "Housecall Pro",
+      "ats": "greenhouse",
+      "slug": "housecall",
+      "sector": "software"
+    },
+    {
+      "name": "Houzz",
+      "ats": "lever",
+      "slug": "houzz",
+      "sector": "software"
+    },
+    {
+      "name": "Jobvite",
+      "ats": "lever",
+      "slug": "jobvite",
+      "sector": "software"
+    },
+    {
+      "name": "Kayak",
+      "ats": "greenhouse",
+      "slug": "kayak",
+      "sector": "software"
+    },
+    {
+      "name": "Lob",
+      "ats": "greenhouse",
+      "slug": "lob",
+      "sector": "software"
+    },
+    {
+      "name": "Machinify",
+      "ats": "greenhouse",
+      "slug": "machinifyinc",
+      "sector": "software"
+    },
+    {
+      "name": "Maven Clinic",
+      "ats": "greenhouse",
+      "slug": "mavenclinic",
+      "sector": "software"
+    },
+    {
+      "name": "Mighty",
+      "ats": "greenhouse",
+      "slug": "mighty",
+      "sector": "software"
+    },
+    {
+      "name": "Neuralink",
+      "ats": "greenhouse",
+      "slug": "neuralink",
+      "sector": "software"
+    },
+    {
+      "name": "Offerup",
+      "ats": "greenhouse",
+      "slug": "offerup",
+      "sector": "software"
+    },
+    {
+      "name": "OpenTable",
+      "ats": "greenhouse",
+      "slug": "opentable",
+      "sector": "software"
+    },
+    {
+      "name": "Quip",
+      "ats": "greenhouse",
+      "slug": "quip",
+      "sector": "software"
+    },
+    {
+      "name": "Rover",
+      "ats": "lever",
+      "slug": "rover",
+      "sector": "software"
+    },
+    {
+      "name": "SmartAsset",
+      "ats": "greenhouse",
+      "slug": "smartasset",
+      "sector": "software"
+    },
+    {
+      "name": "TaskRabbit",
+      "ats": "greenhouse",
+      "slug": "taskrabbit",
+      "sector": "software"
+    },
+    {
+      "name": "Thoughtworks",
+      "ats": "greenhouse",
+      "slug": "thoughtworks",
+      "sector": "software"
+    },
+    {
+      "name": "Toptal",
+      "ats": "lever",
+      "slug": "toptal",
+      "sector": "software"
+    },
+    {
+      "name": "Trace3",
+      "ats": "greenhouse",
+      "slug": "trace3",
+      "sector": "software"
+    },
+    {
+      "name": "Tubi TV",
+      "ats": "greenhouse",
+      "slug": "tubitv",
+      "sector": "software"
+    },
+    {
+      "name": "Turing",
+      "ats": "greenhouse",
+      "slug": "turing",
+      "sector": "software"
+    },
+    {
+      "name": "Walnut",
+      "ats": "greenhouse",
+      "slug": "walnut",
+      "sector": "software"
+    },
+    {
+      "name": "Wizeline",
+      "ats": "greenhouse",
+      "slug": "wizeline",
+      "sector": "software"
+    },
+    {
+      "name": "Yubico",
+      "ats": "greenhouse",
+      "slug": "yubico",
+      "sector": "software"
     }
   ]
 }
