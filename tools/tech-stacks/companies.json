@@ -3120,6 +3120,1368 @@
       "ats": "greenhouse",
       "slug": "yubico",
       "sector": "software"
+    },
+    {
+      "name": "1Password",
+      "ats": "ashby",
+      "slug": "1password",
+      "sector": "security"
+    },
+    {
+      "name": "1X",
+      "ats": "ashby",
+      "slug": "1x",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "99",
+      "ats": "smartrecruiters",
+      "slug": "99",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Abridge",
+      "ats": "ashby",
+      "slug": "abridge",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Acorns",
+      "ats": "ashby",
+      "slug": "acorns",
+      "sector": "fintech"
+    },
+    {
+      "name": "Airbyte",
+      "ats": "ashby",
+      "slug": "airbyte",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Airwallex",
+      "ats": "ashby",
+      "slug": "airwallex",
+      "sector": "fintech"
+    },
+    {
+      "name": "Alchemy",
+      "ats": "ashby",
+      "slug": "alchemy",
+      "sector": "fintech"
+    },
+    {
+      "name": "Ambience Healthcare",
+      "ats": "ashby",
+      "slug": "ambiencehealthcare",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Amplitude",
+      "ats": "ashby",
+      "slug": "amplitude",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Andela",
+      "ats": "ashby",
+      "slug": "andela",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Applied Intuition",
+      "ats": "ashby",
+      "slug": "applied",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Arlo",
+      "ats": "ashby",
+      "slug": "arlo",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Armis",
+      "ats": "smartrecruiters",
+      "slug": "armis",
+      "sector": "security"
+    },
+    {
+      "name": "Atera",
+      "ats": "smartrecruiters",
+      "slug": "atera",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Aurora Solar",
+      "ats": "ashby",
+      "slug": "aurorasolar",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Baseten",
+      "ats": "ashby",
+      "slug": "baseten",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Benchling",
+      "ats": "ashby",
+      "slug": "benchling",
+      "sector": "health and bio"
+    },
+    {
+      "name": "BigCommerce",
+      "ats": "smartrecruiters",
+      "slug": "bigcommerce",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Bright Health",
+      "ats": "recruitee",
+      "slug": "bright",
+      "sector": "fintech"
+    },
+    {
+      "name": "Bubble",
+      "ats": "ashby",
+      "slug": "bubble",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Built Robotics",
+      "ats": "ashby",
+      "slug": "built-robotics",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Bumble",
+      "ats": "ashby",
+      "slug": "bumbleinc",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Bunq",
+      "ats": "recruitee",
+      "slug": "bunq",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Canva",
+      "ats": "smartrecruiters",
+      "slug": "canva",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Capchase",
+      "ats": "ashby",
+      "slug": "capchase",
+      "sector": "fintech"
+    },
+    {
+      "name": "Caterpillar",
+      "ats": "smartrecruiters",
+      "slug": "caterpillarinc",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Cerebras",
+      "ats": "ashby",
+      "slug": "cerebras",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Character.AI",
+      "ats": "ashby",
+      "slug": "character",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Circle",
+      "ats": "ashby",
+      "slug": "circle",
+      "sector": "fintech"
+    },
+    {
+      "name": "ClassDojo",
+      "ats": "ashby",
+      "slug": "classdojo",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Clearco",
+      "ats": "ashby",
+      "slug": "clearco",
+      "sector": "fintech"
+    },
+    {
+      "name": "ClickHouse",
+      "ats": "ashby",
+      "slug": "clickhouse",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "ClickUp",
+      "ats": "ashby",
+      "slug": "clickup",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Climeworks",
+      "ats": "recruitee",
+      "slug": "climeworks",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Cohere",
+      "ats": "ashby",
+      "slug": "cohere",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Commure",
+      "ats": "ashby",
+      "slug": "commure",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Confluent",
+      "ats": "ashby",
+      "slug": "confluent",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Constructor",
+      "ats": "ashby",
+      "slug": "constructor",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Crusoe",
+      "ats": "ashby",
+      "slug": "crusoe",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "d-Matrix",
+      "ats": "ashby",
+      "slug": "d-matrix",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Dapper Labs",
+      "ats": "ashby",
+      "slug": "dapper",
+      "sector": "fintech"
+    },
+    {
+      "name": "Dave",
+      "ats": "ashby",
+      "slug": "dave",
+      "sector": "fintech"
+    },
+    {
+      "name": "Delivery Hero",
+      "ats": "smartrecruiters",
+      "slug": "deliveryhero",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Demandbase",
+      "ats": "ashby",
+      "slug": "demandbase",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Devoted Health",
+      "ats": "smartrecruiters",
+      "slug": "devotedhealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Digital Turbine",
+      "ats": "recruitee",
+      "slug": "digital",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Docker",
+      "ats": "ashby",
+      "slug": "docker",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Domino's",
+      "ats": "smartrecruiters",
+      "slug": "dominos",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Drata",
+      "ats": "ashby",
+      "slug": "drata",
+      "sector": "security"
+    },
+    {
+      "name": "EasyPost",
+      "ats": "recruitee",
+      "slug": "easypost",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Eight Sleep",
+      "ats": "ashby",
+      "slug": "eightsleep",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Enode",
+      "ats": "ashby",
+      "slug": "enode",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Expensify",
+      "ats": "ashby",
+      "slug": "expensify",
+      "sector": "fintech"
+    },
+    {
+      "name": "Fireworks AI",
+      "ats": "ashby",
+      "slug": "fireworks",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Flock Safety",
+      "ats": "ashby",
+      "slug": "flock",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Form Energy",
+      "ats": "ashby",
+      "slug": "formenergy",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Freshworks",
+      "ats": "smartrecruiters",
+      "slug": "freshworks",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "FullStory",
+      "ats": "ashby",
+      "slug": "fullstory",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Gainsight",
+      "ats": "ashby",
+      "slug": "gainsight",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Gamma",
+      "ats": "ashby",
+      "slug": "gamma",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Gecko Robotics",
+      "ats": "ashby",
+      "slug": "gecko-robotics",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Genetec",
+      "ats": "smartrecruiters",
+      "slug": "genetec",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Ghost Kitchens",
+      "ats": "ashby",
+      "slug": "ghost",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Gorgias",
+      "ats": "ashby",
+      "slug": "gorgias",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Gousto",
+      "ats": "smartrecruiters",
+      "slug": "gousto",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Grab",
+      "ats": "smartrecruiters",
+      "slug": "grab",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "HackerOne",
+      "ats": "ashby",
+      "slug": "hackerone",
+      "sector": "security"
+    },
+    {
+      "name": "Health Gorilla",
+      "ats": "ashby",
+      "slug": "healthgorilla",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Helion",
+      "ats": "ashby",
+      "slug": "helion",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Hex",
+      "ats": "ashby",
+      "slug": "hex",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Hightouch",
+      "ats": "ashby",
+      "slug": "hightouch",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Hims & Hers",
+      "ats": "ashby",
+      "slug": "hims-and-hers",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Hopper",
+      "ats": "ashby",
+      "slug": "hopper",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Improbable",
+      "ats": "ashby",
+      "slug": "improbable",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "incident.io",
+      "ats": "ashby",
+      "slug": "incident",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "InfluxData",
+      "ats": "ashby",
+      "slug": "influxdata",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Insitro",
+      "ats": "ashby",
+      "slug": "insitro",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Instructure",
+      "ats": "ashby",
+      "slug": "instructure",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "InVision",
+      "ats": "recruitee",
+      "slug": "invision",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Iron Mountain",
+      "ats": "smartrecruiters",
+      "slug": "ironmountain",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Ironclad",
+      "ats": "ashby",
+      "slug": "ironcladhq",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Kong",
+      "ats": "ashby",
+      "slug": "kong",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Lago",
+      "ats": "ashby",
+      "slug": "lago",
+      "sector": "fintech"
+    },
+    {
+      "name": "Lambda",
+      "ats": "ashby",
+      "slug": "lambda",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "LangChain",
+      "ats": "ashby",
+      "slug": "langchain",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Lemonade",
+      "ats": "ashby",
+      "slug": "lemonade",
+      "sector": "fintech"
+    },
+    {
+      "name": "Lightspeed",
+      "ats": "ashby",
+      "slug": "lightspeed",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Linear",
+      "ats": "ashby",
+      "slug": "linear",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "LlamaIndex",
+      "ats": "ashby",
+      "slug": "llamaindex",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Material Security",
+      "ats": "ashby",
+      "slug": "materialsecurity",
+      "sector": "security"
+    },
+    {
+      "name": "Materialize",
+      "ats": "ashby",
+      "slug": "materialize",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Medtronic",
+      "ats": "smartrecruiters",
+      "slug": "medtronicinc",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Midjourney",
+      "ats": "ashby",
+      "slug": "midjourney",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Miro",
+      "ats": "ashby",
+      "slug": "miro",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Modal",
+      "ats": "ashby",
+      "slug": "modal",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Modern Treasury",
+      "ats": "ashby",
+      "slug": "moderntreasury",
+      "sector": "fintech"
+    },
+    {
+      "name": "Mollie",
+      "ats": "ashby",
+      "slug": "mollie",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Mural",
+      "ats": "ashby",
+      "slug": "mural",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Mux",
+      "ats": "ashby",
+      "slug": "mux",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Nabla",
+      "ats": "ashby",
+      "slug": "nabla",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Namecheap",
+      "ats": "recruitee",
+      "slug": "namecheap",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Neptune.ai",
+      "ats": "ashby",
+      "slug": "neptune",
+      "sector": "data and ai"
+    },
+    {
+      "name": "NerdWallet",
+      "ats": "ashby",
+      "slug": "nerdwallet",
+      "sector": "fintech"
+    },
+    {
+      "name": "NextGen",
+      "ats": "smartrecruiters",
+      "slug": "nextgen",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Notion",
+      "ats": "ashby",
+      "slug": "notion",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "OpenAI",
+      "ats": "ashby",
+      "slug": "openai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "OpenSea",
+      "ats": "ashby",
+      "slug": "opensea",
+      "sector": "fintech"
+    },
+    {
+      "name": "Outschool",
+      "ats": "ashby",
+      "slug": "outschool",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Oyster",
+      "ats": "ashby",
+      "slug": "oyster",
+      "sector": "fintech"
+    },
+    {
+      "name": "Paddle",
+      "ats": "ashby",
+      "slug": "paddle",
+      "sector": "fintech"
+    },
+    {
+      "name": "Patreon",
+      "ats": "ashby",
+      "slug": "patreon",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Paxos",
+      "ats": "ashby",
+      "slug": "paxos",
+      "sector": "fintech"
+    },
+    {
+      "name": "Perplexity",
+      "ats": "ashby",
+      "slug": "perplexity",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Persona",
+      "ats": "ashby",
+      "slug": "persona",
+      "sector": "fintech"
+    },
+    {
+      "name": "Pinecone",
+      "ats": "ashby",
+      "slug": "pinecone",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Plaid",
+      "ats": "ashby",
+      "slug": "plaid",
+      "sector": "fintech"
+    },
+    {
+      "name": "Pleo",
+      "ats": "ashby",
+      "slug": "pleo",
+      "sector": "fintech"
+    },
+    {
+      "name": "Prismic",
+      "ats": "recruitee",
+      "slug": "prismic",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Quora",
+      "ats": "ashby",
+      "slug": "quora",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Rain AI",
+      "ats": "ashby",
+      "slug": "rain",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Ramp",
+      "ats": "ashby",
+      "slug": "ramp",
+      "sector": "fintech"
+    },
+    {
+      "name": "ReadMe",
+      "ats": "ashby",
+      "slug": "readme",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Recharge",
+      "ats": "ashby",
+      "slug": "recharge",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Redis",
+      "ats": "ashby",
+      "slug": "redis",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Render",
+      "ats": "ashby",
+      "slug": "render",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Replit",
+      "ats": "ashby",
+      "slug": "replit",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Roboflow",
+      "ats": "ashby",
+      "slug": "roboflow",
+      "sector": "data and ai"
+    },
+    {
+      "name": "RunPod",
+      "ats": "ashby",
+      "slug": "runpod",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Runway",
+      "ats": "ashby",
+      "slug": "runway",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Sanctuary AI",
+      "ats": "ashby",
+      "slug": "sanctuary",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Sanity",
+      "ats": "ashby",
+      "slug": "sanity",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Seek",
+      "ats": "smartrecruiters",
+      "slug": "seek",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Semgrep",
+      "ats": "ashby",
+      "slug": "semgrep",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Sentry",
+      "ats": "ashby",
+      "slug": "sentry",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "ServiceNow",
+      "ats": "smartrecruiters",
+      "slug": "servicenow",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Sift",
+      "ats": "ashby",
+      "slug": "sift",
+      "sector": "fintech"
+    },
+    {
+      "name": "Skydio",
+      "ats": "ashby",
+      "slug": "skydio",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Snowflake",
+      "ats": "ashby",
+      "slug": "snowflake",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Snyk",
+      "ats": "ashby",
+      "slug": "snyk",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Socure",
+      "ats": "ashby",
+      "slug": "socure",
+      "sector": "fintech"
+    },
+    {
+      "name": "Sonder",
+      "ats": "ashby",
+      "slug": "sonder",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Span",
+      "ats": "ashby",
+      "slug": "span",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Spring Health",
+      "ats": "recruitee",
+      "slug": "spring",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Strava",
+      "ats": "ashby",
+      "slug": "strava",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Stream",
+      "ats": "ashby",
+      "slug": "stream",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Substack",
+      "ats": "ashby",
+      "slug": "substack",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Supabase",
+      "ats": "ashby",
+      "slug": "supabase",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Supercell",
+      "ats": "ashby",
+      "slug": "supercell",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Surge AI",
+      "ats": "ashby",
+      "slug": "surge-ai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Swiggy",
+      "ats": "smartrecruiters",
+      "slug": "swiggy",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Temporal",
+      "ats": "ashby",
+      "slug": "temporal",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "TigerData",
+      "ats": "ashby",
+      "slug": "tigerdata",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Tink",
+      "ats": "smartrecruiters",
+      "slug": "tinklabs",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Tonal",
+      "ats": "ashby",
+      "slug": "tonal",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Trulioo",
+      "ats": "ashby",
+      "slug": "trulioo",
+      "sector": "fintech"
+    },
+    {
+      "name": "Trustly",
+      "ats": "ashby",
+      "slug": "trustly",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Uber",
+      "ats": "smartrecruiters",
+      "slug": "uber",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Unacademy",
+      "ats": "smartrecruiters",
+      "slug": "unacademy",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Uniswap Labs",
+      "ats": "ashby",
+      "slug": "uniswap",
+      "sector": "fintech"
+    },
+    {
+      "name": "Unit",
+      "ats": "ashby",
+      "slug": "unit",
+      "sector": "fintech"
+    },
+    {
+      "name": "Vanta",
+      "ats": "ashby",
+      "slug": "vanta",
+      "sector": "security"
+    },
+    {
+      "name": "Vitally",
+      "ats": "ashby",
+      "slug": "vitally",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Vivid Seats",
+      "ats": "ashby",
+      "slug": "vivid",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Vivint",
+      "ats": "smartrecruiters",
+      "slug": "vivint",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Vouch",
+      "ats": "smartrecruiters",
+      "slug": "vouch",
+      "sector": "fintech"
+    },
+    {
+      "name": "Vultr",
+      "ats": "ashby",
+      "slug": "vultr",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Walmart",
+      "ats": "smartrecruiters",
+      "slug": "walmartinc",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Wayfair",
+      "ats": "smartrecruiters",
+      "slug": "wayfair",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Wayve",
+      "ats": "ashby",
+      "slug": "wayve",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Wealthsimple",
+      "ats": "ashby",
+      "slug": "wealthsimple",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Weaviate",
+      "ats": "ashby",
+      "slug": "weaviate",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Whoop",
+      "ats": "ashby",
+      "slug": "whoop",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Wistia",
+      "ats": "ashby",
+      "slug": "wistia",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "WP Engine",
+      "ats": "recruitee",
+      "slug": "wp",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Xero",
+      "ats": "ashby",
+      "slug": "xero",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Yardi",
+      "ats": "smartrecruiters",
+      "slug": "yardi",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Zapier",
+      "ats": "ashby",
+      "slug": "zapier",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Zip",
+      "ats": "ashby",
+      "slug": "zip",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Avant",
+      "ats": "recruitee",
+      "slug": "avantlabs",
+      "sector": "software"
+    },
+    {
+      "name": "Backstage",
+      "ats": "recruitee",
+      "slug": "backstagecareers",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "BambooHR",
+      "ats": "recruitee",
+      "slug": "bamboohr",
+      "sector": "software"
+    },
+    {
+      "name": "BetterUp",
+      "ats": "ashby",
+      "slug": "betterup",
+      "sector": "software"
+    },
+    {
+      "name": "Black Forest Labs",
+      "ats": "ashby",
+      "slug": "black-forest-labs",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Brain Corp",
+      "ats": "recruitee",
+      "slug": "brain",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Checkly",
+      "ats": "ashby",
+      "slug": "checkly",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Cursor",
+      "ats": "ashby",
+      "slug": "cursor",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Decagon",
+      "ats": "ashby",
+      "slug": "decagon",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Deepgram",
+      "ats": "ashby",
+      "slug": "deepgram",
+      "sector": "software"
+    },
+    {
+      "name": "DeepL",
+      "ats": "ashby",
+      "slug": "deepl",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "ElevenLabs",
+      "ats": "ashby",
+      "slug": "elevenlabs",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Envoy",
+      "ats": "ashby",
+      "slug": "envoy",
+      "sector": "software"
+    },
+    {
+      "name": "Epidemic Sound",
+      "ats": "ashby",
+      "slug": "epidemic-sound",
+      "sector": "games and media"
+    },
+    {
+      "name": "Feedly",
+      "ats": "smartrecruiters",
+      "slug": "feedly",
+      "sector": "games and media"
+    },
+    {
+      "name": "Glean",
+      "ats": "smartrecruiters",
+      "slug": "glean",
+      "sector": "software"
+    },
+    {
+      "name": "Harvey",
+      "ats": "ashby",
+      "slug": "harvey",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Hetzner",
+      "ats": "recruitee",
+      "slug": "hetzner",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Hyperscience",
+      "ats": "ashby",
+      "slug": "hyperscience",
+      "sector": "software"
+    },
+    {
+      "name": "iHeartMedia",
+      "ats": "smartrecruiters",
+      "slug": "iheartmedia",
+      "sector": "games and media"
+    },
+    {
+      "name": "Imprint",
+      "ats": "ashby",
+      "slug": "imprint",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Jeeves",
+      "ats": "recruitee",
+      "slug": "jeeves",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Jellyfish",
+      "ats": "ashby",
+      "slug": "jellyfish",
+      "sector": "software"
+    },
+    {
+      "name": "Jobber",
+      "ats": "ashby",
+      "slug": "jobber",
+      "sector": "software"
+    },
+    {
+      "name": "Kustomer",
+      "ats": "ashby",
+      "slug": "kustomer",
+      "sector": "software"
+    },
+    {
+      "name": "Luma AI",
+      "ats": "ashby",
+      "slug": "lumaai",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Lyra",
+      "ats": "smartrecruiters",
+      "slug": "lyra",
+      "sector": "software"
+    },
+    {
+      "name": "Mapbox",
+      "ats": "ashby",
+      "slug": "mapbox",
+      "sector": "software"
+    },
+    {
+      "name": "Mirantis",
+      "ats": "smartrecruiters",
+      "slug": "mirantis",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Nylas",
+      "ats": "ashby",
+      "slug": "nylas",
+      "sector": "software"
+    },
+    {
+      "name": "OpsLevel",
+      "ats": "ashby",
+      "slug": "opslevel",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Physical Intelligence",
+      "ats": "ashby",
+      "slug": "physicalintelligence",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Poolside",
+      "ats": "ashby",
+      "slug": "poolside",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Propel",
+      "ats": "ashby",
+      "slug": "propel",
+      "sector": "software"
+    },
+    {
+      "name": "Quantcast",
+      "ats": "ashby",
+      "slug": "quantcast",
+      "sector": "software"
+    },
+    {
+      "name": "Railway",
+      "ats": "ashby",
+      "slug": "railway",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Rec Room",
+      "ats": "ashby",
+      "slug": "rec",
+      "sector": "games and media"
+    },
+    {
+      "name": "Reka",
+      "ats": "ashby",
+      "slug": "reka",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Replicant",
+      "ats": "ashby",
+      "slug": "replicant",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Rewind",
+      "ats": "ashby",
+      "slug": "rewind",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Shift",
+      "ats": "ashby",
+      "slug": "shift",
+      "sector": "software"
+    },
+    {
+      "name": "Sierra",
+      "ats": "ashby",
+      "slug": "sierra",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Suno",
+      "ats": "ashby",
+      "slug": "suno",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Synthesia",
+      "ats": "ashby",
+      "slug": "synthesia",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Thinking Machines",
+      "ats": "ashby",
+      "slug": "thinkingmachines",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Thumbtack",
+      "ats": "ashby",
+      "slug": "thumbtack",
+      "sector": "software"
+    },
+    {
+      "name": "Vesta",
+      "ats": "ashby",
+      "slug": "vesta",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Writer",
+      "ats": "ashby",
+      "slug": "writer",
+      "sector": "ai and robotics"
     }
   ]
 }
