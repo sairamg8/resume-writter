@@ -290,3 +290,30 @@ test.describe('the Updating chip, the pill and the dock do not collide', () => {
     expect(open.dockBottomRoom, 'the dock\'s scroll box ends above the pill').toBeGreaterThanOrEqual(open.vh - open.pill.t);
   });
 });
+
+// The stage toolbar keeps to the top of the preview box as the pages scroll under it, FLUSH with the box's top edge. A sticky box
+// is held at its `top` measured from the scroll box's PADDING edge: the box pads its top (pt-8 from sm), so `top-0` stuck the bar
+// 32 px below the box's top and the résumé showed above it while scrolling (the owner's screenshot, 2026-10-08). The classes are
+// pinned in tests/pdf/228; this reads the geometry in Chromium, where the bug was seen.
+test.describe('the stage toolbar while the pages scroll', () => {
+  for (const width of [1280, 1024]) {
+    test(`${width} px: the toolbar sticks flush with the top of the preview box and nothing of the page shows above it`, async ({ page }) => {
+      await visit(page, width);
+      const got = await page.evaluate(() => new Promise((resolve) => {
+        const bar = document.querySelector('[data-testid="stage-toolbar"]');
+        const stage = bar.parentElement;
+        stage.scrollTop = 600; // clamped to the end of the pages: well past the toolbar's own place
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const b = bar.getBoundingClientRect();
+          const s = stage.getBoundingClientRect();
+          // The point 2 px under the box's top edge, in the middle: the bar's own padding when it is flush, the page when it is not.
+          const hit = document.elementFromPoint(s.left + s.width / 2, s.top + 2);
+          resolve({ scrolled: stage.scrollTop, gap: b.top - s.top, barHoldsTheTop: Boolean(hit && bar.contains(hit)) });
+        }));
+      }));
+      expect(got.scrolled, 'the pages scrolled').toBeGreaterThan(100);
+      expect(Math.abs(got.gap), `the toolbar's top is ${got.gap} px from the box's top`).toBeLessThanOrEqual(1);
+      expect(got.barHoldsTheTop, 'the toolbar covers the top edge of the box: no page is drawn above it').toBe(true);
+    });
+  }
+});

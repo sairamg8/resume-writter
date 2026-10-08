@@ -50,7 +50,9 @@ describe('the document switch at xl', () => {
 describe('the stage toolbar runs to the edges of the preview box', () => {
   it('takes the box\'s full width over its padding and keeps sticking to the top (no left-0: it cannot act in a box that is as wide as its parent)', () => {
     const on = classesOf('components/EditorPreviewPane.jsx', 'data-testid="stage-toolbar"');
-    for (const token of ['sticky', 'top-0', 'self-stretch', '-mx-2', 'sm:-mx-4', 'px-2', 'sm:px-4']) assert.ok(on.includes(token), `${token}: ${on.join(' ')}`);
+    // `-top-4 sm:-top-8`, not top-0: a sticky box is held at `top` from the scroll box's padding edge (tests/pdf/228).
+    for (const token of ['sticky', '-top-4', 'sm:-top-8', 'self-stretch', '-mx-2', 'sm:-mx-4', 'px-2', 'sm:px-4']) assert.ok(on.includes(token), `${token}: ${on.join(' ')}`);
+    assert.ok(!on.includes('top-0'), 'top-0 stuck the bar one padding too low');
     assert.ok(!on.includes('left-0'), 'a sideways stick that cannot work is not claimed');
     assert.ok(!on.includes('w-full'), 'a full width of the content box leaves the padding bare at the sides');
     // The box pads by px-2 sm:px-4: the toolbar's negative margins are the same numbers (pinned together).
