@@ -20,6 +20,9 @@ const ENC = encodeURIComponent(ID);
 const job = { ...acme, id: ID };
 const src = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 
+// The router commits a navigation from a transition, after the click's own flush: let it land.
+const settle = async () => { for (let i = 0; i < 10; i += 1) await new Promise((r) => { setImmediate(r); }); };
+
 function Landed({ name }) {
   const { id } = useParams();
   return h('p', { 'data-landed': name }, `${name}:${id}`);
@@ -35,6 +38,7 @@ it('the job page\'s Edit button opens the form of the job whose id holds / ? and
     const edit = page.all().find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Edit job');
     assert.ok(edit, 'the job opened, so its Edit button is there');
     page.fire(edit, 'onClick');
+    await settle();
     assert.equal(page.text(), `EDIT:${ID}`, 'the edit route got the whole id');
   } finally {
     await page.view.unmount();
