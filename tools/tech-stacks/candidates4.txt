@@ -1,0 +1,463 @@
+# enterprise
+Bosch = BoschGroup
+Visa
+Mastercard
+American Express
+Capital One
+Wells Fargo
+Citi
+Bank of America
+Morgan Stanley
+HSBC
+Barclays
+Lloyds Banking Group
+NatWest
+Santander
+BBVA
+ING
+ABN AMRO
+Deutsche Bank
+Commerzbank
+UBS
+Credit Suisse
+BNP Paribas
+Societe Generale
+Standard Chartered
+DBS
+OCBC
+Nordea
+Danske Bank
+Swedbank
+Allianz
+AXA
+Zurich Insurance
+Generali
+Aviva
+Prudential
+MetLife
+Aflac
+Allstate
+State Farm
+Progressive
+Liberty Mutual
+Travelers
+Chubb
+Nationwide
+USAA
+Fidelity
+Vanguard
+Charles Schwab
+BlackRock
+State Street
+Northern Trust
+Franklin Templeton
+Invesco
+T. Rowe Price
+Bloomberg
+Refinitiv
+S&P Global
+Moody's
+MSCI
+FactSet
+Broadridge
+SS&C
+FIS
+Fiserv
+Jack Henry
+Temenos
+Finastra
+Nasdaq
+Intercontinental Exchange
+CME Group
+Cboe
+Citadel
+Two Sigma
+Jane Street
+Hudson River Trading
+Jump Trading
+DRW
+Optiver
+IMC Trading
+Flow Traders
+Virtu
+Point72
+Millennium
+D. E. Shaw
+Susquehanna
+Tower Research
+XTX Markets
+Siemens
+SAP
+Philips
+Ericsson
+Nokia
+Vodafone
+Telefonica
+Orange
+Deutsche Telekom
+BT Group
+Telstra
+AT&T
+Verizon
+T-Mobile
+Comcast
+Charter
+Samsung
+Sony
+Panasonic
+Toyota
+Honda
+Nissan
+BMW
+Mercedes-Benz
+Volkswagen
+Audi
+Porsche
+Volvo
+Scania
+Renault
+Stellantis
+Ford
+General Motors
+Continental
+ZF
+Magna
+Denso
+Aptiv
+Valeo
+Airbus
+Boeing
+Lockheed Martin
+Northrop Grumman
+Raytheon
+BAE Systems
+Thales
+Leonardo
+Safran
+Honeywell
+GE
+Schneider Electric
+ABB
+Rockwell Automation
+Emerson
+Johnson Controls
+3M
+Caterpillar
+John Deere
+Cisco
+IBM
+HP
+Dell
+Lenovo
+Accenture
+Capgemini
+Cognizant
+Infosys
+TCS
+Wipro
+HCL
+Tech Mahindra
+Thoughtworks
+EPAM
+Globant
+Endava
+Luxoft
+SoftServe
+Grid Dynamics
+Nagarro
+DataArt
+N-iX
+Intellias
+Ciklum
+Sigma Software
+Altoros
+Itransition
+Netguru
+STX Next
+10Clouds
+Software Mansion
+Droids on Roids
+Tooploox
+Polcode
+Boldare
+Vention
+Andersen
+Innowise
+Bairesdev
+Toptal
+Turing
+Andela
+Crossover
+Revelo
+Arc.dev
+Gorilla Logic
+Wizeline
+Encora
+Hexaware
+Mphasis
+Persistent Systems
+LTIMindtree
+Zensar
+Cyient
+Virtusa
+Sapient
+Publicis Sapient
+Deloitte
+PwC
+EY
+KPMG
+McKinsey
+BCG
+Bain
+Slalom
+Perficient
+Avanade
+Rackspace Technology
+Kyndryl
+DXC
+NTT Data
+Fujitsu
+NEC
+Hitachi
+# e-commerce, travel, consumer (non-US)
+Zalando
+About You
+Otto
+HelloFresh
+Delivery Hero
+Just Eat Takeaway
+Glovo
+Wolt
+Deliveroo
+Bolt
+Uber Eats
+Rappi
+Mercado Libre
+Falabella
+Magazine Luiza
+Americanas
+Nubank
+Stone
+PagSeguro
+Inter
+Itau
+Bradesco
+Banco do Brasil
+Cloudwalk
+Kavak
+Clip
+Konfio
+Bitso
+Ualá
+Despegar
+Booking Holdings
+Trivago
+Skyscanner
+Kiwi.com
+Omio
+GetYourGuide
+Airbnb
+Vrbo
+Hostelworld
+Lastminute
+Rakuten
+Mercari
+LINE
+LY Corporation
+Coupang
+Naver
+Kakao
+Toss
+Woowa
+Krafton
+Nexon
+NCSoft
+Netmarble
+DeNA
+CyberAgent
+Gree
+Sea
+Shopee
+Lazada
+Tokopedia
+Bukalapak
+Gojek
+Grab
+Traveloka
+Zilingo
+Carousell
+Razer
+Appier
+Trax
+Ninja Van
+Lalamove
+Meituan
+ByteDance
+TikTok
+Shein
+Temu
+Alibaba
+Tencent
+Baidu
+JD.com
+Xiaomi
+Oppo
+Flipkart
+Myntra
+Meesho
+Nykaa
+Zomato
+Swiggy
+Dream11
+PhonePe
+Paytm
+Razorpay
+CRED
+Groww
+Zerodha
+Upstox
+Freshworks
+Zoho
+Postman
+BrowserStack
+Chargebee
+Druva
+Icertis
+Innovaccer
+Sharechat
+Dailyhunt
+Inmobi
+Unacademy
+Vedantu
+Byju's
+upGrad
+Practo
+Pharmeasy
+1mg
+Ola
+Rapido
+Delhivery
+Shiprocket
+Licious
+Urban Company
+Lenskart
+Nazara
+Games24x7
+MPL
+Jumia
+Takealot
+Naspers
+Prosus
+OLX
+Allegro
+Ceneo
+Zooplus
+Vinted
+Depop
+Asos
+Boohoo
+Farfetch
+Net-a-Porter
+Ocado
+Tesco
+Sainsbury's
+Marks and Spencer
+John Lewis
+IKEA
+H&M
+Inditex
+Adidas
+Puma
+Nike
+Lululemon
+Gap
+Walmart Global Tech
+Target
+Home Depot
+Lowe's
+Best Buy
+Kroger
+Albertsons
+Costco
+Walgreens
+CVS
+UnitedHealth
+Optum
+Anthem
+Cigna
+Humana
+Kaiser Permanente
+Mayo Clinic
+Pfizer
+Merck
+Johnson & Johnson
+Novartis
+Roche
+AstraZeneca
+Sanofi
+GSK
+Bayer
+# media/telecom/gov/other
+BBC
+Sky
+ITV
+Channel 4
+Financial Times
+The Guardian
+The Economist
+Axel Springer
+Schibsted
+Spotify
+Netflix
+Disney
+Warner Bros
+NBCUniversal
+Paramount
+Fox
+ESPN
+DAZN
+Bet365
+Flutter
+DraftKings
+FanDuel
+Entain
+Kindred
+Betfair
+William Hill
+Paddy Power
+888
+Playtech
+Evolution
+NetEnt
+Unibet
+Supercell
+Rovio
+Remedy
+Paradox Interactive
+Embracer
+Ubisoft
+Gameloft
+Focus Entertainment
+CD Projekt
+11 bit studios
+Techland
+People Can Fly
+CI Games
+Huuuge
+Wargaming
+Gaijin
+Playrix
+Nexters
+Zeptolab
+Frogwares
+Ocado Technology
+Ordnance Survey
+Government Digital Service
+NHS Digital
+Companies House
+HMRC
+Ministry of Defence
+GCHQ
+Cabinet Office
+Defra
+DWP
