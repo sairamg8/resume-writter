@@ -60,7 +60,7 @@ export function PageHeader({ title, onTitleChange, titleLabel = 'Title', subtitl
               {subtitle && <p className="truncate text-[13px] leading-5 text-cv-faint">{subtitle}</p>}
             </div>
           </div>
-          {actions && <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
+          {actions && <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">{actions}</div>}
         </div>
         {children}
       </div>

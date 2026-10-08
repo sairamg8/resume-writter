@@ -100,7 +100,7 @@ export function ProjectList() {
               return (
                 <tr key={issue.id} className="group h-10 hover:bg-cv-stage">
                   <td className={cx('border-b border-line-subtle px-3', PHONE_HIDDEN)}><IssueTypeIcon type={issue.type} /></td>
-                  <td className={cx('border-b border-line-subtle px-2 text-cv-muted', done && 'line-through')}>{key}</td>
+                  <td className={cx('whitespace-nowrap border-b border-line-subtle px-2 text-cv-muted', done && 'line-through')}>{key}</td>
                   <td className="border-b border-line-subtle px-2">
                     {/* A long summary is cut short in the cell at every width (inline-size containment:
                         it no longer sets the column's width), so it cannot push Status off screen —

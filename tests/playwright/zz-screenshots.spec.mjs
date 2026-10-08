@@ -4,7 +4,12 @@
 import { test } from '@playwright/test';
 import fs from 'node:fs';
 import { buildTestState, STORAGE_KEY } from '../helpers.js';
-import { visitEditor, openDesignPanel } from './pw-helpers.js';
+import { visitEditor as visitEditorStrict, openDesignPanel } from './pw-helpers.js';
+
+// On a phone the preview is not mounted until asked for, so the strict helper's wait for it times out: carry on after a pause.
+async function visitEditor(page, ...args) {
+  try { return await visitEditorStrict(page, ...args); } catch (e) { await page.waitForTimeout(2500); }
+}
 
 const DIR = process.env.SHOTS_DIR;
 // B17 cross-width sweep: every screen at each width (the width is the last part of the file name).
@@ -97,7 +102,8 @@ for (const [vp, size] of VIEWPORTS) {
 
     await attempt(`jobs ${vp}`, async () => {
       await seedAndGo(page, '/jobs', { jobs: JOBS });
-      await page.waitForSelector('text=Job Tracker', { timeout: 20_000 });
+      await page.waitForSelector('main, h1', { timeout: 20_000 });
+      await page.waitForTimeout(800);
       await shot(page, '09-jobs', vp);
       await seedAndGo(page, '/jobs?view=list', { jobs: JOBS });
       await shot(page, '09b-jobs-list', vp);

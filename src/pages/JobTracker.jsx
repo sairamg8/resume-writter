@@ -190,7 +190,7 @@ export function JobTracker({ store }) {
               placeholder="Search company, role, location…"
               aria-label="Search applications"
               size="sm"
-              className="mr-1 w-full sm:w-64"
+              className="mr-1 w-full sm:w-72"
             />
             {JOB_STATUSES.map(s => {
               const count = jobs.filter(j => j.status === s.id).length;

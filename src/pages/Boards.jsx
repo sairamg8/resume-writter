@@ -91,7 +91,7 @@ export function Boards() {
                         <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.key}</td>
                         <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
                         <td className={`border-b border-cv-hairline px-2 ${PHONE_HIDDEN}`}><span className="flex items-center gap-2 text-cv-muted"><Avatar name="You" size="xs" decorative />You</span></td>
-                        <td className="border-b border-cv-hairline px-2 text-cv-muted">{counts.open} open · {counts.total} total</td>
+                        <td className="whitespace-nowrap border-b border-cv-hairline px-2 text-cv-muted">{counts.open} open · {counts.total} total</td>
                         <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{relativeTime(b.updatedAt)}</td>
                         <td className="border-b border-cv-hairline px-2">
                           <Menu

@@ -36,7 +36,7 @@ function WorkRow({ row, onOpen, onDone, showUpdated }) {
         </span>
         <PriorityIcon priority={issue.priority} />
         {issue.due && <DatePill value={issue.due} done={done} size="sm" />}
-        <Lozenge tone={column?.category} className="hidden sm:inline-flex">{column?.title}</Lozenge>
+        <Lozenge tone={column?.category} className="max-sm:hidden">{column?.title}</Lozenge>
         {showUpdated && <span className="hidden w-20 shrink-0 text-right text-[12px] text-cv-faint md:block">{relativeTime(issue.updatedAt)}</span>}
       </button>
       {!done && onDone && board.columns.some((c) => c.category === 'done') && (
