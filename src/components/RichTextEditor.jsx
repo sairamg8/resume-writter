@@ -325,11 +325,11 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   return (
     <div>
       {/* A <label> cannot name a contenteditable: the editor points back at it, and a click focuses it. */}
-      {label && <label id={ids.labelId} htmlFor={ids.id} onClick={() => ref.current?.focus()} className="block text-xs text-gray-500 mb-1">{label}</label>}
-      <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+      {label && <label id={ids.labelId} htmlFor={ids.id} onClick={() => ref.current?.focus()} className="block text-xs text-cv-muted mb-1">{label}</label>}
+      <div className="border border-cv-field rounded-cv-control overflow-hidden focus-within:ring-2 focus-within:ring-cv-brand focus-within:border-transparent">
 
         {/* Toolbar */}
-        <div className="flex items-center flex-wrap gap-0.5 px-1.5 py-1 bg-gray-50 border-b border-gray-100">
+        <div className="flex items-center flex-wrap gap-0.5 px-1.5 py-1 bg-cv-ground border-b border-cv-hairline">
 
           {/* Format group */}
           <Btn title="Bold (Ctrl+B)" onExec={() => exec('bold')}><Bold size={12} /></Btn>
@@ -363,9 +363,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
               e.preventDefault(); // keeps the caret and selection in the editor for openOptimizer
               openOptimizer();
             }}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 transition-colors ml-auto cursor-pointer"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-cv-warn bg-cv-warn-soft hover:text-cv-warn hover:brightness-95 transition-colors ml-auto cursor-pointer"
           >
-            <Sparkles size={11} className="text-amber-600" />
+            <Sparkles size={11} className="text-cv-warn" />
             <span className="hidden sm:inline">STAR Optimizer</span>
           </button>
         </div>
@@ -395,7 +395,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           data-placeholder={placeholder}
         />
         {pasteCut && (
-          <p role="status" data-testid="paste-cut" className="px-3 pb-2 text-xs text-amber-700">
+          <p role="status" data-testid="paste-cut" className="px-3 pb-2 text-xs text-cv-warn">
             {pasteCut === 'blocks'
               ? `The pasted text was cut: a field holds at most ${MAX_FIELD_BLOCKS.toLocaleString('en-US')} paragraphs and bullets.`
               : `The pasted text was cut to its first ${MAX_PASTE_CHARS.toLocaleString('en-US')} characters.`}
@@ -760,7 +760,7 @@ function Btn({ title, onExec, children }) {
       type="button"
       title={title}
       onMouseDown={e => { e.preventDefault(); onExec(); }}
-      className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+      className="p-1 rounded text-cv-muted hover:text-cv-brand-text hover:bg-cv-brand-soft transition-colors"
     >
       {children}
     </button>
@@ -768,5 +768,5 @@ function Btn({ title, onExec, children }) {
 }
 
 function Sep() {
-  return <div className="w-px h-4 bg-gray-200 mx-0.5 self-center" />;
+  return <div className="w-px h-4 bg-cv-hairline mx-0.5 self-center" />;
 }
