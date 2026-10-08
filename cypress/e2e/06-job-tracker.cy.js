@@ -159,7 +159,7 @@ describe('job tracker', () => {
   });
 
   it('the brand returns to the résumés dashboard', () => {
-    cy.get('a[aria-label="CPWT-CV — résumés"]').first().click(); // the brand, at the top left of the workspace
+    cy.get('[data-testid="app-bar-brand"]').first().click(); // the brand on the app bar, at the top left of the workspace
     cy.location('hash').should('eq', '#/');
   });
 });
