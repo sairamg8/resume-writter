@@ -49,3 +49,12 @@ it("the job list keeps the Salary and Applied cells on one line", () => {
   assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.salary/);
   assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.appliedDate/);
 });
+
+it("the Projects table drops Type and Lead below lg, so Issues and Updated stay in view at 768 px", () => {
+  const s = src("src/pages/Boards.jsx");
+  assert.match(s, /NARROW_HIDDEN = .hidden lg:table-cell./);
+  assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Type/);
+  assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Lead/);
+  assert.match(s, /lg:min-w-\[48rem\]/);
+  assert.ok(!/ sm:min-w-\[48rem\]/.test(s), "no 48rem floor from sm");
+});

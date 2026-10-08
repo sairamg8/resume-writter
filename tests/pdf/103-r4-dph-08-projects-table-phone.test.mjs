@@ -63,13 +63,14 @@ const classOf = (attrs) => (/\bclass="([^"]*)"/.exec(attrs)?.[1] ?? '').split(/\
 const cells = (html, tag) => [...html.matchAll(new RegExp(`<${tag}\\b([^>]*)>([\\s\\S]*?)</${tag}>`, 'g'))]
   .map(([, attrs, inner]) => ({ cls: classOf(attrs), inner, text: text(inner) }));
 const PHONE_HIDDEN = ['hidden', 'sm:table-cell'];
+const NARROW_HIDDEN = ['hidden', 'lg:table-cell']; // Type and Lead: also hidden between sm and lg (B17 sweep)
 
 it('below sm the Projects table drops Key, Type, Lead and Updated in the header and every row, and loses its 48rem floor', () => {
   const html = render();
   const table = /<table\b([^>]*)>([\s\S]*?)<\/table>/.exec(html);
   assert.ok(table, 'the projects table is rendered');
   const tableClass = classOf(table[1]);
-  assert.ok(tableClass.includes('sm:min-w-[48rem]'), `48rem wide from sm up, as before: ${tableClass.join(' ')}`);
+  assert.ok(tableClass.includes('lg:min-w-[48rem]'), `48rem wide from lg up (B17 sweep: at 768px it pushed Issues and Updated off screen): ${tableClass.join(' ')}`);
   assert.ok(!tableClass.includes('min-w-[48rem]'), 'no 48rem floor on a phone: the table is as wide as the screen');
   assert.ok(tableClass.includes('w-full'));
 
@@ -88,7 +89,8 @@ it('below sm the Projects table drops Key, Type, Lead and Updated in the header 
   head.forEach((th, i) => {
     for (const [where, cell] of [['header', th], ['row', row[i]]]) {
       if (hidden.has(th.text)) {
-        for (const t of PHONE_HIDDEN) assert.ok(cell.cls.includes(t), `${th.text} (${where}) is hidden on a phone and shown from sm up: ${cell.cls.join(' ')}`);
+        const shown = th.text === 'Type' || th.text === 'Lead' ? NARROW_HIDDEN : PHONE_HIDDEN;
+        for (const t of shown) assert.ok(cell.cls.includes(t), `${th.text} (${where}) is hidden on a phone and shown from ${shown[1].split(':')[0]} up: ${cell.cls.join(' ')}`);
       } else {
         assert.ok(!cell.cls.includes('hidden'), `${th.text} (${where}) stays on a phone: ${cell.cls.join(' ')}`);
       }

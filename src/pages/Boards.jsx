@@ -15,6 +15,8 @@ import { relativeTime } from '@/utils/uiFormat';
  * table then fits a 375px screen, with each row's menu in view. Shown again from sm up.
  */
 const PHONE_HIDDEN = 'hidden sm:table-cell';
+/** Type and Lead go too below lg, and the 48rem floor with them: at 768px Issues and Updated were off screen and Name was cut to "Person…". */
+const NARROW_HIDDEN = 'hidden lg:table-cell';
 
 /**
  * Projects (/boards): every project as a row — star, name, key, type, lead, open and total
@@ -57,15 +59,15 @@ export function Boards() {
           <>
             <SearchInput value={query} onChange={setQuery} placeholder="Search projects" size="sm" className="w-full sm:w-64" />
             <div className="overflow-x-auto">
-              <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[48rem]">
+              <table className="w-full border-separate border-spacing-0 text-sm lg:min-w-[48rem]">
                 <caption className="sr-only">Projects</caption>
                 <thead>
                   <tr className="text-left text-[12px] font-semibold text-cv-muted">
                     <th scope="col" className="w-10 border-b-2 border-cv-hairline px-2 py-2"><span className="sr-only">Starred</span><Star size={14} aria-hidden="true" /></th>
                     <th scope="col" className="border-b-2 border-cv-hairline px-2 py-2">Name</th>
                     <th scope="col" className={`w-24 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Key</th>
-                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Type</th>
-                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Lead</th>
+                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${NARROW_HIDDEN}`}>Type</th>
+                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${NARROW_HIDDEN}`}>Lead</th>
                     <th scope="col" className="w-32 border-b-2 border-cv-hairline px-2 py-2">Issues</th>
                     <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Updated</th>
                     <th scope="col" className="w-12 border-b-2 border-cv-hairline px-2 py-2"><span className="sr-only">Actions</span></th>
@@ -89,8 +91,8 @@ export function Boards() {
                           </button>
                         </td>
                         <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.key}</td>
-                        <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
-                        <td className={`border-b border-cv-hairline px-2 ${PHONE_HIDDEN}`}><span className="flex items-center gap-2 text-cv-muted"><Avatar name="You" size="xs" decorative />You</span></td>
+                        <td className={`border-b border-cv-hairline px-2 text-cv-muted ${NARROW_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
+                        <td className={`border-b border-cv-hairline px-2 ${NARROW_HIDDEN}`}><span className="flex items-center gap-2 text-cv-muted"><Avatar name="You" size="xs" decorative />You</span></td>
                         <td className="whitespace-nowrap border-b border-cv-hairline px-2 text-cv-muted">{counts.open} open · {counts.total} total</td>
                         <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{relativeTime(b.updatedAt)}</td>
                         <td className="border-b border-cv-hairline px-2">
