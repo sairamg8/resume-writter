@@ -5,6 +5,7 @@ import { IconButton } from './IconButton.jsx';
 import { usePresence } from './usePresence.js';
 import { useFocusTrap } from './useFocusTrap.js';
 import { useScrollLock } from './useScrollLock.js';
+import { dismissedLayer } from './useDismiss.js';
 import { cx, isImeKey } from './compose.js';
 
 const SIZES = {
@@ -76,7 +77,8 @@ export function Dialog({
   // releasing outside must not throw the dialog away, nor a drag begun outside and released inside
   // (the browser sends its click to the overlay, the two ends' common ancestor).
   const onOverlayPointerDown = (event) => {
-    pressStartedOnOverlay.current = event.target === event.currentTarget;
+    // A press that closed a menu or popover open over the dialog is that layer's, not the dialog's.
+    pressStartedOnOverlay.current = event.target === event.currentTarget && !dismissedLayer(event.nativeEvent);
     releasedInside.current = false;
   };
   const onOverlayPointerUp = (event) => { releasedInside.current = event.target !== event.currentTarget; };
