@@ -9,7 +9,8 @@ Cadence: work 3 hours continuously with ultracode, sleep 2 hours, repeat until t
 Only the wake-ups below are pending at any time: the window-end wake (`send_later`), and CI check-ins during a window.
 
 ## Hard rules
-- AT MOST 5 AGENTS PER WINDOW IN TOTAL (every `Agent` call and every `agent()` in a `Workflow` counts; never more than 5 alive at once). Count them in the log below. Need more: do it yourself or defer it to the next window.
+- AT MOST 5 AGENTS ALIVE AT ONCE (the owner's standing cap, 2026-09-23 and again 2026-10-08; every `Agent` call and every `agent()` in a `Workflow` counts; this box runs 2 at a time). The total per window is sized to the work and never padded; trivial work is done directly with no agents. Count them in the log below.
+- EFFORT RULE (owner, HARD RULE, 2026-10-08): before each launch decide every agent's effort; tell the owner in chat in the same turn, ahead of the call (how many agents, each effort, a few words why); put the effort in each agent label and in the workflow phase titles (`[medium] sweep fixes`); restate in the report which effort each ran at. Memory: claude-context `shared/feedback_agent_effort_right_size.md`.
 - Effort per agent, never everything at the top: scouting, reading, mechanical or CSS-only edits and docs = `medium` (or `low`); implementation with tests = `high`; adversarial verification of a risky change = `xhigh`; `max` never, unless a wrong call would be irreversible.
 - Tests run ONLY on CI (`ci.yml`: no inputs = the full gate; `tests`, `failfirst`, `playwright`, `cypress` for targeted runs). Read the logs; never run tests on a machine.
 - Commits are authored `sairamgudiputi <sairamgudiputi8@gmail.com>`, no trailers, no mention of Claude or AI.
@@ -30,7 +31,7 @@ Complete = every B-batch built, the open sweep items fixed, bug-hunt rounds dry,
 3. Go idle; start nothing new.
 
 ## Resume wake (the text to send_later)
-RESUME (owner's cadence: a 3-hour ultracode window now, then 2 hours asleep, until the new UI is complete and on master). In order: (1) FIRST schedule this window's end with send_later at now + 3 hours (name 'UI build window end', the Window end text in docs/tracking/ui-redesign/CYCLE.md); (2) read docs/tracking/ui-redesign/CYCLE.md (charter and log) and the top HANDOFF entry, fetch the branch, read every unread CI run listed there, fix reds; (3) run the window as Workflow scripts with at most 5 agents in total and the effort rules in CYCLE.md; (4) keep going for the whole 3 hours, with CI check-ins by send_later every 20 to 30 minutes while runs are in flight.
+RESUME (owner's cadence: a 3-hour ultracode window now, then 2 hours asleep, until the new UI is complete and on master). In order: (1) FIRST schedule this window's end with send_later at now + 3 hours (name 'UI build window end', the Window end text in docs/tracking/ui-redesign/CYCLE.md); (2) read docs/tracking/ui-redesign/CYCLE.md (charter and log) and the top HANDOFF entry, fetch the branch, read every unread CI run listed there, fix reds; (3) run the window as Workflow scripts with at most 5 agents alive at once, the effort of each decided, announced in chat before the launch and shown in its label (CYCLE.md); (4) keep going for the whole 3 hours, with CI check-ins by send_later every 20 to 30 minutes while runs are in flight.
 
 ## Window end text (the text to send_later)
 WINDOW END (owner's cadence: work 3 hours continuously with ultracode, sleep 2 hours, repeat until the new UI is complete and on master). In order: (1) FIRST schedule the resume wake with send_later at now + 2 hours, name 'UI build resume', message = the Resume wake text in docs/tracking/ui-redesign/CYCLE.md; (2) wrap up per the Wrap-up procedure in CYCLE.md; (3) go idle and start nothing new. Hard rules stay (CYCLE.md).
@@ -38,4 +39,4 @@ WINDOW END (owner's cadence: work 3 hours continuously with ultracode, sleep 2 h
 ## Log
 | Window | Start (UTC) | Agents used (of 5) | Efforts | Runs dispatched / read | Outcome and next |
 |---|---|---|---|---|---|
-| 1 | 2026-10-08 13:37 (ends 16:37, resume 18:37) | in progress | | merge of master into the UI `7460219`: full gate dispatched | see HANDOFF |
+| 1 | 2026-10-08 13:37 (ends 16:37, resume 18:37) | 4 so far (2 at a time), wf_7a356c0b-175 | hunt-editor high, hunt-workspace high, sweep-fixes medium, jobmap-shell medium (launched before the announce-first rule was applied) | merge of master into the UI `7460219`: full gate 37785725572 dispatched | see HANDOFF |
