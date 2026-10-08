@@ -348,6 +348,2154 @@
       "ats": "greenhouse",
       "slug": "sofi",
       "sector": "fintech"
+    },
+    {
+      "name": "2U",
+      "ats": "greenhouse",
+      "slug": "2u",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "6sense",
+      "ats": "greenhouse",
+      "slug": "6sense",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Abnormal Security",
+      "ats": "greenhouse",
+      "slug": "abnormalsecurity",
+      "sector": "security"
+    },
+    {
+      "name": "Accrue",
+      "ats": "greenhouse",
+      "slug": "accrue",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Adyen",
+      "ats": "greenhouse",
+      "slug": "adyen",
+      "sector": "fintech"
+    },
+    {
+      "name": "Aeva",
+      "ats": "lever",
+      "slug": "aeva",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Agility Robotics",
+      "ats": "greenhouse",
+      "slug": "agilityrobotics",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Airship",
+      "ats": "greenhouse",
+      "slug": "airship",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Algolia",
+      "ats": "greenhouse",
+      "slug": "algolia",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Alloy",
+      "ats": "greenhouse",
+      "slug": "alloy",
+      "sector": "fintech"
+    },
+    {
+      "name": "Ambi Robotics",
+      "ats": "lever",
+      "slug": "ambirobotics",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Amwell",
+      "ats": "greenhouse",
+      "slug": "amwell",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Anaplan",
+      "ats": "greenhouse",
+      "slug": "anaplan",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Anchorage Digital",
+      "ats": "lever",
+      "slug": "anchorage",
+      "sector": "fintech"
+    },
+    {
+      "name": "Anyscale",
+      "ats": "lever",
+      "slug": "anyscale",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Apollo",
+      "ats": "greenhouse",
+      "slug": "apollo",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Appen",
+      "ats": "lever",
+      "slug": "appen",
+      "sector": "data and ai"
+    },
+    {
+      "name": "AppLovin",
+      "ats": "greenhouse",
+      "slug": "applovin",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Apptronik",
+      "ats": "greenhouse",
+      "slug": "apptronik",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Arcadia",
+      "ats": "lever",
+      "slug": "arcadia",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Archer",
+      "ats": "greenhouse",
+      "slug": "archer",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Arize",
+      "ats": "greenhouse",
+      "slug": "arizeai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Astranis",
+      "ats": "greenhouse",
+      "slug": "astranis",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "At-Bay",
+      "ats": "greenhouse",
+      "slug": "atbay",
+      "sector": "fintech"
+    },
+    {
+      "name": "Attentive",
+      "ats": "greenhouse",
+      "slug": "attentive",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Automattic",
+      "ats": "greenhouse",
+      "slug": "automatticcareers",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Axon",
+      "ats": "greenhouse",
+      "slug": "axon",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Axonius",
+      "ats": "greenhouse",
+      "slug": "axonius",
+      "sector": "security"
+    },
+    {
+      "name": "Backblaze",
+      "ats": "greenhouse",
+      "slug": "backblaze",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Bandwidth",
+      "ats": "greenhouse",
+      "slug": "bandwidth",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Bankrate",
+      "ats": "greenhouse",
+      "slug": "bankrate",
+      "sector": "fintech"
+    },
+    {
+      "name": "Bazaarvoice",
+      "ats": "lever",
+      "slug": "bazaarvoice",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Betterment",
+      "ats": "greenhouse",
+      "slug": "betterment",
+      "sector": "fintech"
+    },
+    {
+      "name": "BeyondTrust",
+      "ats": "greenhouse",
+      "slug": "beyondtrust",
+      "sector": "security"
+    },
+    {
+      "name": "BigID",
+      "ats": "greenhouse",
+      "slug": "bigid",
+      "sector": "security"
+    },
+    {
+      "name": "Bishop Fox",
+      "ats": "greenhouse",
+      "slug": "bishopfox",
+      "sector": "security"
+    },
+    {
+      "name": "BitGo",
+      "ats": "greenhouse",
+      "slug": "bitgo",
+      "sector": "fintech"
+    },
+    {
+      "name": "Bitwarden",
+      "ats": "greenhouse",
+      "slug": "bitwarden",
+      "sector": "security"
+    },
+    {
+      "name": "BlackSky",
+      "ats": "greenhouse",
+      "slug": "blacksky",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Blend",
+      "ats": "greenhouse",
+      "slug": "blend",
+      "sector": "fintech"
+    },
+    {
+      "name": "Blockchain.com",
+      "ats": "greenhouse",
+      "slug": "blockchain",
+      "sector": "fintech"
+    },
+    {
+      "name": "Bloomreach",
+      "ats": "greenhouse",
+      "slug": "bloomreach",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Blue Apron",
+      "ats": "lever",
+      "slug": "blue",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Blumira",
+      "ats": "greenhouse",
+      "slug": "blumira",
+      "sector": "security"
+    },
+    {
+      "name": "Box",
+      "ats": "greenhouse",
+      "slug": "boxinc",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Branch",
+      "ats": "greenhouse",
+      "slug": "branch",
+      "sector": "fintech"
+    },
+    {
+      "name": "Braze",
+      "ats": "greenhouse",
+      "slug": "braze",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Brilliant",
+      "ats": "lever",
+      "slug": "brilliant",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Bugcrowd",
+      "ats": "greenhouse",
+      "slug": "bugcrowd",
+      "sector": "security"
+    },
+    {
+      "name": "Buildkite",
+      "ats": "greenhouse",
+      "slug": "buildkite",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Bungie",
+      "ats": "greenhouse",
+      "slug": "bungie",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Butterfly Network",
+      "ats": "greenhouse",
+      "slug": "butterflynetwork",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Calendly",
+      "ats": "greenhouse",
+      "slug": "calendly",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Calm",
+      "ats": "greenhouse",
+      "slug": "calm",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Carbon Health",
+      "ats": "greenhouse",
+      "slug": "carbon",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Careem",
+      "ats": "greenhouse",
+      "slug": "careem",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Cato Networks",
+      "ats": "greenhouse",
+      "slug": "catonetworks",
+      "sector": "security"
+    },
+    {
+      "name": "Celigo",
+      "ats": "greenhouse",
+      "slug": "celigo",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Chainguard",
+      "ats": "greenhouse",
+      "slug": "chainguard",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Chargepoint",
+      "ats": "greenhouse",
+      "slug": "chargepoint",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Cherre",
+      "ats": "lever",
+      "slug": "cherre",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "ChowNow",
+      "ats": "lever",
+      "slug": "chownow",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "CircleCI",
+      "ats": "greenhouse",
+      "slug": "circleci",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Cloudinary",
+      "ats": "lever",
+      "slug": "cloudinary",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Clover Health",
+      "ats": "greenhouse",
+      "slug": "cloverhealth",
+      "sector": "fintech"
+    },
+    {
+      "name": "Coalition",
+      "ats": "greenhouse",
+      "slug": "coalition",
+      "sector": "fintech"
+    },
+    {
+      "name": "Cobalt",
+      "ats": "greenhouse",
+      "slug": "cobaltio",
+      "sector": "security"
+    },
+    {
+      "name": "Cobalt Robotics",
+      "ats": "lever",
+      "slug": "cobaltrobotics",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Cockroach Labs",
+      "ats": "greenhouse",
+      "slug": "cockroachlabs",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Coder",
+      "ats": "lever",
+      "slug": "coderio",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Comet",
+      "ats": "greenhouse",
+      "slug": "comet",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Commvault",
+      "ats": "greenhouse",
+      "slug": "commvault",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "ConnectWise",
+      "ats": "greenhouse",
+      "slug": "connectwise",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Consensys",
+      "ats": "greenhouse",
+      "slug": "consensys",
+      "sector": "fintech"
+    },
+    {
+      "name": "Contentful",
+      "ats": "greenhouse",
+      "slug": "contentful",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Contentsquare",
+      "ats": "lever",
+      "slug": "contentsquare",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "CoreWeave",
+      "ats": "greenhouse",
+      "slug": "coreweave",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "CoStar",
+      "ats": "greenhouse",
+      "slug": "costar",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Couchbase",
+      "ats": "greenhouse",
+      "slug": "couchbaseinc",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Coupa",
+      "ats": "lever",
+      "slug": "coupa",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Course Hero",
+      "ats": "greenhouse",
+      "slug": "coursehero",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Coursera",
+      "ats": "greenhouse",
+      "slug": "coursera",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "CRED",
+      "ats": "lever",
+      "slug": "cred",
+      "sector": "fintech"
+    },
+    {
+      "name": "Cribl",
+      "ats": "greenhouse",
+      "slug": "cribl",
+      "sector": "security"
+    },
+    {
+      "name": "Culture Amp",
+      "ats": "greenhouse",
+      "slug": "cultureamp",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Customer.io",
+      "ats": "greenhouse",
+      "slug": "customerio",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Cybereason",
+      "ats": "greenhouse",
+      "slug": "cybereason",
+      "sector": "security"
+    },
+    {
+      "name": "Dashlane",
+      "ats": "greenhouse",
+      "slug": "dashlane",
+      "sector": "security"
+    },
+    {
+      "name": "Dataiku",
+      "ats": "greenhouse",
+      "slug": "dataiku",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Degreed",
+      "ats": "greenhouse",
+      "slug": "degreed",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Deliveroo",
+      "ats": "greenhouse",
+      "slug": "deliveroo",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Dexterity",
+      "ats": "lever",
+      "slug": "dexterity",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Dialpad",
+      "ats": "greenhouse",
+      "slug": "dialpad",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Doma",
+      "ats": "greenhouse",
+      "slug": "doma",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Domino Data Lab",
+      "ats": "greenhouse",
+      "slug": "dominodatalab",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Doximity",
+      "ats": "greenhouse",
+      "slug": "doximity",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Dragos",
+      "ats": "greenhouse",
+      "slug": "dragos",
+      "sector": "security"
+    },
+    {
+      "name": "Dremio",
+      "ats": "greenhouse",
+      "slug": "dremio",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Druva",
+      "ats": "greenhouse",
+      "slug": "druva",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Endor Labs",
+      "ats": "greenhouse",
+      "slug": "endorlabs",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Entrata",
+      "ats": "lever",
+      "slug": "entrata",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Etched",
+      "ats": "greenhouse",
+      "slug": "etchedai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Eventbrite",
+      "ats": "greenhouse",
+      "slug": "eventbriteinc",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Exabeam",
+      "ats": "greenhouse",
+      "slug": "exabeam",
+      "sector": "security"
+    },
+    {
+      "name": "Expel",
+      "ats": "greenhouse",
+      "slug": "expel",
+      "sector": "security"
+    },
+    {
+      "name": "Faire",
+      "ats": "greenhouse",
+      "slug": "faire",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Farfetch",
+      "ats": "lever",
+      "slug": "farfetch",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Feedzai",
+      "ats": "greenhouse",
+      "slug": "feedzai",
+      "sector": "fintech"
+    },
+    {
+      "name": "Fieldwire",
+      "ats": "greenhouse",
+      "slug": "fieldwire",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Figure",
+      "ats": "greenhouse",
+      "slug": "figure",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Finix",
+      "ats": "lever",
+      "slug": "finix",
+      "sector": "fintech"
+    },
+    {
+      "name": "Fireblocks",
+      "ats": "greenhouse",
+      "slug": "fireblocks",
+      "sector": "fintech"
+    },
+    {
+      "name": "Fivetran",
+      "ats": "greenhouse",
+      "slug": "fivetran",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Flagship Pioneering",
+      "ats": "greenhouse",
+      "slug": "flagshippioneeringinc",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Flatiron Health",
+      "ats": "greenhouse",
+      "slug": "flatironhealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Flexport",
+      "ats": "greenhouse",
+      "slug": "flexport",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Fly.io",
+      "ats": "lever",
+      "slug": "fly",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Forter",
+      "ats": "greenhouse",
+      "slug": "forter",
+      "sector": "fintech"
+    },
+    {
+      "name": "Forward",
+      "ats": "greenhouse",
+      "slug": "forward",
+      "sector": "health and bio"
+    },
+    {
+      "name": "FourKites",
+      "ats": "greenhouse",
+      "slug": "fourkites",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Fundrise",
+      "ats": "lever",
+      "slug": "fundrise",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Galileo",
+      "ats": "greenhouse",
+      "slug": "galileo",
+      "sector": "fintech"
+    },
+    {
+      "name": "Gearbox",
+      "ats": "greenhouse",
+      "slug": "gearbox",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Gemini",
+      "ats": "greenhouse",
+      "slug": "gemini",
+      "sector": "fintech"
+    },
+    {
+      "name": "Ghost",
+      "ats": "greenhouse",
+      "slug": "ghost",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Ginkgo Bioworks",
+      "ats": "greenhouse",
+      "slug": "ginkgobioworks",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Glide",
+      "ats": "greenhouse",
+      "slug": "glide",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Glossier",
+      "ats": "greenhouse",
+      "slug": "glossier",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "GoCardless",
+      "ats": "greenhouse",
+      "slug": "gocardless",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "GoDaddy",
+      "ats": "greenhouse",
+      "slug": "godaddy",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Gong",
+      "ats": "greenhouse",
+      "slug": "gongio",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Gopuff",
+      "ats": "lever",
+      "slug": "gopuff",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Grafana Labs",
+      "ats": "greenhouse",
+      "slug": "grafanalabs",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Graphcore",
+      "ats": "greenhouse",
+      "slug": "graphcore",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Groww",
+      "ats": "greenhouse",
+      "slug": "groww",
+      "sector": "fintech"
+    },
+    {
+      "name": "Guild",
+      "ats": "greenhouse",
+      "slug": "guild",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Handshake",
+      "ats": "greenhouse",
+      "slug": "handshake",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Harness",
+      "ats": "greenhouse",
+      "slug": "harnessinc",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Healthie",
+      "ats": "greenhouse",
+      "slug": "healthie",
+      "sector": "health and bio"
+    },
+    {
+      "name": "HelloFresh",
+      "ats": "greenhouse",
+      "slug": "hellofresh",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Highnote",
+      "ats": "greenhouse",
+      "slug": "highnote",
+      "sector": "fintech"
+    },
+    {
+      "name": "Hive",
+      "ats": "greenhouse",
+      "slug": "hive",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Homeward",
+      "ats": "greenhouse",
+      "slug": "homeward",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Honeycomb",
+      "ats": "greenhouse",
+      "slug": "honeycomb",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Hootsuite",
+      "ats": "greenhouse",
+      "slug": "hootsuite",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Huntress",
+      "ats": "greenhouse",
+      "slug": "huntress",
+      "sector": "security"
+    },
+    {
+      "name": "Hyliion",
+      "ats": "greenhouse",
+      "slug": "hyliion",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "iFIT",
+      "ats": "greenhouse",
+      "slug": "ifit",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Immuta",
+      "ats": "lever",
+      "slug": "immuta",
+      "sector": "security"
+    },
+    {
+      "name": "Imply",
+      "ats": "greenhouse",
+      "slug": "imply",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Included Health",
+      "ats": "lever",
+      "slug": "includedhealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Indigo Ag",
+      "ats": "greenhouse",
+      "slug": "indigo",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Inflection",
+      "ats": "greenhouse",
+      "slug": "inflectionai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "InMobi",
+      "ats": "greenhouse",
+      "slug": "inmobi",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Island",
+      "ats": "greenhouse",
+      "slug": "island",
+      "sector": "security"
+    },
+    {
+      "name": "Iterable",
+      "ats": "greenhouse",
+      "slug": "iterable",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Jam City",
+      "ats": "lever",
+      "slug": "jamcity",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Jamf",
+      "ats": "greenhouse",
+      "slug": "jamf",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "JetBrains",
+      "ats": "greenhouse",
+      "slug": "jetbrains",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "JFrog",
+      "ats": "greenhouse",
+      "slug": "jfrog",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Jumia",
+      "ats": "greenhouse",
+      "slug": "jumia",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Jumio",
+      "ats": "greenhouse",
+      "slug": "jumio",
+      "sector": "fintech"
+    },
+    {
+      "name": "Justworks",
+      "ats": "greenhouse",
+      "slug": "justworks",
+      "sector": "fintech"
+    },
+    {
+      "name": "Kabam",
+      "ats": "lever",
+      "slug": "kabam",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Kaseya",
+      "ats": "greenhouse",
+      "slug": "kaseya",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Kavak",
+      "ats": "lever",
+      "slug": "kavak",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Khan Academy",
+      "ats": "greenhouse",
+      "slug": "khanacademy",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Klaviyo",
+      "ats": "greenhouse",
+      "slug": "klaviyo",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Knock",
+      "ats": "greenhouse",
+      "slug": "knock",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "KnowBe4",
+      "ats": "greenhouse",
+      "slug": "knowbe4",
+      "sector": "security"
+    },
+    {
+      "name": "Kodiak Robotics",
+      "ats": "greenhouse",
+      "slug": "kodiak",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Labelbox",
+      "ats": "greenhouse",
+      "slug": "labelbox",
+      "sector": "data and ai"
+    },
+    {
+      "name": "LastPass",
+      "ats": "greenhouse",
+      "slug": "lastpass",
+      "sector": "security"
+    },
+    {
+      "name": "Latch",
+      "ats": "lever",
+      "slug": "latch",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Lattice",
+      "ats": "greenhouse",
+      "slug": "lattice",
+      "sector": "fintech"
+    },
+    {
+      "name": "LaunchDarkly",
+      "ats": "greenhouse",
+      "slug": "launchdarkly",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "LendingTree",
+      "ats": "greenhouse",
+      "slug": "lendingtree",
+      "sector": "fintech"
+    },
+    {
+      "name": "Liftoff",
+      "ats": "greenhouse",
+      "slug": "liftoff",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Lightmatter",
+      "ats": "greenhouse",
+      "slug": "lightmatter",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Lithic",
+      "ats": "greenhouse",
+      "slug": "lithic",
+      "sector": "fintech"
+    },
+    {
+      "name": "Loadsmart",
+      "ats": "lever",
+      "slug": "loadsmart",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Locus Robotics",
+      "ats": "greenhouse",
+      "slug": "locusrobotics",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "LogRocket",
+      "ats": "lever",
+      "slug": "logrocket",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Lucid Motors",
+      "ats": "greenhouse",
+      "slug": "lucidmotors",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Lucidworks",
+      "ats": "lever",
+      "slug": "lucidworks",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Lyra Health",
+      "ats": "lever",
+      "slug": "lyrahealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "MasterClass",
+      "ats": "greenhouse",
+      "slug": "masterclass",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Match Group",
+      "ats": "lever",
+      "slug": "matchgroup",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Meesho",
+      "ats": "lever",
+      "slug": "meesho",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Melio",
+      "ats": "greenhouse",
+      "slug": "melio",
+      "sector": "fintech"
+    },
+    {
+      "name": "Mendix",
+      "ats": "lever",
+      "slug": "mendix",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Mercari",
+      "ats": "greenhouse",
+      "slug": "mercari",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Mercury",
+      "ats": "greenhouse",
+      "slug": "mercury",
+      "sector": "fintech"
+    },
+    {
+      "name": "Metabase",
+      "ats": "lever",
+      "slug": "metabase",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Metronome",
+      "ats": "greenhouse",
+      "slug": "metronome",
+      "sector": "fintech"
+    },
+    {
+      "name": "Misfits Market",
+      "ats": "greenhouse",
+      "slug": "misfitsmarket",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Mixpanel",
+      "ats": "greenhouse",
+      "slug": "mixpanel",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Moloco",
+      "ats": "greenhouse",
+      "slug": "moloco",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Moonpig",
+      "ats": "lever",
+      "slug": "moonpig",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Motive",
+      "ats": "greenhouse",
+      "slug": "motive",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "N26",
+      "ats": "greenhouse",
+      "slug": "n26",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Narvar",
+      "ats": "greenhouse",
+      "slug": "narvar",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Natera",
+      "ats": "greenhouse",
+      "slug": "natera",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Naughty Dog",
+      "ats": "greenhouse",
+      "slug": "naughtydog",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Neon",
+      "ats": "lever",
+      "slug": "neon",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Netlify",
+      "ats": "greenhouse",
+      "slug": "netlify",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Netskope",
+      "ats": "greenhouse",
+      "slug": "netskope",
+      "sector": "security"
+    },
+    {
+      "name": "Nextdoor",
+      "ats": "greenhouse",
+      "slug": "nextdoor",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Nozomi Networks",
+      "ats": "greenhouse",
+      "slug": "nozominetworks",
+      "sector": "security"
+    },
+    {
+      "name": "Nuance",
+      "ats": "greenhouse",
+      "slug": "nuancelabs",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Nubank",
+      "ats": "greenhouse",
+      "slug": "nubank",
+      "sector": "fintech"
+    },
+    {
+      "name": "Octopus Deploy",
+      "ats": "greenhouse",
+      "slug": "octopusdeploy",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Oklo",
+      "ats": "greenhouse",
+      "slug": "oklo",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Olo",
+      "ats": "lever",
+      "slug": "olo",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "One Medical",
+      "ats": "greenhouse",
+      "slug": "onemedical",
+      "sector": "health and bio"
+    },
+    {
+      "name": "OneTrust",
+      "ats": "greenhouse",
+      "slug": "onetrust",
+      "sector": "security"
+    },
+    {
+      "name": "OpenX",
+      "ats": "lever",
+      "slug": "openx",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Orb",
+      "ats": "greenhouse",
+      "slug": "orb",
+      "sector": "fintech"
+    },
+    {
+      "name": "Orca Security",
+      "ats": "greenhouse",
+      "slug": "orcasecurity",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Orchard",
+      "ats": "greenhouse",
+      "slug": "orchard",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Osano",
+      "ats": "greenhouse",
+      "slug": "osano",
+      "sector": "security"
+    },
+    {
+      "name": "Oscar Health",
+      "ats": "greenhouse",
+      "slug": "oscar",
+      "sector": "fintech"
+    },
+    {
+      "name": "Oura",
+      "ats": "greenhouse",
+      "slug": "oura",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Outbrain",
+      "ats": "greenhouse",
+      "slug": "outbraininc",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Outreach",
+      "ats": "lever",
+      "slug": "outreach",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Pacaso",
+      "ats": "greenhouse",
+      "slug": "pacaso",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Palmetto",
+      "ats": "greenhouse",
+      "slug": "palmetto",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "PandaDoc",
+      "ats": "greenhouse",
+      "slug": "pandadoc",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Panther Labs",
+      "ats": "greenhouse",
+      "slug": "pantherlabs",
+      "sector": "security"
+    },
+    {
+      "name": "Papa John's",
+      "ats": "greenhouse",
+      "slug": "papa",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Parsley Health",
+      "ats": "greenhouse",
+      "slug": "parsleyhealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Payhawk",
+      "ats": "greenhouse",
+      "slug": "payhawkio",
+      "sector": "fintech"
+    },
+    {
+      "name": "Payoneer",
+      "ats": "greenhouse",
+      "slug": "payoneer",
+      "sector": "fintech"
+    },
+    {
+      "name": "Paytm",
+      "ats": "lever",
+      "slug": "paytm",
+      "sector": "fintech"
+    },
+    {
+      "name": "Pendo",
+      "ats": "greenhouse",
+      "slug": "pendo",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Picnic",
+      "ats": "greenhouse",
+      "slug": "picnicai",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Ping Identity",
+      "ats": "greenhouse",
+      "slug": "pingidentity",
+      "sector": "security"
+    },
+    {
+      "name": "Pivot Bio",
+      "ats": "greenhouse",
+      "slug": "pivotbio",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Planet Labs",
+      "ats": "greenhouse",
+      "slug": "planetlabs",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "PlanetScale",
+      "ats": "greenhouse",
+      "slug": "planetscale",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Poshmark",
+      "ats": "greenhouse",
+      "slug": "poshmark",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Postscript",
+      "ats": "greenhouse",
+      "slug": "postscript",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Presto",
+      "ats": "lever",
+      "slug": "prestolabs",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Prisma",
+      "ats": "greenhouse",
+      "slug": "prisma",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Project44",
+      "ats": "greenhouse",
+      "slug": "project44",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Proof",
+      "ats": "greenhouse",
+      "slug": "proof",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Prosper",
+      "ats": "lever",
+      "slug": "prosper",
+      "sector": "fintech"
+    },
+    {
+      "name": "Public.com",
+      "ats": "greenhouse",
+      "slug": "public",
+      "sector": "fintech"
+    },
+    {
+      "name": "PubMatic",
+      "ats": "greenhouse",
+      "slug": "pubmatic",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Pure Storage",
+      "ats": "greenhouse",
+      "slug": "purestorage",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Qualia",
+      "ats": "greenhouse",
+      "slug": "qualia",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Qualtrics",
+      "ats": "greenhouse",
+      "slug": "qualtrics",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "QuintoAndar",
+      "ats": "greenhouse",
+      "slug": "quintoandar",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Recorded Future",
+      "ats": "greenhouse",
+      "slug": "recordedfuture",
+      "sector": "security"
+    },
+    {
+      "name": "Redwood Materials",
+      "ats": "greenhouse",
+      "slug": "redwoodmaterials",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Relativity Space",
+      "ats": "greenhouse",
+      "slug": "relativity",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Remote",
+      "ats": "greenhouse",
+      "slug": "remote",
+      "sector": "fintech"
+    },
+    {
+      "name": "Rent the Runway",
+      "ats": "greenhouse",
+      "slug": "renttherunway",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Revel",
+      "ats": "greenhouse",
+      "slug": "revel",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Riskified",
+      "ats": "greenhouse",
+      "slug": "riskified",
+      "sector": "fintech"
+    },
+    {
+      "name": "Ro",
+      "ats": "lever",
+      "slug": "ro",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Rocket Lab",
+      "ats": "greenhouse",
+      "slug": "rocketlab",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Roku",
+      "ats": "greenhouse",
+      "slug": "roku",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Roofstock",
+      "ats": "greenhouse",
+      "slug": "roofstock",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Rubrik",
+      "ats": "greenhouse",
+      "slug": "rubrik",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Salesloft",
+      "ats": "greenhouse",
+      "slug": "salesloft",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Scopely",
+      "ats": "greenhouse",
+      "slug": "scopely",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "SeatGeek",
+      "ats": "greenhouse",
+      "slug": "seatgeek",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Secureframe",
+      "ats": "lever",
+      "slug": "secureframe",
+      "sector": "security"
+    },
+    {
+      "name": "Sendbird",
+      "ats": "greenhouse",
+      "slug": "sendbird",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Shield AI",
+      "ats": "lever",
+      "slug": "shieldai",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "ShipBob",
+      "ats": "greenhouse",
+      "slug": "shipbobinc",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "ShipMonk",
+      "ats": "greenhouse",
+      "slug": "shipmonk",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Showpad",
+      "ats": "greenhouse",
+      "slug": "showpad",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Sigma Computing",
+      "ats": "greenhouse",
+      "slug": "sigmacomputing",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Sila",
+      "ats": "lever",
+      "slug": "sila",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "SimpliSafe",
+      "ats": "greenhouse",
+      "slug": "simplisafe",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "SingleStore",
+      "ats": "greenhouse",
+      "slug": "singlestore",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Skillz",
+      "ats": "greenhouse",
+      "slug": "skillzinc",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Slice",
+      "ats": "greenhouse",
+      "slug": "slice",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "SmartRent",
+      "ats": "greenhouse",
+      "slug": "smartrent",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Smartsheet",
+      "ats": "greenhouse",
+      "slug": "smartsheet",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Snorkel AI",
+      "ats": "greenhouse",
+      "slug": "snorkelai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Socket",
+      "ats": "greenhouse",
+      "slug": "socket",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Sonatype",
+      "ats": "lever",
+      "slug": "sonatype",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "SpaceX",
+      "ats": "greenhouse",
+      "slug": "spacex",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Spire",
+      "ats": "greenhouse",
+      "slug": "spire",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Stability AI",
+      "ats": "greenhouse",
+      "slug": "stabilityai",
+      "sector": "data and ai"
+    },
+    {
+      "name": "StackBlitz",
+      "ats": "greenhouse",
+      "slug": "stackblitz",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Starburst",
+      "ats": "greenhouse",
+      "slug": "starburst",
+      "sector": "data and ai"
+    },
+    {
+      "name": "Stitch Fix",
+      "ats": "greenhouse",
+      "slug": "stitchfix",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Storyblok",
+      "ats": "greenhouse",
+      "slug": "storyblok",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "StreamNative",
+      "ats": "greenhouse",
+      "slug": "streamnative",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "StubHub",
+      "ats": "greenhouse",
+      "slug": "stubhubinc",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Suki",
+      "ats": "greenhouse",
+      "slug": "suki",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Sumo Logic",
+      "ats": "greenhouse",
+      "slug": "sumologic",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Sunnova",
+      "ats": "greenhouse",
+      "slug": "sunnova",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "SurveyMonkey",
+      "ats": "greenhouse",
+      "slug": "surveymonkey",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Sweetgreen",
+      "ats": "greenhouse",
+      "slug": "sweetgreen",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Synack",
+      "ats": "greenhouse",
+      "slug": "synack",
+      "sector": "security"
+    },
+    {
+      "name": "Sysdig",
+      "ats": "lever",
+      "slug": "sysdig",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Taboola",
+      "ats": "greenhouse",
+      "slug": "taboola",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Tailscale",
+      "ats": "greenhouse",
+      "slug": "tailscale",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Take-Two",
+      "ats": "greenhouse",
+      "slug": "taketwo",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Tala",
+      "ats": "lever",
+      "slug": "tala",
+      "sector": "fintech"
+    },
+    {
+      "name": "Talkspace",
+      "ats": "greenhouse",
+      "slug": "talkspace",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Tanium",
+      "ats": "greenhouse",
+      "slug": "tanium",
+      "sector": "security"
+    },
+    {
+      "name": "Teampay",
+      "ats": "greenhouse",
+      "slug": "teampaycareers",
+      "sector": "fintech"
+    },
+    {
+      "name": "Tebra",
+      "ats": "greenhouse",
+      "slug": "tebra",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Tenable",
+      "ats": "greenhouse",
+      "slug": "tenableinc",
+      "sector": "security"
+    },
+    {
+      "name": "Tenstorrent",
+      "ats": "greenhouse",
+      "slug": "tenstorrent",
+      "sector": "data and ai"
+    },
+    {
+      "name": "The New York Times",
+      "ats": "greenhouse",
+      "slug": "thenewyorktimes",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "The Trade Desk",
+      "ats": "greenhouse",
+      "slug": "thetradedesk",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Thinkific",
+      "ats": "greenhouse",
+      "slug": "thinkific",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Thrive Market",
+      "ats": "greenhouse",
+      "slug": "thrivemarket",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Tigera",
+      "ats": "greenhouse",
+      "slug": "tigera",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Together AI",
+      "ats": "greenhouse",
+      "slug": "togetherai",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Trade Republic",
+      "ats": "greenhouse",
+      "slug": "traderepublic",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Transcend",
+      "ats": "greenhouse",
+      "slug": "transcendinc",
+      "sector": "security"
+    },
+    {
+      "name": "Treasury Prime",
+      "ats": "greenhouse",
+      "slug": "treasuryprime",
+      "sector": "fintech"
+    },
+    {
+      "name": "TripActions",
+      "ats": "greenhouse",
+      "slug": "tripactions",
+      "sector": "fintech"
+    },
+    {
+      "name": "Tripadvisor",
+      "ats": "greenhouse",
+      "slug": "tripadvisor",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Trivago",
+      "ats": "greenhouse",
+      "slug": "trivago",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Truecaller",
+      "ats": "greenhouse",
+      "slug": "truecaller",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Twist Bioscience",
+      "ats": "greenhouse",
+      "slug": "twistbioscience",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Typeform",
+      "ats": "greenhouse",
+      "slug": "typeform",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Uber Freight",
+      "ats": "greenhouse",
+      "slug": "uberfreight",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Udacity",
+      "ats": "greenhouse",
+      "slug": "udacity",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Udemy",
+      "ats": "greenhouse",
+      "slug": "udemy",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Upstart",
+      "ats": "greenhouse",
+      "slug": "upstart",
+      "sector": "fintech"
+    },
+    {
+      "name": "Vacasa",
+      "ats": "greenhouse",
+      "slug": "vacasa",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Vast.ai",
+      "ats": "greenhouse",
+      "slug": "vast",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Veeva",
+      "ats": "lever",
+      "slug": "veeva",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Veracode",
+      "ats": "greenhouse",
+      "slug": "veracode",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Veriff",
+      "ats": "greenhouse",
+      "slug": "veriff",
+      "sector": "fintech"
+    },
+    {
+      "name": "Vonage",
+      "ats": "greenhouse",
+      "slug": "vonage",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Vox Media",
+      "ats": "greenhouse",
+      "slug": "voxmedia",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "VTS",
+      "ats": "greenhouse",
+      "slug": "vts",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Waabi",
+      "ats": "lever",
+      "slug": "waabi",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Wasabi",
+      "ats": "greenhouse",
+      "slug": "wasabi",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Wealthfront",
+      "ats": "lever",
+      "slug": "wealthfront",
+      "sector": "fintech"
+    },
+    {
+      "name": "Wildlife Studios",
+      "ats": "greenhouse",
+      "slug": "wildlifestudios",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Wing",
+      "ats": "greenhouse",
+      "slug": "wing",
+      "sector": "big tech and platforms"
+    },
+    {
+      "name": "Wiz",
+      "ats": "greenhouse",
+      "slug": "wizinc",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Wolt",
+      "ats": "greenhouse",
+      "slug": "wolt",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Workato",
+      "ats": "greenhouse",
+      "slug": "workato",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Yext",
+      "ats": "greenhouse",
+      "slug": "yext",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Yotpo",
+      "ats": "greenhouse",
+      "slug": "yotpo",
+      "sector": "consumer, media, social"
+    },
+    {
+      "name": "Yugabyte",
+      "ats": "greenhouse",
+      "slug": "yugabyte",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Zilliz",
+      "ats": "lever",
+      "slug": "zilliz",
+      "sector": "developer tools and infrastructure"
+    },
+    {
+      "name": "Zocdoc",
+      "ats": "greenhouse",
+      "slug": "zocdoc",
+      "sector": "health and bio"
+    },
+    {
+      "name": "ZoomInfo",
+      "ats": "greenhouse",
+      "slug": "zoominfo",
+      "sector": "enterprise software"
+    },
+    {
+      "name": "Zopa",
+      "ats": "lever",
+      "slug": "zopa",
+      "sector": "international and large non-us tech"
+    },
+    {
+      "name": "Zscaler",
+      "ats": "greenhouse",
+      "slug": "zscaler",
+      "sector": "security"
+    },
+    {
+      "name": "Zuora",
+      "ats": "greenhouse",
+      "slug": "zuora",
+      "sector": "fintech"
+    },
+    {
+      "name": "Zus Health",
+      "ats": "lever",
+      "slug": "zushealth",
+      "sector": "health and bio"
+    },
+    {
+      "name": "Zwift",
+      "ats": "greenhouse",
+      "slug": "zwift",
+      "sector": "retail, logistics, other"
+    },
+    {
+      "name": "Zynga",
+      "ats": "greenhouse",
+      "slug": "zyngacareers",
+      "sector": "consumer, media, social"
     }
   ]
 }
