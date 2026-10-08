@@ -92,14 +92,14 @@ export default function HeaderIconPickerModal({
                 onClearIcon();
                 onClose();
               }}
-              className="mr-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              className="mr-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs font-medium text-cv-bad hover:bg-cv-bad-soft rounded-cv-control transition-colors cursor-pointer"
               title="Reset to default icon"
             >
               <RotateCcw size={12} />
               Reset to Default
             </button>
           ) : (
-            <span className="mr-auto text-[11px] text-gray-400">Using default template icon</span>
+            <span className="mr-auto text-[11px] text-cv-faint">Using default template icon</span>
           )}
 
           {/* Optional Image Upload Fallback */}
@@ -126,9 +126,9 @@ export default function HeaderIconPickerModal({
       )}
     >
       {/* Search & Tabs: they stay at the top while the grid scrolls under them. */}
-      <div className="sticky top-0 z-10 px-5 pt-4 pb-2 space-y-3 bg-gray-50 border-y border-gray-100">
+      <div className="sticky top-0 z-10 px-5 pt-4 pb-2 space-y-3 bg-cv-ground border-y border-cv-hairline">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-cv-faint" />
           {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-30).
               A mouse keeps 12 px. */}
           <input
@@ -136,13 +136,13 @@ export default function HeaderIconPickerModal({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search icons (e.g. mail, phone, globe, arrow, star)..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs pointer-coarse:text-base bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-xs pointer-coarse:text-base bg-cv-surface border border-cv-hairline rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand focus:border-transparent transition-all"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-cv-faint hover:text-cv-muted"
             >
               <X size={12} />
             </button>
@@ -150,14 +150,14 @@ export default function HeaderIconPickerModal({
         </div>
 
         {!search && (
-          <div className="flex gap-1.5 p-0.5 bg-gray-200/60 rounded-lg text-xs font-medium">
+          <div className="flex gap-1.5 p-0.5 bg-cv-sunken rounded-cv-control text-xs font-medium">
             <button
               type="button"
               onClick={() => setActiveTab('recommended')}
-              className={`flex-1 py-1 rounded-md transition-all ${
+              className={`flex-1 py-1 rounded-cv-control transition-all ${
                 activeTab === 'recommended'
-                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-cv-surface text-cv-brand-text shadow-xs font-semibold'
+                  : 'text-cv-muted hover:text-cv-ink'
               }`}
             >
               Recommended ({recommended.length})
@@ -165,10 +165,10 @@ export default function HeaderIconPickerModal({
             <button
               type="button"
               onClick={() => setActiveTab('styles')}
-              className={`flex-1 py-1 rounded-md transition-all ${
+              className={`flex-1 py-1 rounded-cv-control transition-all ${
                 activeTab === 'styles'
-                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-cv-surface text-cv-brand-text shadow-xs font-semibold'
+                  : 'text-cv-muted hover:text-cv-ink'
               }`}
             >
               Style Packs (5)
@@ -176,10 +176,10 @@ export default function HeaderIconPickerModal({
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`flex-1 py-1 rounded-md transition-all ${
+              className={`flex-1 py-1 rounded-cv-control transition-all ${
                 activeTab === 'all'
-                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-cv-surface text-cv-brand-text shadow-xs font-semibold'
+                  : 'text-cv-muted hover:text-cv-ink'
               }`}
             >
               All Icons ({all.length})
@@ -192,7 +192,7 @@ export default function HeaderIconPickerModal({
       <div className="p-5 space-y-4">
         {activeTab === 'styles' && !search ? (
           <div className="space-y-2">
-            <p className="text-[11px] text-gray-500 mb-2">
+            <p className="text-[11px] text-cv-muted mb-2">
               Choose a specific visual style pack for this field:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -204,21 +204,21 @@ export default function HeaderIconPickerModal({
                     key={pv.id}
                     type="button"
                     onClick={() => handleSelect(pv.id)}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${
+                    className={`flex items-center gap-3 p-2.5 rounded-cv-card border text-left transition-all ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50/80 ring-2 ring-blue-500/20'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 bg-white'
+                        ? 'border-cv-brand bg-cv-brand-soft ring-2 ring-cv-brand/20'
+                        : 'border-cv-hairline hover:border-cv-brand-soft-border hover:bg-cv-ground bg-cv-surface'
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
+                    <div className="w-9 h-9 rounded-cv-control bg-cv-sunken flex items-center justify-center text-cv-ink shrink-0">
                       <IconPreview shapes={shapes} size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-gray-800 flex items-center justify-between">
+                      <p className="text-xs font-semibold text-cv-ink flex items-center justify-between">
                         {pv.label}
-                        {isSelected && <Check size={12} className="text-blue-600" />}
+                        {isSelected && <Check size={12} className="text-cv-brand-text" />}
                       </p>
-                      <p className="text-[10px] text-gray-400 truncate">{pv.desc}</p>
+                      <p className="text-[10px] text-cv-faint truncate">{pv.desc}</p>
                     </div>
                   </button>
                 );
@@ -228,12 +228,12 @@ export default function HeaderIconPickerModal({
         ) : (
           <div>
             {filteredIcons.length === 0 ? (
-              <div className="py-12 text-center text-gray-400">
+              <div className="py-12 text-center text-cv-faint">
                 <p className="text-xs font-medium">No icons match &quot;{search}&quot;</p>
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="mt-2 text-xs text-blue-600 hover:underline"
+                  className="mt-2 text-xs text-cv-brand-text hover:underline"
                 >
                   Clear search
                 </button>
@@ -249,14 +249,14 @@ export default function HeaderIconPickerModal({
                       key={item.id}
                       type="button"
                       onClick={() => handleSelect(iconVal)}
-                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer group ${
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-cv-card border text-center transition-all cursor-pointer group ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50/90 text-blue-700 ring-2 ring-blue-500/20 shadow-xs'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 text-gray-700 bg-white'
+                          ? 'border-cv-brand bg-cv-brand-soft text-cv-brand-text ring-2 ring-cv-brand/20 shadow-xs'
+                          : 'border-cv-hairline hover:border-cv-brand-soft-border hover:bg-cv-brand-soft text-cv-ink bg-cv-surface'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors mb-1.5 ${
-                        isSelected ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
+                      <div className={`w-8 h-8 rounded-cv-control flex items-center justify-center transition-colors mb-1.5 ${
+                        isSelected ? 'text-cv-brand-text' : 'text-cv-muted group-hover:text-cv-brand-pressed'
                       }`}>
                         <IconPreview shapes={shapes} size={20} />
                       </div>
