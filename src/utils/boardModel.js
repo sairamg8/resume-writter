@@ -196,10 +196,11 @@ export const defaultColumnId = (board) => (firstColumnOf(board, 'todo') ?? board
 
 /**
  * A title as stored: one line (line breaks become spaces, runs of spaces one), trimmed, at most
- * 255 characters. '' when nothing is left — callers keep the previous title then.
+ * 255 characters (whole ones: an emoji is never cut in half). '' when nothing is left — callers keep the previous title then.
  */
 export function cleanTitle(text) {
-  return String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, 255);
+  const one = String(text ?? '').replace(/\s+/g, ' ').trim();
+  return one.length > 255 ? [...one].slice(0, 255).join('') : one; // whole characters: an emoji at the cut is not split
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────────────────
