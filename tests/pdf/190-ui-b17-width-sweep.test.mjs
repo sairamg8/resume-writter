@@ -43,3 +43,9 @@ it("Your work's status lozenge is hidden below sm with max-sm:hidden", () => {
   assert.match(s, /<Lozenge tone=\{column\?\.category\} className="max-sm:hidden">/);
   assert.ok(!/hidden sm:inline-flex/.test(s));
 });
+
+it("the job list keeps the Salary and Applied cells on one line", () => {
+  const s = src("src/components/job/ListView.jsx");
+  assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.salary/);
+  assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.appliedDate/);
+});

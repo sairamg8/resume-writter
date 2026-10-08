@@ -106,8 +106,8 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 <td className="px-3 text-ink">{job.role || '—'}</td>
                 <td className="px-3"><StatusBadge statusId={job.status} /></td>
                 <td className="px-3 text-[13px] text-ink-subtle">{job.location || '—'}</td>
-                <td className="px-3 text-[13px] text-ink-subtle">{job.salary || '—'}</td>
-                <td className="px-3 text-[13px] text-ink-subtle">{job.appliedDate || '—'}</td>
+                <td className="px-3 text-[13px] whitespace-nowrap text-ink-subtle">{job.salary || '—'}</td>
+                <td className="px-3 text-[13px] whitespace-nowrap text-ink-subtle">{job.appliedDate || '—'}</td>
                 <td className="px-3 text-[13px]">
                   {job.deadline ? (() => {
                     // A closed job has nothing to chase: its passed deadline is no longer late.
