@@ -122,10 +122,14 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   );
 }
 
-/** The account's photo (no-referrer) or its initial: the name's first character as written (a whole emoji, not half of one; spaces first are skipped), "U" for a nameless account. */
+/**
+ * The account's photo (no-referrer) or its initial: the name's first character as written (a whole emoji, not half of one; spaces first are skipped), "U" for a nameless account.
+ * A photo that does not load (offline with it out of the cache, a blocked host) falls back to the initial, as the kit's Avatar does; the address that failed is kept, so another account's photo is tried.
+ */
 function Avatar({ user, size }) {
-  return user.photoURL ? (
-    <img src={user.photoURL} alt="" className={`${size} rounded-full`} referrerPolicy="no-referrer" />
+  const [broken, setBroken] = useState(null);
+  return user.photoURL && broken !== user.photoURL ? (
+    <img src={user.photoURL} alt="" className={`${size} rounded-full`} referrerPolicy="no-referrer" onError={() => setBroken(user.photoURL)} />
   ) : (
     <div className={`${size} shrink-0 rounded-full bg-cv-brand-soft text-cv-brand-text flex items-center justify-center font-bold`}>
       {Array.from(user.displayName?.trim() ?? '')[0] || 'U'}

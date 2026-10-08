@@ -10,6 +10,7 @@ import { Lozenge, StatusMenu } from '@/components/tracker/Lozenge';
 import { childrenOf } from '@/utils/boardQuery';
 import { hasRichText, sanitizeRichText } from '@/utils/richText';
 import { copyText } from '@/utils/clipboard';
+import { notSavedMessage } from '@/utils/storageBackup';
 import { issueById, issueKey, statusColumn } from '@/utils/boardModel';
 import { IssueChecklist } from './IssueChecklist';
 import { IssueActivity } from './IssueActivity';
@@ -217,6 +218,12 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
         />
         <IconButton icon={X} label="Close" onClick={onClose} />
       </div>
+      {/* The page's own notice (BoardStorageNotice) is behind this view; every edit made here goes straight to the store, so it says when storage refused one (R2-037). */}
+      {store.persistError && (
+        <p role="alert" className="mx-4 mt-3 rounded-cv-control border border-cv-bad bg-cv-bad-soft px-3 py-2 text-xs text-cv-bad sm:mx-6">
+          {notSavedMessage('boards', store.persistError)}
+        </p>
+      )}
 
       <div className="grid gap-8 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
