@@ -233,7 +233,7 @@ describe('the sidebar’s projects', () => {
  * `drawerOpen()` (the drawer is shown and not on its way out), `drawerLink(text)` (a link in the
  * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
  */
-async function drawerShell(path, { width, entries = [path] } = {}) {
+async function drawerShell(path, { width, rem = 16, entries = [path] } = {}) {
   patchFakeDom(); // the drawer's focus trap queries and moves focus
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
@@ -244,11 +244,13 @@ async function drawerShell(path, { width, entries = [path] } = {}) {
     workspace = useWorkspace();
     return createElement('p', null, name);
   }
-  // A window `width` wide whose (min-width) lists fire `change` when resize() crosses them.
+  // A window `width` wide whose (min-width) lists fire `change` when resize() crosses them. A rem is `rem` px, the
+  // browser's default text size (a media query's rem is that, whatever the page sets), 16 unless the test says.
   let viewport = width;
   const lists = [];
   const matchMedia = (query) => {
-    const min = Number(/\(min-width:\s*(\d+)px\)/.exec(query)?.[1] ?? 0);
+    const asked = /\(min-width:\s*([\d.]+)(px|rem)\)/.exec(query);
+    const min = asked ? Number(asked[1]) * (asked[2] === 'rem' ? rem : 1) : 0;
     const handlers = new Set();
     const list = {
       get matches() { return viewport >= min; },
@@ -358,6 +360,19 @@ describe('R4-APP-03/04: the phone navigation drawer closes on every navigation',
 // tablet turned to landscape), it stayed mounted as a modal, and useHotkeys ignores every shortcut
 // while one is on the page: [, c, / and ? did nothing until the next page.
 describe('R4-APP-06: widening the window past the phone layout closes the drawer', () => {
+  // Tailwind's md is 48rem: with the browser's text size at 24 px it starts at 1152 px, so at 800 px the menu button
+  // (md:hidden) is still shown and the sidebar still hidden. A 768 px query called that "wide" and closed the drawer in
+  // the render that opened it: the button did nothing.
+  it('at 800 px with a 24 px text size (below md) the menu button opens the drawer and it stays', async () => {
+    const s = await drawerShell('/jobs', { width: 800, rem: 24 });
+    try {
+      s.openNav();
+      assert.ok(s.drawerOpen(), 'the drawer closed at once: the window counted as wide below md');
+      await s.resize(1200); // past 48rem = 1152 px
+      assert.ok(!s.drawerOpen(), 'past md the drawer still closes');
+    } finally { await s.view.unmount(); }
+  });
+
   it('opened at 375 px, the window widened to 1024 px: the drawer closes and goes', async () => {
     const s = await drawerShell('/jobs', { width: 375 });
     try {
