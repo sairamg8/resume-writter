@@ -292,7 +292,9 @@ function AtsCheck({ resume, store, getLatest }) {
 
     if (target?.item) {
       const { skills } = skillGroup(target.item);
-      store.updateItem(target.section.id, target.item.id, i => ({ ...i, skills: skills ? `${skills}, ${keyword}` : keyword }));
+      // The chip stays drawn through the dock's pause, so a double press on it comes here twice: the group has it already.
+      const held = skills.split(/[,;\n•|]+/).some((s) => s.trim().toLowerCase() === keyword.toLowerCase());
+      if (!held) store.updateItem(target.section.id, target.item.id, i => ({ ...i, skills: skills ? `${skills}, ${keyword}` : keyword }));
     } else if (target) {
       store.addItem(target.section.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
     } else {
