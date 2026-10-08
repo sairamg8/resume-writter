@@ -220,7 +220,8 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         {/* The template's name as the editor shows it: an id the app does not offer opens as Classic (R2-133). */}
         <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <p className="text-xs sm:text-[13px] text-cv-muted min-w-0">
-            {templateLabel(resume.template)} · {timeAgo(resume.updatedAt)}
+            {/* A record with no edit time (an older or hand-edited one) shows no age, not "NaNd ago". */}
+            {templateLabel(resume.template)}{Number.isFinite(resume.updatedAt) && ` · ${timeAgo(resume.updatedAt)}`}
           </p>
           <Lazy
             load="menu"
