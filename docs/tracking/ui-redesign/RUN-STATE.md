@@ -1,3 +1,5 @@
+**2026-10-08: B5b, B6, B7 (step 1), B8, B9, B10 restyled and pushed (head `9d8bd27`); full gate run 37722106416 to be read; report `batches/B5b-B10-report.md`. Next: B7 step 2 (SectionStylePopover), B11 to B17. Cadence: continuous, no pauses (owner, 2026-10-08).**
+
 **2026-10-07: B5a DONE except bug-hunt and screenshots: full gate 37636926781 green on `01653718`; report `batches/B5a-report.md`. B5b in progress (committed locally, tests being updated; see HANDOFF).**
 
 # UI rebuild: run state and cadence (the resume point; keep it current)
