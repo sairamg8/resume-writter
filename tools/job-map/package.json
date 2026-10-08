@@ -1,0 +1,1 @@
+{ "name": "resume-writter-jobmap", "private": true, "type": "module", "dependencies": { "firebase-admin": "^13.0.0", "playwright": "^1.55.0" } }

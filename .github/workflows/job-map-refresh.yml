@@ -1,0 +1,71 @@
+# Keeps the Job Map's jobs and companies current (tools/job-map). Weekly it re-reads every known board and
+# replaces the owner's `jobmap/*` documents; monthly it also looks for new companies first and commits what it
+# found (discovered.json, unresolved.json, jobs-agg.json) so the next run keeps it. Run it by hand from
+# Actions → job-map-refresh → Run workflow. The upload refuses a crawl with 40% fewer roles than are stored.
+#
+# Needs one repository secret, FIREBASE_SERVICE_ACCOUNT: the JSON key of a Firebase service account
+# (Firebase console → Project settings → Service accounts → Generate new private key). Only the owner can add it.
+name: job-map-refresh
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays: roles
+    - cron: '43 2 1 * *'   # the 1st of the month: new companies, then roles
+  workflow_dispatch:
+    inputs:
+      discover:
+        description: 'Look for new companies first (about 1 hour more)'
+        type: boolean
+        default: false
+      dry:
+        description: 'Build and check, upload nothing'
+        type: boolean
+        default: false
+      force:
+        description: 'Upload even if the crawl found far fewer roles than are stored'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: job-map-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install (the upload needs firebase-admin; the crawl needs no browser)
+        working-directory: tools/job-map
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm install --no-audit --no-fund
+      - name: Refresh
+        working-directory: tools/job-map
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DISCOVER: ${{ (github.event_name == 'schedule' && github.event.schedule == '43 2 1 * *') || inputs.discover }}
+          DRY: ${{ inputs.dry }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          flags=""
+          [ "$DISCOVER" = "true" ] && flags="$flags --discover"
+          [ "$DRY" = "true" ] && flags="$flags --dry"
+          [ "$FORCE" = "true" ] && flags="$flags --force"
+          node refresh.mjs $flags
+      - name: Keep what discovery found
+        if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        run: |
+          git config user.name sairamgudiputi
+          git config user.email sairamgudiputi8@gmail.com
+          git add tools/job-map/discovered.json tools/job-map/unresolved.json tools/job-map/jobs-agg.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(job-map): monthly discovery of companies and boards [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}

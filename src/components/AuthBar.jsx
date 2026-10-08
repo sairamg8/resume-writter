@@ -12,7 +12,10 @@ function GoogleIcon() {
     </svg>
   );
 }
-import { useCallback, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useRef, useState } from 'react';
+
+// A failed load shows no item: the menu works without it.
+const JobMapMenuItem = lazy(() => import('@/pages/JobMap').then((m) => ({ default: m.JobMapMenuItem }), () => ({ default: () => null })));
 
 const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
 
@@ -236,6 +239,8 @@ export default function AuthBar({
               </p>
             )}
             <div className="h-px bg-cv-hairline mx-1.5 my-2" />
+            {/* The Job Map's item, for the accounts the owner allowed: its code and its access check load only when this menu opens. */}
+            <Suspense fallback={null}><JobMapMenuItem user={user} onPick={() => setMenuOpen(false)} className={item} /></Suspense>
             {onShortcuts && (
               <button data-testid="account-shortcuts" onClick={() => { setMenuOpen(false); onShortcuts(); }} className={item}>
                 Keyboard shortcuts <span className="ml-auto text-xs font-medium text-cv-muted">?</span>

@@ -11,7 +11,6 @@ import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
-import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResumeImport'; // not jsonResume.js: its export is the editor's
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
@@ -191,7 +190,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       return;
     }
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       try {
         const parsed = JSON.parse(ev.target.result);
         if (parsed?.personal && Array.isArray(parsed?.sections)) {
@@ -199,13 +198,21 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           setImportError(null);
           // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
           navigate(editorPath(id, normalizeResume(parsed)));
-        } else if (isJsonResume(parsed)) {
-          const converted = jsonResumeToCpwtResume(parsed);
+        } else {
+          // The JSON Resume reader loads when such a file is picked, not at start-up (R2-142; not jsonResume.js: its export is the editor's).
+          const jr = await import('@/utils/jsonResumeImport').catch(() => null);
+          if (!jr) {
+            setImportError('This file needs a part of the app that could not load. Check your connection and try again.');
+            return;
+          }
+          if (!jr.isJsonResume(parsed)) {
+            setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
+            return;
+          }
+          const converted = jr.jsonResumeToCpwtResume(parsed);
           const id = store.importResume(converted, { keep: keeps && importAsOriginal.current });
           setImportError(null);
           navigate(`/resume/${id}`);
-        } else {
-          setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
         }
       } catch {
         setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');

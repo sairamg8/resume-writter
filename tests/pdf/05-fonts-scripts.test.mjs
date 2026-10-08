@@ -3,22 +3,20 @@
 // default font and in a custom font that has the script (R2-010). They used to fall through every
 // registered face to react-pdf's last resort, Helvetica, whose WinAnsi encoding drew mojibake:
 // pdf.js read '王小明 東京大学' as "‹q¬'f" and 'Rocket 🚀 Star' as 'Rocket =€' over 'Star'.
-import { before, after, describe, it } from 'node:test';
+import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, experience, render, renderCover, read, allText, allItems, loadModule, TEMPLATES } from './harness.mjs';
+import { fakeFontsource } from './fake-fontsource.mjs';
 
 before(setup);
 after(teardown);
 
-const CDN = 'https://cdn.jsdelivr.net/npm/@fontsource';
-let online = null;
-async function isOnline() {
-  if (online === null) {
-    online = await fetch(`${CDN}/inter@5/metadata.json`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
-  }
-  return online;
-}
+let cdn;
+before(() => { cdn = fakeFontsource(); });
+after(() => cdn?.restore());
+// A URL the stand-in does not know, or a connection it refused, fails the case that asked for it.
+afterEach(() => cdn?.assertClean());
 
 const fontsOf = (pages) => [...new Set(allItems(pages).map((t) => t.font.replace(/^[A-Z]{6}\+/, '')))];
 // pdf.js may split a run of CJK or RTL glyphs into items with spaces between them: compare without spaces.
@@ -100,16 +98,14 @@ const SAMPLES = {
 
 describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-010)', () => {
   for (const [script, sample] of Object.entries(SAMPLES)) {
-    it(`${script}, default font: the name, the company and the text read back, and nothing is Helvetica`, async (t) => {
-      if (!(await isOnline())) return t.skip('offline');
+    it(`${script}, default font: the name, the company and the text read back, and nothing is Helvetica`, async () => {
       const pages = await renderSample(sample);
       assertPrinted(pages, [sample.name, sample.company, sample.line]);
       assert.ok(allText(pages).includes('Role 1'), 'the Latin text around it still prints');
     });
   }
 
-  it('emoji and other characters beyond U+FFFF print whole, with an ordinary space after them', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('emoji and other characters beyond U+FFFF print whole, with an ordinary space after them', async () => {
     const pages = await renderSample({ name: 'Test Person', company: 'Launch 🚀 Co', line: 'Rocket 🚀 Star ⭐ and ✅ done 𝗕𝗼𝗹𝗱' });
     assertPrinted(pages, ['🚀', 'Star', '⭐', '✅'], /NotoEmoji/);
     // 𝗕𝗼𝗹𝗱 (pasted "bold" letters, U+1D5D5…) comes from Noto Sans Math, which draws the sans and the
@@ -127,8 +123,7 @@ describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-
     }
   });
 
-  it('a long right-to-left bullet reads back line by line in the order it was typed', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('a long right-to-left bullet reads back line by line in the order it was typed', async () => {
     const words = 'פיתחתי מערכת תשלומים חדשה עבור לקוחות הבנק ושיפרתי את זמני התגובה של השרתים בצורה משמעותית מאוד לאורך כל השנה'.split(' ');
     const line = [...words, ...words].join(' ');
     const pages = await renderSample({ name: 'דוד כהן', company: 'בנק הפועלים', line });
@@ -138,8 +133,7 @@ describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-
     assert.deepEqual(read, line.split(' '), 'every wrapped line reads right to left, in order');
   });
 
-  it('Hebrew points and Arabic vowels sit on their letters and read back after them', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('Hebrew points and Arabic vowels sit on their letters and read back after them', async () => {
     const bytes = await render(resume({ personal: { name: 'שָׁלוֹם כהן' }, sections: [experience([{ company: 'مُحَمَّد 2020 Ltd' }])] }));
     assertPrinted(await read(bytes), ['שָׁלוֹם כהן', 'مُحَمَّد']);
     // A mark's offset reached the page ~1/100 as large (textkit scaled it to points, the renderer
@@ -153,8 +147,7 @@ describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-
     }
   });
 
-  it('textWidth (the letterhead fit) measures CJK words and the spaces between them as they print', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('textWidth (the letterhead fit) measures CJK words and the spaces between them as they print', async () => {
     const line = '山田 太郎 東京 大学';
     const r = resume({ sections: [experience([{ description: `<p>${line}</p>` }])] });
     const item = allItems(await read(await render(r))).find((i) => i.str.includes('太郎'));
@@ -166,20 +159,17 @@ describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-
     assert.ok(Math.abs(width - item.w) < 0.05, `textWidth ${width.toFixed(2)} pt, printed ${item.w.toFixed(2)} pt`);
   });
 
-  it('a custom font that has the script draws it: Noto Sans JP prints the Japanese name in Noto Sans JP', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('a custom font that has the script draws it: Noto Sans JP prints the Japanese name in Noto Sans JP', async () => {
     const pages = await renderSample(SAMPLES.japanese, { customFont: 'Noto Sans JP' });
     assertPrinted(pages, [SAMPLES.japanese.name, SAMPLES.japanese.company, SAMPLES.japanese.line], /NotoSansJP/);
   });
 
-  it('a custom font that has the script draws it: IBM Plex Sans Arabic prints the Arabic name in itself', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('a custom font that has the script draws it: IBM Plex Sans Arabic prints the Arabic name in itself', async () => {
     const pages = await renderSample(SAMPLES.arabic, { customFont: 'IBM Plex Sans Arabic' });
     assertPrinted(pages, [SAMPLES.arabic.name, SAMPLES.arabic.company, SAMPLES.arabic.line], /IBMPlexSansArabic/);
   });
 
-  it('Noto Sans Arabic as the custom font draws the Arabic, not Helvetica', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('Noto Sans Arabic as the custom font draws the Arabic, not Helvetica', async () => {
     // Its text layer is the font's own limit: it draws a letter as a dotless skeleton plus a dot
     // glyph, shared by several letters (pdfFontCoverage.js), so only the drawing is asserted here.
     const pages = await renderSample(SAMPLES.arabic, { customFont: 'Noto Sans Arabic' });
@@ -187,8 +177,7 @@ describe('scripts outside the bundled Noto Sans subsets print as themselves (R2-
     assert.ok(allItems(pages).some((i) => /NotoSansArabic/.test(i.font) && /[\u0600-\u06FF]/.test(i.str)), 'Arabic letters are drawn in Noto Sans Arabic');
   });
 
-  it('a picker font with no CJK still prints a Chinese name (Inter + Noto Sans SC)', async (t) => {
-    if (!(await isOnline())) return t.skip('offline');
+  it('a picker font with no CJK still prints a Chinese name (Inter + Noto Sans SC)', async () => {
     const pages = await renderSample(SAMPLES.chinese, { font: 'inter' });
     assertPrinted(pages, [SAMPLES.chinese.name, SAMPLES.chinese.company], /Inter/);
   });
@@ -198,8 +187,7 @@ describe('every template, and its cover letter, prints every script (R2-010)', (
   // The font stack is resolved once per document from all of its text (pdfExportReactPDF), so each
   // template — and the letter, whose text is collected apart — must carry the same fallbacks.
   for (const template of TEMPLATES) {
-    it(`${template}: CJK, Korean, Arabic, Hebrew, Thai and emoji in the header, an entry and the letter`, async (t) => {
-      if (!(await isOnline())) return t.skip('offline');
+    it(`${template}: CJK, Korean, Arabic, Hebrew, Thai and emoji in the header, an entry and the letter`, async () => {
       const r = resume({
         template,
         personal: { name: '王小明', location: '서울' },

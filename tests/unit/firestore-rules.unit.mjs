@@ -21,10 +21,11 @@ const code = rules.replace(/\/\/.*$/gm, '');
 const matches = [...code.matchAll(/match\s+(\S+)\s*\{/g)].map((m) => m[1]);
 const allows = [...code.matchAll(/allow\s+([^:]+):\s*if\s+([^;]+);/g)].map((m) => ({ ops: m[1].split(',').map((s) => s.trim()), cond: m[2].replace(/\s+/g, ' ').trim() }));
 
-test('two rules: an account reaches only its own documents under users/{uid}; a published résumé is got by anyone, written by its owner', () => {
-  assert.deepEqual(matches, ['/databases/{database}/documents', '/users/{uid}/{document=**}', '/public/{shareId}']);
+test('three rules (the Job Map is the owner-allowed one): an account reaches only its own documents under users/{uid}; a published résumé is got by anyone, written by its owner', () => {
+  assert.deepEqual(matches, ['/databases/{database}/documents', '/users/{uid}/{document=**}', '/jobmap/{document}', '/public/{shareId}']);
   assert.deepEqual(allows, [
     { ops: ['read', 'write'], cond: 'request.auth != null && request.auth.uid == uid' },
+    { ops: ['read', 'write'], cond: 'mayUseJobMap()' },
     { ops: ['get'], cond: 'true' },
     { ops: ['create'], cond: 'request.auth != null && isPublishedCopy(request.resource.data)' },
     { ops: ['update'], cond: 'request.auth != null && resource.data.owner == request.auth.uid && isPublishedCopy(request.resource.data)' },

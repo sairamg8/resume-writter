@@ -31,6 +31,8 @@ const ProjectCalendar = page(() => import('@/pages/ProjectCalendar'), 'ProjectCa
 const ProjectList     = page(() => import('@/pages/ProjectList'), 'ProjectList');
 // A published résumé (R2-148), opened from its link by anyone: its page, not the editor's code.
 const PublicResume    = page(() => import('@/pages/PublicResume'), 'PublicResume');
+// The Job Map: open roles across countries, for the accounts the owner allowed (firestore.rules).
+const JobMap          = page(() => import('@/pages/JobMap'), 'JobMap');
 
 /** What shows for the moment a page's code is on its way. */
 export function PageLoading() {
@@ -122,6 +124,7 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
+        <Route path="/job-map"    element={<JobMap auth={auth} />} />
         <Route path="/terms"      element={<TermsPage auth={auth} sync={sync} />} />
         <Route path="/privacy"    element={<PrivacyPage auth={auth} sync={sync} />} />
         {/* A published résumé, read-only, for anyone with its link (R2-148). */}
