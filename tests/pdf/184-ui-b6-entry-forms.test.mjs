@@ -231,7 +231,8 @@ describe('the current box (B6)', () => {
       assert.match(wrap(endMonth).getAttribute('class'), /opacity-40/);
       assert.equal(reactProps(endMonth).value, '', 'it shows nothing while current');
       assert.doesNotMatch(wrap(startMonth).getAttribute('class') ?? '', /pointer-events-none/);
-      const box = t.all().find((e) => e.tagName === 'INPUT' && e.getAttribute('type') === 'checkbox');
+      const box = [...elements(t.label('Currently working here'))].find((e) => e.tagName === 'INPUT');
+      assert.ok(box, 'the checkbox sits inside its label');
       assert.equal(reactProps(box).checked, true);
       t.view.act(() => reactProps(box).onChange({ target: { checked: false } }));
       assert.equal(t.calls[0].current, false);
@@ -245,7 +246,8 @@ describe('the current box (B6)', () => {
       const endMonth = t.all().find((e) => e.getAttribute('aria-label') === 'End Date month');
       assert.doesNotMatch(endMonth.parentNode.parentNode.getAttribute('class') ?? '', /pointer-events-none/);
       assert.equal(reactProps(endMonth).value, 'Jun');
-      const box = t.all().find((e) => e.tagName === 'INPUT' && e.getAttribute('type') === 'checkbox');
+      const box = [...elements(t.label('Currently working here'))].find((e) => e.tagName === 'INPUT');
+      assert.ok(box, 'the checkbox sits inside its label');
       t.view.act(() => reactProps(box).onChange({ target: { checked: true } }));
       assert.equal(t.calls[0].current, true);
     } finally { await t.view.unmount(); }
