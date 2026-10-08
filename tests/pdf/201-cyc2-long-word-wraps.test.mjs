@@ -6,6 +6,7 @@
 //    overflow-wrap: anywhere now (min-content counts the break points, so a flex child shrinks too);
 //  - a toast ("<company> deleted", "Column “…” deleted", "<project> deleted") and a dialog (the confirm's
 //    "Delete <company>?" title and its body) had no break-words, so the word ran under the Dismiss / Close button;
+//  - the "No … match “<what was typed>”" lines of the search box and the Projects table (a link pasted into the box).
 // fake-dom has no layout: the source classes that carry it are read.
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,4 +26,9 @@ it('the notice boxes break inside a long word', () => {
 it('the toast and the dialog break inside a long word', () => {
   assert.match(src('src/components/ui/Toast.jsx'), /'pointer-events-auto flex w-full items-start gap-3 break-words /);
   assert.match(src('src/components/ui/Dialog.jsx'), /'relative flex w-full flex-col overflow-hidden break-words /);
+});
+
+it('the "no match" lines break inside what was typed', () => {
+  assert.match(src('src/components/shell/TopBar.jsx'), /className="px-3 py-3 text-sm break-words text-cv-muted">No issues or projects match/);
+  assert.match(src('src/pages/Boards.jsx'), /className="py-8 text-center text-sm break-words text-cv-faint">No projects match/);
 });
