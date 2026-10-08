@@ -14,7 +14,7 @@
 // How the lead proves the spec can fail (mutation pair, on throw-away commits, then reverted; run
 // playwright: tests/playwright/ui-b4-editor-layout.spec.mjs on each and record both run ids):
 //   M1 (dock a flex sibling below 1100): in src/components/EditorDock.jsx delete the five max-[1099px]:... utilities
-//      (absolute inset-y-0 right-0 z-30 shadow-xl) from the dock's className and in src/pages/Editor.jsx pass
+//      (absolute inset-y-0 right-0 z-30 shadow-pop) from the dock's className and in src/pages/Editor.jsx pass
 //      overlay={false}. At 1024 and 768 the dock is then position: static and the stage is 360 px narrower than with
 //      the dock closed: "overlays below 1100" and "the stage keeps the width it had" go RED. The stored-640 tests are
 //      not what catches this one (they run from 1100 px). The commit before it is GREEN.

@@ -192,7 +192,7 @@ export async function gotoEditor(page, template = 'classic', settingsOverride = 
  */
 export async function gotoDashboard(page) {
   await page.goto('/#/');
-  await page.waitForSelector('.group.bg-white.rounded-2xl', { timeout: 15_000 });
+  await page.waitForSelector('[data-testid="resume-card"]', { timeout: 15_000 });
 }
 
 /**
@@ -206,7 +206,7 @@ export async function getPreviewText(page) {
  * Open a resume from the dashboard by template name (e.g. "Classic").
  */
 export async function openResumeByName(page, name) {
-  const card = page.locator(`.group.bg-white.rounded-2xl:has-text("${name}")`).first();
+  const card = page.locator(`[data-testid="resume-card"]:has-text("${name}")`).first();
   await card.locator('button:has-text("Edit")').click();
   await page.waitForSelector('button:has-text("Export")', { timeout: 15_000 });
 }

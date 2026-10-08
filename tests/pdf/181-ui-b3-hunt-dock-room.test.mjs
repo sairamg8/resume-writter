@@ -10,7 +10,7 @@ before(prepare);
 after(finish);
 
 const tokens = (el) => attr(el, 'class').split(/\s+/).filter(Boolean);
-const overlaid = (t) => ['absolute', 'z-30', 'shadow-xl'].every((c) => tokens(t.byTid('dock-design')).includes(c));
+const overlaid = (t) => ['absolute', 'z-30', 'shadow-pop'].every((c) => tokens(t.byTid('dock-design')).includes(c));
 const closeShown = (t) => !tokens(t.byTid('dock-close')).includes('min-[1100px]:hidden');
 
 describe('the width from which the dock sits beside the preview', () => {

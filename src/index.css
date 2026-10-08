@@ -253,6 +253,15 @@ body {
   }
 }
 
+/* The toast stack is fixed to the same corner (md and up: 360 px wide, 1.5 rem from the right, z-90), so a notice hid the chip.
+   While a notice is up the chip moves left of it (360 px + the stack's 1.5 rem + the chip's own 1 rem), with or without a dock.
+   After the dock rule above, same specificity, so it wins when both apply. */
+@media (min-width: 768px) {
+  body:has([aria-label="Notifications"] > *) .cv-preview-chip {
+    right: calc(360px + 2.5rem);
+  }
+}
+
 /* A notice (ui/Toast, portalled to the body) is drawn above the editor's Edit | Preview | Design pill on a phone: both sit at the
    window's bottom (16 px), so a notice covered the pill. The media query is the exact complement of the pill's own (useIsMobile(768):
    not (min-width: 768px)), so no width has the pill without the lift. Outside a layer: it outranks the stack's bottom-4 utility. */

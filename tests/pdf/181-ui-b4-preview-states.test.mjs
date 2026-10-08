@@ -89,6 +89,16 @@ describe('the Updating chip: while a rebuild runs over pages already shown', () 
   });
 });
 
+describe('the chip and the notice stack (L3)', () => {
+  it('the stylesheet moves the chip left of the toast stack while a notice is up, from md, after the dock rule', () => {
+    const css = readFileSync(path.join(ROOT, 'src/index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const at = css.indexOf('body:has([aria-label="Notifications"] > *) .cv-preview-chip');
+    assert.ok(at > css.indexOf('.cv-preview-chip'), 'a rule for the chip while a notice is up, after the dock rule');
+    assert.match(css.slice(at, at + 200), /right:\s*calc\(360px \+ 2\.5rem\)/);
+    assert.match(css.slice(css.lastIndexOf('@media', at), at), /^@media \(min-width: 768px\)\s*\{\s*$/);
+  });
+});
+
 describe('Preview failed, with Retry', () => {
   it('says why in the red notice, and Retry builds again with the placeholder in the meantime', async () => {
     const [v0] = versions(1);

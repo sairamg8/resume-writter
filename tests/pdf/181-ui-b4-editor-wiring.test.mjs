@@ -14,7 +14,7 @@ after(finish);
 
 const source = (file) => fs.readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8');
 const panelPx = (t) => findTid(t.live.tree, 'editor-sidebar').props.style?.width;
-const overlaid = (t) => ['absolute', 'z-30', 'shadow-xl'].every((c) => attr(t.byTid('dock-design'), 'class').split(/\s+/).includes(c));
+const overlaid = (t) => ['absolute', 'z-30', 'shadow-pop'].every((c) => attr(t.byTid('dock-design'), 'class').split(/\s+/).includes(c));
 const resizeTo = (t, width) => { window.innerWidth = width; t.act(() => window.dispatchEvent({ type: 'resize' })); };
 
 describe('the editor panel with a dock open (the Editor calls usePanelResize with its dock)', () => {

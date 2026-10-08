@@ -160,7 +160,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
           ) : <ResumeThumbnail resume={resume} accent={accent} />}
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 no-hover:hidden">
-          <span className="px-4 py-2 bg-white rounded-lg shadow-md text-sm font-semibold text-cv-ink">Open</span>
+          <span className="px-4 py-2 bg-cv-surface rounded-cv-control shadow-md text-sm font-semibold text-cv-ink">Open</span>
         </div>
       </div>
 

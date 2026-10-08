@@ -48,7 +48,7 @@ describe('the dock\'s classes at each window width', () => {
     for (const width of [1100, 1280, 1920]) {
       const on = activeAt(asideClasses, width);
       assert.ok(on.has('shrink-0') && on.has('w-[360px]'), `${width}: 360 px and shrink-0`);
-      for (const token of ['absolute', 'fixed', 'inset-y-0', 'right-0', 'z-30', 'shadow-xl']) assert.ok(!on.has(token), `${width}: ${token} is for the overlay`);
+      for (const token of ['absolute', 'fixed', 'inset-y-0', 'right-0', 'z-30', 'shadow-pop']) assert.ok(!on.has(token), `${width}: ${token} is for the overlay`);
       assert.ok(activeAt(closeClasses, width).has('hidden'), `${width}: the close X is hidden (the Design button toggles it)`);
     }
   });

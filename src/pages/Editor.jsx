@@ -191,7 +191,7 @@ export function Editor({ store, auth, sync }) {
         <div className="hidden md:block xl:hidden order-4 basis-full h-0" />
       </div>
       {/* The alerts sit between the bar and the content row, full width: an export error must show in the preview-only layout too (the sidebar is hidden there, and that is where the Export menu is). */}
-      <div data-testid="editor-alerts" className="shrink-0 pb-2 empty:hidden">
+      <div data-testid="editor-alerts" className="shrink-0 pb-2 empty:hidden max-md:max-h-[35vh] max-md:overflow-y-auto">
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={dismissExportError} persistError={store.persistReason} importNotice={importNotice.notice} onDismissImport={dismissImport} />
       </div>
       <div className="relative flex-1 min-h-0 flex overflow-hidden">
@@ -201,7 +201,7 @@ export function Editor({ store, auth, sync }) {
           isMobile
             ? (mobileTab === 'editor' ? 'flex-1 min-w-0 flex flex-col' : 'hidden')
             : (layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1 min-w-0 flex flex-col' : 'flex flex-col')
-        } bg-white overflow-hidden shadow-sm min-h-0 h-full`}
+        } bg-cv-surface overflow-hidden shadow-sm min-h-0 h-full`}
         style={!isMobile && layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
       >
         <EditorTabContent activeTab={doc}>

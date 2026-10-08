@@ -32,6 +32,11 @@ describe('the alerts row', () => {
     assert.ok(on.includes('empty:hidden'), 'an empty row draws nothing, so the gap is not drawn either');
     assert.ok(on.includes('shrink-0'));
   });
+  it('is capped on a phone and scrolls inside the cap, so a stack of alerts leaves the editor room (L6)', () => {
+    const on = classesOf('pages/Editor.jsx', 'data-testid="editor-alerts"');
+    assert.ok(on.includes('max-md:max-h-[35vh]'), `a height cap below md: ${on.join(' ')}`);
+    assert.ok(on.includes('max-md:overflow-y-auto'), 'scrolls inside the cap');
+  });
 });
 
 describe('the stage toolbar runs to the edges of the preview box', () => {
