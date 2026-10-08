@@ -33,6 +33,9 @@ function writeDraft(key, form, owner) {
 function clearDraft(key) {
   try { sessionStorage.removeItem(key); } catch { /* nothing stored */ }
 }
+// The job page a saved new job opens on takes the place of the Add job page in the history: Back from
+// it went to a blank Add job form, one press short of the tracker.
+const ADDED = { replace: true };
 
 /**
  * Holds the browser's Back and every in-app link (a breadcrumb, the sidebar, the top bar, quick
@@ -133,9 +136,9 @@ export function JobForm({ store }) {
       askingRef.current = false;
     }
   };
-  function leaveTo(path) {
+  function leaveTo(path, options) {
     leavingRef.current = true;
-    navigate(path);
+    navigate(path, options);
   }
   async function leave() {
     if (askingRef.current) return; // the question already up answers for this way out too
@@ -185,7 +188,7 @@ export function JobForm({ store }) {
 
   function handleSave() {
     if (!canSave || gone || accountLeft) return;
-    if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addOnce()}`); return; }
+    if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addOnce()}`, ADDED); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
     if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${encodeURIComponent(id)}`); }
   }
