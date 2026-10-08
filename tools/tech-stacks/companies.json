@@ -1,0 +1,353 @@
+{
+  "_comment": "ats = greenhouse | lever; slug = the company's board id (boards.greenhouse.io/<slug>, jobs.lever.co/<slug>). A wrong or retired slug is reported as 'not found' and skipped. Companies on Workday/iCIMS/custom ATS (most banks, Amazon, Google, Microsoft, Walmart) have no public API and are not covered.",
+  "companies": [
+    {
+      "name": "Stripe",
+      "ats": "greenhouse",
+      "slug": "stripe",
+      "sector": "fintech"
+    },
+    {
+      "name": "Airbnb",
+      "ats": "greenhouse",
+      "slug": "airbnb",
+      "sector": "travel"
+    },
+    {
+      "name": "Dropbox",
+      "ats": "greenhouse",
+      "slug": "dropbox",
+      "sector": "software"
+    },
+    {
+      "name": "Cloudflare",
+      "ats": "greenhouse",
+      "slug": "cloudflare",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Datadog",
+      "ats": "greenhouse",
+      "slug": "datadog",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Figma",
+      "ats": "greenhouse",
+      "slug": "figma",
+      "sector": "software"
+    },
+    {
+      "name": "Discord",
+      "ats": "greenhouse",
+      "slug": "discord",
+      "sector": "social"
+    },
+    {
+      "name": "Coinbase",
+      "ats": "greenhouse",
+      "slug": "coinbase",
+      "sector": "fintech"
+    },
+    {
+      "name": "Robinhood",
+      "ats": "greenhouse",
+      "slug": "robinhood",
+      "sector": "fintech"
+    },
+    {
+      "name": "Databricks",
+      "ats": "greenhouse",
+      "slug": "databricks",
+      "sector": "data"
+    },
+    {
+      "name": "Instacart",
+      "ats": "greenhouse",
+      "slug": "instacart",
+      "sector": "retail"
+    },
+    {
+      "name": "Lyft",
+      "ats": "greenhouse",
+      "slug": "lyft",
+      "sector": "mobility"
+    },
+    {
+      "name": "Pinterest",
+      "ats": "greenhouse",
+      "slug": "pinterest",
+      "sector": "social"
+    },
+    {
+      "name": "Reddit",
+      "ats": "greenhouse",
+      "slug": "reddit",
+      "sector": "social"
+    },
+    {
+      "name": "Twilio",
+      "ats": "greenhouse",
+      "slug": "twilio",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Okta",
+      "ats": "greenhouse",
+      "slug": "okta",
+      "sector": "security"
+    },
+    {
+      "name": "MongoDB",
+      "ats": "greenhouse",
+      "slug": "mongodb",
+      "sector": "data"
+    },
+    {
+      "name": "Elastic",
+      "ats": "greenhouse",
+      "slug": "elastic",
+      "sector": "data"
+    },
+    {
+      "name": "GitLab",
+      "ats": "greenhouse",
+      "slug": "gitlab",
+      "sector": "software"
+    },
+    {
+      "name": "Asana",
+      "ats": "greenhouse",
+      "slug": "asana",
+      "sector": "software"
+    },
+    {
+      "name": "Airtable",
+      "ats": "greenhouse",
+      "slug": "airtable",
+      "sector": "software"
+    },
+    {
+      "name": "Brex",
+      "ats": "greenhouse",
+      "slug": "brex",
+      "sector": "fintech"
+    },
+    {
+      "name": "Samsara",
+      "ats": "greenhouse",
+      "slug": "samsara",
+      "sector": "iot"
+    },
+    {
+      "name": "Anthropic",
+      "ats": "greenhouse",
+      "slug": "anthropic",
+      "sector": "ai"
+    },
+    {
+      "name": "Scale AI",
+      "ats": "greenhouse",
+      "slug": "scaleai",
+      "sector": "ai"
+    },
+    {
+      "name": "Vercel",
+      "ats": "greenhouse",
+      "slug": "vercel",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Webflow",
+      "ats": "greenhouse",
+      "slug": "webflow",
+      "sector": "software"
+    },
+    {
+      "name": "Squarespace",
+      "ats": "greenhouse",
+      "slug": "squarespace",
+      "sector": "software"
+    },
+    {
+      "name": "Duolingo",
+      "ats": "greenhouse",
+      "slug": "duolingo",
+      "sector": "education"
+    },
+    {
+      "name": "Toast",
+      "ats": "greenhouse",
+      "slug": "toast",
+      "sector": "fintech"
+    },
+    {
+      "name": "Affirm",
+      "ats": "greenhouse",
+      "slug": "affirm",
+      "sector": "fintech"
+    },
+    {
+      "name": "Carta",
+      "ats": "greenhouse",
+      "slug": "carta",
+      "sector": "fintech"
+    },
+    {
+      "name": "Gusto",
+      "ats": "greenhouse",
+      "slug": "gusto",
+      "sector": "software"
+    },
+    {
+      "name": "Block",
+      "ats": "greenhouse",
+      "slug": "block",
+      "sector": "fintech"
+    },
+    {
+      "name": "Roblox",
+      "ats": "greenhouse",
+      "slug": "roblox",
+      "sector": "gaming"
+    },
+    {
+      "name": "Riot Games",
+      "ats": "greenhouse",
+      "slug": "riotgames",
+      "sector": "gaming"
+    },
+    {
+      "name": "Epic Games",
+      "ats": "greenhouse",
+      "slug": "epicgames",
+      "sector": "gaming"
+    },
+    {
+      "name": "Peloton",
+      "ats": "greenhouse",
+      "slug": "peloton",
+      "sector": "consumer"
+    },
+    {
+      "name": "Twitch",
+      "ats": "greenhouse",
+      "slug": "twitch",
+      "sector": "media"
+    },
+    {
+      "name": "New Relic",
+      "ats": "greenhouse",
+      "slug": "newrelic",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "PagerDuty",
+      "ats": "greenhouse",
+      "slug": "pagerduty",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Fastly",
+      "ats": "greenhouse",
+      "slug": "fastly",
+      "sector": "infrastructure"
+    },
+    {
+      "name": "Intercom",
+      "ats": "greenhouse",
+      "slug": "intercom",
+      "sector": "software"
+    },
+    {
+      "name": "Monzo",
+      "ats": "greenhouse",
+      "slug": "monzo",
+      "sector": "fintech"
+    },
+    {
+      "name": "Wise",
+      "ats": "greenhouse",
+      "slug": "wise",
+      "sector": "fintech"
+    },
+    {
+      "name": "Spotify",
+      "ats": "lever",
+      "slug": "spotify",
+      "sector": "media"
+    },
+    {
+      "name": "Palantir",
+      "ats": "lever",
+      "slug": "palantir",
+      "sector": "data"
+    },
+    {
+      "name": "Mistral AI",
+      "ats": "lever",
+      "slug": "mistral",
+      "sector": "ai"
+    },
+    {
+      "name": "Zoox",
+      "ats": "lever",
+      "slug": "zoox",
+      "sector": "mobility"
+    },
+    {
+      "name": "Binance",
+      "ats": "lever",
+      "slug": "binance",
+      "sector": "fintech"
+    },
+    {
+      "name": "Kraken",
+      "ats": "lever",
+      "slug": "kraken123",
+      "sector": "fintech"
+    },
+    {
+      "name": "Ripple",
+      "ats": "greenhouse",
+      "slug": "ripple",
+      "sector": "fintech"
+    },
+    {
+      "name": "Medium",
+      "ats": "greenhouse",
+      "slug": "medium",
+      "sector": "media"
+    },
+    {
+      "name": "Waymo",
+      "ats": "greenhouse",
+      "slug": "waymo",
+      "sector": "mobility"
+    },
+    {
+      "name": "Nuro",
+      "ats": "greenhouse",
+      "slug": "nuro",
+      "sector": "mobility"
+    },
+    {
+      "name": "Verkada",
+      "ats": "greenhouse",
+      "slug": "verkada",
+      "sector": "iot"
+    },
+    {
+      "name": "Chime",
+      "ats": "greenhouse",
+      "slug": "chime",
+      "sector": "fintech"
+    },
+    {
+      "name": "SoFi",
+      "ats": "greenhouse",
+      "slug": "sofi",
+      "sector": "fintech"
+    }
+  ]
+}
