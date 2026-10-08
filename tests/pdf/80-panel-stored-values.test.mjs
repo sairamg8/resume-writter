@@ -18,7 +18,7 @@ import { drawing } from './extractors.mjs';
 before(setup);
 after(teardown);
 
-const ACTIVE = 'bg-blue-600';
+const ACTIVE = 'bg-cv-brand'; // a whole class name: bg-cv-brand-soft is not the active chip
 
 /** Each chip in `html` under the label `after`, up to the next label: [its text, active?]. */
 function chipsAfter(html, label) {
@@ -28,7 +28,7 @@ function chipsAfter(html, label) {
   const end = rest.search(/<p[\s>]/);
   const part = end < 0 ? rest : rest.slice(0, end);
   return [...part.matchAll(/<button[^>]*class="([^"]*)"[^>]*>(.*?)<\/button>/g)]
-    .map(([, cls, text]) => [text.replace(/<!-- -->/g, ''), cls.includes(ACTIVE)]);
+    .map(([, cls, text]) => [text.replace(/<!-- -->/g, ''), cls.split(/\s+/).includes(ACTIVE)]);
 }
 const activeChip = (html, label) => chipsAfter(html, label)?.filter(([, on]) => on).map(([text]) => text);
 

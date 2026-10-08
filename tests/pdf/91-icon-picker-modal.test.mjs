@@ -127,7 +127,7 @@ describe('the header icon picker (R2-157)', () => {
       assert.deepEqual(view.settings().customContactIcons, { phone: 'pack:filled', github: 'icon:terminal', email: 'icon:send' });
       // Opened again, it shows the pick as the current one, and offers to take it off.
       view.choose('email');
-      assert.ok(view.inPicker('Paper Plane').className.includes('border-blue-500'), 'Paper Plane marked');
+      assert.ok(view.inPicker('Paper Plane').className.split(/\s+/).includes('border-cv-brand'), 'Paper Plane marked');
       assert.ok(view.inPicker('Reset to Default'));
     } finally { await view.unmount(); }
   });

@@ -244,7 +244,7 @@ async function headerPanel(template, settings) {
   const style = {};
   // The three Style chips, by their "⊕ Icon" / "• Bullet" / "| Bar" labels; true = the active one.
   for (const [, cls, label] of html.matchAll(/<button class="([^"]*)">[⊕•|] ([A-Za-z]+)<\/button>/g)) {
-    style[label] = cls.includes('bg-blue-600');
+    style[label] = cls.split(/\s+/).includes('bg-cv-brand');
   }
   return { style, iconControls: html.includes('>Icon set<') && html.includes('>Icon size<') };
 }
