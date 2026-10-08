@@ -90,7 +90,8 @@ export function Editor({ store, auth, sync }) {
   const acts = useStableActions(store);
   const keptDesigns = useKept(designs);
   // The gallery draws from the template and settings only, and a pick reads the whole résumé at the click (getResume).
-  const galleryResume = useMemo(() => ({ id: resume.id, template: resume.template, settings: resume.settings }), [resume.id, resume.template, resume.settings]);
+  // (No résumé at all — a stale address on an empty list — is the page's null below, and useOpenResume's way back to the dashboard.)
+  const galleryResume = useMemo(() => (resume ? { id: resume.id, template: resume.template, settings: resume.settings } : null), [resume?.id, resume?.template, resume?.settings]);
   const latestResume = useRef(resume);
   useEffect(() => { latestResume.current = resume; });
   const getResume = useCallback(() => latestResume.current, []);
