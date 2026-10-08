@@ -42,7 +42,9 @@ describe('Export follows the open document', () => {
       assert.ok(labels(t).includes('Export Cover Letter PDF'), labels(t).join(' | '));
       await t.press('doc-switch-resume');
       assert.equal(t.header().exportMenu.letterTab, false);
-      assert.ok(labels(t).includes('Export PDF'), labels(t).join(' | '));
+      // The menu is drawn from the header's props in the commit after the render that recorded them; under the full
+      // suite's load that commit came a moment after `press` settled (one red in a full gate, green alone and on re-run).
+      await until(() => labels(t).includes('Export PDF'), `the menu names the résumé's export: ${labels(t).join(' | ')}`);
       await t.press('doc-switch-letter');
       assert.equal(t.header().exportMenu.letterTab, true);
     } finally { await t.close(); }
