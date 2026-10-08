@@ -37,8 +37,6 @@ export function Editor({ store, auth, sync }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  useOpenResume(store, id);
-
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
@@ -46,6 +44,10 @@ export function Editor({ store, auth, sync }) {
   // ?dock=): the editor panel is the document's content only, the dock sits right of the preview. The preview and
   // Export follow the document; Design and ATS belong to the résumé, so a dock opened from the letter switches to it.
   const { doc, dock, setDoc, setDock } = useEditorTab();
+  // After useEditorTab, whose effect rewrites an old address (?tab=design) in place: effects run in call order and the
+  // later navigation wins. Before it, an old link to a résumé this browser does not hold was sent home and then
+  // rewritten back to its own address, which left a blank page with no way out.
+  useOpenResume(store, id);
   // What is open on the Résumé document lives here, so it survives a trip to the letter or a dock.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);

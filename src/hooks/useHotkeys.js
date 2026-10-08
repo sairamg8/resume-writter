@@ -37,7 +37,12 @@ export function matchesHotkey(event, combo, isMac = false) {
   if (key !== spec.key) return false;
   const wantMeta = spec.meta || (spec.mod && isMac);
   const wantCtrl = spec.ctrl || (spec.mod && !isMac);
-  if (!!event.metaKey !== wantMeta || !!event.ctrlKey !== wantCtrl || !!event.altKey !== spec.alt) return false;
+  // A symbol made with Alt is the character the layout gave: '[' is AltGr+8 on a German keyboard (Windows reports
+  // Ctrl+Alt) and Option+5 on a German Mac, '/' and '?' are AltGr keys on a Brazilian one. The key already says
+  // which character came out, so those modifiers are not a command.
+  const madeWithAlt = !!event.altKey && !spec.alt && !wantCtrl && !wantMeta && key.length === 1 && !/[a-z0-9]/.test(key);
+  if (!!event.metaKey !== wantMeta) return false;
+  if (!madeWithAlt && (!!event.ctrlKey !== wantCtrl || !!event.altKey !== spec.alt)) return false;
   const letter = /^[a-z]$/.test(spec.key);
   const named = spec.key.length > 1;
   if ((letter || named || spec.shift) && !!event.shiftKey !== spec.shift) return false;
