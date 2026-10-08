@@ -30,6 +30,12 @@ function LetterFallback({ asked, make }) {
   return null;
 }
 
+/** The import dialog's pending element: while it shows, Import says it is opening. */
+function Opening({ on }) {
+  useEffect(() => { on(true); return () => on(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 const BUTTON = 'inline-flex items-center gap-2 h-[38px] px-3.5 rounded-[10px] text-sm font-semibold whitespace-nowrap transition-colors';
 const IMPORT_BUTTON = `${BUTTON} border border-cv-hairline bg-cv-surface text-cv-ink hover:bg-cv-sunken`;
 const PRIMARY_BUTTON = `${BUTTON} bg-cv-brand text-white hover:bg-cv-brand-text`;
@@ -69,6 +75,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // and is disabled, and a second pick meanwhile is ignored — the ref catches two in the same tick.
   const [importing, setImporting] = useState(false);
   const importBusy = useRef(false);
+  // The dialog's code still on its way (Opening): Import says so, and a second tap is not offered.
+  const [opening, setOpening] = useState(false);
   // A read that ends after the Dashboard is gone still imports, but no longer drags the user back.
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -251,11 +259,11 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
               onClick={() => { setImportUsed(true); setImportOpen(true); }}
               onMouseEnter={() => warm('import')}
               onFocus={() => warm('import')}
-              disabled={importing}
+              disabled={importing || opening}
               className={`${IMPORT_BUTTON} disabled:opacity-60`}
               title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}
             >
-              <Upload size={16} /> {importing ? 'Reading…' : 'Import'}
+              <Upload size={16} /> {importing ? 'Reading…' : opening ? 'Opening…' : 'Import'}
             </button>
             <button onClick={startLetter} onMouseEnter={() => warm('letter')} onFocus={() => warm('letter')} className={IMPORT_BUTTON}>
               <MailIcon size={16} /> New Cover
@@ -362,6 +370,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       {importUsed && (
         <Lazy
           load="import"
+          pending={<Opening on={setOpening} />}
           fallback={() => <ImportFallback asked={importOpen} pick={() => { setImportOpen(false); pickImport(false); }} />}
           isOpen={importOpen}
           keeps={keeps}
