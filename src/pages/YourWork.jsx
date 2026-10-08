@@ -85,7 +85,7 @@ export function YourWork() {
   const row = (r, extra = {}) => <WorkRow key={`${r.board.id}-${r.issue.id}`} row={r} onOpen={() => route.open(r.key)} onDone={() => markDone(r)} {...extra} />;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader title="Your work" subtitle={open ? `${open} issue${open === 1 ? '' : 's'} need attention across ${store.boards.length} project${store.boards.length === 1 ? '' : 's'}` : undefined} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex flex-col gap-6 px-4 py-4 md:px-8">

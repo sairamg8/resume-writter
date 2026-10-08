@@ -96,7 +96,7 @@ export function JobDetail({ store }) {
   const statuses = JOB_STATUSES.map((s) => ({ id: s.id, name: s.label, category: jobTone(s.id) }));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         breadcrumbs={[{ label: 'Job Tracker', to: '/jobs' }, { label: job.company || 'Untitled Company' }]}
         title={job.company || 'Untitled Company'}
@@ -163,7 +163,9 @@ export function JobDetail({ store }) {
           )}
         </div>
 
-        <aside aria-label="Job details" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
+        {/* lg:top-40 (160 px): the page header is sticky from md and about 140 px tall with its tabs, and a sticky
+            top is measured from the scroll box's top edge, so top-4 parked the box's first 120 px under the header. */}
+        <aside aria-label="Job details" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-40 lg:self-start">
           <StatusMenu value={job.status} options={statuses} onChange={(status) => set('status', status)} className="self-start" />
           <section className="rounded-cv-card border border-cv-hairline">
             <h2 className="border-b border-cv-hairline px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>

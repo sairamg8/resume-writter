@@ -254,7 +254,7 @@ export function BoardSettings() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <ProjectHeader board={board} />
       {/* Left-aligned under the header at its padding (px-4, md:px-8), as every other project view:
           a centred column drifted up to 300 px right of the header on a wide screen (R4-DVIS-05). */}

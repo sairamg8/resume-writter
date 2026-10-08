@@ -54,7 +54,7 @@ export function ProjectSummary() {
   const base = `/boards/${encodeURIComponent(board.id)}`;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex flex-1 flex-col gap-4 bg-cv-sunken px-4 py-6 md:px-8">

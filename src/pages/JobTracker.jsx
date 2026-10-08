@@ -137,7 +137,7 @@ export function JobTracker({ store }) {
   const open = id => navigate(`/jobs/${encodeURIComponent(id)}`);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Job Tracker"
         subtitle={`${jobs.length} application${jobs.length === 1 ? '' : 's'} tracked`}
