@@ -79,7 +79,7 @@ export function InlineEdit({
       'aria-label': label,
       onBlur: () => finish(true),
       onKeyDown,
-      className: cx(BOX, 'block border-brand bg-white text-slate-900 outline-none ring-2 ring-brand/25', className, inputClassName),
+      className: cx(BOX, 'block border-brand bg-cv-surface text-cv-ink outline-none ring-2 ring-brand/25', className, inputClassName),
     };
     return multiline
       ? <textarea {...shared} rows={1} onChange={(e) => { setDraft(e.target.value); fit(e.target); }} className={cx(shared.className, 'resize-none overflow-hidden')} />
@@ -88,7 +88,7 @@ export function InlineEdit({
 
   const empty = !String(value ?? '').trim();
   if (disabled) {
-    return <span className={cx('block', empty && 'text-slate-400', multiline && 'whitespace-pre-wrap', className)}>{empty ? placeholder : value}</span>;
+    return <span className={cx('block', empty && 'text-cv-faint', multiline && 'whitespace-pre-wrap', className)}>{empty ? placeholder : value}</span>;
   }
   return (
     <button
@@ -97,8 +97,8 @@ export function InlineEdit({
       onClick={start}
       className={cx(
         BOX, 'block cursor-text border-transparent text-left transition-colors duration-150',
-        'hover:bg-slate-100 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25',
-        empty ? 'text-slate-400' : 'text-inherit', multiline && 'whitespace-pre-wrap', className,
+        'hover:bg-cv-sunken focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25',
+        empty ? 'text-cv-faint' : 'text-inherit', multiline && 'whitespace-pre-wrap', className,
       )}
     >
       {empty ? placeholder : value}

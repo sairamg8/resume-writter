@@ -61,7 +61,7 @@ describe('Button and IconButton', () => {
   it('every interactive kit control wears the focus ring', () => {
     for (const out of [html(h(ui.Button, null, 'A')), html(h(ui.IconButton, { icon: Icon, label: 'More' }))]) {
       assert.match(out, /focus-visible:ring-2/);
-      assert.match(out, /focus-visible:ring-indigo-500\/60/);
+      assert.match(out, /focus-visible:ring-cv-brand\/60/);
     }
   });
 
@@ -111,7 +111,7 @@ describe('fields', () => {
   it('InlineEdit shows its value as a button that says what it edits', () => {
     const out = html(h(ui.InlineEdit, { value: 'Life admin', label: 'Project name', onCommit: () => {} }));
     assert.match(out, /<button type="button"[^>]*>Life admin<span class="sr-only">, edit Project name<\/span><\/button>/);
-    assert.match(html(h(ui.InlineEdit, { value: '  ', placeholder: 'Add a title', onCommit: () => {} })), /text-slate-400[^>]*>Add a title/);
+    assert.match(html(h(ui.InlineEdit, { value: '  ', placeholder: 'Add a title', onCommit: () => {} })), /text-cv-faint[^>]*>Add a title/);
   });
 });
 

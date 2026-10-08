@@ -39,7 +39,7 @@ export function SegmentedControl({ value, onChange, options, iconOnly = false, s
       role="radiogroup"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className={cx('inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200/60', className)}
+      className={cx('inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-cv-sunken p-0.5 ring-1 ring-inset ring-cv-hairline', className)}
     >
       {options.map((option, index) => {
         const checked = option.value === value;
@@ -59,8 +59,8 @@ export function SegmentedControl({ value, onChange, options, iconOnly = false, s
               "after:absolute after:content-[''] after:-inset-y-1 after:inset-x-0 pointer-coarse:after:-inset-y-2",
               size === 'sm' ? 'h-7 text-xs' : 'h-8 text-[13px]',
               iconOnly ? (size === 'sm' ? 'w-7' : 'w-8') : 'px-2.5',
-              checked ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-900',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
+              checked ? 'bg-cv-surface text-cv-ink ring-1 ring-cv-hairline' : 'text-cv-faint hover:text-cv-ink',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60',
             )}
           >
             {Icon && <Icon size={15} aria-hidden="true" />}

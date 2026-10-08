@@ -8,14 +8,14 @@ export function tabClass(selected) {
     'relative inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md px-1 text-[13px] font-medium transition-colors duration-150',
     'after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:transition-colors after:duration-150',
     'pointer-coarse:h-11',
-    selected ? 'text-brand after:bg-brand' : 'text-slate-500 hover:text-slate-900 after:bg-transparent hover:after:bg-slate-300',
+    selected ? 'text-brand after:bg-brand' : 'text-cv-faint hover:text-cv-ink after:bg-transparent hover:after:bg-cv-field',
     FOCUS_RING, 'focus-visible:ring-offset-0',
   );
 }
 
 /** A tab's count: "Comments 3". */
 export function TabCount({ children }) {
-  return <span className="rounded-full bg-slate-100 px-1.5 text-[11px] font-semibold leading-4 text-slate-600">{children}</span>;
+  return <span className="rounded-full bg-cv-sunken px-1.5 text-[11px] font-semibold leading-4 text-cv-muted">{children}</span>;
 }
 
 /** The ids tying tab `value` of the tab list `id` to its panel. */

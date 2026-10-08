@@ -84,7 +84,7 @@ export function Tooltip({ content, shortcut, placement = 'top', disabled = false
             id={id}
             role="tooltip"
             style={style}
-            className="pointer-events-none z-[80] flex max-w-64 items-center gap-2 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium leading-5 text-white shadow-lg animate-ui-fade-in"
+            className="pointer-events-none z-[80] flex max-w-64 items-center gap-2 rounded-md bg-cv-ink px-2 py-1 text-xs font-medium leading-5 text-white shadow-pop animate-ui-fade-in"
           >
             <span>{content}</span>
             {shortcut && <Kbd combo={shortcut} tone="dark" />}

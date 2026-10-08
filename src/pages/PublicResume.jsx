@@ -71,7 +71,7 @@ export function PublicResume({ io = firebasePublicIo }) {
   }[view.state];
 
   return (
-    <div className="min-h-screen bg-[#f5f3ef] flex flex-col items-center py-6 px-2 sm:px-4">
+    <div className="min-h-screen bg-cv-ground flex flex-col items-center py-6 px-2 sm:px-4">
       {view.state === 'ready' ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-center gap-3">

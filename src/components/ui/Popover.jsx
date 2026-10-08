@@ -107,7 +107,7 @@ export function Popover({
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             className={cx(
-              'z-[70] flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl outline-none animate-ui-pop-in',
+              'z-[70] flex flex-col overflow-hidden rounded-cv-card border border-cv-hairline bg-cv-surface shadow-pop outline-none animate-ui-pop-in',
               className,
             )}
           >

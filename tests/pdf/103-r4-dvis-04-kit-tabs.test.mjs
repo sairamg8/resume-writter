@@ -70,7 +70,7 @@ it('a job page\'s tabs wear the kit\'s tabClass, and the Tasks count is the kit\
     assert.equal(count.textContent, '2');
     const kitCount = renderToStaticMarkup(h(TabCount, null, 2)).match(/class="([^"]*)"/)[1];
     assert.deepEqual(classOf(count), tokens(kitCount), 'the kit\'s tab count');
-    assert.ok(classOf(count).includes('leading-4') && classOf(count).includes('bg-slate-100'));
+    assert.ok(classOf(count).includes('leading-4') && classOf(count).includes('bg-cv-sunken'));
   } finally {
     await page.view.unmount();
     delete globalThis.localStorage;

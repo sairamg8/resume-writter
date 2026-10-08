@@ -21,7 +21,7 @@ export function TextField({
     <Field ids={ids} label={label} hint={hint} error={error} required={required} className={className} labelClassName={labelClassName}>
       <div className="relative flex items-center">
         {LeadingIcon && (
-          <LeadingIcon size={16} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-slate-400" />
+          <LeadingIcon size={16} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-cv-faint" />
         )}
         <input
           ref={ref}

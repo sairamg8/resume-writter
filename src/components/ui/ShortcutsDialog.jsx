@@ -16,11 +16,11 @@ export function ShortcutsDialog({ open, onClose, groups = [], title = 'Keyboard 
       <div className="flex flex-col gap-5">
         {groups.map((group) => (
           <section key={group.title}>
-            <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{group.title}</h3>
-            <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-cv-faint">{group.title}</h3>
+            <dl className="divide-y divide-cv-hairline rounded-lg border border-cv-hairline">
               {group.shortcuts.map((s) => (
                 <div key={s.combo} className="flex items-center justify-between gap-4 px-3 py-2">
-                  <dt className="text-[13px] text-slate-700">{s.label}</dt>
+                  <dt className="text-[13px] text-cv-body">{s.label}</dt>
                   <dd><Kbd combo={s.combo} /></dd>
                 </div>
               ))}

@@ -37,7 +37,7 @@ export function SearchInput({
 
   return (
     <div className={cx('relative flex items-center', className)}>
-      <Search size={15} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-slate-400" />
+      <Search size={15} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-cv-faint" />
       <input
         ref={mergeRefs(ref, inputRef)}
         type="search"
@@ -60,7 +60,7 @@ export function SearchInput({
           type="button"
           onClick={clear}
           aria-label="Clear search"
-          className="absolute right-1.5 inline-flex size-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+          className="absolute right-1.5 inline-flex size-6 items-center justify-center rounded-md text-cv-faint transition-colors hover:bg-cv-sunken hover:text-cv-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60"
         >
           <X size={14} aria-hidden="true" />
         </button>

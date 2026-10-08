@@ -106,16 +106,16 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
     <div className="flex max-h-[inherit] flex-col">
       {(title || (clearable && value.length > 0)) && (
         <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-          {title && <span className="text-xs font-semibold text-slate-500">{title}</span>}
+          {title && <span className="text-xs font-semibold text-cv-faint">{title}</span>}
           {clearable && value.length > 0 && (
-            <button type="button" onClick={() => onChange?.([])} className="ml-auto rounded text-xs font-medium text-brand hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+            <button type="button" onClick={() => onChange?.([])} className="ml-auto rounded text-xs font-medium text-brand hover:text-cv-brand-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
               Clear
             </button>
           )}
         </div>
       )}
       <div className="relative m-2 mb-1 flex items-center">
-        <Search size={14} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-slate-400" />
+        <Search size={14} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-cv-faint" />
         <input
           data-autofocus
           type="text"
@@ -129,7 +129,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
           value={query}
           onChange={(e) => { setQuery(e.target.value); setActive(0); }}
           onKeyDown={onKeyDown}
-          className="h-8 w-full rounded-md border border-slate-200 bg-slate-50 pr-2 pl-8 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/25 pointer-coarse:h-10 pointer-coarse:text-base"
+          className="h-8 w-full rounded-md border border-cv-hairline bg-cv-ground pr-2 pl-8 text-[13px] text-cv-ink placeholder:text-cv-faint focus:border-brand focus:bg-cv-surface focus:outline-none focus:ring-2 focus:ring-brand/25 pointer-coarse:h-10 pointer-coarse:text-base"
         />
       </div>
       <ul ref={listRef} id={`${id}-list`} role="listbox" aria-multiselectable="true" aria-label={title ?? searchPlaceholder} className="max-h-64 overflow-y-auto p-1 pt-0">
@@ -147,8 +147,8 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
               onClick={() => pick(row)}
               onPointerMove={() => { if (active !== i) setActive(i); }}
               className={cx(
-                'flex min-h-8 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[13px] text-slate-700 pointer-coarse:min-h-11',
-                i === active && 'bg-slate-100 text-slate-900',
+                'flex min-h-8 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[13px] text-cv-body pointer-coarse:min-h-11',
+                i === active && 'bg-cv-sunken text-cv-ink',
               )}
             >
               {row.create ? (
@@ -162,21 +162,21 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
                     aria-hidden="true"
                     className={cx(
                       'flex size-4 shrink-0 items-center justify-center rounded border transition-colors duration-100',
-                      selected ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white',
+                      selected ? 'border-brand bg-brand text-white' : 'border-cv-field bg-cv-surface',
                     )}
                   >
                     {selected && <Check size={11} strokeWidth={3} />}
                   </span>
                   {row.color && <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />}
-                  {Icon && <Icon size={14} aria-hidden="true" className="shrink-0 text-slate-400" />}
+                  {Icon && <Icon size={14} aria-hidden="true" className="shrink-0 text-cv-faint" />}
                   <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                  {row.count != null && <span className="shrink-0 text-xs tabular-nums text-slate-500">{row.count}</span>}
+                  {row.count != null && <span className="shrink-0 text-xs tabular-nums text-cv-faint">{row.count}</span>}
                 </>
               )}
             </li>
           );
         })}
-        {rows.length === 0 && <li role="presentation" className="px-2 py-6 text-center text-[13px] text-slate-500">{emptyText}</li>}
+        {rows.length === 0 && <li role="presentation" className="px-2 py-6 text-center text-[13px] text-cv-faint">{emptyText}</li>}
       </ul>
     </div>
   );
