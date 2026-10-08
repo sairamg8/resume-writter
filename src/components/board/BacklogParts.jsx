@@ -61,7 +61,7 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
       onClick={onOpen}
       onKeyDown={(e) => openOnKey(e, onOpen)}
       className={cx(
-        'group/row flex h-10 cursor-pointer items-center gap-2.5 border-b border-cv-hairline bg-cv-surface px-3 text-sm last:border-b-0 hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cv-brand',
+        'group/row flex h-10 cursor-pointer touch-manipulation items-center gap-2.5 no-hover:select-none border-b border-cv-hairline bg-cv-surface px-3 text-sm last:border-b-0 hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cv-brand',
         isDragging && 'relative z-10 opacity-70 shadow-lg',
       )}
     >
