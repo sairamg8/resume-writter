@@ -124,7 +124,7 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
-        <Route path="/job-map"    element={<JobMap auth={auth} />} />
+        <Route path="/job-map"    element={<JobMap auth={auth} sync={sync} />} />
         <Route path="/terms"      element={<TermsPage auth={auth} sync={sync} />} />
         <Route path="/privacy"    element={<PrivacyPage auth={auth} sync={sync} />} />
         {/* A published résumé, read-only, for anyone with its link (R2-148). */}
