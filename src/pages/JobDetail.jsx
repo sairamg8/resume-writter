@@ -164,8 +164,11 @@ export function JobDetail({ store }) {
         </div>
 
         {/* lg:top-40 (160 px): the page header is sticky from md and about 140 px tall with its tabs, and a sticky
-            top is measured from the scroll box's top edge, so top-4 parked the box's first 120 px under the header. */}
-        <aside aria-label="Job details" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-40 lg:self-start">
+            top is measured from the scroll box's top edge, so top-4 parked the box's first 120 px under the header.
+            The column is about 500 px tall, so on a short window (a 720 px laptop) its lower rows would sit below the
+            fold until the page's end: it is as high as the room left under the top bar and the header (14.5rem: 3.5
+            + 10 + 1 spare) and scrolls inside that. The menus it opens are portals, so they are not clipped. */}
+        <aside aria-label="Job details" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-40 lg:max-h-[calc(100dvh-14.5rem)] lg:self-start lg:overflow-y-auto">
           <StatusMenu value={job.status} options={statuses} onChange={(status) => set('status', status)} className="self-start" />
           <section className="rounded-cv-card border border-cv-hairline">
             <h2 className="border-b border-cv-hairline px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>
