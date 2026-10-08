@@ -272,7 +272,7 @@ export function Board() {
       {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
         <p className="flex items-center gap-1.5 px-4 pb-2 text-[13px] text-cv-muted md:px-8">
           <Info size={14} aria-hidden="true" className="shrink-0 text-cv-faint" />
-          <span>
+          <span className="min-w-0 break-words">
             {sprint && <><span className="font-semibold text-cv-ink">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}{sprint.goal && <> · {sprint.goal}</>}. </>}
             {!sprint && board.mode === 'scrum' && <>No sprint is active, so every issue is shown. <Link className="font-medium text-cv-brand-text hover:underline" to={`/boards/${encodeURIComponent(board.id)}/backlog`}>Plan one in the backlog</Link>. </>}
             {hiddenDone > 0 && <>{hiddenDone} done issue{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {countLabel(board.hideDoneAfterDays, 'day')} ago.</>}

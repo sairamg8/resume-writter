@@ -6,6 +6,8 @@
 //    overflow-wrap: anywhere now (min-content counts the break points, so a flex child shrinks too);
 //  - a toast ("<company> deleted", "Column “…” deleted", "<project> deleted") and a dialog (the confirm's
 //    "Delete <company>?" title and its body) had no break-words, so the word ran under the Dismiss / Close button;
+//  - the board's sprint note ("<sprint> · ends … · <goal>"): a goal pasted as a link widened the line past the screen
+//    (the Backlog's goal line already breaks words);
 //  - the "No … match “<what was typed>”" lines of the search box and the Projects table (a link pasted into the box).
 // fake-dom has no layout: the source classes that carry it are read.
 import { it } from 'node:test';
@@ -31,4 +33,9 @@ it('the toast and the dialog break inside a long word', () => {
 it('the "no match" lines break inside what was typed', () => {
   assert.match(src('src/components/shell/TopBar.jsx'), /className="px-3 py-3 text-sm break-words text-cv-muted">No issues or projects match/);
   assert.match(src('src/pages/Boards.jsx'), /className="py-8 text-center text-sm break-words text-cv-faint">No projects match/);
+});
+
+it("the board's sprint note can shrink and breaks inside a long goal", () => {
+  const s = src('src/pages/Board.jsx');
+  assert.match(s, /<Info size=\{14\} aria-hidden="true" className="shrink-0 text-cv-faint" \/>\s*<span className="min-w-0 break-words">\s*\{sprint &&/);
 });
