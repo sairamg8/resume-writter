@@ -26,6 +26,9 @@ const VIEWS = [
   { id: 'list', label: 'List', icon: List },
 ];
 
+// A ?view= that names none of them (a typo, an old link) is the default view, not a view with no tab lit.
+const knownView = (v) => (VIEWS.some((x) => x.id === v) ? v : undefined);
+
 /**
  * The views as tabs under the title: Summary · Board · List (`?view=`). They wear the kit's tab
  * look (tabClass), as a project's Board · Backlog · Settings do, but stay buttons marking the
@@ -64,7 +67,7 @@ export function JobTracker({ store }) {
   const { toast } = useToast();
   const { appState } = store;
   const { resumes } = appState;
-  const [view, setView] = useUrlState('view', 'kanban');
+  const [view, setView] = useUrlState('view', 'kanban', { parse: knownView });
   // Kept for the tab's session: opening a job and coming back cleared them (J-30).
   const [search, setSearch] = useSessionState('cpwtcv_jobs_search', '', v => typeof v === 'string');
   const [filterStatus, setFilterStatus] = useSessionState('cpwtcv_jobs_status', '', v => v === '' || JOB_STATUSES.some(s => s.id === v));

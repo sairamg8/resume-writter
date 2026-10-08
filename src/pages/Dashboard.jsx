@@ -72,6 +72,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // A read that ends after the Dashboard is gone still imports, but no longer drags the user back.
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // A read that ends after the Dashboard is gone (a document, or a JSON Resume file whose reader is still on its way) imports but opens nothing.
+  const goTo = (...args) => { if (mounted.current) navigate(...args); };
   // The account the list is now (syncedUid), for a read that ends after it signed out.
   const listOwner = useRef(store.appState.syncedUid);
   useEffect(() => { listOwner.current = store.appState.syncedUid; }, [store.appState.syncedUid]);
@@ -181,7 +183,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       });
       importDocument(file, {
         importResume, keep: keeps && importAsOriginal.current,
-        navigate: (...args) => { if (mounted.current) navigate(...args); },
+        navigate: goTo,
         onError: setImportError,
       }).finally(() => {
         importBusy.current = false;
@@ -197,7 +199,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           const id = store.importResume(parsed, { keep: keeps && importAsOriginal.current });
           setImportError(null);
           // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
-          navigate(editorPath(id, normalizeResume(parsed)));
+          goTo(editorPath(id, normalizeResume(parsed)));
         } else {
           // The JSON Resume reader loads when such a file is picked, not at start-up (R2-142; not jsonResume.js: its export is the editor's).
           const jr = await import('@/utils/jsonResumeImport').catch(() => null);
@@ -212,7 +214,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           const converted = jr.jsonResumeToCpwtResume(parsed);
           const id = store.importResume(converted, { keep: keeps && importAsOriginal.current });
           setImportError(null);
-          navigate(`/resume/${id}`);
+          goTo(`/resume/${id}`);
         }
       } catch {
         setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
