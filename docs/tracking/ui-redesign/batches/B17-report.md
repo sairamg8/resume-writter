@@ -1,6 +1,6 @@
 # B17 report: release candidate for the UI rebuild on `revamp-ui`
 
-Full gate: <fill: run id and result>
+Full gate: GREEN, run 37797966992 on `f43f020` (ci.yml, no inputs, first attempt, 15 of 15 jobs: lint, build, suite 6/6, Playwright 3/3, Cypress 4/4; start-up path 1,073.0 kB of 1,100 kB, 27.0 kB to spare). `f43f020` is on master (fast-forward `00c7283..f43f020`, 2026-10-08 15:27Z); master before it is kept as the branches `master-backup` and `backup/master-2026-10-08-00c7283`. Since the first B17 gate: master (Job Map) merged in, two bug-hunt rounds (21 fixes, each with a CI fail-first proof), a release review and a test-parity audit (46 removed test titles reconciled, none lost), and the screenshots looked at by eye.
 
 UI only; every live function, label and test id stays (PARITY-RULE). Accessibility is deferred. Nothing here is pushed to master; deploy is the owner's call.
 
