@@ -131,7 +131,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
             {error && <p role="alert" className="text-cv-bad">{error}</p>}
             <div className="flex flex-wrap gap-2 pt-1">
               {(!share || !current) && (
-                <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-brand text-white font-semibold hover:bg-cv-brand disabled:opacity-60">
+                <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-brand text-white font-semibold hover:bg-cv-brand-pressed disabled:opacity-60">
                   {share ? 'Update the public copy' : 'Publish'}
                 </button>
               )}
@@ -145,7 +145,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
               <div className="p-3 rounded-cv-card border border-cv-bad bg-cv-bad-soft space-y-2">
                 <p className="text-cv-bad">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-bad text-white font-semibold hover:bg-cv-bad disabled:opacity-60">
+                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-bad text-white font-semibold hover:opacity-90 disabled:opacity-60">
                     Yes, unpublish
                   </button>
                   <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-sunken text-cv-ink font-semibold hover:bg-cv-stage disabled:opacity-60">
