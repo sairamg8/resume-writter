@@ -36,6 +36,10 @@ on:
         description: 'Performance budgets (tests/perf; never part of the gate): node (PDF build, one keystroke, start-up size), browser (Chromium: last key to the pages), or all. Set, only this runs.'
         required: false
         default: ''
+      shots:
+        description: 'Screenshots of the main screens (tests/playwright/zz-screenshots.spec.mjs), uploaded as the artifact ui-shots: true. Pair it with tests/playwright none/cypress none and one cheap test file so the rest of the gate stays out of the way.'
+        required: false
+        default: ''
 
 # A push to master cancels the run it supersedes; each dispatch runs to the end, so checks started
 # side by side on one branch never cancel one another.
@@ -242,6 +246,34 @@ jobs:
           name: dist
           path: dist
           retention-days: 3
+
+  # Opt-in (dispatch input `shots`): the main screens as PNGs, to look at the UI without running the app.
+  shots:
+    if: inputs.shots == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: Production build
+        run: ./node_modules/.bin/vite build --mode production --outDir dist --emptyOutDir
+      - name: Chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Screenshots
+        env:
+          SHOTS_DIR: ${{ github.workspace }}/shots
+        run: ./node_modules/.bin/playwright test tests/playwright/zz-screenshots.spec.mjs --reporter=list
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-shots
+          path: shots
+          if-no-files-found: warn
+          retention-days: 7
 
   # Split across machines like the suite: one browser suite on one machine was the run's longest job.
   playwright:
