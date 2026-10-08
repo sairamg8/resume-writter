@@ -4626,6 +4626,438 @@
       "ats": "ashby",
       "slug": "ziplines",
       "sector": "software"
+    },
+    {
+      "name": "11 bit studios",
+      "ats": "recruitee",
+      "slug": "11bitstudios",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Accenture",
+      "ats": "recruitee",
+      "slug": "accenture",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Allegro",
+      "ats": "greenhouse",
+      "slug": "allegro",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Allstate",
+      "ats": "recruitee",
+      "slug": "allstate",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Appier",
+      "ats": "greenhouse",
+      "slug": "appier",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Asos",
+      "ats": "smartrecruiters",
+      "slug": "asos",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Axel Springer",
+      "ats": "ashby",
+      "slug": "axel",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Baidu",
+      "ats": "greenhouse",
+      "slug": "baidu",
+      "sector": "enterprise"
+    },
+    {
+      "name": "BBC",
+      "ats": "recruitee",
+      "slug": "bbc",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Bosch",
+      "ats": "smartrecruiters",
+      "slug": "BoschGroup",
+      "sector": "enterprise"
+    },
+    {
+      "name": "BT Group",
+      "ats": "recruitee",
+      "slug": "bt",
+      "sector": "enterprise"
+    },
+    {
+      "name": "ByteDance",
+      "ats": "smartrecruiters",
+      "slug": "bytedance",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Capital One",
+      "ats": "lever",
+      "slug": "capital",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Charles Schwab",
+      "ats": "greenhouse",
+      "slug": "charles",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Continental",
+      "ats": "smartrecruiters",
+      "slug": "continental",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Coupang",
+      "ats": "greenhouse",
+      "slug": "coupang",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Despegar",
+      "ats": "lever",
+      "slug": "despegar",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Droids on Roids",
+      "ats": "greenhouse",
+      "slug": "droidsonroids",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Endava",
+      "ats": "smartrecruiters",
+      "slug": "endava",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Entain",
+      "ats": "smartrecruiters",
+      "slug": "entain",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Evolution",
+      "ats": "smartrecruiters",
+      "slug": "evolution",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "EY",
+      "ats": "recruitee",
+      "slug": "ey",
+      "sector": "enterprise"
+    },
+    {
+      "name": "FanDuel",
+      "ats": "greenhouse",
+      "slug": "fanduel",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Flow Traders",
+      "ats": "greenhouse",
+      "slug": "flowtraders",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Focus Entertainment",
+      "ats": "recruitee",
+      "slug": "focusentertainment",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Fox",
+      "ats": "greenhouse",
+      "slug": "fox",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Gameloft",
+      "ats": "smartrecruiters",
+      "slug": "gameloft",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Gap",
+      "ats": "smartrecruiters",
+      "slug": "gapinc",
+      "sector": "enterprise"
+    },
+    {
+      "name": "General Motors",
+      "ats": "greenhouse",
+      "slug": "general",
+      "sector": "enterprise"
+    },
+    {
+      "name": "GetYourGuide",
+      "ats": "greenhouse",
+      "slug": "getyourguide",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Gorilla Logic",
+      "ats": "ashby",
+      "slug": "gorilla",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Grid Dynamics",
+      "ats": "recruitee",
+      "slug": "grid",
+      "sector": "enterprise"
+    },
+    {
+      "name": "HP",
+      "ats": "greenhouse",
+      "slug": "hp",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Huuuge",
+      "ats": "recruitee",
+      "slug": "huuuge",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "IMC Trading",
+      "ats": "greenhouse",
+      "slug": "imc",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Inter",
+      "ats": "greenhouse",
+      "slug": "inter",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Intercontinental Exchange",
+      "ats": "recruitee",
+      "slug": "intercontinental",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Jack Henry",
+      "ats": "recruitee",
+      "slug": "jack",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Jane Street",
+      "ats": "greenhouse",
+      "slug": "janestreet",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Jump Trading",
+      "ats": "greenhouse",
+      "slug": "jumptrading",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Kindred",
+      "ats": "ashby",
+      "slug": "kindred",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Kiwi.com",
+      "ats": "ashby",
+      "slug": "kiwi",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Krafton",
+      "ats": "greenhouse",
+      "slug": "krafton",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Lalamove",
+      "ats": "lever",
+      "slug": "lalamove",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Lenskart",
+      "ats": "recruitee",
+      "slug": "lenskart",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Marks and Spencer",
+      "ats": "recruitee",
+      "slug": "marksandspencer",
+      "sector": "enterprise"
+    },
+    {
+      "name": "MetLife",
+      "ats": "lever",
+      "slug": "metlife",
+      "sector": "enterprise"
+    },
+    {
+      "name": "N-iX",
+      "ats": "greenhouse",
+      "slug": "nix",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Ninja Van",
+      "ats": "lever",
+      "slug": "ninjavan",
+      "sector": "enterprise"
+    },
+    {
+      "name": "OLX",
+      "ats": "recruitee",
+      "slug": "olx",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Omio",
+      "ats": "smartrecruiters",
+      "slug": "omio",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Optiver",
+      "ats": "greenhouse",
+      "slug": "optiver",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Paradox Interactive",
+      "ats": "ashby",
+      "slug": "paradox",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "People Can Fly",
+      "ats": "smartrecruiters",
+      "slug": "peoplecanfly",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Playrix",
+      "ats": "recruitee",
+      "slug": "playrix",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Playtech",
+      "ats": "smartrecruiters",
+      "slug": "playtech",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Point72",
+      "ats": "greenhouse",
+      "slug": "point72",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Prosus",
+      "ats": "ashby",
+      "slug": "prosus",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Remedy",
+      "ats": "greenhouse",
+      "slug": "remedy",
+      "sector": "media/telecom/gov/other"
+    },
+    {
+      "name": "Samsung",
+      "ats": "recruitee",
+      "slug": "samsung",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Shein",
+      "ats": "greenhouse",
+      "slug": "shein",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Sigma Software",
+      "ats": "smartrecruiters",
+      "slug": "sigmasoftware",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Software Mansion",
+      "ats": "recruitee",
+      "slug": "softwaremansion",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Standard Chartered",
+      "ats": "recruitee",
+      "slug": "standard",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Stone",
+      "ats": "greenhouse",
+      "slug": "stone",
+      "sector": "enterprise"
+    },
+    {
+      "name": "TCS",
+      "ats": "greenhouse",
+      "slug": "tcs",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Thales",
+      "ats": "smartrecruiters",
+      "slug": "thales",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Tooploox",
+      "ats": "ashby",
+      "slug": "tooploox",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Toss",
+      "ats": "greenhouse",
+      "slug": "tosscareers",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Upstox",
+      "ats": "smartrecruiters",
+      "slug": "upstox",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Virtu",
+      "ats": "greenhouse",
+      "slug": "virtu",
+      "sector": "enterprise"
+    },
+    {
+      "name": "Xiaomi",
+      "ats": "smartrecruiters",
+      "slug": "xiaomi",
+      "sector": "enterprise"
     }
   ]
 }
