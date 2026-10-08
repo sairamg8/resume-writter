@@ -48,7 +48,7 @@ const project = {
   labels: [{ id: 'l1', name: 'Urgent', color: '#ef4444' }],
   sprints: [],
   issues: [
-    issue('i1', 1, SUMMARY, { labelIds: ['l1'], epicId: 'e1', due: '2030-01-02', estimate: 3 }),
+    issue('i1', 1, SUMMARY, { labelIds: ['l1'], epicId: 'e1', due: '2099-01-02', estimate: 3 }),
     issue('e1', 2, 'Garden makeover', { type: 'epic' }),
   ],
   nextNumber: 3,
@@ -98,7 +98,7 @@ it('below sm the List drops Type, Labels, Parent, Points and Updated in the head
   assert.match(row[3].inner, /aria-label="Status of HOME-1: To Do"/, 'Status');
   assert.match(row[5].inner, /title="Urgent"/, 'Labels');
   assert.match(row[6].inner, /title="Epic: Garden makeover"/, 'Parent');
-  assert.match(row[7].inner, /2030/, 'Due date');
+  assert.match(row[7].inner, /2099/, 'Due date');
   assert.match(row[8].inner, /title="3 story points"/, 'Points');
 
   for (const r of rows) {
