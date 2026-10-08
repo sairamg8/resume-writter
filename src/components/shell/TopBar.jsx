@@ -23,7 +23,7 @@ const SHORTCUTS = [
   { title: 'Issues', shortcuts: [
     { combo: 'Enter', label: 'Open the focused issue' },
     { combo: 'Escape', label: 'Close the issue' },
-    { combo: 'Space', label: 'Pick up a card to move it (arrows, then Space to drop)' },
+    { combo: 'Space', label: 'Open the focused issue' },
   ] },
 ];
 
