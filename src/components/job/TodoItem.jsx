@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { CheckSquare, Square, X } from 'lucide-react';
 import { isImeKey } from '@/components/ui/compose';
 
+/** A touch screen: nothing hovers, and a double tap is not a double click there (iOS Safari sends none to a plain span). */
+const touchOnly = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(hover: none)').matches;
+
 export function TodoItem({ todo, onToggle, onDelete, onRename }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(todo.text);
@@ -12,6 +15,12 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
   const opened = useRef(todo.text);
 
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  function startEdit() {
+    opened.current = todo.text;
+    setDraft(todo.text);
+    setEditing(true);
+  }
 
   function commit() {
     setEditing(false);
@@ -47,7 +56,9 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
         />
       ) : (
         <span
-          onDoubleClick={() => { opened.current = todo.text; setDraft(todo.text); setEditing(true); }}
+          // A double click on a mouse; one tap on a touch screen, where a double tap never reaches the text.
+          onClick={() => { if (touchOnly()) startEdit(); }}
+          onDoubleClick={startEdit}
           // A URL or a long word wraps inside the row: unbroken, it widened the text past a phone's
           // screen and took the delete X with it, out of reach (R4-DPH-03; as job/Field.jsx, J-12).
           className={`min-w-0 flex-1 break-words text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-ink-subtlest' : 'text-ink'}`}
