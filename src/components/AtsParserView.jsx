@@ -43,9 +43,9 @@ const JOB_FIELDS = [['title', 'Title'], ['company', 'Company'], ['dates', 'Dates
 
 /** How each outcome of jobFields shows: its mark, colour and what it means. */
 const FIELD_LOOK = {
-  own: { Icon: CheckCircle2, tone: 'text-emerald-700 bg-emerald-50 border-emerald-200', says: 'a field of its own: a parser files it' },
-  joined: { Icon: AlertTriangle, tone: 'text-amber-800 bg-amber-50 border-amber-200', says: 'on one run with other text: a parser has to split it out' },
-  missing: { Icon: XCircle, tone: 'text-red-700 bg-red-50 border-red-200', says: 'not found in the text as it is typed' },
+  own: { Icon: CheckCircle2, tone: 'text-cv-good bg-cv-good-soft border-cv-good', says: 'a field of its own: a parser files it' },
+  joined: { Icon: AlertTriangle, tone: 'text-cv-warn bg-cv-warn-soft border-cv-warn', says: 'on one run with other text: a parser has to split it out' },
+  missing: { Icon: XCircle, tone: 'text-cv-bad bg-cv-bad-soft border-cv-bad', says: 'not found in the text as it is typed' },
 };
 
 /** A change waits this long for the typing to pause before the PDF is read again (PdfPreview's). */
@@ -124,69 +124,69 @@ export function AtsParserView({ resume, columnsWarned = false }) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-cv-surface border border-cv-hairline rounded-cv-card shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
+        className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-cv-ground transition-colors"
       >
         <span className="flex items-center gap-2.5 min-w-0">
-          <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700 shrink-0"><ScanText size={16} /></span>
+          <span className="p-1.5 rounded-cv-control bg-cv-sunken text-cv-ink shrink-0"><ScanText size={16} /></span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold text-gray-900">What a parser reads</span>
-            <span className="block text-xs text-gray-500">The text in this résumé&apos;s PDF, as pdf.js reads it</span>
+            <span className="block text-sm font-bold text-cv-ink">What a parser reads</span>
+            <span className="block text-xs text-cv-muted">The text in this résumé&apos;s PDF, as pdf.js reads it</span>
           </span>
         </span>
-        <ChevronDown size={15} className={`text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={15} className={`text-cv-faint shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-3">
-          <p className="text-[11px] text-gray-600">
+        <div className="px-4 pb-4 pt-3 border-t border-cv-hairline space-y-3">
+          <p className="text-[11px] text-cv-muted">
             What an applicant-tracking system starts from: every line pdf.js reads from the PDF, in the order it reads
             them. Text the page sets apart on one line, such as a date at the line&apos;s end, shows three spaces apart:
             a parser reads it as a field of its own.
           </p>
           {columnsWarned && (
-            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+            <p className="text-[11px] text-cv-warn bg-cv-warn-soft border border-cv-warn rounded-cv-control px-2.5 py-1.5">
               pdf.js reads text set side by side in the order it is drawn. A parser that reads the page by position, as
               Poppler does, mixes their lines: see ATS Layout &amp; Parser Safety below.
             </p>
           )}
           {read.status === 'error' && (
-            <div role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+            <div role="alert" className="text-xs text-cv-bad bg-cv-bad-soft border border-cv-bad rounded-cv-control px-3 py-2 flex items-start gap-2">
               <span className="flex-1">Could not read the PDF{read.error?.message ? ` (${read.error.message})` : ''}.</span>
-              <button onClick={() => setRetry((n) => n + 1)} className="font-semibold hover:text-red-900">Retry</button>
+              <button onClick={() => setRetry((n) => n + 1)} className="font-semibold hover:text-cv-bad">Retry</button>
             </div>
           )}
-          {!read.pages && read.status !== 'error' && <p className="text-xs text-gray-400">Reading the PDF…</p>}
+          {!read.pages && read.status !== 'error' && <p className="text-xs text-cv-faint">Reading the PDF…</p>}
           {read.pages && (
             <>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] text-gray-500" data-parser-status={read.status}>
+                <span className="text-[11px] text-cv-muted" data-parser-status={read.status}>
                   {read.status === 'reading' ? 'Updating…' : `${read.pages.length} page${read.pages.length === 1 ? '' : 's'} read`}
                 </span>
                 <button
                   onClick={handleCopy}
                   title={copied === 'failed' ? 'The browser did not allow copying to the clipboard. Select the text and copy it (Ctrl+C / ⌘C).' : 'Copy what a parser reads'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-xl shadow-sm transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-cv-ink bg-cv-surface hover:bg-cv-sunken border border-cv-field rounded-cv-card shadow-sm transition-all"
                 >
-                  {copied === 'done' && <><Check size={13} className="text-emerald-600" /> Copied</>}
-                  {copied === 'failed' && <><XCircle size={13} className="text-red-600" /> Copy failed</>}
+                  {copied === 'done' && <><Check size={13} className="text-cv-good" /> Copied</>}
+                  {copied === 'failed' && <><XCircle size={13} className="text-cv-bad" /> Copy failed</>}
                   {!copied && <><Copy size={13} /> Copy</>}
                 </button>
               </div>
               {jobs.length > 0 && (
                 <div className="space-y-1.5" data-parser-jobs>
-                  <p className="text-[11px] font-semibold text-gray-700">Each job, as a parser files it</p>
+                  <p className="text-[11px] font-semibold text-cv-ink">Each job, as a parser files it</p>
                   {jobs.map((job, i) => (
                     <div key={job.id || i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                      <span className="font-medium text-gray-800 mr-1">{[job.role, job.company].filter(Boolean).join(' · ') || `Job ${i + 1}`}</span>
+                      <span className="font-medium text-cv-ink mr-1">{[job.role, job.company].filter(Boolean).join(' · ') || `Job ${i + 1}`}</span>
                       {JOB_FIELDS.filter(([key]) => checks[i]?.[key]).map(([key, label]) => {
                         const { Icon, tone, says } = FIELD_LOOK[checks[i][key]];
                         return (
                           <span key={key} data-field={key} data-outcome={checks[i][key]} title={`${label}: ${says}`}
-                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${tone}`}>
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-cv-control border ${tone}`}>
                             <Icon size={11} /> {label}
                           </span>
                         );
@@ -197,7 +197,7 @@ export function AtsParserView({ resume, columnsWarned = false }) {
               )}
               <pre
                 aria-label="The text a parser reads"
-                className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed font-mono text-gray-800 bg-gray-50 border border-gray-200 rounded-xl p-3"
+                className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed font-mono text-cv-ink bg-cv-ground border border-cv-hairline rounded-cv-card p-3"
               >
                 {text}
               </pre>

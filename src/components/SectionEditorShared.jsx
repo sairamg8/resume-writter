@@ -13,14 +13,14 @@ export function InputField({ label, value, onChange, placeholder, type = 'text' 
   const { id } = useFieldIds(label);
   return (
     <div className="w-full">
-      {label && <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {label && <label htmlFor={id} className="block text-xs text-cv-muted mb-1">{label}</label>}
       <input
         id={id}
         type={type}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base text-cv-ink bg-cv-surface border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand"
       />
     </div>
   );
@@ -60,7 +60,7 @@ export function MonthPicker({ label, value, onChange, disabled }) {
 
   return (
     <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
-      {label && <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {label && <label htmlFor={id} className="block text-xs text-cv-muted mb-1">{label}</label>}
       {/* The selects may shrink below their widest option (min-w-0), so a narrow picker stays in its
           own cell instead of running under the one beside it (R4-DPH-27); 16 px on touch, as
           InputField is (R4-DPH-28). */}
@@ -70,7 +70,7 @@ export function MonthPicker({ label, value, onChange, disabled }) {
           aria-label={name ? `${name} month` : 'Month'}
           value={monthStr}
           onChange={e => update(e.target.value, yearStr)}
-          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base text-cv-ink border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-surface"
         >
           <option value="">Month</option>
           {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
@@ -79,13 +79,13 @@ export function MonthPicker({ label, value, onChange, disabled }) {
           aria-label={name ? `${name} year` : 'Year'}
           value={yearStr}
           onChange={e => update(monthStr, e.target.value)}
-          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base text-cv-ink border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-surface"
         >
           <option value="">Year</option>
           {yearOptions(yearStr).map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         {value && (
-          <button onClick={() => onChange('')} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
+          <button onClick={() => onChange('')} className="p-1 text-cv-faint hover:text-cv-bad shrink-0">
             <X size={12} />
           </button>
         )}
@@ -124,10 +124,10 @@ export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
   return (
     <div className={isHidden ? 'opacity-50' : ''}>
       <div className="flex items-center justify-between mb-1">
-        <label id={ids.labelId} htmlFor={id} className="text-xs text-gray-500">{label}</label>
+        <label id={ids.labelId} htmlFor={id} className="text-xs text-cv-muted">{label}</label>
         <button
           onClick={() => onToggle(field)}
-          className={`p-0.5 ${isHidden ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
+          className={`p-0.5 ${isHidden ? 'text-cv-faint hover:text-cv-muted' : 'text-cv-brand-text hover:text-cv-brand-pressed'}`}
           title={isHidden ? 'Show field on resume' : 'Hide field from resume'}
         >
           {isHidden ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -141,32 +141,32 @@ export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
 export function ItemCard({ label, onRemove, onDuplicate, onToggleVisibility, visible = true, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`border rounded-lg overflow-hidden ${visible ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
+    <div className={`border rounded-cv-control overflow-hidden ${visible ? 'border-cv-hairline' : 'border-cv-hairline opacity-60'}`}>
       <div
         data-testid="entry-header"
-        className="flex items-center justify-between px-3 py-2 bg-gray-50 cursor-pointer select-none"
+        className="flex items-center justify-between px-3 py-2 bg-cv-ground cursor-pointer select-none"
         onClick={() => setOpen(o => !o)}
       >
-        <span data-testid="entry-title" className={`text-sm font-medium truncate flex-1 ${visible ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{label || 'New Entry'}</span>
+        <span data-testid="entry-title" className={`text-sm font-medium truncate flex-1 ${visible ? 'text-cv-ink' : 'text-cv-faint line-through'}`}>{label || 'New Entry'}</span>
         <div className="flex items-center gap-1 shrink-0">
           {onToggleVisibility && (
             <button
               onClick={e => { e.stopPropagation(); onToggleVisibility(); }}
-              className={`p-1 ${visible ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'}`}
+              className={`p-1 ${visible ? 'text-cv-brand-text hover:text-cv-brand-pressed' : 'text-cv-faint hover:text-cv-muted'}`}
               title={visible ? 'Hide entry' : 'Show entry'}
             >
               {visible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
           )}
           {onDuplicate && (
-            <button onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate entry" aria-label="Duplicate entry" className="p-1 text-gray-400 hover:text-blue-600">
+            <button onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate entry" aria-label="Duplicate entry" className="p-1 text-cv-faint hover:text-cv-brand-text">
               <Copy size={12} />
             </button>
           )}
-          <button onClick={e => { e.stopPropagation(); onRemove(); }} title="Delete entry" aria-label="Delete entry" className="p-1 text-gray-400 hover:text-red-500">
+          <button onClick={e => { e.stopPropagation(); onRemove(); }} title="Delete entry" aria-label="Delete entry" className="p-1 text-cv-faint hover:text-cv-bad">
             <Trash2 size={12} />
           </button>
-          {open ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+          {open ? <ChevronUp size={13} className="text-cv-faint" /> : <ChevronDown size={13} className="text-cv-faint" />}
         </div>
       </div>
       {/* A size container: the fields' two-column rows (@sm:grid-cols-2) go side by side only when
@@ -192,7 +192,7 @@ export function SortableItemWrapper({ id, children }) {
         {...listeners}
         aria-label="Reorder entry"
         title="Drag, or press Space then the arrow keys, to reorder"
-        className="mt-2.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 no-hover:opacity-100 transition-opacity shrink-0 touch-none"
+        className="mt-2.5 cursor-grab active:cursor-grabbing text-cv-faint hover:text-cv-muted opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 no-hover:opacity-100 transition-opacity shrink-0 touch-none"
       >
         <GripVertical size={13} />
       </button>

@@ -8,7 +8,7 @@ const answerConfirm = (answer) =>
   cy.window().then((win) => { cy.stub(win, 'confirm').returns(answer).as('confirm'); });
 
 const sectionCard = (title) =>
-  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('.rounded-xl');
+  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('[data-testid^="section-card-"]');
 
 describe('regressions — deletes ask first', () => {
   it('dashboard: cancelling the confirm keeps the resume', () => {

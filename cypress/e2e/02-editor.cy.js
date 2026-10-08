@@ -4,14 +4,14 @@ import { ALL_SECTION_TYPES } from '../../tests/helpers.js';
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 
 /** The collapsible Personal Info panel in the editor. */
-const personal = () => cy.contains('span', 'Personal Info').closest('.rounded-xl');
+const personal = () => cy.contains('span', 'Personal Info').closest('.cv-card');
 
 /** A Personal Info text input, found through the label rendered above it. */
 const field = (label) => personal().contains('label', label).parent().next('input');
 
 /** A section's editor card, found through the value of its title input. */
 const sectionCard = (title) =>
-  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('.rounded-xl');
+  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('[data-testid^="section-card-"]');
 
 describe('editor — content', () => {
   beforeEach(() => cy.visitEditor('classic'));

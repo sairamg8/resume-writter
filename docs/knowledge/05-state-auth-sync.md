@@ -186,7 +186,7 @@ out) still joins whoever signs in; a build with no cloud keeps its list (its onl
 
 **Files:** `src/hooks/useDemoSeed.js` (wiring), `src/utils/demoSeed.js` (pure rules, unit-tested),
 `src/utils/demoAccounts.js` (`DEMO_ACCOUNTS`), `vite-plugin-owner-resume.js` (the private file on
-the dev server), `src/components/ImportMenu.jsx` + `ResumeCard.jsx` (the controls).
+the dev server), `src/components/ImportDialog.jsx` + `ResumeCard.jsx` (the controls).
 
 The owner's login (`DEMO_ACCOUNTS`: the build's `VITE_DEMO_ACCOUNTS`, comma-separated, read by
 `src/utils/siteOwner.js`; unset or empty = nobody, so a fork has no demo account — the e2e build's

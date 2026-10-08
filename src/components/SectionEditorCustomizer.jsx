@@ -7,12 +7,12 @@ import { SECTION_OVERRIDE_PX, sectionOverridePx } from '@/constants/spacingNumbe
 export function ToggleRow({ label, value, onChange }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-600">{label}</span>
+      <span className="text-xs text-cv-muted">{label}</span>
       <button
         onClick={() => onChange(!value)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${value ? 'bg-blue-600' : 'bg-gray-200'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${value ? 'bg-cv-brand' : 'bg-cv-field'}`}
       >
-        <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
+        <span className={`inline-block h-3.5 w-3.5 rounded-full bg-cv-surface shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
       </button>
     </div>
   );
@@ -21,7 +21,7 @@ export function ToggleRow({ label, value, onChange }) {
 export function SegmentRow({ label, options, value, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-gray-600 shrink-0">{label}</span>
+      <span className="text-xs text-cv-muted shrink-0">{label}</span>
       {/* The choices wrap onto a second line, kept to the right, when the panel is dragged narrow:
           in one line Skills' Style lost 'Tags' and Rows 'Spacious' past the card's edge (R4-DVIS-30). */}
       <div className="flex flex-wrap justify-end gap-1">
@@ -29,10 +29,10 @@ export function SegmentRow({ label, options, value, onChange }) {
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`px-2 py-1 text-[11px] rounded border transition-all ${
+            className={`px-2 py-1 text-[11px] rounded-cv-control border transition-all ${
               value === opt.value
-                ? 'bg-blue-600 border-blue-600 text-white font-medium'
-                : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                ? 'bg-cv-brand border-cv-brand text-white font-medium'
+                : 'border-cv-field text-cv-muted hover:border-cv-brand-soft-border hover:text-cv-brand-text'
             }`}
           >
             {opt.label}
@@ -66,11 +66,11 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
   const uid = useId();
 
   return (
-    <div className="px-3 py-3 bg-slate-50 border-b border-slate-100 space-y-2.5">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section Options</p>
+    <div className="px-3 py-3 bg-cv-ground border-b border-cv-hairline space-y-2.5">
+      <p className="text-[10px] font-bold text-cv-faint uppercase tracking-widest">Section Options</p>
 
       {sideColumn ? (
-        <p className="text-[11px] text-slate-500 leading-snug">
+        <p className="text-[11px] text-cv-muted leading-snug">
           Sidebar prints this section in its side column, one left-aligned column: no alignment, grid or title layout to choose.
         </p>
       ) : (
@@ -93,7 +93,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
       />
 
       {mixedColumn && (
-        <p className="text-[11px] text-slate-500 leading-snug" data-testid="mixed-column-note">
+        <p className="text-[11px] text-cv-muted leading-snug" data-testid="mixed-column-note">
           Sidebar · Mixed prints this section in one of the two columns under the main sections: one entry to a row, no grid to choose.
         </p>
       )}
@@ -172,8 +172,8 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
         <ToggleRow label="Group roles by company" value={s.groupRoles === true} onChange={v => set('groupRoles', v)} />
       )}
 
-      <div className="pt-1 border-t border-slate-200 space-y-2">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Spacing Override</p>
+      <div className="pt-1 border-t border-cv-hairline space-y-2">
+        <p className="text-[10px] font-bold text-cv-faint uppercase tracking-widest">Spacing Override</p>
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: 'Before', key: 'spaceBefore', title: 'Space before section (px)' },
@@ -181,7 +181,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
             { label: 'Item gap', key: 'itemGap', title: 'Gap between items (px)' },
           ].map(({ label, key, title }) => (
             <div key={key} className="flex flex-col gap-1">
-              <label htmlFor={uid + key} className="text-[10px] text-slate-400">{label}</label>
+              <label htmlFor={uid + key} className="text-[10px] text-cv-faint">{label}</label>
               <div className="flex items-center gap-0.5">
                 {/* 16 px on a touch screen, as the section's other fields are: iOS zooms the page into
                     a smaller field it focuses (R4-DPH-29). A mouse keeps 12 px. */}
@@ -200,10 +200,10 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
                     const v = sectionOverridePx(e.target.value);
                     if (v !== undefined) set(key, v);
                   }}
-                  className="w-full text-xs pointer-coarse:text-base border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
+                  className="w-full text-xs pointer-coarse:text-base border border-cv-field rounded-cv-control px-1.5 py-1 text-center text-cv-ink outline-none focus:border-cv-brand bg-cv-surface"
                 />
                 {s[key] != null && (
-                  <button title="Reset" onClick={() => set(key, undefined)} className="text-gray-300 hover:text-gray-500 shrink-0">
+                  <button title="Reset" onClick={() => set(key, undefined)} className="text-cv-faint hover:text-cv-muted shrink-0">
                     <RotateCcw size={10} />
                   </button>
                 )}

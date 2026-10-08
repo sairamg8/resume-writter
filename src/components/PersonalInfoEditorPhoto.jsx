@@ -74,7 +74,7 @@ export function PhotoSection({ resume: shown, getResume, personal, updatePersona
   // Position have nothing to place, and say so instead (R3-0, R2-147).
   const beside = photoTextPositionApplies(s, template);
   const besideNote = (testId) => (
-    <p className="text-[11px] text-gray-400" data-testid={testId}>
+    <p className="text-[11px] text-cv-faint" data-testid={testId}>
       {templateId(template) === 'sidebar'
         // Design → Template → Layout: on the band across the top (Details Top, Mixed) the photo sits
         // left of the name, centred on it; in the column, above it (R2-147-col).
@@ -86,28 +86,28 @@ export function PhotoSection({ resume: shown, getResume, personal, updatePersona
   );
 
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-100">
+    <div className="bg-cv-ground rounded-cv-card border border-cv-hairline">
       <button onClick={onToggle} className="w-full flex items-center justify-between p-3 text-left">
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Photo</p>
+          <p className="text-[11px] font-bold text-cv-muted uppercase tracking-widest">Photo</p>
           {personal.photo && !hidden.has('photo') && (unprintable ? (
-            <span className="text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full">Not printed</span>
+            <span className="text-[9px] font-medium text-cv-warn bg-cv-warn-soft px-1.5 py-0.5 rounded-full">Not printed</span>
           ) : (
-            <span className="text-[9px] font-medium text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">Added</span>
+            <span className="text-[9px] font-medium text-cv-brand-text bg-cv-brand-soft px-1.5 py-0.5 rounded-full">Added</span>
           ))}
         </div>
         <div className="flex items-center gap-1">
           {personal.photo && (
             <button
               onClick={e => { e.stopPropagation(); toggleFieldVisibility('photo'); }}
-              className={`p-1 rounded transition-colors ${hidden.has('photo') ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
+              className={`p-1 rounded transition-colors ${hidden.has('photo') ? 'text-cv-faint hover:text-cv-faint' : 'text-cv-brand-text hover:text-cv-brand-pressed'}`}
               // Hidden, it leaves the cover letter too; a photo uploaded for the letter still prints (R2-092).
               title={hidden.has('photo') ? 'Show photo on the résumé and cover letter' : 'Hide photo from the résumé and cover letter (a photo uploaded for the letter stays)'}
             >
               {hidden.has('photo') ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           )}
-          {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+          {open ? <ChevronDown size={14} className="text-cv-faint" /> : <ChevronRight size={14} className="text-cv-faint" />}
         </div>
       </button>
 
@@ -116,12 +116,12 @@ export function PhotoSection({ resume: shown, getResume, personal, updatePersona
           <div className="flex items-center gap-4">
             <div
               onClick={() => photoInputRef.current?.click()}
-              className="w-14 h-14 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors overflow-hidden shrink-0"
+              className="w-14 h-14 rounded-full border-2 border-dashed border-cv-field flex items-center justify-center cursor-pointer hover:border-cv-brand-soft-border hover:bg-cv-brand-soft transition-colors overflow-hidden shrink-0"
             >
               {personal.photo ? (
                 <img src={personal.photo} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <div className="flex flex-col items-center gap-0.5 text-gray-400">
+                <div className="flex flex-col items-center gap-0.5 text-cv-faint">
                   <Camera size={16} />
                   <span className="text-[9px]">Photo</span>
                 </div>
@@ -129,56 +129,56 @@ export function PhotoSection({ resume: shown, getResume, personal, updatePersona
             </div>
             <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-700">Profile Photo</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Optional. Click to upload.</p>
+              <p className="text-xs font-medium text-cv-ink">Profile Photo</p>
+              <p className="text-[11px] text-cv-faint mt-0.5">Optional. Click to upload.</p>
               {unprintable && (
-                <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">
+                <p className="text-[11px] text-cv-warn mt-1" data-testid="photo-unprintable">
                   {typeof personal.photo === 'string' && !personal.photo.startsWith('data:') ? UNLOADABLE_PHOTO : UNPRINTABLE_PHOTO}
                 </p>
               )}
               {personal.photo && (
-                <button onClick={removePhoto} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
+                <button onClick={removePhoto} className="text-[11px] text-cv-bad hover:text-cv-bad mt-1">Remove photo</button>
               )}
             </div>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Shape</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Shape</p>
             <PhotoChips control="photoShape" s={s} set={set} />
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Size</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Size</p>
             <PhotoChips control="photoSize" s={s} set={set} />
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Border</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Border</p>
             <PhotoChips control="photoBorder" s={s} set={set} />
           </div>
 
           {/* A circle takes no Height, and an imported shape the PDF does not draw ('oval') is one (R2-094). */}
           {photoOption('photoShape', s.photoShape) !== 'circle' && (
             <div>
-              <p className="text-xs font-semibold text-gray-700 mb-1.5">Height</p>
+              <p className="text-xs font-semibold text-cv-ink mb-1.5">Height</p>
               <PhotoChips control="photoHeight" s={s} set={set} />
             </div>
           )}
 
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Text Position</p>
             {beside ? <PhotoChips control="photoTextAlign" s={s} set={set} /> : besideNote('photo-text-position-note')}
           </div>
 
           {/* The photo's side of the name (R2-147): only where it sits beside the name, as Text Position. */}
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Position</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Position</p>
             {beside ? <PhotoChips control="photoPosition" s={s} set={set} /> : besideNote('photo-position-note')}
           </div>
 
           {/* A greyscale copy prints in the PDF and Word; the upload itself is kept as it is (R2-147). */}
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">Tone</p>
+            <p className="text-xs font-semibold text-cv-ink mb-1.5">Tone</p>
             <PhotoChips control="photoTone" s={s} set={set} />
           </div>
         </div>

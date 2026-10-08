@@ -24,7 +24,8 @@ const dialog = (page) => page.all().find((el) => el.getAttribute('role') === 'di
 const inDialog = (page, label) => [...elements(dialog(page))].find((el) => el.tagName === 'BUTTON' && text(el) === label);
 /** The picker: the Dashboard's hidden file input, whose click is counted. */
 function picker(page) {
-  const input = page.all().find((el) => el.tagName === 'INPUT' && el.getAttribute('type') === 'file');
+  const input = page.all().find((el) => el.tagName === 'INPUT' && el.type === 'file');
+  assert.ok(input, 'the Dashboard\'s file input');
   const box = { clicks: 0 };
   input.click = () => { box.clicks += 1; };
   return box;

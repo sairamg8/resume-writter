@@ -16,8 +16,10 @@ after(teardown);
 
 const inputs = (el) => [...elements(el)].filter((e) => e.tagName === 'INPUT' && e.getAttribute('aria-label') !== 'Section title');
 /** The entry cards within `root`, each with its title and how many text boxes it shows (0: collapsed). */
+// An entry card is the box around its header (data-testid entry-header), whatever classes it is drawn with.
 const cards = (root) => [...elements(root)]
-  .filter((e) => e.tagName === 'DIV' && /\bborder rounded-lg overflow-hidden\b/.test(e.getAttribute('class') || ''))
+  .filter((e) => e.getAttribute('data-testid') === 'entry-header')
+  .map((header) => header.parentNode)
   .map((card) => ({ title: card.childNodes[0].textContent, fields: inputs(card).length }));
 
 describe('only the entry just added opens (R4-LO-20)', () => {

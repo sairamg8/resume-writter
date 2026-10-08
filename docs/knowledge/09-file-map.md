@@ -25,7 +25,7 @@ resume-writter/
 │   │   ├── CoverLetterPanel*.jsx, CoverLetterGeneratorModal.jsx, BulletOptimizerModal.jsx
 │   │   ├── DesignPanel*.jsx, HeaderIconPickerModal.jsx, HeaderSpacingControls.jsx
 │   │   ├── EditorHeader|EditorResumeTab|EditorPreviewPane|EditorTabContent.jsx  # the Editor page's parts
-│   │   ├── ExportDropdown.jsx, ImportMenu.jsx, LayoutToggle.jsx
+│   │   ├── ExportDropdown.jsx, ImportDialog.jsx, LayoutToggle.jsx
 │   │   ├── PdfPreview.jsx     # the preview: the exported PDF, painted by pdf.js
 │   │   ├── PersonalInfoEditor*.jsx, RichTextEditor.jsx, SectionEditor*.jsx
 │   │   ├── ResumeCard.jsx, ResumeThumbnail.jsx, StarterTemplateModal.jsx

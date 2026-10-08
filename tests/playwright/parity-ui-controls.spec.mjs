@@ -214,7 +214,7 @@ test.describe('every design control changes the preview, through the UI', () => 
     // And Languages' — its Level (Text, Dots, Bar) is its own (R2-147): its card is the one titled Languages.
     await page.evaluate(() => {
       const title = [...document.querySelectorAll('input[aria-label="Section title"]')].find((i) => i.value === 'Languages');
-      title.closest('div.rounded-cv-card').dataset.pwLanguages = '1';
+      title.closest('[data-testid^="section-card-"]').dataset.pwLanguages = '1';
     });
     await page.locator('[data-pw-languages] button[title="Section options"]').click();
     // The ⋯ menu opens in a portal at the end of <body>, not inside the card (R4-DPH-24): its open menu.

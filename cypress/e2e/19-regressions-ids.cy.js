@@ -6,7 +6,7 @@ const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const unique = (ids) => expect(new Set(ids).size, `unique ids: ${ids.join(', ')}`).to.eq(ids.length);
 const stopTheClock = () => cy.clock(Date.now(), ['Date']);
 const sectionCard = (title) =>
-  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('.rounded-xl');
+  cy.get('input[type="text"]').filter((_, el) => el.value === title).closest('[data-testid^="section-card-"]');
 const formField = (label) => cy.contains('label', label).parent().find('input, select, textarea').first();
 
 describe('regressions — unique ids', () => {

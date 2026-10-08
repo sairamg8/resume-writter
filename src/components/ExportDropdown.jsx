@@ -46,8 +46,8 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
         ref={buttonRef}
         onClick={() => setOpen(o => !o)}
         disabled={!!exporting || importing}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
-          open ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-cv-control border transition-colors disabled:opacity-60 ${
+          open ? 'bg-cv-sunken border-cv-field text-cv-ink' : 'bg-cv-surface border-cv-hairline text-cv-ink hover:bg-cv-ground'
         }`}
       >
         <Download size={12} />
@@ -56,13 +56,13 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
       </button>
 
       {open && (
-        <div ref={menuRef} style={menuStyle} className={`${letter ? 'w-72' : 'w-52'} overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1`}>
+        <div ref={menuRef} style={menuStyle} className={`${letter ? 'w-72' : 'w-52'} overflow-y-auto bg-cv-surface border border-cv-hairline rounded-cv-control shadow-lg z-20 py-1`}>
           <button
             onClick={() => { onExportPDF(); setOpen(false); }}
             disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-brand-soft hover:text-cv-brand-pressed disabled:opacity-50"
           >
-            <Download size={12} className="text-blue-500" /> {letter ? 'Export Cover Letter PDF' : 'Export PDF'}
+            <Download size={12} className="text-cv-brand-text" /> {letter ? 'Export Cover Letter PDF' : 'Export PDF'}
           </button>
           <button
             onClick={() => { onExportWord(); setOpen(false); }}
@@ -77,69 +77,69 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
             title={letter
               ? 'An editable document: the letter with the letterhead, photo and text of its PDF'
               : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page; the designed layouts' section-title rules print, but their header bars and rules and the Timeline's rail are left out"}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-good-soft hover:text-cv-good disabled:opacity-50"
           >
-            <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
+            <FileText size={12} className="text-cv-good" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
           </button>
           {letter && (
             <button
               onClick={() => { onExportLetterText?.(); setOpen(false); }}
               disabled={!!exporting}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-50"
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-brand-soft hover:text-cv-brand-pressed disabled:opacity-50"
             >
-              <FileText size={12} className="text-purple-500" /> Export Cover Letter Text (.txt)
+              <FileText size={12} className="text-cv-brand-text" /> Export Cover Letter Text (.txt)
             </button>
           )}
           <button
             onClick={() => { onExportMarkdown?.(); setOpen(false); }}
             disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-warn-soft hover:text-cv-warn disabled:opacity-50"
           >
-            <FileCode size={12} className="text-amber-600" /> {letter ? 'Export Résumé as Markdown (.md)' : 'Export Markdown (.md)'}
+            <FileCode size={12} className="text-cv-warn" /> {letter ? 'Export Résumé as Markdown (.md)' : 'Export Markdown (.md)'}
           </button>
           <button
             onClick={() => { onExportAtsText?.(); setOpen(false); }}
             disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-brand-soft hover:text-cv-brand-pressed disabled:opacity-50"
           >
-            <FileText size={12} className="text-purple-500" /> {letter ? 'Export Résumé as ATS Text (.txt)' : 'Export ATS Text (.txt)'}
+            <FileText size={12} className="text-cv-brand-text" /> {letter ? 'Export Résumé as ATS Text (.txt)' : 'Export ATS Text (.txt)'}
           </button>
           <button
             onClick={() => { onExportJsonResume?.(); setOpen(false); }}
             disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cyan-50 hover:text-cyan-800 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cyan-50 hover:text-cyan-800 disabled:opacity-50"
           >
             <FileJson size={12} className="text-cyan-600" /> {letter ? 'Export Résumé as JSON Resume (.json)' : 'Export JSON Resume (.json)'}
           </button>
           <button
             onClick={() => { onExportJSON(); setOpen(false); }}
             disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-ground disabled:opacity-50"
           >
-            <Download size={12} className="text-gray-400" /> Export Backup JSON
+            <Download size={12} className="text-cv-faint" /> Export Backup JSON
           </button>
           {onShare && (
             <button
               onClick={() => { onShare(); setOpen(false); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-brand-soft hover:text-cv-brand-pressed"
             >
-              <Globe size={12} className="text-blue-500" /> Share a public link…
+              <Globe size={12} className="text-cv-brand-text" /> Share a public link…
             </button>
           )}
-          <div className="my-1 border-t border-gray-100" />
+          <div className="my-1 border-t border-cv-hairline" />
           <button
             onClick={() => pickImport(false)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-ground"
           >
-            <Upload size={12} className="text-gray-400" /> Import as a new résumé (JSON, PDF, Word or text)
+            <Upload size={12} className="text-cv-faint" /> Import as a new résumé (JSON, PDF, Word or text)
           </button>
-          <p className="px-3 pb-1 text-[11px] text-gray-500">{DOCUMENT_HINT}</p>
+          <p className="px-3 pb-1 text-[11px] text-cv-muted">{DOCUMENT_HINT}</p>
           {keeps && (
             <>
-              <button onClick={() => pickImport(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
-                <Pin size={12} className="text-amber-700" aria-hidden="true" /> Import as my original
+              <button onClick={() => pickImport(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cv-ink hover:bg-cv-ground">
+                <Pin size={12} className="text-cv-warn" aria-hidden="true" /> Import as my original
               </button>
-              <p className="px-3 pt-1 pb-2 text-[11px] text-gray-500">{ORIGINALS_HINT}</p>
+              <p className="px-3 pt-1 pb-2 text-[11px] text-cv-muted">{ORIGINALS_HINT}</p>
             </>
           )}
         </div>
