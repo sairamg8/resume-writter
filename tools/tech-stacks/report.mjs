@@ -6,17 +6,26 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-let roles = ['backend', 'fullstack']
+let mode = 'backend'
+let roles = null
 let out = join(here, 'out')
 const a = process.argv.slice(2)
 for (let i = 0; i < a.length; i++) {
-  if (a[i] === '--roles') roles = a[++i].split(',')
+  if (a[i] === '--mode') mode = a[++i]
+  else if (a[i] === '--roles') roles = a[++i].split(',')
   else if (a[i] === '--out') out = resolve(a[++i])
   else throw new Error(`Unknown argument: ${a[i]}`)
 }
 
-const LANGS = ['Python', 'Java', 'Go', 'Node.js', 'TypeScript', 'JavaScript', 'C#/.NET', 'Ruby', 'PHP', 'Kotlin', 'Scala', 'Rust', 'Elixir', 'C++']
-const FRAMEWORKS = ['Spring', 'Django/Flask/FastAPI', 'Rails', 'Node.js', 'Express/NestJS', 'C#/.NET', 'Laravel/Symfony', 'Phoenix', 'GraphQL', 'gRPC']
+if (!roles) roles = mode === 'frontend' ? ['frontend', 'fullstack'] : ['backend', 'fullstack']
+
+const LANGS_BACKEND = ['Python', 'Java', 'Go', 'Node.js', 'TypeScript', 'JavaScript', 'C#/.NET', 'Ruby', 'PHP', 'Kotlin', 'Scala', 'Rust', 'Elixir', 'C++']
+const FRAMEWORKS_BACKEND = ['Spring', 'Django/Flask/FastAPI', 'Rails', 'Node.js', 'Express/NestJS', 'C#/.NET', 'Laravel/Symfony', 'Phoenix', 'GraphQL', 'gRPC']
+const FRONTEND_FW = ['React', 'Angular', 'Vue', 'Svelte', 'Next.js', 'Nuxt', 'Remix', 'Solid', 'Astro', 'Ember', 'jQuery', 'Web Components/Lit']
+const FRONTEND_OTHER = ['TypeScript', 'JavaScript', 'HTML/CSS', 'Sass/styled-components', 'Tailwind', 'Redux', 'MobX/Zustand/Recoil', 'GraphQL', 'Webpack/Vite', 'Jest/Cypress/Playwright', 'Storybook', 'WebAssembly/WebGL', 'Node.js']
+const LANGS = mode === 'frontend' ? FRONTEND_FW : LANGS_BACKEND
+const FRAMEWORKS = mode === 'frontend' ? FRONTEND_OTHER : FRAMEWORKS_BACKEND
+const TITLE = mode === 'frontend' ? 'Frontend framework report (web development)' : 'Backend language report (web development)'
 const MIN_COMPANY_ROLES = 3
 
 const { companies } = JSON.parse(await readFile(join(out, 'tech-stacks.json'), 'utf8'))
@@ -42,26 +51,26 @@ for (const c of eligible) {
   s.roles += sum(c)
   for (const l of LANGS) s.t[l] = (s.t[l] || 0) + techN(c, l)
 }
-const sectorLines = Object.entries(bySector).filter(([, s]) => s.roles >= 100).sort((x, y) => y[1].roles - x[1].roles).map(([name, s]) => {
+const sectorLines = Object.entries(bySector).filter(([, s]) => s.roles >= 40).sort((x, y) => y[1].roles - x[1].roles).map(([name, s]) => {
   const top = Object.entries(s.t).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([l, n]) => `${l} ${Math.round((100 * n) / s.roles)}%`).join(', ')
   return `| ${name} | ${s.roles} | ${top} |`
 })
 
-const md = `# Backend language report (web development)
+const md = `# ${TITLE}
 
 Roles counted: ${roles.join(' + ')} engineering postings (${total} roles at ${companies.filter((c) => sum(c) > 0).length} companies; ${eligible.length} companies with at least ${MIN_COMPANY_ROLES} such roles).
 A role can mention several technologies, so shares do not add to 100%.
 
-## Languages
+## ${mode === 'frontend' ? 'Frameworks and libraries' : 'Languages'}
 ${table(LANGS)}
 
-## Web frameworks and API styles
+## ${mode === 'frontend' ? 'Languages, styling, state, tooling' : 'Web frameworks and API styles'}
 ${table(FRAMEWORKS)}
 
-## By sector (top 4 languages)
+## By sector (top 4)
 | Sector | Roles | Top languages |
 |---|---|---|
 ${sectorLines.join('\n')}
 `
-await writeFile(join(out, 'backend-language-report.md'), md)
+await writeFile(join(out, mode === 'frontend' ? 'frontend-framework-report.md' : 'backend-language-report.md'), md)
 console.log(md)
