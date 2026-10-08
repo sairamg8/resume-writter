@@ -123,7 +123,7 @@ export function JobDetail({ store }) {
         tabs={(
           // The kit's tab look and count (tabClass, TabCount), as the other page headers wear; still
           // buttons marking the open tab with aria-current, not the kit's role="tab" Tabs.
-          <div className="flex items-end gap-5 overflow-x-auto">
+          <div className="flex items-end gap-5 overflow-x-auto overflow-y-hidden">
             {TABS.map(tab => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;

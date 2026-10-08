@@ -36,7 +36,7 @@ const knownView = (v) => (VIEWS.some((x) => x.id === v) ? v : undefined);
  */
 function ViewTabs({ view, onChange }) {
   return (
-    <nav aria-label="Job tracker views" className="flex items-end gap-5 overflow-x-auto">
+    <nav aria-label="Job tracker views" className="flex items-end gap-5 overflow-x-auto overflow-y-hidden">
       {VIEWS.map((v) => (
         <button
           key={v.id}
