@@ -177,9 +177,15 @@ export function JobForm({ store }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountLeft]);
 
+  // The job this form added, if it did: the page it goes to opens as a transition, so the form (and its
+  // button) stays live while that page's code loads, and a double-click or a second Enter made a second job.
+  // A press after the first goes to the job already added.
+  const addedRef = useRef(null);
+  const addOnce = () => { addedRef.current ??= addJob(form); return addedRef.current; };
+
   function handleSave() {
     if (!canSave || gone || accountLeft) return;
-    if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); return; }
+    if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addOnce()}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
     if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${id}`); }
   }
@@ -191,7 +197,7 @@ export function JobForm({ store }) {
   }
 
   function saveAsNew() {
-    if (canSave && !accountLeft) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); }
+    if (canSave && !accountLeft) { clearDraft(key); leaveTo(`/jobs/${addOnce()}`); }
   }
 
   // An unknown id is not a blank form whose Save throws the input away (J-16). The job page's own
