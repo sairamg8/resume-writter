@@ -133,7 +133,7 @@ export function MenuList({
         data-menu-root={rootId}
         onKeyDown={onKeyDown}
         style={{ ...style, minWidth }}
-        className="z-[70] overflow-y-auto rounded-xl border border-cv-hairline bg-cv-surface p-1 shadow-pop outline-none animate-ui-pop-in"
+        className="z-[70] overflow-y-auto overscroll-contain rounded-xl border border-cv-hairline bg-cv-surface p-1 shadow-pop outline-none animate-ui-pop-in"
       >
         {items.map((item, index) => {
           if (item?.type === 'separator') return <div key={`sep-${index}`} role="separator" className="-mx-1 my-1 h-px bg-cv-sunken" />;
