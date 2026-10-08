@@ -39,6 +39,12 @@ export function PublicResume({ io = firebasePublicIo }) {
         setRead(copy ? { shareId, state: 'ready', resume: normalizeResume({ ...copy, id: `public_${shareId}`, name: copy.personal?.name || 'Résumé' }) } : { shareId, state: 'missing', resume: null });
       })
       .catch((e) => {
+        // An address Firestore refuses as a document id (a %2F in it, "..", one far too long) names no résumé: the
+        // answer is the same as for a link never published, not "check your connection", which no retry mends.
+        if (e?.code === 'invalid-argument') {
+          if (live) setRead({ shareId, state: 'missing', resume: null });
+          return;
+        }
         console.error('Reading the public résumé failed:', e);
         if (live) setRead({ shareId, state: 'error', resume: null });
       });
