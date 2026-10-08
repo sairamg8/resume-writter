@@ -61,7 +61,7 @@ describe('Button and IconButton', () => {
   it('every interactive kit control wears the focus ring', () => {
     for (const out of [html(h(ui.Button, null, 'A')), html(h(ui.IconButton, { icon: Icon, label: 'More' }))]) {
       assert.match(out, /focus-visible:ring-2/);
-      assert.match(out, /focus-visible:ring-cv-brand\/60/);
+      assert.match(out, /focus-visible:ring-indigo-500\/60/);
     }
   });
 
