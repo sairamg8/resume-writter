@@ -47,7 +47,10 @@ describe('the generator starts from the letter that is open (CYC6)', () => {
     try {
       const all = () => [...elements(view.document.body)];
       const button = (label) => all().find((el) => el.tagName === 'BUTTON' && text(el) === label);
-      const role = () => all().find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === 'Product Designer');
+      // Inside the generator's dialog: the panel's own Signature Designation field has the same placeholder (the
+      // person's title) and comes first in the page, so a search of the whole page typed into the wrong box.
+      const dialog = () => all().find((el) => el.getAttribute('aria-modal') === 'true');
+      const role = () => [...elements(dialog())].find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === 'Product Designer');
 
       view.act(() => reactProps(button('Auto-Generate from Resume')).onClick());
       view.act(() => reactProps(role()).onChange({ target: { value: 'Staff Engineer' } }));
