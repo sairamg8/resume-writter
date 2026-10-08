@@ -1,8 +1,8 @@
 // R4-DVIS-20: a project's Timeline, a row under the pointer. The row turned grey on hover
-// (hover:bg-hovered), but its sticky name cell is opaque white, so bars scrolled under it stay
+// (hover:bg-cv-stage), but its sticky name cell is opaque white, so bars scrolled under it stay
 // hidden, and it had no hover colour of its own: the highlight covered the days and stopped at the
 // name, at every width. The row is now a hover group and the name cell takes the same grey on the
-// row's hover (group-hover:bg-hovered, still opaque), keeping white as its resting colour. The real
+// row's hover (group-hover:bg-cv-stage, still opaque), keeping white as its resting colour. The real
 // page is rendered through Vite's loader (tests/pdf/harness.mjs) with react-dom/server over the
 // board store, as tests/pdf/103-r4-dph-01-timeline-name-column.test.mjs does; the fake DOM has no
 // layout or hover, so the class tokens that make it are read. Fictional data only.
@@ -79,8 +79,8 @@ it('R4-DVIS-20: each Timeline row is a hover group, and its sticky name cell tak
   const found = rows(html);
   assert.deepEqual(found.map((r) => r.key), ['HOME-1', 'HOME-2', 'HOME-3'], 'the epic, its child, then the issue in no epic');
   for (const { key, cell, row } of found) {
-    for (const t of ['group', 'flex', 'h-10', 'hover:bg-hovered']) assert.ok(row.includes(t), `${key}: the row has ${t}: ${row.join(' ')}`);
-    for (const t of ['sticky', 'bg-white', 'group-hover:bg-hovered']) assert.ok(cell.includes(t), `${key}: the name cell has ${t}: ${cell.join(' ')}`);
+    for (const t of ['group', 'flex', 'h-10', 'hover:bg-cv-stage']) assert.ok(row.includes(t), `${key}: the row has ${t}: ${row.join(' ')}`);
+    for (const t of ['sticky', 'bg-cv-surface', 'group-hover:bg-cv-stage']) assert.ok(cell.includes(t), `${key}: the name cell has ${t}: ${cell.join(' ')}`);
   }
 });
 
@@ -89,7 +89,7 @@ it('R4-DVIS-20: the header\'s Issue cell and the grid are no hover group, so one
   const divs = [...html.matchAll(/<div ([^>]*)>(Issue<\/div>)?/g)].map((m) => ({ tokens: classOf(m[1]), issue: Boolean(m[2]) }));
   const header = divs.find((d) => d.issue);
   assert.ok(header, 'the header\'s Issue cell');
-  assert.ok(header.tokens.includes('bg-white') && !header.tokens.includes('group-hover:bg-hovered'), `the header cell stays white: ${header.tokens.join(' ')}`);
+  assert.ok(header.tokens.includes('bg-cv-surface') && !header.tokens.includes('group-hover:bg-cv-stage'), `the header cell stays white: ${header.tokens.join(' ')}`);
   const at = divs.findIndex((d) => d.tokens.includes('relative') && d.tokens.includes('w-max'));
   assert.ok(at >= 0, 'the grid of rows');
   assert.ok(!divs[at].tokens.includes('group'), 'the grid of rows is not a group');

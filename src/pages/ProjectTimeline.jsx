@@ -42,18 +42,18 @@ function Row({ board, issue, span, from, depth = 0, open, onToggle, onOpen }) {
   const clippedLeft = left === null ? null : Math.max(left, 0);
   const clippedWidth = left === null ? 0 : Math.min(width - (clippedLeft - left), DAYS - clippedLeft);
   return (
-    <div className="group flex h-10 border-b border-line-subtle hover:bg-hovered">
+    <div className="group flex h-10 border-b border-line-subtle hover:bg-cv-stage">
       {/* The sticky name cell is opaque so bars scrolled under it stay hidden; it takes the row's
           hover colour itself, or the highlight stopped at its edge. */}
-      <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center gap-2 border-r border-line bg-white px-3 group-hover:bg-hovered" style={{ paddingLeft: `calc(12px + ${depth} * var(--depth-w))` }}>
+      <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center gap-2 border-r border-cv-hairline bg-cv-surface px-3 group-hover:bg-cv-stage" style={{ paddingLeft: `calc(12px + ${depth} * var(--depth-w))` }}>
         {onToggle ? (
-          <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the issues of ${issue.title}`} onClick={onToggle} className="rounded p-0.5 text-ink-subtle hover:bg-neutral-fill">
+          <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the issues of ${issue.title}`} onClick={onToggle} className="rounded p-0.5 text-cv-muted hover:bg-neutral-fill">
             <ChevronDown size={14} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
           </button>
         ) : <span className="w-5 shrink-0" />}
         <IssueTypeIcon type={issue.type} />
-        <button type="button" onClick={() => onOpen(key)} className="min-w-0 flex-1 truncate text-left text-sm text-ink hover:underline">
-          <span className="mr-1.5 text-ink-subtle">{key}</span>{issue.title}
+        <button type="button" onClick={() => onOpen(key)} className="min-w-0 flex-1 truncate text-left text-sm text-cv-ink hover:underline">
+          <span className="mr-1.5 text-cv-muted">{key}</span>{issue.title}
         </button>
         <Lozenge tone={cat} className="hidden xl:inline-flex">{statusColumn(board, issue)?.title}</Lozenge>
       </div>
@@ -69,7 +69,7 @@ function Row({ board, issue, span, from, depth = 0, open, onToggle, onOpen }) {
             {issue.title}
           </button>
         )}
-        {!span && <span className="absolute top-2.5 left-3 text-[12px] text-ink-subtlest">No due date</span>}
+        {!span && <span className="absolute top-2.5 left-3 text-[12px] text-cv-faint">No due date</span>}
       </div>
     </div>
   );
@@ -105,26 +105,26 @@ export function ProjectTimeline() {
         <Button onClick={() => setFrom(addDays(weekStart(today), -7))}>Today</Button>
         <IconButton icon={ChevronLeft} label="Earlier" onClick={() => setFrom((f) => addDays(f, -7))} />
         <IconButton icon={ChevronRight} label="Later" onClick={() => setFrom((f) => addDays(f, 7))} />
-        <span className="ml-1 text-sm text-ink-subtle">{formatShortDay(days[0])} – {formatShortDay(days.at(-1))}</span>
+        <span className="ml-1 text-sm text-cv-muted">{formatShortDay(days[0])} – {formatShortDay(days.at(-1))}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
         {/* The name column is 20rem from sm up; on a phone 10rem, with a child's indent halved, so
             the days still show beside it. The rows, the header and the today line all read it. */}
-        <div className="relative w-max min-w-full rounded-md border border-line [--depth-w:12px] [--name-w:10rem] sm:[--depth-w:24px] sm:[--name-w:20rem]">
-          <div className="sticky top-0 z-20 flex border-b border-line bg-white">
-            <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center border-r border-line bg-white px-3 text-[12px] font-semibold text-ink-subtle">Issue</div>
+        <div className="relative w-max min-w-full rounded-cv-control border border-cv-hairline [--depth-w:12px] [--name-w:10rem] sm:[--depth-w:24px] sm:[--name-w:20rem]">
+          <div className="sticky top-0 z-20 flex border-b border-cv-hairline bg-cv-surface">
+            <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center border-r border-cv-hairline bg-cv-surface px-3 text-[12px] font-semibold text-cv-muted">Issue</div>
             <div className="flex">
               {days.map((d) => (
-                <div key={d} className={cx('flex h-9 shrink-0 flex-col items-center justify-center border-l border-line-subtle text-[11px]', d === today ? 'font-bold text-brand' : 'text-ink-subtlest')} style={{ width: DAY_W }}>
+                <div key={d} className={cx('flex h-9 shrink-0 flex-col items-center justify-center border-l border-line-subtle text-[11px]', d === today ? 'font-bold text-cv-brand-text' : 'text-cv-faint')} style={{ width: DAY_W }}>
                   {Number(d.slice(8)) === 1 || d === days[0]
-                    ? <span className="whitespace-nowrap font-semibold text-ink-subtle">{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short' })}</span>
+                    ? <span className="whitespace-nowrap font-semibold text-cv-muted">{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short' })}</span>
                     : <span>{Number(d.slice(8))}</span>}
                 </div>
               ))}
             </div>
           </div>
           {todayAt !== null && todayAt >= 0 && todayAt < DAYS && (
-            <span aria-hidden="true" className="pointer-events-none absolute top-0 bottom-0 z-0 w-0.5 bg-brand/70" style={{ left: `calc(var(--name-w) + ${todayAt * DAY_W + DAY_W / 2}px)` }} />
+            <span aria-hidden="true" className="pointer-events-none absolute top-0 bottom-0 z-0 w-0.5 bg-cv-brand/70" style={{ left: `calc(var(--name-w) + ${todayAt * DAY_W + DAY_W / 2}px)` }} />
           )}
           {epics.map((e) => {
             const open = !folded.has(e.id);
@@ -136,7 +136,7 @@ export function ProjectTimeline() {
             );
           })}
           {loose.map((i) => <Row key={i.id} board={board} issue={i} span={spanOf(i)} from={from} onOpen={route.open} />)}
-          {board.issues.length === 0 && <p className="px-4 py-8 text-center text-sm text-ink-subtlest">No issues yet.</p>}
+          {board.issues.length === 0 && <p className="px-4 py-8 text-center text-sm text-cv-faint">No issues yet.</p>}
         </div>
       </div>
       <IssueHost route={route} />

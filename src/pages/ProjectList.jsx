@@ -39,9 +39,9 @@ const COLUMNS = [
 function Th({ col, sort, onSort }) {
   const on = sort.by === col.sort;
   return (
-    <th scope="col" aria-sort={on ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined} className={cx('h-9 border-b border-line bg-white px-2 text-left text-[12px] font-semibold text-ink-subtle', col.className)}>
+    <th scope="col" aria-sort={on ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined} className={cx('h-9 border-b border-cv-hairline bg-cv-surface px-2 text-left text-[12px] font-semibold text-cv-muted', col.className)}>
       {col.sort ? (
-        <button type="button" onClick={() => onSort(col.sort)} className="inline-flex items-center gap-1 rounded px-1 hover:bg-neutral-fill hover:text-ink">
+        <button type="button" onClick={() => onSort(col.sort)} className="inline-flex items-center gap-1 rounded px-1 hover:bg-neutral-fill hover:text-cv-ink">
           {col.label}
           {on && (sort.dir === 'asc' ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
         </button>
@@ -83,7 +83,7 @@ export function ProjectList() {
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
-      <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics right={<span className="text-[13px] text-ink-subtlest">{rows.length} of {board.issues.length} issues</span>} />
+      <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics right={<span className="text-[13px] text-cv-faint">{rows.length} of {board.issues.length} issues</span>} />
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
         <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[64rem]">
           <caption className="sr-only">Issues of {board.title}</caption>
@@ -98,34 +98,34 @@ export function ProjectList() {
               const labels = issue.labelIds.map((l) => board.labels.find((x) => x.id === l)).filter(Boolean);
               const epic = epicOf(issue);
               return (
-                <tr key={issue.id} className="group h-10 hover:bg-hovered">
+                <tr key={issue.id} className="group h-10 hover:bg-cv-stage">
                   <td className={cx('border-b border-line-subtle px-3', PHONE_HIDDEN)}><IssueTypeIcon type={issue.type} /></td>
-                  <td className={cx('border-b border-line-subtle px-2 text-ink-subtle', done && 'line-through')}>{key}</td>
+                  <td className={cx('border-b border-line-subtle px-2 text-cv-muted', done && 'line-through')}>{key}</td>
                   <td className="border-b border-line-subtle px-2">
                     {/* A long summary is cut short in the cell at every width (inline-size containment:
                         it no longer sets the column's width), so it cannot push Status off screen —
                         from sm up it widened the table past its 64rem floor too (R5-JOB-06). */}
-                    <button type="button" onClick={() => route.open(key)} className="w-full max-w-full truncate text-left text-ink hover:text-brand hover:underline contain-inline-size">{issue.title}</button>
+                    <button type="button" onClick={() => route.open(key)} className="w-full max-w-full truncate text-left text-cv-ink hover:text-cv-brand-text hover:underline contain-inline-size">{issue.title}</button>
                   </td>
                   <td className="border-b border-line-subtle px-2">
                     <StatusMenu size="sm" value={column?.id} options={statuses} onChange={(columnId) => store.updateIssue(board.id, issue.id, { columnId })} label={`Status of ${key}`} />
                   </td>
                   <td className="border-b border-line-subtle px-2">
-                    <span className="inline-flex items-center gap-1.5 text-ink"><PriorityIcon priority={issue.priority} decorative />{priorityOf(issue.priority).name}</span>
+                    <span className="inline-flex items-center gap-1.5 text-cv-ink"><PriorityIcon priority={issue.priority} decorative />{priorityOf(issue.priority).name}</span>
                   </td>
                   <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}>
-                    <span className="flex gap-1 overflow-hidden">{labels.slice(0, 2).map((l) => <LabelPill key={l.id} label={l} className="max-w-[6rem]" />)}{labels.length > 2 && <span className="text-[11px] text-ink-subtlest">+{labels.length - 2}</span>}</span>
+                    <span className="flex gap-1 overflow-hidden">{labels.slice(0, 2).map((l) => <LabelPill key={l.id} label={l} className="max-w-[6rem]" />)}{labels.length > 2 && <span className="text-[11px] text-cv-faint">+{labels.length - 2}</span>}</span>
                   </td>
                   <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}>{epic && <EpicLozenge title={epic.title} className="max-w-[10rem]" />}</td>
                   <td className="border-b border-line-subtle px-2">{issue.due && <DatePill value={issue.due} done={done} size="sm" />}</td>
                   <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}><Points value={issue.estimate} /></td>
-                  <td className={cx('border-b border-line-subtle px-2 text-[13px] text-ink-subtle', PHONE_HIDDEN)}>{relativeTime(issue.updatedAt)}</td>
+                  <td className={cx('border-b border-line-subtle px-2 text-[13px] text-cv-muted', PHONE_HIDDEN)}>{relativeTime(issue.updatedAt)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="py-10 text-center text-sm text-ink-subtlest">{board.issues.length ? 'No issues match these filters.' : 'No issues yet. Create the first one below.'}</p>}
+        {rows.length === 0 && <p className="py-10 text-center text-sm text-cv-faint">{board.issues.length ? 'No issues match these filters.' : 'No issues yet. Create the first one below.'}</p>}
         <div className="mt-1 max-w-xl">
           <InlineCreate variant="row" onCreate={create} />
         </div>

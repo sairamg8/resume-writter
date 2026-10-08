@@ -110,7 +110,7 @@ it('R4-DPH-01: a child row is indented by one step of the variable (halved on a 
 
 it('R4-DPH-01: the today line sits past the name column\'s width, on today\'s day, not at a literal 320px', () => {
   const html = timeline();
-  const lines = opening(html, 'span').filter((s) => s.tokens.includes('absolute') && s.tokens.includes('bg-brand/70'));
+  const lines = opening(html, 'span').filter((s) => s.tokens.includes('absolute') && s.tokens.includes('bg-cv-brand/70'));
   assert.equal(lines.length, 1, 'the today line');
   const today = dates.todayISO();
   const todayAt = dates.daysBetween(dates.addDays(dates.weekStart(today), -7), today);

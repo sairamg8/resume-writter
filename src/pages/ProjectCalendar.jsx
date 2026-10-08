@@ -54,25 +54,25 @@ export function ProjectCalendar() {
         <Button size="md" onClick={() => setMonth(`${today.slice(0, 7)}-01`)}>Today</Button>
         <IconButton icon={ChevronLeft} label="Previous month" onClick={() => setMonth((m) => shiftMonth(m, -1))} />
         <IconButton icon={ChevronRight} label="Next month" onClick={() => setMonth((m) => shiftMonth(m, 1))} />
-        <h2 className="ml-1 whitespace-nowrap text-lg font-semibold text-ink" aria-live="polite">{title}</h2>
-        {undated > 0 && <span className="w-full text-[13px] text-ink-subtlest sm:ml-auto sm:w-auto">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
+        <h2 className="ml-1 whitespace-nowrap text-lg font-semibold text-cv-ink" aria-live="polite">{title}</h2>
+        {undated > 0 && <span className="w-full text-[13px] text-cv-faint sm:ml-auto sm:w-auto">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
-        <div role="grid" aria-label={`${title} calendar`} className="min-w-[48rem] overflow-hidden rounded-md border border-line">
-          <div role="row" className="grid grid-cols-7 border-b border-line bg-sunken">
-            {WEEKDAYS.map((d) => <div key={d} role="columnheader" className="px-2 py-1.5 text-[12px] font-semibold uppercase text-ink-subtle">{d}</div>)}
+        <div role="grid" aria-label={`${title} calendar`} className="min-w-[48rem] overflow-hidden rounded-cv-control border border-cv-hairline">
+          <div role="row" className="grid grid-cols-7 border-b border-cv-hairline bg-cv-sunken">
+            {WEEKDAYS.map((d) => <div key={d} role="columnheader" className="px-2 py-1.5 text-[12px] font-semibold uppercase text-cv-muted">{d}</div>)}
           </div>
           {monthWeeks(month).map((week) => (
-            <div key={week[0].iso} role="row" className="grid grid-cols-7 border-b border-line last:border-b-0">
+            <div key={week[0].iso} role="row" className="grid grid-cols-7 border-b border-cv-hairline last:border-b-0">
               {week.map((day) => {
                 const list = byDay.get(day.iso) ?? [];
                 const open = expanded === day.iso;
                 const shown = open ? list : list.slice(0, MAX_IN_DAY);
                 const isToday = day.iso === today;
                 return (
-                  <div key={day.iso} role="gridcell" aria-label={day.iso} className={cx('group/day relative flex min-h-28 flex-col gap-1 border-r border-line p-1.5 last:border-r-0', !day.inMonth && 'bg-sunken/70')}>
+                  <div key={day.iso} role="gridcell" aria-label={day.iso} className={cx('group/day relative flex min-h-28 flex-col gap-1 border-r border-cv-hairline p-1.5 last:border-r-0', !day.inMonth && 'bg-cv-sunken/70')}>
                     <div className="flex items-center justify-between">
-                      <span className={cx('flex size-6 items-center justify-center rounded-full text-[12px]', isToday ? 'bg-brand font-semibold text-white' : day.inMonth ? 'text-ink' : 'text-ink-subtlest')}>
+                      <span className={cx('flex size-6 items-center justify-center rounded-full text-[12px]', isToday ? 'bg-cv-brand font-semibold text-white' : day.inMonth ? 'text-cv-ink' : 'text-cv-faint')}>
                         {Number(day.iso.slice(8))}
                       </span>
                       <IconButton icon={Plus} label={`Create an issue due ${day.iso}`} size="sm" tooltip={false} onClick={() => workspace?.openCreate({ boardId: board.id, due: day.iso })} className="opacity-0 group-hover/day:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />
@@ -81,14 +81,14 @@ export function ProjectCalendar() {
                       const key = issueKey(board, i);
                       const done = isIssueDone(board, i);
                       return (
-                        <button key={i.id} type="button" onClick={() => route.open(key)} title={`${key} ${i.title}`} className={cx('flex min-w-0 items-center gap-1.5 rounded border border-line bg-white px-1.5 py-0.5 text-left text-[12px] shadow-[0_1px_1px_#091e4220] hover:bg-hovered', done && 'text-ink-subtlest line-through')}>
+                        <button key={i.id} type="button" onClick={() => route.open(key)} title={`${key} ${i.title}`} className={cx('flex min-w-0 items-center gap-1.5 rounded border border-cv-hairline bg-cv-surface px-1.5 py-0.5 text-left text-[12px] shadow-[0_1px_1px_#091e4220] hover:bg-cv-stage', done && 'text-cv-faint line-through')}>
                           <IssueTypeIcon type={i.type} size={12} decorative />
                           <span className="truncate">{i.title}</span>
                         </button>
                       );
                     })}
                     {list.length > MAX_IN_DAY && (
-                      <button type="button" onClick={() => setExpanded(open ? null : day.iso)} className="self-start rounded px-1 text-[12px] font-medium text-ink-subtle hover:bg-neutral-fill">
+                      <button type="button" onClick={() => setExpanded(open ? null : day.iso)} className="self-start rounded px-1 text-[12px] font-medium text-cv-muted hover:bg-neutral-fill">
                         {open ? 'Show less' : `+${list.length - MAX_IN_DAY} more`}
                       </button>
                     )}
