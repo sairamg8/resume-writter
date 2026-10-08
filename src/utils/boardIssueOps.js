@@ -40,8 +40,11 @@ const sprintName = (board, id) => (id ? sprintById(board, id)?.name ?? '' : 'Bac
 const epicName = (board, id) => (id ? issueById(board, id)?.title ?? '' : '');
 const labelNames = (board, ids) => ids.map((id) => board.labels.find((l) => l.id === id)?.name).filter(Boolean).join(', ');
 const checklistCount = (list) => `${list.filter((c) => c.done).length}/${list.length}`;
-/** A description in the history: its first 140 characters as plain text, not the whole HTML each time. */
-const excerpt = (html) => richTextToPlain(html || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+/** A description in the history: its first 140 characters (whole ones) as plain text, not the whole HTML each time. */
+const excerpt = (html) => {
+  const plain = richTextToPlain(html || '').replace(/\s+/g, ' ').trim();
+  return plain.length > 140 ? [...plain].slice(0, 140).join('') : plain; // whole characters: an emoji at the cut is not split
+};
 
 /** A sprint an issue may be put in: one that exists and is not closed. */
 const openSprintId = (board, id) => (id && sprintById(board, id) && sprintById(board, id).state !== 'closed' ? id : null);
