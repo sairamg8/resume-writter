@@ -1,16 +1,28 @@
+import { useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { IconButton, NavTabs } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import { PROJECT_VIEWS, projectPath } from '@/components/shell/projectViews';
 import { useBoardStore } from '@/hooks/useBoardStore';
 
-/** A project's views as tabs — Summary · Timeline · Backlog · Board · Calendar · List. */
+/**
+ * A project's views as tabs — Summary · Timeline · Backlog · Board · Calendar · List. Below lg the
+ * row can be wider than the screen: it pans sideways, its right edge fades out as the cue, and the
+ * current tab is scrolled into view when the page opens (at 768px Calendar was half shown and List hidden).
+ */
 export function ProjectTabs({ boardId }) {
+  const box = useRef(null);
+  useEffect(() => {
+    box.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+  }, [boardId]);
   return (
-    <NavTabs
-      aria-label="Project views"
-      items={PROJECT_VIEWS.map((v) => ({ to: projectPath(boardId, v.path), label: v.label, icon: v.icon, end: true }))}
-    />
+    <div ref={box} className="min-w-0">
+      <NavTabs
+        aria-label="Project views"
+        className="max-lg:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]"
+        items={PROJECT_VIEWS.map((v) => ({ to: projectPath(boardId, v.path), label: v.label, icon: v.icon, end: true }))}
+      />
+    </div>
   );
 }
 
