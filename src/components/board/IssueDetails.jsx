@@ -8,14 +8,14 @@ import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, Recur
 function Row({ label, children }) {
   return (
     <div className="grid grid-cols-[7.5rem_1fr] items-center gap-2 py-0.5">
-      <span className="text-[13px] font-semibold text-ink-subtle">{label}</span>
+      <span className="text-[13px] font-semibold text-cv-muted">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
 const Stamp = ({ label, at }) => (at ? (
-  <p className="text-[12px] text-ink-subtlest">
+  <p className="text-[12px] text-cv-faint">
     {label} <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)}>{relativeTime(at)}</time>
   </p>
 ) : null);
@@ -31,13 +31,13 @@ export function IssueDetails({ board, issue, onChange, onCreateLabel }) {
   const sprints = board.mode === 'scrum' || board.sprints.length > 0;
   return (
     <div className="flex flex-col gap-3">
-      <section className="rounded-md border border-line">
+      <section className="rounded-cv-control border border-cv-hairline">
         <h3>
           <button
             type="button"
             aria-expanded={open}
             onClick={() => setOpen(!open)}
-            className="flex w-full items-center justify-between gap-2 rounded-t-md border-b border-line px-3 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+            className="flex w-full items-center justify-between gap-2 rounded-t-cv-control border-b border-cv-hairline px-3 py-2.5 text-left text-sm font-semibold text-cv-ink transition-colors hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60"
           >
             Details
             <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />

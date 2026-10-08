@@ -31,7 +31,7 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         type="button"
         onClick={() => setOpen(true)}
         className={cx(
-          'flex h-9 w-full items-center gap-1.5 rounded px-2 text-sm font-medium text-ink-subtle transition-colors hover:bg-neutral-fill-hover hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
+          'flex h-9 w-full items-center gap-1.5 rounded-cv-control px-2 text-sm font-medium text-cv-muted transition-colors hover:bg-cv-stage hover:text-cv-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60',
           className,
         )}
       >
@@ -44,7 +44,7 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
   // on a phone they left it about 100px, narrower than its own placeholder, so it stacks there.
   return (
     <div
-      className={cx('flex flex-col gap-2 rounded border-2 border-brand bg-white p-2', variant === 'row' && 'sm:flex-row sm:items-center', className)}
+      className={cx('flex flex-col gap-2 rounded-cv-control border-2 border-cv-brand bg-cv-surface p-2', variant === 'row' && 'sm:flex-row sm:items-center', className)}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget) && !text.trim()) setOpen(false); }}
     >
       <textarea
@@ -62,11 +62,11 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         placeholder={placeholder}
         aria-label="Summary of the new issue"
         // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
-        className="min-w-0 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-subtlest focus:outline-none pointer-coarse:text-base"
+        className="min-w-0 flex-1 resize-none bg-transparent text-sm text-cv-ink placeholder:text-cv-faint focus:outline-none pointer-coarse:text-base"
       />
       <div className="flex items-center gap-2">
         {showType && <div className="w-32"><TypePicker value={type} onChange={setType} allowEpic={false} /></div>}
-        <button type="button" onClick={create} disabled={!text.trim()} className="ml-auto h-7 rounded bg-brand px-2.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-hover disabled:opacity-50">
+        <button type="button" onClick={create} disabled={!text.trim()} className="ml-auto h-7 rounded-cv-control bg-cv-brand px-2.5 text-[13px] font-medium text-white transition-colors hover:bg-cv-brand-pressed disabled:opacity-50">
           Create
         </button>
       </div>

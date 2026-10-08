@@ -28,16 +28,16 @@ export function IssueChecklist({ items = [], onChange, readNow, autoFocus = fals
   return (
     <section aria-labelledby="issue-checklist-heading" className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
-        <h3 id="issue-checklist-heading" className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <CheckSquare size={16} aria-hidden="true" className="text-ink-subtle" /> Checklist
+        <h3 id="issue-checklist-heading" className="flex items-center gap-2 text-sm font-semibold text-cv-ink">
+          <CheckSquare size={16} aria-hidden="true" className="text-cv-muted" /> Checklist
         </h3>
-        {items.length > 0 && <span className="text-[12px] text-ink-subtlest">{done} of {items.length} done</span>}
+        {items.length > 0 && <span className="text-[12px] text-cv-faint">{done} of {items.length} done</span>}
       </div>
       {items.length > 0 && (
         <ProgressBar value={done} max={items.length} autoTone label="Checklist progress" valueText={`${done} of ${items.length} done`} />
       )}
       {items.length > 0 && (
-        <ul className="flex flex-col divide-y divide-line-subtle rounded-md border border-line">
+        <ul className="flex flex-col divide-y divide-cv-hairline rounded-cv-control border border-cv-hairline">
           {items.map((c) => (
             <li key={c.id} className="group flex items-center gap-2 px-2 py-1">
               <input
@@ -55,7 +55,7 @@ export function IssueChecklist({ items = [], onChange, readNow, autoFocus = fals
                 value={c.text}
                 onCommit={(next) => set(c.id, { text: next })}
                 label="Checklist item"
-                className={`min-w-0 flex-1 break-words text-sm ${c.done ? 'text-ink-subtlest line-through' : 'text-ink'}`}
+                className={`min-w-0 flex-1 break-words text-sm ${c.done ? 'text-cv-faint line-through' : 'text-cv-ink'}`}
                 inputClassName="pointer-coarse:text-base"
               />
               <IconButton
@@ -85,7 +85,7 @@ export function IssueChecklist({ items = [], onChange, readNow, autoFocus = fals
         placeholder="Add an item (Enter to add)"
         aria-label="Add a checklist item"
         // 16 px on touch screens, as the item's field above (R4-DPH-11).
-        className="h-8 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base"
+        className="h-8 rounded-cv-control border border-transparent bg-transparent px-2 text-sm text-cv-ink placeholder:text-cv-faint transition-colors hover:bg-cv-sunken focus:border-cv-brand focus:bg-cv-surface focus:outline-none pointer-coarse:text-base"
       />
     </section>
   );

@@ -30,7 +30,7 @@ function initialDraft(board, defaults = {}) {
 function Row({ label, children }) {
   return (
     <div className="grid gap-1 sm:grid-cols-[8.5rem_1fr] sm:items-center sm:gap-3">
-      <span className="text-[12px] font-semibold text-ink-subtle">{label}</span>
+      <span className="text-[12px] font-semibold text-cv-muted">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -97,7 +97,7 @@ function CreateForm({ board, boards, defaults, onBoardChange, onClose, typedRef 
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-      <p className="text-[13px] text-ink-subtlest">Required fields are marked with an asterisk <span className="text-red-600">*</span></p>
+      <p className="text-[13px] text-cv-faint">Required fields are marked with an asterisk <span className="text-cv-bad">*</span></p>
       <Select
         label="Project"
         required
@@ -127,10 +127,10 @@ function CreateForm({ board, boards, defaults, onBoardChange, onClose, typedRef 
         onKeyDown={(e) => { if (e.key === 'Enter' && !isImeKey(e)) submit(e); }}
       />
       <div className="flex flex-col gap-1.5">
-        <span className="text-[12px] font-semibold text-ink-subtle">Description</span>
+        <span className="text-[12px] font-semibold text-cv-muted">Description</span>
         <RichTextEditor key={editorKey} ariaLabel="Description" value={draft.description} onChange={(description) => set({ description })} placeholder="Add a description…" rows={4} />
       </div>
-      <div className="flex flex-col gap-1 rounded-md border border-line p-2">
+      <div className="flex flex-col gap-1 rounded-cv-control border border-cv-hairline p-2">
         <Row label="Priority"><PriorityPicker value={draft.priority} onChange={(priority) => set({ priority })} /></Row>
         <Row label="Labels">
           <LabelsPicker board={board} value={draft.labelIds} onChange={(labelIds) => set({ labelIds })} onCreateLabel={(l) => store.addLabel(board.id, l)} />
@@ -141,8 +141,8 @@ function CreateForm({ board, boards, defaults, onBoardChange, onClose, typedRef 
         <Row label="Start date"><DateInput label="Start date" value={draft.startDate} onChange={(startDate) => set({ startDate })} /></Row>
         <Row label="Due date"><DateInput label="Due date" value={draft.due} onChange={(due) => set({ due })} /></Row>
       </div>
-      <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center gap-3 border-t border-line bg-white px-5 py-3 sm:-mx-6 sm:px-6">
-        <label className="mr-auto flex items-center gap-2 text-sm text-ink-subtle">
+      <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center gap-3 border-t border-cv-hairline bg-cv-surface px-5 py-3 sm:-mx-6 sm:px-6">
+        <label className="mr-auto flex items-center gap-2 text-sm text-cv-muted">
           <input type="checkbox" checked={another} onChange={(e) => setAnother(e.target.checked)} className="size-4 accent-[#0c66e4]" />
           Create another
         </label>

@@ -81,7 +81,7 @@ it('R4-DVIS-06: the Details captions are the kit\'s field labels (12 px, semibol
   const page = await mountSettings();
   try {
     for (const caption of ['Name', 'Key', 'Description', 'Colour', 'Way of working']) {
-      tokens(ownText(page, caption), `the "${caption}" caption`, { has: ['text-[12px]', 'font-semibold', 'text-ink-subtle'], hasNot: ['text-xs'] });
+      tokens(ownText(page, caption), `the "${caption}" caption`, { has: ['text-[12px]', 'font-semibold', 'text-cv-muted'], hasNot: ['text-xs'] });
     }
   } finally {
     await page.close();

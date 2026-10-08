@@ -61,7 +61,7 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
       onClick={onOpen}
       onKeyDown={(e) => openOnKey(e, onOpen)}
       className={cx(
-        'group/row flex h-10 cursor-pointer items-center gap-2.5 border-b border-line-subtle bg-white px-3 text-sm last:border-b-0 hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand',
+        'group/row flex h-10 cursor-pointer items-center gap-2.5 border-b border-cv-hairline bg-cv-surface px-3 text-sm last:border-b-0 hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cv-brand',
         isDragging && 'relative z-10 opacity-70 shadow-lg',
       )}
     >
@@ -70,8 +70,8 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
           its number is wider than that, and it widens its column while the summary gives way —
           held to w-16 it wrapped after the '-' or ran over the summary. Never truncated: the
           number is what tells the issue apart. */}
-      <span className={cx('min-w-16 shrink-0 whitespace-nowrap text-[13px] text-ink-subtle', column?.category === 'done' && 'line-through')}>{key}</span>
-      <span className="min-w-0 flex-1 truncate text-ink">{issue.title}</span>
+      <span className={cx('min-w-16 shrink-0 whitespace-nowrap text-[13px] text-cv-muted', column?.category === 'done' && 'line-through')}>{key}</span>
+      <span className="min-w-0 flex-1 truncate text-cv-ink">{issue.title}</span>
       {epic && <EpicLozenge title={epic.title} className="hidden max-w-[10rem] sm:inline-flex" />}
       <span {...stop} className="hidden shrink-0 sm:block"><StatusMenu size="sm" value={column?.id} options={statuses} onChange={onStatus} /></span>
       <span className="flex w-6 shrink-0 justify-center"><Points value={issue.estimate} /></span>
@@ -95,26 +95,26 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
 export function EpicPanel({ board, selected = [], onToggle, onOpen, onCreate, onClose }) {
   const epics = epicsOf(board);
   return (
-    <aside aria-label="Epics" className="flex w-full shrink-0 flex-col gap-2 rounded-md border border-line bg-white p-3 lg:w-72 lg:self-start">
+    <aside aria-label="Epics" className="flex w-full shrink-0 flex-col gap-2 rounded-cv-control border border-cv-hairline bg-cv-surface p-3 lg:w-72 lg:self-start">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ink">Epic</h2>
+        <h2 className="text-sm font-semibold text-cv-ink">Epic</h2>
         <IconButton icon={X} label="Close the epic panel" size="sm" onClick={onClose} />
       </div>
-      {epics.length === 0 && <p className="text-[13px] text-ink-subtlest">No epics yet. An epic groups the issues of a bigger piece of work.</p>}
+      {epics.length === 0 && <p className="text-[13px] text-cv-faint">No epics yet. An epic groups the issues of a bigger piece of work.</p>}
       <ul className="flex flex-col gap-1.5">
         {epics.map((e) => {
           const p = epicProgress(board, e.id);
           const on = selected.includes(e.id);
           return (
-            <li key={e.id} className={cx('rounded border p-2 transition-colors', on ? 'border-brand bg-brand-subtle' : 'border-line hover:bg-hovered')}>
+            <li key={e.id} className={cx('rounded-cv-control border p-2 transition-colors', on ? 'border-cv-brand bg-cv-brand-soft' : 'border-cv-hairline hover:bg-cv-stage')}>
               <div className="flex items-center gap-2">
-                <button type="button" aria-pressed={on} onClick={() => onToggle(e.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium text-ink focus-visible:outline-none focus-visible:underline" title="Show only this epic's issues">
+                <button type="button" aria-pressed={on} onClick={() => onToggle(e.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium text-cv-ink focus-visible:outline-none focus-visible:underline" title="Show only this epic's issues">
                   {e.title}
                 </button>
-                <button type="button" onClick={() => onOpen(issueKey(board, e))} className="shrink-0 text-[12px] text-ink-subtle hover:text-brand hover:underline">{issueKey(board, e)}</button>
+                <button type="button" onClick={() => onOpen(issueKey(board, e))} className="shrink-0 text-[12px] text-cv-muted hover:text-cv-brand-text hover:underline">{issueKey(board, e)}</button>
               </div>
               <ProgressBar className="mt-2" value={p.done} max={Math.max(p.total, 1)} autoTone label={`${e.title} progress`} valueText={`${p.done} of ${p.total} done`} />
-              <p className="mt-1 text-[11px] text-ink-subtlest">{p.done} of {p.total} issues done{p.points ? ` · ${p.donePoints}/${p.points} points` : ''}</p>
+              <p className="mt-1 text-[11px] text-cv-faint">{p.done} of {p.total} issues done{p.points ? ` · ${p.donePoints}/${p.points} points` : ''}</p>
             </li>
           );
         })}
@@ -165,7 +165,7 @@ export function CompleteSprintDialog({ sprint, stats, futures, onComplete, onClo
     <Dialog open={!!sprint} onClose={onClose} title={`Complete ${sprint?.name ?? 'sprint'}`} size="md"
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onComplete(to === 'backlog' ? null : to)}>Complete sprint</Button></>}>
       {stats && (
-        <div className="flex flex-col gap-4 text-sm text-ink">
+        <div className="flex flex-col gap-4 text-sm text-cv-ink">
           <p>This sprint contains <strong>{stats.done} completed issue{stats.done === 1 ? '' : 's'}</strong> and <strong>{stats.open} open issue{stats.open === 1 ? '' : 's'}</strong>.</p>
           {stats.open > 0 ? (
             <Select
@@ -174,7 +174,7 @@ export function CompleteSprintDialog({ sprint, stats, futures, onComplete, onClo
               onChange={(e) => setTo(e.target.value)}
               options={[{ value: 'backlog', label: 'Backlog' }, ...futures.map((s) => ({ value: s.id, label: s.name }))]}
             />
-          ) : <p className="text-ink-subtle">Every issue in this sprint is done. Nice work.</p>}
+          ) : <p className="text-cv-muted">Every issue in this sprint is done. Nice work.</p>}
         </div>
       )}
     </Dialog>

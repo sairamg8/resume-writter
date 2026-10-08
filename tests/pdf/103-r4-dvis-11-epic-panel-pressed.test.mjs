@@ -21,14 +21,14 @@ it('R4-DVIS-11: "Epic panel" is drawn selected while the panel is open, as the q
     assert.equal(toggle().getAttribute('aria-pressed'), 'false');
     const got = tokens(toggle());
     assert.ok(got.has('bg-neutral-fill'), 'the toggle is the kit\'s grey button while the panel is closed');
-    for (const t of ['aria-pressed:bg-brand-subtle', 'aria-pressed:text-brand', 'aria-pressed:hover:bg-brand-subtle-hover']) {
+    for (const t of ['aria-pressed:bg-cv-brand-soft', 'aria-pressed:text-cv-brand-text', 'aria-pressed:hover:bg-cv-brand-soft-border']) {
       assert.ok(got.has(t), `the toggle lacks ${t}: it looks the same open and closed`);
     }
 
     page.click(toggle());
     assert.ok(page.byLabel('Epics'), 'the Epic panel opened');
     assert.equal(toggle().getAttribute('aria-pressed'), 'true', 'the pressed look keys on aria-pressed');
-    assert.ok(tokens(toggle()).has('aria-pressed:bg-brand-subtle'));
+    assert.ok(tokens(toggle()).has('aria-pressed:bg-cv-brand-soft'));
   } finally {
     await page.view.unmount();
   }

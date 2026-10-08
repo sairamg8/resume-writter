@@ -27,14 +27,14 @@ function FilterButton({ label, count, className, ...rest }) {
     <button
       type="button"
       className={cx(
-        'inline-flex h-8 shrink-0 items-center gap-1 rounded px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
-        count ? 'bg-brand-subtle text-brand hover:bg-brand-subtle-hover' : 'text-ink-subtle hover:bg-neutral-fill hover:text-ink',
+        'inline-flex h-8 shrink-0 items-center gap-1 rounded-cv-control px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60',
+        count ? 'bg-cv-brand-soft text-cv-brand-text hover:bg-cv-brand-soft-border' : 'text-cv-muted hover:bg-cv-sunken hover:text-cv-ink',
         className,
       )}
       {...rest}
     >
       {label}
-      {count > 0 && <span className="rounded-full bg-brand px-1.5 text-[11px] leading-4 text-white">{count}</span>}
+      {count > 0 && <span className="rounded-full bg-cv-brand px-1.5 text-[11px] leading-4 text-white">{count}</span>}
       <ChevronDown size={14} aria-hidden="true" />
     </button>
   );
@@ -105,7 +105,7 @@ export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy
           onChange={(priorities) => set({ priorities })}
           trigger={<FilterButton label="Priority" count={filters.priorities.length} />}
         />
-        <span aria-hidden="true" className="mx-1 hidden h-5 w-px bg-line sm:block" />
+        <span aria-hidden="true" className="mx-1 hidden h-5 w-px bg-cv-hairline sm:block" />
         {QUICK.map((q) => (
           <button
             key={q.id}
@@ -113,15 +113,15 @@ export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy
             aria-pressed={filters.due === q.id}
             onClick={() => set({ due: filters.due === q.id ? '' : q.id })}
             className={cx(
-              'h-8 shrink-0 rounded px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
-              filters.due === q.id ? 'bg-brand-subtle text-brand hover:bg-brand-subtle-hover' : 'text-ink-subtle hover:bg-neutral-fill hover:text-ink',
+              'h-8 shrink-0 rounded-cv-control px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60',
+              filters.due === q.id ? 'bg-cv-brand-soft text-cv-brand-text hover:bg-cv-brand-soft-border' : 'text-cv-muted hover:bg-cv-sunken hover:text-cv-ink',
             )}
           >
             {q.label}
           </button>
         ))}
         {hasFilters(filters) && (
-          <button type="button" onClick={() => onChange(EMPTY_FILTERS)} className="h-8 shrink-0 rounded px-2.5 text-sm font-medium text-ink-subtle underline-offset-2 hover:text-ink hover:underline">
+          <button type="button" onClick={() => onChange(EMPTY_FILTERS)} className="h-8 shrink-0 rounded-cv-control px-2.5 text-sm font-medium text-cv-muted underline-offset-2 hover:text-cv-ink hover:underline">
             Clear filters
           </button>
         )}

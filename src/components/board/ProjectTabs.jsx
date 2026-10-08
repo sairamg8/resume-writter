@@ -20,7 +20,7 @@ export function ProjectAvatar({ board, size = 32 }) {
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-md font-bold text-white"
+      className="flex shrink-0 items-center justify-center rounded-cv-control font-bold text-white"
       style={{ width: size, height: size, backgroundColor: board.color || '#94a3b8', fontSize: Math.round(size * 0.45) }}
     >
       {letter}
@@ -49,7 +49,7 @@ export function ProjectHeader({ board, actions, children }) {
             label={board.starred ? 'Unstar project' : 'Star project'}
             pressed={board.starred}
             onClick={() => store.toggleStar(board.id)}
-            className={board.starred ? '[&_svg]:fill-amber-400 [&_svg]:text-amber-500' : undefined}
+            className={board.starred ? '[&_svg]:fill-cv-warn [&_svg]:text-cv-warn' : undefined}
           />
           {actions}
         </>

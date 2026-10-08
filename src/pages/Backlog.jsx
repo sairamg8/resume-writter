@@ -28,7 +28,7 @@ const TOUCH_DRAG = { activationConstraint: { delay: 200, tolerance: 8 } };
  */
 function DroppableSection({ id, sprintId, children, ...props }) {
   const { setNodeRef, isOver } = useDroppable({ id: `section:${id}`, data: { type: 'section', sprintId } });
-  return <section ref={setNodeRef} {...props} className={cx('rounded-md p-2 transition-colors', isOver ? 'bg-brand-subtle' : 'bg-sunken')}>{children}</section>;
+  return <section ref={setNodeRef} {...props} className={cx('rounded-cv-control p-2 transition-colors', isOver ? 'bg-cv-brand-soft' : 'bg-cv-sunken')}>{children}</section>;
 }
 
 /**
@@ -131,24 +131,24 @@ export function Backlog() {
         filters={filters}
         onChange={setFilters}
         // Drawn selected while the panel is open, as the quick filters beside it are when on. The
-        // aria-pressed variants outrank the button's own grey and its hover; a plain bg-brand-subtle
-        // would only tie with its bg-neutral-fill (cx does not merge classes).
+        // aria-pressed variants outrank the button's own grey and its hover; a plain bg-cv-brand-soft
+        // would only tie with its bg-cv-sunken (cx does not merge classes).
         right={(
           <Button
             size="md"
             leftIcon={Layers}
             onClick={() => setEpicsOpen((o) => !o)}
             aria-pressed={epicsOpen}
-            className="aria-pressed:bg-brand-subtle aria-pressed:text-brand aria-pressed:hover:bg-brand-subtle-hover"
+            className="aria-pressed:bg-cv-brand-soft aria-pressed:text-cv-brand-text aria-pressed:hover:bg-cv-brand-soft-border"
           >
             Epic panel
           </Button>
         )}
       />
       {!scrum && (
-        <div className="mx-4 mb-3 flex flex-wrap items-center gap-3 rounded-md border border-line bg-sunken px-4 py-3 md:mx-8">
-          <p className="min-w-[14rem] flex-1 text-sm text-ink-subtle">
-            <span className="font-semibold text-ink">Plan in sprints?</span> This project runs as Kanban: its board shows every issue. With sprints you plan time-boxed iterations, and the board shows the active one.
+        <div className="mx-4 mb-3 flex flex-wrap items-center gap-3 rounded-cv-control border border-cv-hairline bg-cv-sunken px-4 py-3 md:mx-8">
+          <p className="min-w-[14rem] flex-1 text-sm text-cv-muted">
+            <span className="font-semibold text-cv-ink">Plan in sprints?</span> This project runs as Kanban: its board shows every issue. With sprints you plan time-boxed iterations, and the board shows the active one.
           </p>
           <Button variant="primary" onClick={() => store.updateBoard(board.id, { mode: 'scrum' })}>Use sprints</Button>
         </div>
@@ -174,7 +174,7 @@ export function Backlog() {
               return (
                 <DroppableSection key={section.id} id={section.id} sprintId={sprintId} data-section={section.id} aria-label={sprint ? sprint.name : 'Backlog'}>
                   <header className="flex flex-wrap items-center gap-2 px-1 py-1">
-                    <button type="button" aria-expanded={open} aria-label={`${open ? 'Fold' : 'Unfold'} ${sprint ? sprint.name : 'the backlog'}`} onClick={() => toggleFold(section.id)} className="rounded p-1 text-ink-subtle hover:bg-neutral-fill">
+                    <button type="button" aria-expanded={open} aria-label={`${open ? 'Fold' : 'Unfold'} ${sprint ? sprint.name : 'the backlog'}`} onClick={() => toggleFold(section.id)} className="rounded-cv-control p-1 text-cv-muted hover:bg-cv-sunken">
                       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
                     </button>
                     {/* The sprint's name in a wrapper as wide as its text: InlineEdit's box is
@@ -183,13 +183,13 @@ export function Backlog() {
                     {sprint
                       ? (
                         <div className="min-w-0 max-w-full">
-                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-ink" inputClassName="pointer-coarse:text-base" />
+                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-cv-ink" inputClassName="pointer-coarse:text-base" />
                         </div>
                       )
-                      : <h2 className="text-sm font-semibold text-ink">Backlog</h2>}
+                      : <h2 className="text-sm font-semibold text-cv-ink">Backlog</h2>}
                     {sprint?.state === 'active' && <span className="rounded-[3px] bg-loz-progress px-1 text-[11px] font-bold uppercase text-loz-progress-ink">Active</span>}
-                    {sprintDates(sprint) && <span className="text-[13px] text-ink-subtle">{sprintDates(sprint)}</span>}
-                    <span className="text-[13px] text-ink-subtlest">({section.stats.issues} issue{section.stats.issues === 1 ? '' : 's'})</span>
+                    {sprintDates(sprint) && <span className="text-[13px] text-cv-muted">{sprintDates(sprint)}</span>}
+                    <span className="text-[13px] text-cv-faint">({section.stats.issues} issue{section.stats.issues === 1 ? '' : 's'})</span>
                     <span className="ml-auto flex items-center gap-2">
                       <PointBubbles board={board} issues={section.issues} />
                       {sprint?.state === 'future' && (
@@ -209,18 +209,18 @@ export function Backlog() {
                     </span>
                     {/* min-w-0 and break-words: a goal with a long unbroken word (a link) breaks at
                         the header's edge instead of widening it and scrolling the backlog sideways. */}
-                    {sprint?.goal && <p className="min-w-0 basis-full break-words pl-9 text-[13px] text-ink-subtle">{sprint.goal}</p>}
+                    {sprint?.goal && <p className="min-w-0 basis-full break-words pl-9 text-[13px] text-cv-muted">{sprint.goal}</p>}
                   </header>
                   {open && (
                     <div className="mt-1 flex flex-col gap-1">
                       <div className="min-h-10 rounded-sm">
                         {section.shown.length === 0 ? (
-                          <p className="rounded border-2 border-dashed border-line px-4 py-3 text-center text-[13px] text-ink-subtlest">
+                          <p className="rounded-cv-control border-2 border-dashed border-cv-hairline px-4 py-3 text-center text-[13px] text-cv-faint">
                             {section.issues.length ? 'No issues here match the filters.' : sprint ? 'Plan this sprint: drag issues here from the backlog, or create one.' : 'Your backlog is empty.'}
                           </p>
                         ) : (
                           <SortableContext items={section.shown.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                            <ul className="overflow-hidden rounded border border-line">
+                            <ul className="overflow-hidden rounded-cv-control border border-cv-hairline">
                               {section.shown.map((issue) => (
                                 <BacklogRow
                                   key={issue.id}

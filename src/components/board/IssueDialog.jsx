@@ -61,11 +61,11 @@ function Description({ value, onSave }) {
       type="button"
       onClick={edit}
       aria-label="Edit description"
-      className="-mx-2 w-[calc(100%+1rem)] rounded px-2 py-1.5 text-left transition-colors hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+      className="-mx-2 w-[calc(100%+1rem)] rounded-cv-control px-2 py-1.5 text-left transition-colors hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60"
     >
       {empty
-        ? <span className="text-sm text-ink-subtlest">Add a description…</span>
-        : <span className="rich-text block text-sm leading-6 text-ink [&_a]:text-brand [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }} />}
+        ? <span className="text-sm text-cv-faint">Add a description…</span>
+        : <span className="rich-text block text-sm leading-6 text-cv-ink [&_a]:text-cv-brand-text [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }} />}
     </button>
   );
 }
@@ -77,20 +77,20 @@ function ChildIssues({ board, epic, onOpen, onAdd }) {
   return (
     <section aria-labelledby="issue-children-heading" className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
-        <h3 id="issue-children-heading" className="text-sm font-semibold text-ink">Child issues</h3>
-        {children.length > 0 && <span className="text-[12px] text-ink-subtlest">{done} of {children.length} done</span>}
+        <h3 id="issue-children-heading" className="text-sm font-semibold text-cv-ink">Child issues</h3>
+        {children.length > 0 && <span className="text-[12px] text-cv-faint">{done} of {children.length} done</span>}
         <AddButton onClick={onAdd} aria-label="Add a child issue">Add</AddButton>
       </div>
       {children.length > 0 ? (
-        <ul className="divide-y divide-line-subtle rounded-md border border-line">
+        <ul className="divide-y divide-cv-hairline rounded-cv-control border border-cv-hairline">
           {children.map((c) => {
             const col = statusColumn(board, c);
             return (
               <li key={c.id}>
-                <button type="button" onClick={() => onOpen(issueKey(board, c))} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/60">
+                <button type="button" onClick={() => onOpen(issueKey(board, c))} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cv-brand/60">
                   <IssueTypeIcon type={c.type} />
-                  <span className={col?.category === 'done' ? 'shrink-0 text-ink-subtlest line-through' : 'shrink-0 text-ink-subtle'}>{issueKey(board, c)}</span>
-                  <span className="min-w-0 flex-1 truncate text-ink">{c.title}</span>
+                  <span className={col?.category === 'done' ? 'shrink-0 text-cv-faint line-through' : 'shrink-0 text-cv-muted'}>{issueKey(board, c)}</span>
+                  <span className="min-w-0 flex-1 truncate text-cv-ink">{c.title}</span>
                   <PriorityIcon priority={c.priority} />
                   <Lozenge tone={col?.category}>{col?.title}</Lozenge>
                 </button>
@@ -98,7 +98,7 @@ function ChildIssues({ board, epic, onOpen, onAdd }) {
             );
           })}
         </ul>
-      ) : <p className="text-sm text-ink-subtlest">No child issues yet.</p>}
+      ) : <p className="text-sm text-cv-faint">No child issues yet.</p>}
     </section>
   );
 }
@@ -174,8 +174,8 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-white px-4 py-2.5 sm:px-6">
-        <nav aria-label="Issue" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-ink-subtle">
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-cv-hairline bg-cv-surface px-4 py-2.5 sm:px-6">
+        <nav aria-label="Issue" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-cv-muted">
           {/* On the board itself the project link only closes the view: closing steps back over
               the entries opening pushed, and following the link as well would push the board on
               top of the issue, which Back then opened again. From another page the link goes to
@@ -188,20 +188,20 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
               e.preventDefault();
               onClose();
             }}
-            className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
+            className="flex min-w-0 items-center gap-1.5 rounded-cv-control px-1 hover:underline">
             <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: board.color }} />
             <span className="truncate">{board.title}</span>
           </Link>
           {epic && (
             <>
               <span aria-hidden="true">/</span>
-              <button type="button" onClick={() => onOpenIssue(issueKey(board, epic))} className="flex shrink-0 items-center gap-1.5 rounded px-1 hover:underline">
+              <button type="button" onClick={() => onOpenIssue(issueKey(board, epic))} className="flex shrink-0 items-center gap-1.5 rounded-cv-control px-1 hover:underline">
                 <IssueTypeIcon type="epic" size={14} /> {issueKey(board, epic)}
               </button>
             </>
           )}
           <span aria-hidden="true">/</span>
-          <span className="flex shrink-0 items-center gap-1.5 px-1 text-ink">
+          <span className="flex shrink-0 items-center gap-1.5 px-1 text-cv-ink">
             <IssueTypeIcon type={issue.type} size={14} /> {key}
           </span>
         </nav>
@@ -221,7 +221,7 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
       <div className="grid gap-8 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <h2 className="text-2xl font-medium leading-8 text-ink">
+            <h2 className="text-2xl font-medium leading-8 text-cv-ink">
               {/* break-words wraps a word too long for the line (a pasted URL) at the column's edge;
                   without it the word ran past the summary's box and the issue view scrolled
                   sideways. The box already has the column's width, so nothing else has to shrink. */}
@@ -235,7 +235,7 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
             </div>
           </div>
           <section aria-labelledby="issue-description-heading" className="flex flex-col gap-1.5">
-            <h3 id="issue-description-heading" className="text-sm font-semibold text-ink">Description</h3>
+            <h3 id="issue-description-heading" className="text-sm font-semibold text-cv-ink">Description</h3>
             <Description value={issue.description} onSave={(description) => update({ description })} />
           </section>
           {(issue.checklist.length > 0 || checklistOpen) && (

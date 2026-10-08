@@ -27,17 +27,17 @@ function WorkRow({ row, onOpen, onDone, showUpdated }) {
   const column = statusColumn(board, issue);
   const done = isIssueDone(board, issue);
   return (
-    <li data-issue={issue.id} className="group flex items-center gap-3 border-b border-line-subtle px-2 py-1.5 last:border-b-0 hover:bg-hovered">
+    <li data-issue={issue.id} className="group flex items-center gap-3 border-b border-cv-hairline px-2 py-1.5 last:border-b-0 hover:bg-cv-stage">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left" title={`Open ${key}`}>
         <IssueTypeIcon type={issue.type} />
         <span className="min-w-0 flex-1">
-          <span className={done ? 'block truncate text-sm text-ink-subtlest line-through' : 'block truncate text-sm text-ink'}>{issue.title}</span>
-          <span className="block truncate text-[12px] text-ink-subtlest">{key} · {board.title}</span>
+          <span className={done ? 'block truncate text-sm text-cv-faint line-through' : 'block truncate text-sm text-cv-ink'}>{issue.title}</span>
+          <span className="block truncate text-[12px] text-cv-faint">{key} · {board.title}</span>
         </span>
         <PriorityIcon priority={issue.priority} />
         {issue.due && <DatePill value={issue.due} done={done} size="sm" />}
         <Lozenge tone={column?.category} className="hidden sm:inline-flex">{column?.title}</Lozenge>
-        {showUpdated && <span className="hidden w-20 shrink-0 text-right text-[12px] text-ink-subtlest md:block">{relativeTime(issue.updatedAt)}</span>}
+        {showUpdated && <span className="hidden w-20 shrink-0 text-right text-[12px] text-cv-faint md:block">{relativeTime(issue.updatedAt)}</span>}
       </button>
       {!done && onDone && board.columns.some((c) => c.category === 'done') && (
         <IconButton icon={Check} size="sm" label={`Mark ${key} done`} onClick={onDone} className="hover:text-loz-done-ink" />
@@ -95,28 +95,28 @@ export function YourWork() {
           <>
             <section aria-labelledby="recent-projects">
               <div className="mb-2 flex items-center justify-between">
-                <h2 id="recent-projects" className="text-sm font-semibold text-ink-subtle">Recent projects</h2>
-                <Link to="/boards" className="text-sm text-brand hover:underline">View all projects</Link>
+                <h2 id="recent-projects" className="text-sm font-semibold text-cv-muted">Recent projects</h2>
+                <Link to="/boards" className="text-sm text-cv-brand-text hover:underline">View all projects</Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {recentProjects.map((b) => {
                   const counts = issueCounts(b);
                   const base = `/boards/${encodeURIComponent(b.id)}`;
                   return (
-                    <div key={b.id} className="relative overflow-hidden rounded-md border border-line bg-white p-4 pl-6 shadow-[0_1px_1px_#091e4220]">
+                    <div key={b.id} className="relative overflow-hidden rounded-cv-control border border-cv-hairline bg-cv-surface p-4 pl-6 shadow-[0_1px_1px_#091e4220]">
                       <span aria-hidden="true" className="absolute inset-y-0 left-0 w-3" style={{ backgroundColor: b.color }} />
                       <div className="flex items-center gap-2.5">
                         <ProjectAvatar board={b} size={28} />
                         <div className="min-w-0">
-                          <Link to={base} className="block truncate text-sm font-semibold text-ink hover:underline">{b.title}</Link>
-                          <p className="text-[12px] text-ink-subtlest">{b.mode === 'scrum' ? 'Scrum' : 'Kanban'} project</p>
+                          <Link to={base} className="block truncate text-sm font-semibold text-cv-ink hover:underline">{b.title}</Link>
+                          <p className="text-[12px] text-cv-faint">{b.mode === 'scrum' ? 'Scrum' : 'Kanban'} project</p>
                         </div>
                       </div>
-                      <p className="mt-3 text-[12px] font-semibold uppercase text-ink-subtle">Quick links</p>
+                      <p className="mt-3 text-[12px] font-semibold uppercase text-cv-muted">Quick links</p>
                       <div className="mt-1 flex flex-col gap-0.5 text-sm">
-                        <Link to={base} className="flex justify-between rounded px-1 py-0.5 text-ink hover:bg-hovered">Open issues <span className="rounded-full bg-neutral-fill-hover px-2 text-[12px]">{counts.open}</span></Link>
-                        <Link to={`${base}/backlog`} className="rounded px-1 py-0.5 text-ink hover:bg-hovered">Backlog</Link>
-                        <Link to={`${base}/summary`} className="rounded px-1 py-0.5 text-ink hover:bg-hovered">Summary</Link>
+                        <Link to={base} className="flex justify-between rounded-cv-control px-1 py-0.5 text-cv-ink hover:bg-cv-stage">Open issues <span className="rounded-full bg-cv-stage px-2 text-[12px]">{counts.open}</span></Link>
+                        <Link to={`${base}/backlog`} className="rounded-cv-control px-1 py-0.5 text-cv-ink hover:bg-cv-stage">Backlog</Link>
+                        <Link to={`${base}/summary`} className="rounded-cv-control px-1 py-0.5 text-cv-ink hover:bg-cv-stage">Summary</Link>
                       </div>
                     </div>
                   );
@@ -126,18 +126,18 @@ export function YourWork() {
             <section className="flex flex-col gap-3">
               <Tabs id="your-work" aria-label="Your work" value={tab} onChange={setTab} items={[{ value: 'todo', label: 'To do', count: open || null }, { value: 'worked', label: 'Worked on' }]} />
               <TabPanel tabsId="your-work" value="todo" current={tab} className="flex flex-col gap-4">
-                {open === 0 && <p className="text-sm text-ink-subtle">Nothing overdue, due this week or in progress. Well done.</p>}
+                {open === 0 && <p className="text-sm text-cv-muted">Nothing overdue, due this week or in progress. Well done.</p>}
                 {SECTIONS.filter((s) => work[s.id].length > 0).map((s) => (
                   <section key={s.id} data-section={s.id}>
-                    <h3 className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-ink-subtle">{s.title} <span className="font-normal text-ink-subtlest">{work[s.id].length}</span></h3>
-                    <ul className="rounded-md border border-line">{work[s.id].map((r) => row(r))}</ul>
+                    <h3 className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-cv-muted">{s.title} <span className="font-normal text-cv-faint">{work[s.id].length}</span></h3>
+                    <ul className="rounded-cv-control border border-cv-hairline">{work[s.id].map((r) => row(r))}</ul>
                   </section>
                 ))}
               </TabPanel>
               <TabPanel tabsId="your-work" value="worked" current={tab}>
                 <section data-section="recent">
-                  {work.recent.length === 0 ? <p className="text-sm text-ink-subtle">No issues yet.</p> : (
-                    <ul className="rounded-md border border-line">{work.recent.map((r) => row(r, { showUpdated: true }))}</ul>
+                  {work.recent.length === 0 ? <p className="text-sm text-cv-muted">No issues yet.</p> : (
+                    <ul className="rounded-cv-control border border-cv-hairline">{work.recent.map((r) => row(r, { showUpdated: true }))}</ul>
                   )}
                 </section>
               </TabPanel>

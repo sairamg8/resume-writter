@@ -16,7 +16,7 @@ export function BoardStorageNotice({ persistError, recovery, onDismissRecovery, 
     <>
       {persistError && (
         <div className={className}>
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p role="alert" className="text-xs text-cv-bad bg-cv-bad-soft border border-cv-bad rounded-cv-control px-3 py-2">
             {notSavedMessage('boards', persistError)}
           </p>
         </div>

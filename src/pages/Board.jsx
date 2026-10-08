@@ -46,7 +46,7 @@ function AddColumn({ onAdd }) {
       aria-label="Column name"
       // 16 px on a touch screen, as the kit's controls are (controlClass): iOS Safari zooms the
       // page into a field whose text is smaller as it focuses it, and this one focuses at once.
-      className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm pointer-coarse:text-base text-ink focus:outline-none"
+      className="h-9 w-[272px] shrink-0 rounded-cv-control border-2 border-cv-brand bg-cv-surface px-2 text-sm pointer-coarse:text-base text-cv-ink focus:outline-none"
     />
   );
 }
@@ -54,9 +54,9 @@ function AddColumn({ onAdd }) {
 /** The line in place of the cards when the filters leave none, and a way out of them. */
 function NoMatch({ onClear, className = 'py-8' }) {
   return (
-    <p className={cx('sticky left-0 text-center text-sm text-ink-subtlest', className)}>
+    <p className={cx('sticky left-0 text-center text-sm text-cv-faint', className)}>
       No issues match these filters.
-      {onClear && <> <button type="button" onClick={onClear} className="font-medium text-brand hover:underline">Clear filters</button></>}
+      {onClear && <> <button type="button" onClick={onClear} className="font-medium text-cv-brand-text hover:underline">Clear filters</button></>}
     </p>
   );
 }
@@ -64,13 +64,13 @@ function NoMatch({ onClear, className = 'py-8' }) {
 /** A swimlane's heading: fold it, its name (an epic's, a priority's, a type's), how many issues. */
 function LaneHeader({ lane, open, onToggle }) {
   return (
-    <button type="button" aria-expanded={open} onClick={onToggle} className="sticky left-0 flex items-center gap-2 rounded px-1 py-2 text-sm font-semibold text-ink hover:bg-neutral-fill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+    <button type="button" aria-expanded={open} onClick={onToggle} className="sticky left-0 flex items-center gap-2 rounded-cv-control px-1 py-2 text-sm font-semibold text-cv-ink hover:bg-cv-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
       {lane.kind === 'type' && <IssueTypeIcon type={lane.id} decorative />}
       {lane.kind === 'priority' && <PriorityIcon priority={lane.id} decorative />}
       {lane.kind === 'epic' && lane.id !== 'none' && <IssueTypeIcon type="epic" decorative />}
       {lane.title}
-      <span className="font-normal text-ink-subtlest">({lane.issues.length} {lane.issues.length === 1 ? 'issue' : 'issues'})</span>
+      <span className="font-normal text-cv-faint">({lane.issues.length} {lane.issues.length === 1 ? 'issue' : 'issues'})</span>
     </button>
   );
 }
@@ -269,11 +269,11 @@ export function Board() {
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} groupBy={groupBy} onGroupBy={setGroupBy} />
       {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
-        <p className="flex items-center gap-1.5 px-4 pb-2 text-[13px] text-ink-subtle md:px-8">
-          <Info size={14} aria-hidden="true" className="shrink-0 text-ink-subtlest" />
+        <p className="flex items-center gap-1.5 px-4 pb-2 text-[13px] text-cv-muted md:px-8">
+          <Info size={14} aria-hidden="true" className="shrink-0 text-cv-faint" />
           <span>
-            {sprint && <><span className="font-semibold text-ink">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}{sprint.goal && <> · {sprint.goal}</>}. </>}
-            {!sprint && board.mode === 'scrum' && <>No sprint is active, so every issue is shown. <Link className="font-medium text-brand hover:underline" to={`/boards/${encodeURIComponent(board.id)}/backlog`}>Plan one in the backlog</Link>. </>}
+            {sprint && <><span className="font-semibold text-cv-ink">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}{sprint.goal && <> · {sprint.goal}</>}. </>}
+            {!sprint && board.mode === 'scrum' && <>No sprint is active, so every issue is shown. <Link className="font-medium text-cv-brand-text hover:underline" to={`/boards/${encodeURIComponent(board.id)}/backlog`}>Plan one in the backlog</Link>. </>}
             {hiddenDone > 0 && <>{hiddenDone} done issue{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
           </span>
         </p>
@@ -319,10 +319,10 @@ export function Board() {
             </>
           ) : (
             <div className="flex w-max min-w-full flex-col gap-1">
-              <div className="sticky top-0 z-10 flex gap-2 bg-white pb-1">
+              <div className="sticky top-0 z-10 flex gap-2 bg-cv-surface pb-1">
                 {shownLists.map((list) => (
-                  <div key={list.id} className="flex h-10 w-[272px] shrink-0 items-center gap-2 rounded-md bg-sunken px-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">
-                    {list.title || 'Untitled'} <span className="text-ink-subtlest">{list.cards.filter((c) => shown.has(c.id)).length}</span>
+                  <div key={list.id} className="flex h-10 w-[272px] shrink-0 items-center gap-2 rounded-cv-control bg-cv-sunken px-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-cv-muted">
+                    {list.title || 'Untitled'} <span className="text-cv-faint">{list.cards.filter((c) => shown.has(c.id)).length}</span>
                   </div>
                 ))}
               </div>

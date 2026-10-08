@@ -91,6 +91,6 @@ it('the Filters button shows no count and is drawn plain while nothing is set', 
     const toggle = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim().startsWith('Filters'));
     assert.ok(toggle, 'a phone gets one "Filters" button');
     assert.equal(toggle.textContent.trim(), 'Filters');
-    assert.ok(!tokens(toggle).includes('bg-brand-subtle'), 'drawn as a filter with nothing ticked');
+    assert.ok(!tokens(toggle).includes('bg-cv-brand-soft'), 'drawn as a filter with nothing ticked');
   } finally { await view.unmount(); }
 });

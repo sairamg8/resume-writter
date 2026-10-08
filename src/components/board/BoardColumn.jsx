@@ -25,23 +25,23 @@ export function BoardColumn({
       ref={setNodeRef}
       data-column={list.id}
       aria-label={showHeader ? `${list.title || 'Untitled'} column` : undefined}
-      className={cx('flex w-[272px] shrink-0 snap-center flex-col rounded-md bg-sunken', className)}
+      className={cx('flex w-[272px] shrink-0 snap-center flex-col rounded-cv-control bg-cv-sunken', className)}
     >
       {showHeader && (
         <header className="group/col flex h-11 items-center gap-2 px-3">
-          <h2 className="min-w-0 truncate text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">{list.title || 'Untitled'}</h2>
+          <h2 className="min-w-0 truncate text-[12px] font-semibold uppercase tracking-[0.03em] text-cv-muted">{list.title || 'Untitled'}</h2>
           <span
-            className={cx('shrink-0 text-[12px] font-semibold', list.wip === 'over' ? 'rounded-[3px] bg-[#ffd5d2] px-1 text-[#ae2e24]' : 'text-ink-subtlest')}
+            className={cx('shrink-0 text-[12px] font-semibold', list.wip === 'over' ? 'rounded-[3px] bg-[#ffd5d2] px-1 text-[#ae2e24]' : 'text-cv-faint')}
             title={list.limit ? `${list.cards.length} issues, limit ${list.limit}` : `${list.cards.length} issues`}
           >
             {list.limit ? `${list.cards.length}/${list.limit}` : list.cards.length}
           </span>
-          {list.limit && list.wip !== 'over' && <span className="shrink-0 text-[11px] font-semibold uppercase text-ink-subtlest">Max {list.limit}</span>}
+          {list.limit && list.wip !== 'over' && <span className="shrink-0 text-[11px] font-semibold uppercase text-cv-faint">Max {list.limit}</span>}
           <span className="ml-auto">{menu}</span>
         </header>
       )}
       <div
-        className={cx('flex min-h-24 flex-1 flex-col gap-1 px-1 pb-1 transition-colors', isOver && 'rounded-b-md bg-brand-subtle/60', !showHeader && 'pt-1')}
+        className={cx('flex min-h-24 flex-1 flex-col gap-1 px-1 pb-1 transition-colors', isOver && 'rounded-b-md bg-cv-brand-soft/60', !showHeader && 'pt-1')}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul className="flex flex-col gap-1">

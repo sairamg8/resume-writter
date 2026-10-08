@@ -60,40 +60,40 @@ export function Boards() {
               <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[48rem]">
                 <caption className="sr-only">Projects</caption>
                 <thead>
-                  <tr className="text-left text-[12px] font-semibold text-ink-subtle">
-                    <th scope="col" className="w-10 border-b-2 border-line px-2 py-2"><span className="sr-only">Starred</span><Star size={14} aria-hidden="true" /></th>
-                    <th scope="col" className="border-b-2 border-line px-2 py-2">Name</th>
-                    <th scope="col" className={`w-24 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Key</th>
-                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Type</th>
-                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Lead</th>
-                    <th scope="col" className="w-32 border-b-2 border-line px-2 py-2">Issues</th>
-                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Updated</th>
-                    <th scope="col" className="w-12 border-b-2 border-line px-2 py-2"><span className="sr-only">Actions</span></th>
+                  <tr className="text-left text-[12px] font-semibold text-cv-muted">
+                    <th scope="col" className="w-10 border-b-2 border-cv-hairline px-2 py-2"><span className="sr-only">Starred</span><Star size={14} aria-hidden="true" /></th>
+                    <th scope="col" className="border-b-2 border-cv-hairline px-2 py-2">Name</th>
+                    <th scope="col" className={`w-24 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Key</th>
+                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Type</th>
+                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Lead</th>
+                    <th scope="col" className="w-32 border-b-2 border-cv-hairline px-2 py-2">Issues</th>
+                    <th scope="col" className={`w-28 border-b-2 border-cv-hairline px-2 py-2 ${PHONE_HIDDEN}`}>Updated</th>
+                    <th scope="col" className="w-12 border-b-2 border-cv-hairline px-2 py-2"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((b) => {
                     const counts = issueCounts(b);
                     return (
-                      <tr key={b.id} className="group h-12 hover:bg-hovered">
-                        <td className="border-b border-line-subtle px-2">
-                          <IconButton icon={Star} size="sm" label={b.starred ? `Unstar ${b.title}` : `Star ${b.title}`} pressed={b.starred} onClick={() => store.toggleStar(b.id)} className={b.starred ? '[&_svg]:fill-amber-400 [&_svg]:text-amber-500' : 'opacity-60 group-hover:opacity-100'} />
+                      <tr key={b.id} className="group h-12 hover:bg-cv-stage">
+                        <td className="border-b border-cv-hairline px-2">
+                          <IconButton icon={Star} size="sm" label={b.starred ? `Unstar ${b.title}` : `Star ${b.title}`} pressed={b.starred} onClick={() => store.toggleStar(b.id)} className={b.starred ? '[&_svg]:fill-cv-warn [&_svg]:text-cv-warn' : 'opacity-60 group-hover:opacity-100'} />
                         </td>
-                        <td className="border-b border-line-subtle px-2">
+                        <td className="border-b border-cv-hairline px-2">
                           {/* A long name is cut short in the cell at every width (inline-size containment: it
                               no longer sets the column's width), so it cannot push the menu off screen —
                               from sm up it widened the table past its container too (R5-JOB-04). */}
-                          <button type="button" onClick={() => open(b)} className="flex w-full min-w-0 items-center gap-2.5 text-left font-medium text-brand hover:underline contain-inline-size">
+                          <button type="button" onClick={() => open(b)} className="flex w-full min-w-0 items-center gap-2.5 text-left font-medium text-cv-brand-text hover:underline contain-inline-size">
                             <ProjectAvatar board={b} size={24} />
                             <span className="truncate">{b.title || 'Untitled project'}</span>
                           </button>
                         </td>
-                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{b.key}</td>
-                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
-                        <td className={`border-b border-line-subtle px-2 ${PHONE_HIDDEN}`}><span className="flex items-center gap-2 text-ink-subtle"><Avatar name="You" size="xs" decorative />You</span></td>
-                        <td className="border-b border-line-subtle px-2 text-ink-subtle">{counts.open} open · {counts.total} total</td>
-                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{relativeTime(b.updatedAt)}</td>
-                        <td className="border-b border-line-subtle px-2">
+                        <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.key}</td>
+                        <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
+                        <td className={`border-b border-cv-hairline px-2 ${PHONE_HIDDEN}`}><span className="flex items-center gap-2 text-cv-muted"><Avatar name="You" size="xs" decorative />You</span></td>
+                        <td className="border-b border-cv-hairline px-2 text-cv-muted">{counts.open} open · {counts.total} total</td>
+                        <td className={`border-b border-cv-hairline px-2 text-cv-muted ${PHONE_HIDDEN}`}>{relativeTime(b.updatedAt)}</td>
+                        <td className="border-b border-cv-hairline px-2">
                           <Menu
                             label={`${b.title} actions`}
                             items={[
@@ -111,7 +111,7 @@ export function Boards() {
                   })}
                 </tbody>
               </table>
-              {rows.length === 0 && <p className="py-8 text-center text-sm text-ink-subtlest">No projects match “{query.trim()}”.</p>}
+              {rows.length === 0 && <p className="py-8 text-center text-sm text-cv-faint">No projects match “{query.trim()}”.</p>}
             </div>
           </>
         )}

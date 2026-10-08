@@ -50,35 +50,35 @@ function ProjectForm({ onCreated, onClose, typedRef }) {
         className="max-w-xs"
       />
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1.5 text-[12px] font-semibold text-ink-subtle">Template</legend>
+        <legend className="mb-1.5 text-[12px] font-semibold text-cv-muted">Template</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {BOARD_TEMPLATES.map((t) => (
-            <label key={t.id} className={cx('flex cursor-pointer flex-col gap-1 rounded-md border-2 p-3 transition-colors', template === t.id ? 'border-brand bg-brand-subtle' : 'border-line hover:bg-hovered')}>
+            <label key={t.id} className={cx('flex cursor-pointer flex-col gap-1 rounded-cv-control border-2 p-3 transition-colors', template === t.id ? 'border-cv-brand bg-cv-brand-soft' : 'border-cv-hairline hover:bg-cv-stage')}>
               <span className="flex items-center gap-2">
                 <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="accent-[#0c66e4]" />
-                <span className="text-sm font-semibold text-ink">{t.name}</span>
-                <span className="ml-auto rounded-[3px] bg-neutral-fill px-1 text-[11px] font-bold uppercase text-ink-subtle">{t.mode}</span>
+                <span className="text-sm font-semibold text-cv-ink">{t.name}</span>
+                <span className="ml-auto rounded-[3px] bg-cv-sunken px-1 text-[11px] font-bold uppercase text-cv-muted">{t.mode}</span>
               </span>
-              <span className="text-[12px] text-ink-subtle">{t.description}</span>
+              <span className="text-[12px] text-cv-muted">{t.description}</span>
               <span className="mt-1 flex flex-wrap gap-1">
-                {t.columns.map(([name]) => <span key={name} className="rounded-[3px] bg-white px-1.5 text-[11px] text-ink-subtle ring-1 ring-line">{name}</span>)}
+                {t.columns.map(([name]) => <span key={name} className="rounded-[3px] bg-cv-surface px-1.5 text-[11px] text-cv-muted ring-1 ring-cv-hairline">{name}</span>)}
               </span>
             </label>
           ))}
         </div>
       </fieldset>
       <fieldset>
-        <legend className="mb-1.5 text-[12px] font-semibold text-ink-subtle">Colour</legend>
+        <legend className="mb-1.5 text-[12px] font-semibold text-cv-muted">Colour</legend>
         <div className="flex flex-wrap gap-2">
           {BOARD_COLORS.map((c) => (
-            <button key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} className="flex size-8 items-center justify-center rounded-md ring-offset-2 transition-transform hover:scale-105 aria-pressed:ring-2 aria-pressed:ring-brand" style={{ backgroundColor: c }}>
+            <button key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} className="flex size-8 items-center justify-center rounded-cv-control ring-offset-2 transition-transform hover:scale-105 aria-pressed:ring-2 aria-pressed:ring-cv-brand" style={{ backgroundColor: c }}>
               {color === c && <Check size={16} className="text-white" aria-hidden="true" />}
             </button>
           ))}
         </div>
       </fieldset>
       <TextArea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
-      <div className="flex justify-end gap-2 border-t border-line pt-4">
+      <div className="flex justify-end gap-2 border-t border-cv-hairline pt-4">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant="primary" type="submit">Create project</Button>
       </div>

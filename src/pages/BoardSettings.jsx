@@ -16,7 +16,7 @@ import { columnDeletion, columnRecategorization } from '@/utils/boardView';
 const CONTROL = controlClass({ size: 'sm' }).split(' ').filter((c) => c !== 'w-full').join(' ');
 const FIELD = `${CONTROL} px-2 py-1.5 leading-5`;
 /** A field's caption, as the kit's Field draws its label. */
-const CAPTION = 'block text-[12px] font-semibold leading-5 text-ink-subtle';
+const CAPTION = 'block text-[12px] font-semibold leading-5 text-cv-muted';
 
 /**
  * A text field that saves when it is left or Enter is pressed (Escape puts the saved value back),
@@ -51,10 +51,10 @@ function CommitField({ value, onCommit, multiline = false, ...props }) {
 /** One settings card: a heading, an optional line under it, and its controls. */
 function Card({ title, note, children, tone = 'default' }) {
   return (
-    <section className={`bg-white border rounded-md  p-4 space-y-3 ${tone === 'danger' ? 'border-red-200' : 'border-line'}`}>
+    <section className={`bg-cv-surface border rounded-cv-control  p-4 space-y-3 ${tone === 'danger' ? 'border-cv-bad' : 'border-cv-hairline'}`}>
       <div>
-        <h2 className={`text-sm font-semibold ${tone === 'danger' ? 'text-red-700' : 'text-ink'}`}>{title}</h2>
-        {note && <p className="text-xs text-ink-subtlest mt-0.5">{note}</p>}
+        <h2 className={`text-sm font-semibold ${tone === 'danger' ? 'text-cv-bad' : 'text-cv-ink'}`}>{title}</h2>
+        {note && <p className="text-xs text-cv-faint mt-0.5">{note}</p>}
       </div>
       {children}
     </section>
@@ -78,8 +78,8 @@ function KeyField({ board, keyError, onSave }) {
         <input aria-label="Project key" value={draft} onChange={(e) => { setDraft(e.target.value); setRefused(null); }} className={`${FIELD} w-32 font-mono uppercase`} />
         <Button variant="primary" size="sm" onClick={save} disabled={next === board.key || Boolean(problem)}>Save key</Button>
       </div>
-      {(problem || refused) && <p role="alert" className="text-xs text-red-600">{refused || problem}</p>}
-      <p className="text-xs text-ink-subtlest">Issue keys use it: {board.key}-1 becomes {next || board.key}-1.</p>
+      {(problem || refused) && <p role="alert" className="text-xs text-cv-bad">{refused || problem}</p>}
+      <p className="text-xs text-cv-faint">Issue keys use it: {board.key}-1 becomes {next || board.key}-1.</p>
     </div>
   );
 }
@@ -145,10 +145,10 @@ function ColumnRow({ board, column, index, store }) {
         <select aria-label="Column category" value={column.category} onChange={(e) => recategorize(e.target.value)} className={FIELD}>
           {COLUMN_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <label className="flex items-center gap-1 text-xs text-ink-subtlest">WIP
+        <label className="flex items-center gap-1 text-xs text-cv-faint">WIP
           <CommitField aria-label="WIP limit" type="number" min="1" placeholder="none" value={column.wipLimit ?? ''} onCommit={(v) => store.updateColumn(board.id, column.id, { wipLimit: v })} className={`${FIELD} w-20`} />
         </label>
-        <span className="text-xs text-ink-subtlest w-16">{count} issue{count === 1 ? '' : 's'}</span>
+        <span className="text-xs text-cv-faint w-16">{count} issue{count === 1 ? '' : 's'}</span>
         <IconButton size="sm" icon={ArrowUp} label="Move column up" disabled={index === 0} onClick={() => store.moveColumn(board.id, column.id, index - 1)} />
         <IconButton size="sm" icon={ArrowDown} label="Move column down" disabled={index === board.columns.length - 1} onClick={() => store.moveColumn(board.id, column.id, index + 1)} />
         {/* A disabled kit button takes no pointer: the wrapper's title still says why. */}
@@ -157,7 +157,7 @@ function ColumnRow({ board, column, index, store }) {
         </span>
       </div>
       {deleting && (
-        <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-md p-2 text-xs text-ink-subtle">
+        <div className="flex flex-wrap items-center gap-2 bg-cv-bad-soft border border-cv-bad rounded-cv-control p-2 text-xs text-cv-muted">
           {/* The select may shrink below its longest column title (titles run to 255 characters) and
               wraps under its words: at its own width it ran past the card on a phone (R4-DPH-17). */}
           <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
@@ -169,7 +169,7 @@ function ColumnRow({ board, column, index, store }) {
           </label>
           <Button variant="danger" size="sm" onClick={() => { const done = drop(target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
           <Button variant="ghost" size="sm" onClick={() => { setDeleting(false); setRefused(false); }}>Cancel</Button>
-          {refused && <p role="alert" className="w-full text-red-600">The column could not be deleted. Pick where its issues go and try again.</p>}
+          {refused && <p role="alert" className="w-full text-cv-bad">The column could not be deleted. Pick where its issues go and try again.</p>}
         </div>
       )}
     </li>
@@ -258,7 +258,7 @@ export function BoardSettings() {
       <ProjectHeader board={board} />
       {/* Left-aligned under the header at its padding (px-4, md:px-8), as every other project view:
           a centred column drifted up to 300 px right of the header on a wide screen (R4-DVIS-05). */}
-      <h2 className="px-4 pt-5 text-xl font-semibold text-ink md:px-8">Project settings</h2>
+      <h2 className="px-4 pt-5 text-xl font-semibold text-cv-ink md:px-8">Project settings</h2>
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
 
       <div className="px-4 py-5 md:px-8">
@@ -281,7 +281,7 @@ export function BoardSettings() {
                     aria-label={`Colour ${c}`}
                     aria-pressed={board.color === c}
                     onClick={() => store.updateBoard(board.id, { color: c })}
-                    className={`h-7 w-7 rounded-full border-2 ${board.color === c ? 'border-gray-900' : 'border-transparent'}`}
+                    className={`h-7 w-7 rounded-full border-2 ${board.color === c ? 'border-cv-ink' : 'border-transparent'}`}
                     style={{ backgroundColor: c }}
                   />
                 ))}
@@ -295,15 +295,15 @@ export function BoardSettings() {
           </Card>
 
           <Card title="Columns" note="Issues in a Done column count as resolved. A WIP limit turns a column's count red when it holds more.">
-            <ul className="divide-y divide-line-subtle">
+            <ul className="divide-y divide-cv-hairline">
               {board.columns.map((c, n) => <ColumnRow key={c.id} board={board} column={c} index={n} store={store} />)}
             </ul>
             <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
           </Card>
 
           <Card title="Labels">
-            {board.labels.length === 0 && <p className="text-xs text-ink-subtlest">No labels yet.</p>}
-            <ul className="divide-y divide-line-subtle">
+            {board.labels.length === 0 && <p className="text-xs text-cv-faint">No labels yet.</p>}
+            <ul className="divide-y divide-cv-hairline">
               {board.labels.map((l) => (
                 <li key={l.id} data-label={l.id} className="flex flex-wrap items-center gap-2 py-2">
                   <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
@@ -315,12 +315,12 @@ export function BoardSettings() {
                 </li>
               ))}
             </ul>
-            {labelRefused && <p role="alert" className="text-xs text-red-600">{labelRefused}</p>}
+            {labelRefused && <p role="alert" className="text-xs text-cv-bad">{labelRefused}</p>}
             <AddRow label="New label" colors={LABEL_COLORS} onAdd={addLabel} />
           </Card>
 
           <Card title="Done issues on the board" note="Done issues resolved longer ago than this leave the board; they stay in the project.">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-ink-subtle">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-cv-muted">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"

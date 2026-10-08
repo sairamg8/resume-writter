@@ -23,33 +23,33 @@ export function IssueCardView({ card, issueKey, done = false, overlay = false, m
   return (
     <div
       className={cx(
-        'group/card relative flex flex-col gap-2 rounded bg-white p-3 text-left select-none',
+        'group/card relative flex flex-col gap-2 rounded-cv-control bg-cv-surface p-3 text-left select-none',
         'shadow-[0_1px_1px_#091e4240,0_0_1px_#091e424f] transition-colors',
-        overlay ? 'rotate-2 shadow-[0_8px_12px_#091e4226,0_0_1px_#091e424f]' : 'hover:bg-sunken',
+        overlay ? 'rotate-2 shadow-[0_8px_12px_#091e4226,0_0_1px_#091e424f]' : 'hover:bg-cv-sunken',
       )}
     >
-      <p className={cx('pr-6 text-sm leading-5 break-words text-ink line-clamp-3', done && 'text-ink-subtle')}>{card.title || 'Untitled'}</p>
+      <p className={cx('pr-6 text-sm leading-5 break-words text-cv-ink line-clamp-3', done && 'text-cv-muted')}>{card.title || 'Untitled'}</p>
       {(labels.length > 0 || card.epic) && (
         <div className="flex flex-wrap items-center gap-1">
           {card.epic && <EpicLozenge title={card.epic.title} className="max-w-[12rem]" />}
           {labels.slice(0, MAX_LABELS).map((l) => <LabelPill key={l.id} label={l} className="max-w-[9rem]" />)}
           {labels.length > MAX_LABELS && (
-            <span className="text-[11px] font-medium text-ink-subtlest" title={labels.slice(MAX_LABELS).map((l) => l.name).join(', ')}>+{labels.length - MAX_LABELS}</span>
+            <span className="text-[11px] font-medium text-cv-faint" title={labels.slice(MAX_LABELS).map((l) => l.name).join(', ')}>+{labels.length - MAX_LABELS}</span>
           )}
         </div>
       )}
       <div className="flex min-h-5 items-center gap-2">
         <IssueTypeIcon type={card.type} />
-        <span className={cx('shrink-0 text-[12px] font-semibold text-ink-subtle', done && 'line-through decoration-ink-subtlest')}>{issueKey}</span>
+        <span className={cx('shrink-0 text-[12px] font-semibold text-cv-muted', done && 'line-through decoration-ink-subtlest')}>{issueKey}</span>
         <span className="flex min-w-0 flex-1 items-center justify-end gap-2">
           {card.due && <DatePill value={card.due} done={done} size="sm" />}
           {checklist.length > 0 && (
-            <span title={`Checklist: ${ticked} of ${checklist.length} done`} className={cx('inline-flex items-center gap-0.5 text-[11px] font-medium', ticked === checklist.length ? 'text-loz-done-ink' : 'text-ink-subtlest')}>
+            <span title={`Checklist: ${ticked} of ${checklist.length} done`} className={cx('inline-flex items-center gap-0.5 text-[11px] font-medium', ticked === checklist.length ? 'text-loz-done-ink' : 'text-cv-faint')}>
               <CheckSquare size={12} aria-hidden="true" />{ticked}/{checklist.length}
             </span>
           )}
           {comments > 0 && (
-            <span title={`${comments} comment${comments === 1 ? '' : 's'}`} className="inline-flex items-center gap-0.5 text-[11px] font-medium text-ink-subtlest">
+            <span title={`${comments} comment${comments === 1 ? '' : 's'}`} className="inline-flex items-center gap-0.5 text-[11px] font-medium text-cv-faint">
               <MessageSquare size={12} aria-hidden="true" />{comments}
             </span>
           )}
@@ -118,10 +118,10 @@ export function SortableIssueCard({ card, listId, issueKey, done, onOpen, menu }
       aria-label={`${issueKey} ${card.title || 'Untitled'}`}
       onClick={onOpen}
       onKeyDown={(e) => { listeners?.onKeyDown?.(e); openOnKey(e, onOpen); }}
-      className="touch-manipulation rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="touch-manipulation rounded-cv-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand"
     >
       {isDragging ? (
-        <div className="h-20 rounded border-2 border-dashed border-[#8590a2]/60 bg-neutral-fill" />
+        <div className="h-20 rounded-cv-control border-2 border-dashed border-[#8590a2]/60 bg-cv-sunken" />
       ) : (
         <IssueCardView card={card} issueKey={issueKey} done={done} menu={menu} />
       )}

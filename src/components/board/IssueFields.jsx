@@ -10,7 +10,7 @@ import { isLocalISO, issueKey } from '@/utils/boardModel';
 // Create dialog alike: each a quiet button showing the value (hover shows it can change), opening
 // a menu of the choices. `value` in, `onChange(next)` out; the board supplies the lists.
 
-const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60';
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60';
 
 /** The trigger every picker shares: the value with its icon, a caret on hover. */
 function PickerButton({ label, children, className, ...rest }) {
@@ -19,18 +19,18 @@ function PickerButton({ label, children, className, ...rest }) {
       type="button"
       aria-label={label}
       className={cx(
-        'group flex min-h-8 w-full min-w-0 items-center gap-2 rounded px-2 py-1 text-left text-sm text-ink transition-colors hover:bg-neutral-fill',
+        'group flex min-h-8 w-full min-w-0 items-center gap-2 rounded-cv-control px-2 py-1 text-left text-sm text-cv-ink transition-colors hover:bg-cv-sunken',
         FOCUS, className,
       )}
       {...rest}
     >
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">{children}</span>
-      <ChevronDown size={14} aria-hidden="true" className="shrink-0 text-ink-subtlest opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 no-hover:opacity-100" />
+      <ChevronDown size={14} aria-hidden="true" className="shrink-0 text-cv-faint opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 no-hover:opacity-100" />
     </button>
   );
 }
 
-const None = ({ children = 'None' }) => <span className="text-ink-subtlest">{children}</span>;
+const None = ({ children = 'None' }) => <span className="text-cv-faint">{children}</span>;
 
 const radioItems = (options, value, onChange) => options.map((o) => ({
   id: o.id, label: o.name, checked: o.id === value, radio: true,
@@ -90,7 +90,7 @@ export function LabelsPicker({ board, value = [], onChange, onCreateLabel, label
 /** A label as the tracker shows one: its name in a grey-bordered pill, a dot of its colour. */
 export function LabelPill({ label, className }) {
   return (
-    <span className={cx('inline-flex h-5 max-w-full items-center gap-1 rounded-[3px] border border-line bg-white px-1.5 text-[12px] text-ink', className)} title={label.name}>
+    <span className={cx('inline-flex h-5 max-w-full items-center gap-1 rounded-[3px] border border-cv-hairline bg-cv-surface px-1.5 text-[12px] text-cv-ink', className)} title={label.name}>
       <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: label.color }} />
       <span className="truncate">{label.name}</span>
     </span>
@@ -193,8 +193,8 @@ export function DateInput({ value, onChange, label, className }) {
       onBlur={() => setDraft(null)}
       className={cx(
         // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
-        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base',
-        !value && 'text-ink-subtlest', className,
+        'h-8 w-full min-w-0 rounded-cv-control border border-transparent bg-transparent px-2 text-sm text-cv-ink transition-colors hover:bg-cv-sunken focus:border-cv-brand focus:bg-cv-surface focus:outline-none pointer-coarse:text-base',
+        !value && 'text-cv-faint', className,
       )}
     />
   );
@@ -237,7 +237,7 @@ export function PointsInput({ value, onChange, label = 'Story points', className
       }}
       className={cx(
         // 16 px on touch screens, as DateInput (R4-DPH-11).
-        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base',
+        'h-8 w-full min-w-0 rounded-cv-control border border-transparent bg-transparent px-2 text-sm text-cv-ink placeholder:text-cv-faint transition-colors hover:bg-cv-sunken focus:border-cv-brand focus:bg-cv-surface focus:outline-none pointer-coarse:text-base',
         className,
       )}
     />
@@ -247,7 +247,7 @@ export function PointsInput({ value, onChange, label = 'Story points', className
 /** A button that adds something ("+ Add label"), quiet until hovered. */
 export function AddButton({ children, icon: Icon = Plus, ...rest }) {
   return (
-    <button type="button" className={cx('inline-flex h-8 items-center gap-1.5 rounded px-2 text-sm font-medium text-ink-subtle transition-colors hover:bg-neutral-fill hover:text-ink', FOCUS)} {...rest}>
+    <button type="button" className={cx('inline-flex h-8 items-center gap-1.5 rounded-cv-control px-2 text-sm font-medium text-cv-muted transition-colors hover:bg-cv-sunken hover:text-cv-ink', FOCUS)} {...rest}>
       <Icon size={16} aria-hidden="true" /> {children}
     </button>
   );

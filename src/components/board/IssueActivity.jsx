@@ -8,7 +8,7 @@ const WHO = 'You';
 
 /** A moment as "3h ago", its full date and time on hover. */
 function When({ at }) {
-  return <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)} className="text-[12px] text-ink-subtlest">{relativeTime(at)}</time>;
+  return <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)} className="text-[12px] text-cv-faint">{relativeTime(at)}</time>;
 }
 
 /**
@@ -55,7 +55,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="h-10 w-full rounded border border-line bg-white px-3 text-left text-sm text-ink-subtlest transition-colors hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+        className="h-10 w-full rounded-cv-control border border-cv-hairline bg-cv-surface px-3 text-left text-sm text-cv-faint transition-colors hover:bg-cv-stage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60"
       >
         Add a comment…
       </button>
@@ -77,7 +77,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
         aria-label="Comment"
         placeholder="Add a comment…"
         // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
-        className="w-full resize-y rounded border border-brand bg-white px-3 py-2 text-sm text-ink ring-1 ring-brand focus:outline-none pointer-coarse:text-base"
+        className="w-full resize-y rounded-cv-control border border-cv-brand bg-cv-surface px-3 py-2 text-sm text-cv-ink ring-1 ring-cv-brand focus:outline-none pointer-coarse:text-base"
       />
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={save} disabled={!text.trim()}>{saveLabel}</Button>
@@ -95,9 +95,9 @@ function Comment({ comment, onUpdate, onDelete }) {
       <Avatar name={WHO} size="md" decorative />
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-sm font-semibold text-ink">{WHO}</span>
+          <span className="text-sm font-semibold text-cv-ink">{WHO}</span>
           <When at={comment.createdAt} />
-          {comment.editedAt && <span className="text-[12px] text-ink-subtlest">(edited)</span>}
+          {comment.editedAt && <span className="text-[12px] text-cv-faint">(edited)</span>}
         </p>
         {editing ? (
           <div className="mt-1">
@@ -105,12 +105,12 @@ function Comment({ comment, onUpdate, onDelete }) {
           </div>
         ) : (
           <>
-            <p className="mt-1 text-sm whitespace-pre-wrap break-words text-ink">{comment.text}</p>
-            <div className="mt-1 flex gap-3 text-[12px] font-medium text-ink-subtle">
-              <button type="button" className="hover:text-ink hover:underline" onClick={() => setEditing(true)}>Edit</button>
+            <p className="mt-1 text-sm whitespace-pre-wrap break-words text-cv-ink">{comment.text}</p>
+            <div className="mt-1 flex gap-3 text-[12px] font-medium text-cv-muted">
+              <button type="button" className="hover:text-cv-ink hover:underline" onClick={() => setEditing(true)}>Edit</button>
               <button
                 type="button"
-                className="hover:text-ink hover:underline"
+                className="hover:text-cv-ink hover:underline"
                 onClick={async () => { if (await confirm({ title: 'Delete this comment?', body: 'Once it is deleted, it is gone for good.', confirmLabel: 'Delete', tone: 'danger' })) onDelete(); }}
               >
                 Delete
@@ -129,13 +129,13 @@ function HistoryEntry({ entry }) {
   return (
     <li className="flex gap-3">
       <Avatar name={WHO} size="md" decorative />
-      <div className="min-w-0 flex-1 text-sm text-ink">
+      <div className="min-w-0 flex-1 text-sm text-cv-ink">
         <p><span className="font-semibold">{WHO}</span> {d.text} <When at={entry.at} /></p>
         {d.from !== null && (
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
-            <span className="max-w-full truncate rounded-[3px] bg-neutral-fill px-1.5 line-through decoration-ink-subtlest">{d.from}</span>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-cv-muted">
+            <span className="max-w-full truncate rounded-[3px] bg-cv-sunken px-1.5 line-through decoration-ink-subtlest">{d.from}</span>
             <ArrowRight size={14} aria-hidden="true" className="shrink-0" />
-            <span className="max-w-full truncate rounded-[3px] bg-brand-subtle px-1.5 text-ink">{d.to}</span>
+            <span className="max-w-full truncate rounded-[3px] bg-cv-brand-soft px-1.5 text-cv-ink">{d.to}</span>
           </p>
         )}
       </div>
@@ -174,7 +174,7 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
 
   return (
     <section ref={sectionRef} aria-labelledby="issue-activity-heading" className="flex flex-col gap-3">
-      <h3 id="issue-activity-heading" className="text-sm font-semibold text-ink">Activity</h3>
+      <h3 id="issue-activity-heading" className="text-sm font-semibold text-cv-ink">Activity</h3>
       <Tabs
         id="issue-activity"
         aria-label="Activity"
@@ -194,7 +194,7 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
         <div className="min-w-0 flex-1">
           {/* Summoned, not re-keyed: a new key threw away a comment being typed. */}
           <Composer summon={composeKey} onSave={onAddComment} />
-          <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
+          <p className="mt-1.5 text-[12px] text-cv-faint"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded-cv-control border border-cv-hairline px-1">M</kbd> to comment</p>
         </div>
       </div>
       <ul className={cx('flex flex-col gap-5', rows.length === 0 && 'hidden')}>
@@ -203,7 +203,7 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
           : <HistoryEntry key={`h-${r.h.id}`} entry={r.h} />))}
       </ul>
       {rows.length === 0 && (
-        <p className="text-sm text-ink-subtlest">{tab === 'history' ? 'No changes yet.' : 'No comments yet.'}</p>
+        <p className="text-sm text-cv-faint">{tab === 'history' ? 'No changes yet.' : 'No comments yet.'}</p>
       )}
       </TabPanel>
     </section>
