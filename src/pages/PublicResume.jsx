@@ -26,6 +26,8 @@ export function PublicResume({ io = firebasePublicIo }) {
   const [read, setRead] = useState(null);
   const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
+  // Counts the visitor's "Try again": a read that failed on a connection is read again, not only by a reload.
+  const [attempt, setAttempt] = useState(0);
   // { state: 'loading' | 'ready' | 'missing' | 'error' | 'off', resume }
   const view = !io ? { state: 'off', resume: null }
     : read?.shareId === shareId ? read : { state: 'loading', resume: null };
@@ -49,7 +51,7 @@ export function PublicResume({ io = firebasePublicIo }) {
         if (live) setRead({ shareId, state: 'error', resume: null });
       });
     return () => { live = false; };
-  }, [io, shareId]);
+  }, [io, shareId, attempt]);
 
   async function download() {
     const id = shareId;
@@ -89,7 +91,14 @@ export function PublicResume({ io = firebasePublicIo }) {
           <PdfPreview title="Résumé" textId="resume-preview" input={view.resume} render={renderResumePreview} zoom={1} active />
         </>
       ) : (
-        <p role={view.state === 'loading' ? 'status' : 'alert'} className="mt-24 text-sm text-cv-muted text-center max-w-md">{message}</p>
+        <>
+          <p role={view.state === 'loading' ? 'status' : 'alert'} className="mt-24 text-sm text-cv-muted text-center max-w-md">{message}</p>
+          {view.state === 'error' && (
+            <button type="button" onClick={() => { setRead(null); setAttempt((n) => n + 1); }} className="mt-4 px-3 py-1.5 text-xs font-semibold rounded-cv-control bg-cv-brand text-white hover:bg-cv-brand-pressed">
+              Try again
+            </button>
+          )}
+        </>
       )}
       <p className="mt-6 text-xs text-cv-faint">A read-only résumé shared from <a href="#/" className="hover:text-cv-muted underline">CPWT-CV</a>.</p>
     </div>
