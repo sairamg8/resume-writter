@@ -29,7 +29,7 @@ function boardWith(cards) {
 }
 
 /** What the page shows: `{ columnId: [cardId…] }`, in column order. */
-const shown = (b, now) => Object.fromEntries(boardLists(b, { now }).map((l) => [l.id, l.cards.map((c) => c.id)]));
+const shown = (b, now = ctx.now) => Object.fromEntries(boardLists(b, { now }).map((l) => [l.id, l.cards.map((c) => c.id)]));
 
 const card = (id) => ({ id, type: 'card' });
 const overCard = (b, id) => ({ id, data: { type: 'card', listId: b.issues.find((i) => i.id === id).columnId } });
