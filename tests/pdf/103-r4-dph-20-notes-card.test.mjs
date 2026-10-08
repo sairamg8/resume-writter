@@ -23,7 +23,7 @@ it('R4-DPH-20: the Notes card has the job page\'s card radius, edge, padding and
     const card = view.container.childNodes.find((el) => el.tagName === 'DIV');
     assert.ok(card, 'the Notes card is drawn');
     const c = classes(card);
-    for (const token of ['bg-white', 'rounded-md', 'border', 'border-line', 'p-5', 'shadow-sm']) {
+    for (const token of ['bg-cv-surface', 'rounded-cv-card', 'border', 'border-cv-hairline', 'p-5', 'shadow-sm']) {
       assert.ok(c.includes(token), `the card has ${token}, as the Overview and Tasks cards: ${c.join(' ')}`);
     }
     for (const token of ['rounded-2xl', 'border-gray-100', 'p-6']) {
