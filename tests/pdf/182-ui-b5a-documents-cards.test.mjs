@@ -47,8 +47,10 @@ it('the menu offers Edit, Rename, Copy and Delete; Copy copies the card once per
     page.press(page.item('Copy'));
     await until(() => page.calls.duplicate.length === 1, 'a copy made');
     assert.deepEqual(page.calls.duplicate, ['resume_b']);
-    await page.openMenu(page.cards()[1]).catch(() => {});
-    if (page.item('Copy')) page.press(page.item('Copy'));
+    // The second Copy must really be pressed: a menu that did not open, or no Copy in it, would leave the count at 1 and pass.
+    await page.openMenu(page.cards()[1]);
+    assert.ok(page.item('Copy'), 'the menu opened again with its Copy');
+    page.press(page.item('Copy'));
     await page.settle();
     assert.equal(page.calls.duplicate.length, 1, 'the guard: the editor is still opening, so no second copy');
   } finally { await page.close(); }
