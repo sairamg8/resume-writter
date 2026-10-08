@@ -146,9 +146,9 @@ export const SortableSection = memo(function SortableSection({
   ];
 
   return (
-    <div ref={setNodeRef} style={style} data-testid={`section-card-${section.id}`} className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isHidden ? 'border-gray-100 opacity-60' : 'border-gray-200'}`}>
-      <div className={`flex items-center gap-1.5 px-3 py-2.5 border-b border-gray-100 ${isHidden ? 'bg-gray-50/50' : 'bg-gray-50'}`}>
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none shrink-0">
+    <div ref={setNodeRef} style={style} data-testid={`section-card-${section.id}`} className={`cv-card overflow-hidden transition-colors ${isHidden ? 'opacity-60' : ''}`}>
+      <div className={`flex items-center gap-1.5 px-3 py-2.5 border-b border-cv-hairline bg-cv-ground`}>
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-cv-faint hover:text-cv-muted touch-none shrink-0">
           <GripVertical size={15} />
         </button>
         {/* 16 px on touch: iOS zooms the page into a smaller field it focuses (R4-DPH-28). */}
@@ -158,14 +158,14 @@ export const SortableSection = memo(function SortableSection({
           data-testid="section-title-input"
           value={section.title}
           onChange={e => updateSection(section.id, s => ({ ...s, title: e.target.value }))}
-          className={`flex-1 text-sm pointer-coarse:text-base font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+          className={`flex-1 text-sm pointer-coarse:text-base font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-cv-faint line-through' : 'text-cv-ink'}`}
         />
         {isHidden && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded shrink-0">Hidden</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-cv-muted bg-cv-sunken px-1.5 py-0.5 rounded shrink-0">Hidden</span>
         )}
         <button
           onClick={() => toggleSectionVisibility?.(section.id)}
-          className={`p-1.5 rounded transition-colors shrink-0 ${isHidden ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100' : 'text-blue-500 hover:text-blue-700 hover:bg-blue-50'}`}
+          className={`p-1.5 rounded transition-colors shrink-0 ${isHidden ? 'text-cv-faint hover:text-cv-muted hover:bg-cv-sunken' : 'text-cv-brand-text hover:text-cv-brand-pressed hover:bg-cv-brand-soft'}`}
           title={isHidden ? 'Show section on resume' : 'Hide section from resume'}
         >
           {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -178,7 +178,7 @@ export const SortableSection = memo(function SortableSection({
           label="Section options"
           trigger={
             <button
-              className={`p-1.5 rounded transition-colors shrink-0 ${menuOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+              className={`p-1.5 rounded transition-colors shrink-0 ${menuOpen ? 'text-cv-brand-text bg-cv-brand-soft' : 'text-cv-faint hover:text-cv-muted hover:bg-cv-sunken'}`}
               title="Section options"
             >
               <MoreHorizontal size={14} />
@@ -187,7 +187,7 @@ export const SortableSection = memo(function SortableSection({
         />
         <button
           onClick={() => setSectionOpen(o => !o)}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0"
+          className="p-1.5 text-cv-faint hover:text-cv-muted hover:bg-cv-sunken rounded transition-colors shrink-0"
         >
           {sectionOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
@@ -217,7 +217,7 @@ export const SortableSection = memo(function SortableSection({
           </DndContext>
           <button
             onClick={handleAddItem}
-            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium mt-1 px-1 py-1"
+            className="flex items-center gap-1.5 text-xs text-cv-brand-text hover:text-cv-brand-pressed font-medium mt-1 px-1 py-1"
           >
             <Plus size={13} /> {(Object.hasOwn(ADD_LABEL, section.type) && ADD_LABEL[section.type]) || 'Add Entry'}
           </button>
