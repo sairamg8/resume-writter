@@ -1,9 +1,10 @@
-import { useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson, Globe } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/constants/cardHints';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
 import { useFloating } from '@/components/ui/useFloating';
+import { useOutsideClose } from '@/hooks/useOutsideClose';
 
 /**
  * The editor's Export menu, with "Import as a new résumé" (R4-DUX-17) of JSON: `onImportJSON(data, asOriginal)`, and a PDF, Word,
@@ -31,14 +32,9 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
   // goes from Export into its items; no ancestor has a transform, which would pin `fixed` to it.
   const { style: menuStyle } = useFloating(open, buttonRef, menuRef, { placement: 'bottom-end', offset: 4 });
 
-  useEffect(() => {
-    if (!open) return;
-    function handle(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, [open]);
+  // A pointer pressed outside closes it (a tap counts: a phone sends no mouse event for a tap on a part of the page with no click handler).
+  const close = useCallback(() => setOpen(false), []);
+  useOutsideClose(ref, open, close);
 
   return (
     <div ref={ref} className="relative">
