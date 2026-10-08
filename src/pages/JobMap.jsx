@@ -7,7 +7,7 @@ import AuthBar from '@/components/AuthBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { Button, Select } from '@/components/ui';
 import { controlClass } from '@/components/ui/Field.jsx';
-import { ROW, FUNCTION_LABELS, checkData, filterRows, distinct } from '@/utils/jobMapData';
+import { ROW, FUNCTION_LABELS, checkData, filterRows, distinct, roleHref } from '@/utils/jobMapData';
 
 /**
  * The account menu's Job Map item (AuthBar loads this page's code only when the menu opens, so the page and the item
@@ -113,7 +113,7 @@ export default function JobMap({ auth, sync }) {
             <ul className="space-y-1.5">
               {shown.slice(0, more).map((r, i) => (
                 <li key={`${r[ROW.url]}-${i}`}>
-                  <a href={r[ROW.url]} target="_blank" rel="noreferrer noopener" className="cv-card flex items-start gap-2 px-3 py-2 hover:border-cv-brand">
+                  <a href={roleHref(r[ROW.url]) || undefined} target="_blank" rel="noopener noreferrer" className="cv-card flex items-start gap-2 px-3 py-2 hover:border-cv-brand">
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-medium text-cv-ink">{r[ROW.title]}</span>
                       <span className="block text-xs text-cv-muted">{companies[r[ROW.company]]?.[0]} · {r[ROW.location] || 'Location not stated'} · {r[ROW.level]}{r[ROW.position] ? ` · ${r[ROW.position]}` : ''}</span>
