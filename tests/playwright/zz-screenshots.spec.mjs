@@ -7,7 +7,8 @@ import { buildTestState, STORAGE_KEY } from '../helpers.js';
 import { visitEditor, openDesignPanel } from './pw-helpers.js';
 
 const DIR = process.env.SHOTS_DIR;
-const VIEWPORTS = [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]];
+// B17 cross-width sweep: every screen at each width (the width is the last part of the file name).
+const VIEWPORTS = [1440, 1280, 1100, 1024, 768, 390].map((w) => [String(w), { width: w, height: w <= 768 ? 844 : 900 }]);
 const JOBS = [
   ['Acme Corp', 'Senior Frontend Engineer', 'saved'], ['Globex', 'Full Stack Developer', 'applied'],
   ['Initech', 'React Developer', 'phone_screen'], ['Umbrella', 'Node.js Engineer', 'interview'],
@@ -98,6 +99,8 @@ for (const [vp, size] of VIEWPORTS) {
       await seedAndGo(page, '/jobs', { jobs: JOBS });
       await page.waitForSelector('text=Job Tracker', { timeout: 20_000 });
       await shot(page, '09-jobs', vp);
+      await seedAndGo(page, '/jobs?view=list', { jobs: JOBS });
+      await shot(page, '09b-jobs-list', vp);
       await seedAndGo(page, `/jobs/${JOBS[1].id}`, { jobs: JOBS });
       await shot(page, '10-job-detail', vp);
     });
@@ -105,6 +108,14 @@ for (const [vp, size] of VIEWPORTS) {
     await attempt(`boards ${vp}`, async () => {
       await seedAndGo(page, '/boards');
       await shot(page, '11-boards', vp);
+      const href = await page.locator('a[href*="#/boards/"]').first().getAttribute('href');
+      const id = href.split('#/boards/')[1].split(/[/?]/)[0];
+      await page.goto(`/#/boards/${id}`);
+      await shot(page, '12-project-board', vp);
+      await page.goto(`/#/boards/${id}/list`);
+      await shot(page, '13-project-list', vp);
+      await page.goto('/#/work');
+      await shot(page, '14-your-work', vp);
     });
   });
 }
