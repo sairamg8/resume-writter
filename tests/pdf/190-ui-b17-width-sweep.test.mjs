@@ -50,13 +50,16 @@ it("the job list keeps the Salary and Applied cells on one line", () => {
   assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.appliedDate/);
 });
 
-it("the Projects table drops Type and Lead below lg, so Issues and Updated stay in view at 768 px", () => {
+it("the Projects table keeps Name wide: Key and Updated go between md and lg (the sidebar's width), Type and Lead wait for xl", () => {
   const s = src("src/pages/Boards.jsx");
-  assert.match(s, /NARROW_HIDDEN = .hidden lg:table-cell./);
+  assert.match(s, /SIDEBAR_HIDDEN = .hidden sm:table-cell md:max-lg:hidden./);
+  assert.match(s, /NARROW_HIDDEN = .hidden xl:table-cell./);
+  assert.match(s, /\$\{SIDEBAR_HIDDEN\}`\}>Key/);
+  assert.match(s, /\$\{SIDEBAR_HIDDEN\}`\}>Updated/);
   assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Type/);
   assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Lead/);
-  assert.match(s, /lg:min-w-\[48rem\]/);
-  assert.ok(!/ sm:min-w-\[48rem\]/.test(s), "no 48rem floor from sm");
+  assert.match(s, /xl:min-w-\[48rem\]/);
+  assert.ok(!/ (sm|lg):min-w-\[48rem\]/.test(s), "no 48rem floor below xl");
 });
 
 it('the project tabs pan sideways below lg with a faded right edge as the cue', async () => {
