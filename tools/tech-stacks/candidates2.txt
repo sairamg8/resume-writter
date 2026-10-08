@@ -1,0 +1,430 @@
+# software
+Abnormal
+Accolade
+Acquia
+Adyen
+Aiven
+Alation
+Algolia
+Amplitude
+Anaconda
+Apptio
+Arista
+Asana
+Aurora Innovation
+Automox
+Avant
+Axiom
+BambooHR
+BetterUp
+Bitly
+Blackbaud
+BlackRock
+Bloomreach
+Bonterra
+Box
+Branch Metrics
+Brightcove
+Buildkite
+Calm
+Canva
+Carvana
+Cars.com
+CarGurus
+Cerebras
+Chainalysis
+Chewy
+Cision
+Clari
+Cloudera
+Cloudflare
+Cockroach
+Collibra
+Confluent
+Contentstack
+Convoy
+Couchbase
+Coveo
+Crunchbase
+CultureAmp
+Culture Amp
+Customer.io
+Cvent
+Dataminr
+Datastax
+Deepgram
+Demandbase
+Descript
+DigitalOcean
+Discord
+Docker
+Domo
+Drata
+Dropbox
+Dynatrace
+Earnin
+Edmunds
+Enverus
+Envoy
+Everlaw
+Evolv
+EverQuote
+Exabeam
+Expel
+Fastly
+Fivetran
+Flatiron
+Flock
+Flowcode
+ForgeRock
+Freshworks
+FullStory
+Gem
+Genesys
+Glean
+GoGuardian
+Grafana
+Grammarly
+Gusto
+Harness
+Hashicorp
+Heap
+Hex
+Highspot
+Honeycomb
+Hootsuite
+Hubspot
+Human Interest
+Hyperscience
+Imperva
+Incode
+Inspectify
+Instabase
+Intercom
+Invitae
+Jellyfish
+Jobber
+Kajabi
+Klaviyo
+Knock
+Kustomer
+Lacework
+Lattice
+LaunchDarkly
+Lever
+Lightricks
+LiveRamp
+Lucid Software
+Lyra
+Mailchimp
+Mapbox
+Marqeta
+Mixpanel
+Mobileye
+Modernizing Medicine
+Mozilla
+Muse
+Nerdwallet
+Netlify
+Newfront
+Nextdoor
+Nylas
+Obsidian Security
+Okta
+Olo
+OneTrust
+Opendoor
+Optimizely
+Orca
+Outreach
+Overleaf
+Pagerduty
+Palantir
+Pantheon
+Particle
+Patreon
+Pax8
+Paylocity
+Paycor
+Pendo
+Phreesia
+Pico
+PlanGrid
+Plaid
+Podium
+Postman
+Preset
+ProcessMaker
+Productboard
+Propel
+Quantcast
+Quora
+Qualtrics
+Ramp
+Rapid7
+Reddit
+Redfin
+Relativity
+Replit
+Retool
+Ripple
+Robinhood
+Rubrik
+Sana
+Samsara
+Scale
+Seatgeek
+Sendbird
+Sendgrid
+Sentry
+Shift
+ShipBob
+Sigma
+Simplisafe
+Skillshare
+Slite
+Smartsheet
+Snyk
+SoundCloud
+Sourcegraph
+Spreedly
+Squarespace
+Stackadapt
+Strava
+Streamlit
+Sumo Logic
+Sunbit
+Superhuman
+Swiftly
+Tanium
+Tempus
+Thumbtack
+Tigera
+Toast
+Tailscale
+Transfix
+Trello
+Tripadvisor
+Trulioo
+Twilio
+Udemy
+Unqork
+Upwork
+Verkada
+Vimeo
+Vonage
+Warby Parker
+Wealthsimple
+Webflow
+Wiz
+Workato
+Yext
+Yotpo
+Zapier
+Zeta
+Zocdoc
+Zuora
+# ai and robotics
+Adept AI
+Aleph Alpha
+Anyscale
+Applied Intuition
+Ascend
+Black Forest Labs
+Brain Corp
+Cognition
+Cursor
+Anysphere
+DeepL
+ElevenLabs
+Glean
+Harvey
+Hebbia
+Imbue
+Jasper
+Kaiko
+Luma AI
+Magic
+Moonshot
+Notion AI
+Poolside
+Reka
+Rewind
+Sakana AI
+Skild
+Suno
+Synthesia
+Thinking Machines
+Typeface
+Writer
+xAI
+Physical Intelligence
+Covariant
+Hugging Face
+Contextual AI
+Sierra
+Decagon
+Ada
+Cresta
+Observe.AI
+Uniphore
+Replicant
+PolyAI
+Parloa
+Moveworks
+Aisera
+# games and media
+Niantic
+Rec Room
+Overwolf
+Wargaming
+Zynga
+Scopely
+Glu
+Big Fish
+Rovio
+Crunchyroll
+Funimation
+Peacock
+Paramount
+Warner Bros Discovery
+Disney Streaming
+Sling
+fuboTV
+Pluto
+Tubi
+Vudu
+Audible
+iHeartMedia
+SiriusXM
+Pandora
+Tidal
+Deezer
+Napster
+Anghami
+Bandcamp
+Splice
+Native Instruments
+Ableton
+Soundtrap
+Epidemic Sound
+Vimeo
+Twitch
+Kick
+Rumble
+Medium
+Pocket
+Flipboard
+Feedly
+Dotdash Meredith
+Ziff Davis
+Gannett
+Axios
+Politico
+Vice
+Vox
+Thrive
+# fintech more
+Addepar
+AlphaSense
+Axos
+Betterment
+BlackLine
+Bolt
+Bread Financial
+Brightside
+Cardlytics
+Carta
+CommonBond
+Credit Sesame
+Currency
+Divvy
+Eton
+EverlyWell
+Figure Technologies
+Finix
+Greenlight
+Imprint
+Jeeves
+Kasasa
+Lendio
+Lithic
+Mainvest
+Mercury
+Mogo
+MX
+Nav
+Noyo
+Oportun
+Paysafe
+Pilot
+Plastiq
+Point
+Ribbit
+Self Financial
+Sezzle
+Simple
+Stenn
+Stessa
+Tally
+Tradeweb
+Truebill
+Varo
+Vesta
+Wealthfront
+Yodlee
+Zip Co
+Ziprecruiter
+# cloud and infra more
+Equinix Metal
+Packet
+Scaleway
+OVHcloud
+Hetzner
+Cherry Servers
+Rackspace
+Cloudsmith
+Spectro Cloud
+Mirantis
+Rancher
+SUSE
+Red Hat
+Canonical
+Chef
+Puppet
+Salt
+Octopus
+Spacelift
+env0
+Scalr
+Terramate
+Upbound
+Crossplane
+Loft Labs
+Civo
+Platform.sh
+Northflank
+Railway
+Koyeb
+Qovery
+Humanitec
+Port
+OpsLevel
+Cortex
+Backstage
+Roadie
+Mezmo
+Edge Delta
+Observe
+Coralogix
+Axiom
+Better Stack
+Checkly
+Pingdom
+Catchpoint
+ThousandEyes
+Kentik
+Auvik
+LogicMonitor
+Netdata
+Zabbix
