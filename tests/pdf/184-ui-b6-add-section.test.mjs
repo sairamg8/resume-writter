@@ -25,8 +25,15 @@ async function tab({ sections, addSectionOpen = true, toggle = () => {} } = {}) 
   const { EditorResumeTab } = await loadModule('/src/components/EditorResumeTab.jsx');
   const r = resume({ sections: sections ?? [section('experience', [{ role: 'Quillwright' }])] });
   const added = [];
-  // The tab takes its actions from the store (useStableActions): a store that records addSection.
-  const store = new Proxy({}, { get: (_t, k) => (k === 'addSection' ? (type) => { added.push(type); return `new_${type}`; } : () => {}) });
+  // The tab takes its actions from the store (useStableActions reads the store's own function keys), so a
+  // plain object holding every action the tab hands on; addSection records the type.
+  const noop = () => {};
+  const store = {
+    addSection: (type) => { added.push(type); return `new_${type}`; },
+    updateSections: noop, updateSection: noop, updateSectionSettings: noop, removeSection: noop, addItem: noop,
+    updateItem: noop, removeItem: noop, reorderItems: noop, toggleSectionVisibility: noop, duplicateSection: noop,
+    duplicateItem: noop, updatePersonal: noop, toggleFieldVisibility: noop, updateSetting: noop, clearSettings: noop,
+  };
   const props = {
     resume: r, store, personalOpen: false, setPersonalOpen() {}, allExpanded: true, forceOpenKey: 0,
     toggleAllSections: toggle, addSectionOpen, setAddSectionOpen() {},
