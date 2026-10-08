@@ -33,7 +33,7 @@ const KanbanCard = memo(function KanbanCard({ job, onDelete, onMove, overlay = f
 
   return (
     <div className={cx(
-      'flex flex-col gap-2 rounded bg-white p-3 select-none shadow-[0_1px_1px_#091e4240,0_0_1px_#091e424f] transition-colors',
+      'flex flex-col gap-2 rounded bg-cv-surface p-3 select-none shadow-[0_1px_1px_#091e4240,0_0_1px_#091e424f] transition-colors',
       overlay ? 'rotate-2 shadow-[0_8px_12px_#091e4226,0_0_1px_#091e424f]' : 'group-hover/card:bg-sunken',
     )}>
       <div className="flex items-start gap-2">
@@ -138,7 +138,7 @@ function KanbanColumn({ status, jobs, day, onNavigate, onDelete, onMove }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
-    <section id={`kanban-col-${status.id}`} aria-label={`${status.label} column`} className="flex w-[264px] shrink-0 snap-center flex-col rounded-md bg-sunken">
+    <section id={`kanban-col-${status.id}`} aria-label={`${status.label} column`} className="flex w-[264px] shrink-0 snap-center flex-col rounded-cv-control bg-sunken">
       <header className="flex h-11 items-center gap-2 px-3">
         <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: status.color }} />
         <h2 className="truncate text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">{status.label}</h2>

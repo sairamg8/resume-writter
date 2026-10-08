@@ -138,7 +138,7 @@ export function JobTracker({ store }) {
       <PageHeader
         title="Job Tracker"
         subtitle={`${jobs.length} application${jobs.length === 1 ? '' : 's'} tracked`}
-        icon={<span className="flex size-8 items-center justify-center rounded-md bg-brand text-white"><Briefcase size={16} aria-hidden="true" /></span>}
+        icon={<span className="flex size-8 items-center justify-center rounded-cv-control bg-brand text-white"><Briefcase size={16} aria-hidden="true" /></span>}
         actions={(
           <>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
@@ -203,7 +203,7 @@ export function JobTracker({ store }) {
                   aria-pressed={on}
                   onClick={() => setFilterStatus(prev => prev === s.id ? '' : s.id)}
                   className={cx(
-                    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
+                    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60',
                     on ? 'bg-brand-subtle text-brand hover:bg-brand-subtle-hover' : 'text-ink-subtle hover:bg-neutral-fill hover:text-ink',
                   )}
                 >

@@ -41,10 +41,10 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
   const sorted = sortJobs(jobs, sort.key, sort.dir);
 
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-white">
+    <div className="overflow-x-auto rounded-cv-card border border-cv-hairline bg-cv-surface">
       <table className="w-full min-w-[60rem] text-sm">
         <thead>
-          <tr className="border-b-2 border-line">
+          <tr className="border-b-2 border-cv-hairline">
             {COLS.map(col => (
               <th
                 key={col.key}
@@ -55,7 +55,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 <button
                   type="button"
                   onClick={() => toggleSort(col.key)}
-                  className="inline-flex cursor-pointer items-center rounded px-1 font-semibold select-none hover:bg-neutral-fill hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="inline-flex cursor-pointer items-center rounded px-1 font-semibold select-none hover:bg-neutral-fill hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand"
                 >
                   {col.label}
                   <SortIcon active={sort.key === col.key} dir={sort.dir} />
@@ -75,7 +75,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
               <tr
                 key={job.id}
                 onClick={() => onNavigate(job.id)}
-                className="group h-11 cursor-pointer border-b border-line-subtle transition-colors last:border-0 hover:bg-hovered"
+                className="group h-11 cursor-pointer border-b border-cv-hairline-subtle transition-colors last:border-0 hover:bg-hovered"
               >
                 <td className="px-3">
                   <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                     <button
                       type="button"
                       onClick={e => { e.stopPropagation(); onNavigate(job.id); }}
-                      className="rounded text-left font-medium text-ink hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      className="rounded text-left font-medium text-ink hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand"
                     >
                       {job.company || '—'}
                     </button>
@@ -115,7 +115,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                     const past = state === 'past';
                     const soon = state === 'soon';
                     return (
-                      <span className={past ? 'font-medium text-red-700' : soon ? 'font-medium text-amber-700' : 'text-ink-subtle'}>
+                      <span className={past ? 'font-medium text-cv-bad' : soon ? 'font-medium text-cv-warn' : 'text-ink-subtle'}>
                         {job.deadline}
                       </span>
                     );

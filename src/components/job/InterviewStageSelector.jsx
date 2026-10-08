@@ -20,7 +20,7 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
     // p-4 on a phone, as the form's other sections. The picked stage's pill goes under the heading
     // when the two do not fit side by side, and a long custom stage wraps inside it: it had a fixed
     // width, so it squeezed the description or ran out of the section (R4-DPH-19).
-    <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+    <section className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div>
           <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Interview Stage</h2>
@@ -37,7 +37,7 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
               <button
                 type="button"
                 onClick={() => onStageChange('')}
-                className="p-0.5 -mr-1 text-brand hover:text-red-400 rounded transition-colors shrink-0"
+                className="p-0.5 -mr-1 text-brand hover:text-cv-bad rounded transition-colors shrink-0"
                 title="Clear stage"
               >
                 <XIcon size={11} />
@@ -59,9 +59,9 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                   key={s}
                   type="button"
                   onClick={() => onStageChange(active ? '' : s)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-all ${active ? 'bg-brand-subtle text-brand font-semibold' : 'text-ink-subtle hover:bg-sunken'}`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-cv-control text-left text-sm transition-all ${active ? 'bg-brand-subtle text-brand font-semibold' : 'text-ink-subtle hover:bg-sunken'}`}
                 >
-                  <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
+                  <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-cv-brand-text' : 'text-ink-subtlest'}`}>{i + 1}.</span>
                   <span className="flex-1 leading-snug">{s}</span>
                   {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                 </button>
@@ -80,18 +80,18 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                 {customStages.map((s, i) => {
                   const active = stage === s;
                   return (
-                    <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all ${active ? 'bg-brand-subtle' : 'hover:bg-sunken'}`}>
+                    <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-cv-control transition-all ${active ? 'bg-brand-subtle' : 'hover:bg-sunken'}`}>
                       {/* min-w-0 and break-words: a long custom stage wraps in its row, as in the pill
                           above, instead of running out of the section with its Remove X (R4-DPH-19). */}
                       <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 min-w-0 flex items-center gap-2.5 text-left">
-                        <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
+                        <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-cv-brand-text' : 'text-ink-subtlest'}`}>{i + 1}.</span>
                         <span className={`text-sm flex-1 min-w-0 break-words leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
                         {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => { if (stage === s) onStageChange(''); removeCustomStage(s); }}
-                        className="p-1 text-ink-subtlest hover:text-red-400 rounded transition-colors shrink-0"
+                        className="p-1 text-ink-subtlest hover:text-cv-bad rounded transition-colors shrink-0"
                         title="Remove"
                       >
                         <XIcon size={11} />
@@ -103,7 +103,7 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-line">
+          <div className="mt-4 pt-4 border-t border-cv-hairline">
             <label htmlFor={inputId} className="block text-[10px] font-semibold text-ink-subtlest mb-2">Add Custom Stage</label>
             <div className="flex gap-2">
               <input
@@ -113,13 +113,13 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                 onKeyDown={e => { if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); handleAddStage(); } }}
                 placeholder="e.g. 2nd Round, Founder Chat…"
                 // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
-                className="flex-1 px-3 py-2 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                className="flex-1 px-3 py-2 text-sm pointer-coarse:text-base border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
               <button
                 type="button"
                 onClick={handleAddStage}
                 disabled={!newStageInput.trim()}
-                className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-white bg-brand rounded-cv-control hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Plus size={14} /> Add
               </button>

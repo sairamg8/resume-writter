@@ -67,7 +67,7 @@ export function ColumnBars({ bars, color = '#1d7afc', height = 150, unit = 'issu
   const max = Math.max(1, ...bars.map((b) => b.value));
   return (
     <div className="flex flex-col gap-2" role="img" aria-label={bars.map((b) => `${b.label}: ${b.value} ${unit}`).join(', ')}>
-      <div className="flex items-end gap-3 border-b border-line" style={{ height }}>
+      <div className="flex items-end gap-3 border-b border-cv-hairline" style={{ height }}>
         {bars.map((b) => (
           <div key={b.id} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${b.label}: ${b.value} ${unit}`}>
             <span className="text-[12px] font-semibold text-ink">{b.value}</span>

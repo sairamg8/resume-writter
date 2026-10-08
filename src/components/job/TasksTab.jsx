@@ -39,7 +39,7 @@ export function TasksTab({ todos, onChange, readNow }) {
   return (
     <div className="space-y-6">
       {/* Add task */}
-      <div className="bg-white rounded-md border border-line p-4 shadow-sm">
+      <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 shadow-sm">
         {/* The job page's card and section headings, as its Details box and this tab's Progress card
             draw theirs: they were 10 px bold capitals (R4-DVIS-09). */}
         <p className="text-sm font-semibold text-ink mb-3">Add Task</p>
@@ -73,7 +73,7 @@ export function TasksTab({ todos, onChange, readNow }) {
 
       {/* Progress */}
       {todos.length > 0 && (
-        <div className="bg-white rounded-md border border-line p-5 shadow-sm">
+        <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-ink">Progress</span>
             <span className={`text-sm font-bold ${pct === 100 ? 'text-brand' : 'text-ink-subtle'}`}>
@@ -82,7 +82,7 @@ export function TasksTab({ todos, onChange, readNow }) {
           </div>
           <div className="w-full h-2.5 bg-neutral-fill rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-brand' : 'bg-indigo-400'}`}
+              className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-brand' : 'bg-cv-brand'}`}
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -130,7 +130,7 @@ export function TasksTab({ todos, onChange, readNow }) {
           {done.length > DONE_PAGE_SIZE && (
             <button
               onClick={() => setShowAllDone(v => !v)}
-              className="w-full text-xs font-semibold text-brand hover:text-brand py-2 rounded-md border border-dashed border-brand-subtle-hover hover:bg-brand-subtle transition-all"
+              className="w-full text-xs font-semibold text-brand hover:text-brand py-2 rounded-cv-control border border-dashed border-brand-subtle-hover hover:bg-brand-subtle transition-all"
             >
               {showAllDone ? 'Show fewer' : `Show ${done.length - DONE_PAGE_SIZE} more completed`}
             </button>
@@ -140,9 +140,9 @@ export function TasksTab({ todos, onChange, readNow }) {
 
       {/* Empty state */}
       {todos.length === 0 && (
-        <div className="bg-white rounded-md border border-line py-12 text-center shadow-sm">
-          <div className="w-14 h-14 bg-brand-subtle rounded-md flex items-center justify-center mx-auto mb-4">
-            <CheckSquare size={26} className="text-indigo-300" />
+        <div className="bg-cv-surface rounded-cv-card border border-cv-hairline py-12 text-center shadow-sm">
+          <div className="w-14 h-14 bg-brand-subtle rounded-cv-control flex items-center justify-center mx-auto mb-4">
+            <CheckSquare size={26} className="text-cv-brand-text" />
           </div>
           <p className="text-sm font-medium text-ink-subtle mb-1">No tasks yet</p>
           <p className="text-xs text-ink-subtlest">Add tasks to track your progress</p>

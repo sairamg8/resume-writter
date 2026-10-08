@@ -71,13 +71,13 @@ export function OverviewTab({ job, set, resumes, navigate }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
       {/* Pipeline — always interactive so user can reopen */}
-      <div className="sm:col-span-2 bg-white rounded-md border border-line p-5 shadow-sm">
+      <div className="sm:col-span-2 bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm">
         <p className={`${HEADING} mb-5`}>Application Stage</p>
         <Pipeline status={job.status} onChange={val => set('status', val)} />
       </div>
 
       {isTerminal && (
-        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-sunken border border-line rounded-md">
+        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-sunken border border-cv-hairline rounded-cv-control">
           <Info size={14} className="text-ink-subtlest shrink-0" />
           <p className="text-sm text-ink-subtle">
             This application is <span className="font-semibold text-ink">{job.status === 'rejected' ? 'Rejected' : 'Withdrawn'}</span>. Restart it from the pipeline above if it reopens.
@@ -85,15 +85,15 @@ export function OverviewTab({ job, set, resumes, navigate }) {
         </div>
       )}
       {isOnHold && (
-        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-md">
-          <Info size={14} className="text-amber-500 shrink-0" />
-          <p className="text-sm text-amber-700">Application is <span className="font-semibold">On Hold</span> — resume or close it from the pipeline above.</p>
+        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-cv-warn-soft border border-cv-warn-soft rounded-cv-control">
+          <Info size={14} className="text-cv-warn shrink-0" />
+          <p className="text-sm text-cv-warn">Application is <span className="font-semibold">On Hold</span> — resume or close it from the pipeline above.</p>
         </div>
       )}
 
       {/* Left col — Role Info */}
       <div className="space-y-4">
-        <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
+        <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm space-y-4">
           <p className={HEADING}>Role Info</p>
           <Field label="Company"          value={job.company}   onChange={named('company', 'role')}  icon={Briefcase} placeholder="Company name" />
           <Field label="Role / Position"  value={job.role}      onChange={named('role', 'company')}     icon={FileText}  placeholder="Job title" />
@@ -115,7 +115,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
       {/* Right col — Timeline & Contact */}
       <div className="space-y-4">
-        <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
+        <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm space-y-4">
           <p className={HEADING}>Timeline & Contact</p>
 
           <Field label="Applied Date"   value={job.appliedDate} onChange={v => set('appliedDate', v)} type="date" icon={Calendar} />
@@ -126,7 +126,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
               Deadline
             </p>
             <div className="flex items-center gap-2 px-3">
-              <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-ink-subtlest'}`} />
+              <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-cv-bad' : isDeadlineSoon ? 'text-cv-warn' : 'text-ink-subtlest'}`} />
               <input
                 type="date"
                 aria-label="Deadline"
@@ -135,12 +135,12 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 // The kit's box, 16 px on touch screens as iOS Safari zooms the page into any smaller
                 // field it focuses (J-38), in the deadline's own colour.
                 className={`${DATE_BOX} ${BOX} ${
-                  isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-ink'
+                  isDeadlinePast ? 'text-cv-bad font-medium' : isDeadlineSoon ? 'text-cv-warn font-medium' : 'text-ink'
                 }`}
               />
             </div>
             {(isDeadlinePast || isDeadlineSoon) && (
-              <p className={`text-[10px] px-3 mt-1 font-semibold ${isDeadlinePast ? 'text-red-500' : 'text-amber-500'}`}>
+              <p className={`text-[10px] px-3 mt-1 font-semibold ${isDeadlinePast ? 'text-cv-bad' : 'text-cv-warn'}`}>
                 {isDeadlinePast ? 'Deadline has passed' : 'Coming up soon!'}
               </p>
             )}

@@ -17,7 +17,7 @@ export const LOZENGE_TONES = {
 const BUTTON_TONES = {
   todo: 'bg-loz-todo text-loz-todo-ink hover:bg-[#c7ccd4]',
   inprogress: 'bg-brand text-white hover:bg-brand-hover',
-  done: 'bg-[#1f845a] text-white hover:bg-[#216e4e]',
+  done: 'bg-cv-good text-white hover:bg-cv-good/90',
   warning: 'bg-[#f8e6a0] text-[#7f5f01] hover:bg-[#f5cd47]',
   danger: 'bg-[#ffd5d2] text-[#ae2e24] hover:bg-[#fd9891]',
 };
@@ -66,7 +66,7 @@ export function StatusMenu({ value, options, onChange, label = 'Status', size = 
           aria-label={`${label}: ${current.name}`}
           className={cx(
             'inline-flex max-w-full items-center gap-1 rounded font-semibold transition-colors duration-150',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-1',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60 focus-visible:ring-offset-1',
             size === 'sm' ? 'h-6 px-2 text-[12px]' : 'h-8 px-3 text-sm',
             BUTTON_TONES[current.category] ?? BUTTON_TONES.todo, className,
           )}

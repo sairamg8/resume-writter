@@ -20,12 +20,12 @@ const AVATAR_COLORS = [
  */
 const LOOKS = {
   dashboard: {
-    card: 'rounded-2xl border border-gray-100 shadow-sm', rule: 'border-gray-100', avatar: 'rounded-xl',
-    name: 'font-bold text-gray-900', ink: 'text-gray-900', muted: 'text-gray-400',
+    card: 'rounded-cv-card border border-cv-hairline shadow-sm', rule: 'border-cv-hairline', avatar: 'rounded-cv-card',
+    name: 'font-bold text-cv-ink', ink: 'text-cv-ink', muted: 'text-cv-faint',
   },
   workspace: {
-    card: 'rounded-md border border-line', rule: 'border-line', avatar: 'rounded-md',
-    name: 'font-semibold text-ink', ink: 'text-ink', muted: 'text-ink-subtlest',
+    card: 'rounded-cv-card border border-cv-hairline', rule: 'border-cv-hairline', avatar: 'rounded-cv-control',
+    name: 'font-semibold text-cv-ink', ink: 'text-cv-ink', muted: 'text-cv-faint',
   },
 };
 
@@ -47,11 +47,11 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
   // A column whose timeline alone scrolls when the panel is held to a height — the Dashboard's sidebar is
   // never taller than the window (R4-DVIS-29) — so the header and the footer's link stay in view.
   return (
-    <div className={`bg-white ${look.card} overflow-hidden flex flex-col min-h-0`}>
+    <div className={`bg-cv-surface ${look.card} overflow-hidden flex flex-col min-h-0`}>
       {/* Profile header */}
       <div className={`px-5 pt-5 pb-4 border-b ${look.rule} shrink-0`}>
         <div className="flex items-center gap-3 mb-1">
-          <div className={`w-9 h-9 ${look.avatar} bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+          <div className={`w-9 h-9 ${look.avatar} bg-cv-brand flex items-center justify-center text-white font-bold text-sm shrink-0`}>
             {(personal.name || '?')[0].toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -73,7 +73,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
           <p className={`text-xs ${look.muted} text-center py-4`}>No experience entries yet</p>
         ) : (
           <div className="relative pl-6">
-            <div className="absolute left-2 top-2 bottom-2 w-px bg-gradient-to-b from-indigo-300 via-indigo-100 to-gray-100" />
+            <div className="absolute left-2 top-2 bottom-2 w-px bg-gradient-to-b from-cv-brand-soft-border via-cv-brand-soft to-cv-hairline" />
             <div className="space-y-4">
               {items.map((item, i) => {
                 const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
@@ -85,7 +85,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
                 return (
                   <div key={item.id} className="relative">
                     <div
-                      className={`absolute -left-6 mt-1.5 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${item.current ? 'ring-2 ring-indigo-300' : ''}`}
+                      className={`absolute -left-6 mt-1.5 w-2.5 h-2.5 rounded-full border-2 border-cv-surface shadow-sm ${item.current ? 'ring-2 ring-cv-brand-soft-border' : ''}`}
                       style={{ backgroundColor: item.current ? '#4f46e5' : '#94a3b8' }}
                     />
                     <div>
@@ -97,7 +97,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
                         <div className="text-right shrink-0">
                           {dur && <p className={`text-[10px] ${look.muted} font-medium`}>{dur}</p>}
                           {item.current && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600">NOW</span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-cv-brand-soft text-cv-brand-text">NOW</span>
                           )}
                         </div>
                       </div>
@@ -116,7 +116,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
         <div className="px-4 pb-4 shrink-0">
           <button
             onClick={() => navigate('/jobs')}
-            className="block w-full text-center text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 py-2 rounded-xl hover:bg-indigo-50 transition-colors"
+            className="block w-full text-center text-[11px] font-semibold text-cv-brand-text hover:text-cv-brand-pressed py-2 rounded-cv-card hover:bg-cv-brand-soft transition-colors"
           >
             Open Job Tracker →
           </button>

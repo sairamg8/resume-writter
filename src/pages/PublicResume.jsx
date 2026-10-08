@@ -75,17 +75,17 @@ export function PublicResume({ io = firebasePublicIo }) {
       {view.state === 'ready' ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-            <button onClick={download} disabled={busy} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+            <button onClick={download} disabled={busy} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-cv-control bg-cv-brand text-white hover:bg-cv-brand-pressed disabled:opacity-60">
               <Download size={12} aria-hidden="true" /> {busy ? 'Preparing PDF…' : 'Download PDF'}
             </button>
           </div>
-          {failed && <p role="alert" className="mb-3 text-xs text-red-700">{failed}</p>}
+          {failed && <p role="alert" className="mb-3 text-xs text-cv-bad">{failed}</p>}
           <PdfPreview title="Résumé" textId="resume-preview" input={view.resume} render={renderResumePreview} zoom={1} active />
         </>
       ) : (
-        <p role={view.state === 'loading' ? 'status' : 'alert'} className="mt-24 text-sm text-gray-600 text-center max-w-md">{message}</p>
+        <p role={view.state === 'loading' ? 'status' : 'alert'} className="mt-24 text-sm text-cv-muted text-center max-w-md">{message}</p>
       )}
-      <p className="mt-6 text-xs text-gray-400">A read-only résumé shared from <a href="#/" className="hover:text-gray-600 underline">CPWT-CV</a>.</p>
+      <p className="mt-6 text-xs text-cv-faint">A read-only résumé shared from <a href="#/" className="hover:text-cv-muted underline">CPWT-CV</a>.</p>
     </div>
   );
 }

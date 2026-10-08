@@ -165,8 +165,8 @@ export function JobDetail({ store }) {
 
         <aside aria-label="Job details" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
           <StatusMenu value={job.status} options={statuses} onChange={(status) => set('status', status)} className="self-start" />
-          <section className="rounded-md border border-line">
-            <h2 className="border-b border-line px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>
+          <section className="rounded-cv-card border border-cv-hairline">
+            <h2 className="border-b border-cv-hairline px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>
             <div className="flex flex-col px-2 py-1.5">
               <Row label="Applied">{dayOf(job.appliedDate, <DatePill value={job.appliedDate} kind="plain" size="sm" />)}</Row>
               <Row label="Deadline">{dayOf(job.deadline, <DatePill value={job.deadline} done={closed} size="sm" />)}</Row>
@@ -179,7 +179,7 @@ export function JobDetail({ store }) {
               <Row label="Résumé">{link.state === 'linked' ? (link.resume.name || 'Untitled') : link.state === 'deleted' ? 'Résumé deleted' : null}</Row>
             </div>
             {todos.length > 0 && (
-              <div className="border-t border-line px-3 py-3">
+              <div className="border-t border-cv-hairline px-3 py-3">
                 <p className="mb-1.5 flex justify-between text-[12px] font-semibold text-ink-subtle"><span>Tasks</span><span>{doneTodos} of {todos.length} done</span></p>
                 <ProgressBar value={doneTodos} max={todos.length} autoTone label="Tasks done" valueText={`${doneTodos} of ${todos.length} done`} />
               </div>

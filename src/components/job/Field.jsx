@@ -68,7 +68,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
           />
         </div>
       ) : (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md group/field">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-cv-control group/field">
           {Icon && <Icon size={13} className="text-ink-subtlest shrink-0" />}
           {/* min-w-0 and break-words: a long value (a posting's URL) wraps in its row on a phone (J-12). */}
           <span className={`min-w-0 flex-1 break-words text-sm ${value ? 'text-ink' : 'text-ink-subtlest italic'}`}>
@@ -77,7 +77,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
           <button
             // From the value as it is: an edit the page refused (OverviewTab's blank name) left its draft behind.
             onClick={() => { opened.current = value || ''; setDraft(opened.current); setEditing(true); }}
-            className="opacity-0 group-hover/field:opacity-100 no-hover:opacity-100 p-1 text-ink-subtlest hover:text-brand hover:bg-brand-subtle rounded-lg transition-all"
+            className="opacity-0 group-hover/field:opacity-100 no-hover:opacity-100 p-1 text-ink-subtlest hover:text-brand hover:bg-brand-subtle rounded-cv-control transition-all"
             title="Edit"
           >
             <Pencil size={12} />

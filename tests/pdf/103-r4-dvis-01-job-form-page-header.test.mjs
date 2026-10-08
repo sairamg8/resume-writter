@@ -43,7 +43,7 @@ for (const [path, title, crumbs] of [
     const { page, header, within } = await openForm(path);
     try {
       // Sticky from md up, and scrolled away with the page on a phone (PageHeader, R4-DPH-07).
-      tokens(header, 'the header', { has: ['md:sticky', 'md:top-0', 'bg-white', 'border-b', 'border-line'], hasNot: ['sticky', 'top-0'] });
+      tokens(header, 'the header', { has: ['md:sticky', 'md:top-0', 'border-b', 'border-cv-hairline'], hasNot: ['sticky', 'top-0'] });
       tokens(header.childNodes[0], 'the header\'s frame', { has: ['px-4', 'md:px-8'], hasNot: ['max-w-3xl', 'mx-auto', 'px-6'] });
 
       const h1 = within(header).find((el) => el.tagName === 'H1');

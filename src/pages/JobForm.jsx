@@ -210,7 +210,7 @@ export function JobForm({ store }) {
   // padding, left-aligned, as the job page's. The breadcrumbs are links: with changes, LeaveGuard
   // asks leave()'s question before they go (R4-DUX-06).
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-cv-surface">
       {holdsNavigation && (
         <LeaveGuard
           shouldBlock={() => dirty && !leavingRef.current}
@@ -220,7 +220,7 @@ export function JobForm({ store }) {
         />
       )}
       <PageHeader
-        className="border-b border-line"
+        className="border-b border-cv-hairline"
         breadcrumbs={[
           { label: 'Job Tracker', to: '/jobs' },
           // A crumb before the last does not shrink: a long company name ran the row off a phone's
@@ -232,7 +232,7 @@ export function JobForm({ store }) {
           { label: title },
         ]}
         icon={(
-          <button type="button" onClick={leave} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
+          <button type="button" onClick={leave} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-cv-control transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
         )}
@@ -251,7 +251,7 @@ export function JobForm({ store }) {
       <JobsNotSavedAlert error={persistError} className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6" />
       {restored && (
         <div className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6">
-          <p className="text-xs text-ink-subtle bg-sunken border border-line rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+          <p className="text-xs text-ink-subtle bg-sunken border border-cv-hairline rounded-cv-control px-3 py-2 flex flex-wrap items-center gap-2">
             <span className="flex-1">Restored your unsaved changes</span>
             <button type="button" onClick={discardRestored} className="font-semibold underline hover:text-ink">Discard</button>
           </p>
@@ -259,9 +259,9 @@ export function JobForm({ store }) {
       )}
       {gone && (
         <div className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6">
-          <p role="alert" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+          <p role="alert" className="text-xs text-cv-warn bg-cv-warn-soft border border-cv-warn-soft rounded-cv-control px-3 py-2 flex flex-wrap items-center gap-2">
             <span className="flex-1">This job was deleted in another tab. What you typed is still here.</span>
-            <button type="button" onClick={saveAsNew} disabled={!canSave} className="font-semibold underline hover:text-amber-900 disabled:opacity-40">Save as a new job</button>
+            <button type="button" onClick={saveAsNew} disabled={!canSave} className="font-semibold underline hover:text-cv-warn disabled:opacity-40">Save as a new job</button>
           </p>
         </div>
       )}
@@ -272,7 +272,7 @@ export function JobForm({ store }) {
             form=, so Enter in a field saves (J-36). The notes stay outside it: the STAR Optimizer the
             notes editor opens has buttons with no type, which would submit the job instead. */}
         <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-5">
-          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <section className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 sm:p-6 space-y-4">
             <div>
               <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Basic Info</h2>
               {/* Either one is enough (canSave): a star on both said both were needed (J-36). */}
@@ -300,7 +300,7 @@ export function JobForm({ store }) {
             </div>
           </section>
 
-          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <section className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 sm:p-6 space-y-4">
             <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select id={uid + 'status'} label="Application Status" value={form.status} onChange={e => setStatus(e.target.value)}>
@@ -324,7 +324,7 @@ export function JobForm({ store }) {
             removeCustomStage={removeCustomStage}
           />
 
-          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <section className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 sm:p-6 space-y-4">
             <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Contact & Resume</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField id={uid + 'contact'} label="Contact Person" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" />
@@ -339,7 +339,7 @@ export function JobForm({ store }) {
         </form>
 
         {/* The other cards' padding: a bare p-6 made a phone's notes editor 16 px narrower than the fields (R4-DPH-20). */}
-        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+        <section className="bg-cv-surface rounded-cv-card border border-cv-hairline p-4 sm:p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Notes</h2>
           {/* The Notes tab's editor and format: plain text here was stripped there (J-03). */}
           <RichTextEditor ariaLabel="Notes" value={form.notes} onChange={html => set('notes', html)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" />

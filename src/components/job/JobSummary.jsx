@@ -7,7 +7,7 @@ import { StatusBadge } from './StatusBadge';
 
 function Stat({ icon: Icon, tone, value, label, hint }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-line bg-white p-4">
+    <div className="flex items-center gap-3 rounded-cv-card border border-cv-hairline bg-cv-surface p-4">
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tone}`}><Icon size={20} aria-hidden="true" /></span>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink">{value} {label}</p>
@@ -19,7 +19,7 @@ function Stat({ icon: Icon, tone, value, label, hint }) {
 
 function Card({ title, description, children, className = '' }) {
   return (
-    <section className={`flex flex-col gap-4 rounded-md border border-line bg-white p-5 ${className}`}>
+    <section className={`flex flex-col gap-4 rounded-cv-card border border-cv-hairline bg-cv-surface p-5 ${className}`}>
       <div>
         <h2 className="text-base font-semibold text-ink">{title}</h2>
         {description && <p className="text-[13px] text-ink-subtle">{description}</p>}
@@ -33,7 +33,7 @@ function Card({ title, description, children, className = '' }) {
 function JobRow({ job, date, onOpen }) {
   return (
     <li>
-      <button type="button" onClick={() => onOpen(job.id)} className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+      <button type="button" onClick={() => onOpen(job.id)} className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-hovered focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
         <Avatar name={job.company || '?'} size="sm" shape="square" decorative />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-ink">{job.company || '—'}</span>

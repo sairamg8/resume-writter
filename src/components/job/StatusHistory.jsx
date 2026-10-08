@@ -15,18 +15,18 @@ export function StatusHistory({ history }) {
   const withdrawals = history.filter(h => h.status === 'withdrawn').length;
 
   return (
-    <div className="bg-white rounded-md border border-line p-5 shadow-sm">
+    <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         {/* The job page's card heading, as its Details box draws one (R4-DVIS-09). */}
         <p className="text-sm font-semibold text-ink">Application History</p>
         <div className="flex gap-2">
           {rejections > 0 && (
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-100">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-cv-bad-soft text-cv-bad border border-cv-bad-soft">
               Rejected {rejections}×
             </span>
           )}
           {withdrawals > 0 && (
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-fill text-ink-subtle border border-line">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-fill text-ink-subtle border border-cv-hairline">
               Withdrawn {withdrawals}×
             </span>
           )}
@@ -48,7 +48,7 @@ export function StatusHistory({ history }) {
               <div key={i} className="relative flex items-start gap-3">
                 {/* Dot */}
                 <div
-                  className={`absolute -left-5 mt-[5px] w-2.5 h-2.5 rounded-full border-2 border-white shrink-0 ${isLast ? 'ring-2' : ''}`}
+                  className={`absolute -left-5 mt-[5px] w-2.5 h-2.5 rounded-full border-2 border-cv-surface shrink-0 ${isLast ? 'ring-2' : ''}`}
                   style={{
                     backgroundColor: s?.color || '#d1d5db',
                     boxShadow: isLast ? `0 0 0 3px ${s?.color || '#d1d5db'}30` : undefined,

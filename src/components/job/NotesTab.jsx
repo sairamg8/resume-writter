@@ -4,7 +4,7 @@ export function NotesTab({ job, set }) {
   return (
     // The job page's card, as the Overview and Tasks tabs draw theirs: this one alone was rounder,
     // lighter-edged and more padded, which showed on switching tabs (R4-DPH-20).
-    <div className="bg-white rounded-md border border-line p-5 shadow-sm">
+    <div className="bg-cv-surface rounded-cv-card border border-cv-hairline p-5 shadow-sm">
       {/* The job page's card heading, as its Details box draws one (R4-DVIS-09). */}
       <p className="text-sm font-semibold text-ink mb-4">Notes</p>
       <RichTextEditor

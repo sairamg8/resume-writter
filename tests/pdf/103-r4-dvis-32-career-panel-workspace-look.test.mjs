@@ -45,23 +45,23 @@ it('on the Job Tracker\'s Summary the Career History panel is drawn as the kit c
     // A kit card of JobSummary's: <section><div><h2>title</h2>…</div>…</section>.
     const card = page.all().find((el) => el.tagName === 'SECTION' && el.firstChild?.firstChild?.tagName === 'H2' && el.firstChild.firstChild.textContent === 'Pipeline');
     assert.ok(card, 'the Pipeline card beside it');
-    for (const t of ['rounded-md', 'border', 'border-line', 'bg-white']) {
+    for (const t of ['rounded-cv-card', 'border', 'border-cv-hairline', 'bg-cv-surface']) {
       assert.ok(tokens(card).includes(t), `the kit card has ${t}`);
       assert.ok(tokens(panel).includes(t), `the panel has ${t}, as the kit card beside it: ${tokens(panel).join(' ')}`);
     }
-    for (const t of ['rounded-2xl', 'shadow-sm', 'border-gray-100']) {
+    for (const t of ['shadow-sm', 'border-gray-100']) {
       assert.ok(!tokens(panel).includes(t), `no ${t}: the résumé side's look beside flat kit cards`);
     }
     const [header] = panel.childNodes;
-    assert.ok(tokens(header).includes('border-line') && !tokens(header).includes('border-gray-100'), 'the header\'s rule is the kit\'s line');
+    assert.ok(tokens(header).includes('border-cv-hairline') && !tokens(header).includes('border-gray-100'), 'the header\'s rule is the kit\'s line');
 
     const inside = within(panel);
     const name = inside.find((el) => el.tagName === 'P' && text(el) === 'Idris Vane');
-    assert.ok(tokens(name).includes('text-ink') && tokens(name).includes('font-semibold'), `the name in the kit's ink, as a kit card's title: ${tokens(name).join(' ')}`);
+    assert.ok(tokens(name).includes('text-cv-ink') && tokens(name).includes('font-semibold'), `the name in the kit's ink, as a kit card's title: ${tokens(name).join(' ')}`);
     const company = inside.find((el) => el.tagName === 'P' && text(el) === 'Brightwater Light');
-    assert.ok(tokens(company).includes('text-ink'), `the company in the kit's ink: ${tokens(company).join(' ')}`);
+    assert.ok(tokens(company).includes('text-cv-ink'), `the company in the kit's ink: ${tokens(company).join(' ')}`);
     const muted = inside.find((el) => el.tagName === 'P' && text(el) === 'Lighthouse Keeper');
-    assert.ok(tokens(muted).includes('text-ink-subtlest'), `the job title in the kit's subtlest ink: ${tokens(muted).join(' ')}`);
+    assert.ok(tokens(muted).includes('text-cv-faint'), `the job title in the kit's subtlest ink: ${tokens(muted).join(' ')}`);
     const gray = inside.filter((el) => tokens(el).some((t) => /^text-gray-\d+$/.test(t)));
     assert.deepEqual(gray.map((el) => `${el.tagName} ${text(el)}`), [], 'no gray text of the résumé side left in the panel');
   } finally {
@@ -80,11 +80,11 @@ it('the Dashboard\'s panel (the default look) keeps the Dashboard cards\' look',
   try {
     const panel = page.view.container.firstChild;
     assert.ok(text(panel).includes('Idris Vane'), 'the panel');
-    for (const t of ['rounded-2xl', 'border', 'border-gray-100', 'shadow-sm', 'bg-white']) {
+    for (const t of ['rounded-cv-card', 'border', 'border-cv-hairline', 'shadow-sm', 'bg-cv-surface']) {
       assert.ok(tokens(panel).includes(t), `the Dashboard's panel keeps ${t}: ${tokens(panel).join(' ')}`);
     }
-    assert.ok(!tokens(panel).includes('border-line'), 'not the workspace look on the Dashboard');
+    assert.ok(tokens(panel).includes('shadow-sm'), 'the Dashboard look keeps its shadow');
     const name = within(panel).find((el) => el.tagName === 'P' && text(el) === 'Idris Vane');
-    assert.ok(tokens(name).includes('text-gray-900') && tokens(name).includes('font-bold'), 'its name as before');
+    assert.ok(tokens(name).includes('text-cv-ink') && tokens(name).includes('font-bold'), 'its name as before');
   } finally { await page.view.unmount(); }
 });

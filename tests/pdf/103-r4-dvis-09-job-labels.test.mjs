@@ -76,7 +76,7 @@ it('R4-DVIS-09: the Overview\'s field names are the kit\'s labels, its card head
       // Its row no longer draws a box of its own around the kit's.
       const row = classes(box.parentNode);
       assert.ok(row.includes('flex') && row.includes('items-center'), `${label}'s row: ${row.join(' ')}`);
-      for (const token of ['border-transparent', 'hover:border-line', 'hover:bg-sunken', 'py-2']) {
+      for (const token of ['border-transparent', 'hover:border-cv-hairline', 'hover:bg-sunken', 'py-2']) {
         assert.ok(!row.includes(token), `${label}'s row has no ${token}: ${row.join(' ')}`);
       }
     }
@@ -92,7 +92,7 @@ it('R4-DVIS-09: the Overview\'s field names are the kit\'s labels, its card head
     // A passed deadline is red in the kit's box, with no second text colour for the stylesheet to pick from.
     view.update({ job: { ...job, deadline: '2020-01-01' }, set: () => {}, navigate: () => {}, resumes: [] });
     const late = classes(control('Deadline'));
-    assert.ok(late.includes('text-red-600') && late.includes('border') && late.includes('rounded'), `the passed deadline: ${late.join(' ')}`);
+    assert.ok(late.includes('text-cv-bad') && late.includes('border') && late.includes('rounded'), `the passed deadline: ${late.join(' ')}`);
     assert.ok(!late.includes('text-ink'), `one text colour: ${late.join(' ')}`);
   } finally {
     await view.unmount();

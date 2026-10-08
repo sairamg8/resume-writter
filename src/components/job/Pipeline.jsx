@@ -20,7 +20,7 @@ export function Pipeline({ status, onChange }) {
     return (
       <div className="space-y-4">
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-cv-control text-sm font-semibold"
           style={{ color: t.text, background: t.color + '15', border: `1px solid ${t.color}30` }}
         >
           <XCircle size={14} style={{ color: t.color }} />
@@ -55,7 +55,7 @@ export function Pipeline({ status, onChange }) {
     return (
       <div className="space-y-4">
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-cv-control text-sm font-semibold"
           style={{ color: holdStatus.text, background: holdStatus.color + '15', border: `1px solid ${holdStatus.color}30` }}
         >
           <Pause size={14} style={{ color: holdStatus.color }} />
@@ -82,7 +82,7 @@ export function Pipeline({ status, onChange }) {
         </div>
         {/* As "Mark as:" (R4-DPH-13): on a phone narrower than the row it wraps between its pills,
             never inside one nor inside "Close as:" (R5-JOB-05). */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line">
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-cv-hairline">
           <span className="text-[12px] font-semibold leading-5 text-ink-subtle whitespace-nowrap">Close as:</span>
           {[
             { id: 'rejected',  icon: XCircle, label: 'Rejected' },
@@ -149,7 +149,7 @@ export function Pipeline({ status, onChange }) {
                 </span>
               </button>
               {!isLast && (
-                <div className={`h-0.5 flex-1 min-w-2 mt-[17px] mx-0.5 sm:mx-1.5 rounded-full transition-colors ${done ? 'bg-gray-300' : 'bg-neutral-fill'}`} />
+                <div className={`h-0.5 flex-1 min-w-2 mt-[17px] mx-0.5 sm:mx-1.5 rounded-full transition-colors ${done ? 'bg-cv-field' : 'bg-neutral-fill'}`} />
               )}
             </div>
           );
@@ -157,11 +157,11 @@ export function Pipeline({ status, onChange }) {
       </div>
 
       {/* Action row */}
-      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-line">
+      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-cv-hairline">
         {nextStatus && (
           <button
             onClick={() => onChange(nextId)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md text-white shadow-sm transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-cv-control text-white shadow-sm transition-all hover:scale-[1.02]"
             style={{ backgroundColor: nextStatus.color }}
           >
             <ArrowRight size={13} />
