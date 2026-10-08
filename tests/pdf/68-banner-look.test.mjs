@@ -186,6 +186,8 @@ describe('the section titles: filled chips, the title reversed out of them (T7)'
     const jobs = Array.from({ length: 5 }, (_, k) => longJob(k, 6));
     for (const marginV of [10, 14, 18, 22, 26]) {
       const pages = await read(await render(banner([experience(jobs), section('skills', [{ category: 'Frontend', skills: 'React' }])], { marginV })));
+      // The title is looked for below with `if (t)`: it must print somewhere, or no page is checked and the test passes empty.
+      assert.ok(pages.some((page) => page.items.some((i) => i.str === 'SKILLS')), `margin ${marginV}: SKILLS printed`);
       for (const [k, page] of pages.entries()) {
         const t = page.items.find((i) => i.str === 'SKILLS');
         if (t) assert.ok(page.items.some((i) => i.y < t.y - 2), `margin ${marginV}: SKILLS on page ${k + 1} has its entry under it`);
