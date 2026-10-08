@@ -390,7 +390,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onDragEnd={() => { dragSource.current = null; }}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={onCompositionEnd}
-          className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
+          className="px-3 py-2 text-sm pointer-coarse:text-base break-words focus:outline-none empty-placeholder rich-text-output"
           style={{ minHeight: minH }}
           data-placeholder={placeholder}
         />
