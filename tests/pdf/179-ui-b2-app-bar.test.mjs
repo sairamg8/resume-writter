@@ -73,7 +73,7 @@ describe('AppBar: the three areas and the brand', () => {
       b.click(b.nav('documents'));
       assert.equal(b.where(), '/');
       b.click(b.nav('projects'));
-      b.click([...elements(b.view.container)].find((el) => el.tagName === 'A' && el.getAttribute('href') === '/' && !el.getAttribute('data-testid')));
+      b.click(tid(b.view.container, 'app-bar-brand'));
       assert.equal(b.where(), '/', 'the brand');
     } finally { await b.view.unmount(); }
   });
