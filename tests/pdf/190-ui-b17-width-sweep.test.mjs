@@ -43,3 +43,38 @@ it("Your work's status lozenge is hidden below sm with max-sm:hidden", () => {
   assert.match(s, /<Lozenge tone=\{column\?\.category\} className="max-sm:hidden">/);
   assert.ok(!/hidden sm:inline-flex/.test(s));
 });
+
+it("the job list keeps the Salary and Applied cells on one line", () => {
+  const s = src("src/components/job/ListView.jsx");
+  assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.salary/);
+  assert.match(s, /whitespace-nowrap text-ink-subtle">\{job\.appliedDate/);
+});
+
+it("the Projects table drops Type and Lead below lg, so Issues and Updated stay in view at 768 px", () => {
+  const s = src("src/pages/Boards.jsx");
+  assert.match(s, /NARROW_HIDDEN = .hidden lg:table-cell./);
+  assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Type/);
+  assert.match(s, /\$\{NARROW_HIDDEN\}`\}>Lead/);
+  assert.match(s, /lg:min-w-\[48rem\]/);
+  assert.ok(!/ sm:min-w-\[48rem\]/.test(s), "no 48rem floor from sm");
+});
+
+it('the project tabs pan sideways below lg with a faded right edge as the cue', async () => {
+  const { ProjectTabs } = await loadModule('/src/components/board/ProjectTabs.jsx');
+  const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/boards/b1'] },
+    createElement(ProjectTabs, { boardId: 'b1' })));
+  const nav = /<nav\b[^>]*class="([^"]*)"/.exec(html);
+  assert.ok(nav, 'the tabs are a nav');
+  const tokens = nav[1].split(/\s+/);
+  assert.ok(tokens.includes('overflow-x-auto'), 'the row pans sideways');
+  assert.ok(tokens.some((t) => t.startsWith('max-lg:[mask-image:linear-gradient(to_right')), `the right edge fades out below lg: ${tokens.join(' ')}`);
+  assert.match(src('src/components/board/ProjectTabs.jsx'), /scrollIntoView\?\.\(\{ inline: 'nearest', block: 'nearest' \}\)/);
+});
+
+it('the board filter bar is one row that pans sideways between md and xl, with Group by at its end', () => {
+  const s = src('src/components/board/BoardToolbar.jsx');
+  assert.match(s, /className="flex flex-wrap items-center gap-1\.5 px-4 py-3 md:px-8 md:max-xl:flex-nowrap md:max-xl:overflow-x-auto"/);
+  assert.match(s, /<span className="ml-auto flex shrink-0 items-center gap-1\.5">/);
+  assert.match(s, /md:flex-initial md:shrink-0/);
+  assert.ok(s.indexOf('ml-auto flex shrink-0') < s.indexOf('label="Group by"'), 'Group by sits in the shrink-0 end box');
+});
