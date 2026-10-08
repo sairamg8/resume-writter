@@ -283,7 +283,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             {store.recovery && <RecoveryNotice what="résumés" recovery={store.recovery} onDismiss={store.dismissRecovery} />}
             {importError && (
               <div className={`cv-notice-bad ${NOTICE} flex items-start gap-2`}>
-                <span className="flex-1">{importError}</span>
+                <span className="flex-1 min-w-0 break-words">{importError}</span>
                 <button type="button" onClick={() => setImportError(null)} className="font-semibold shrink-0">Dismiss</button>
               </div>
             )}
