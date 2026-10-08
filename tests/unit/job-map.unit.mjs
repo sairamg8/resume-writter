@@ -67,3 +67,17 @@ test('the menu item and the page wait for the server: no access means no button 
   const page = readFileSync(join(root, 'src/pages/JobMap.jsx'), 'utf8');
   assert.match(page, /!auth\.user \|\| allowed === false\) return <Navigate to="\/" replace \/>/);
 });
+
+test('the page sits on the new shell and the cv tokens: the shared bar and phone tabs, no gray-/blue- utility left', () => {
+  const root = new URL('../../', import.meta.url).pathname;
+  const page = readFileSync(join(root, 'src/pages/JobMap.jsx'), 'utf8');
+  assert.match(page, /<AppBar active=\{null\} account=\{<AuthBar \{\.\.\.auth\} \{\.\.\.sync\} compact \/>\} \/>/, 'the shared top bar with the account');
+  assert.match(page, /<BottomTabBar \/>/, 'the phone tab bar');
+  assert.match(page, /bg-cv-ground/);
+  assert.match(page, /text-cv-ink/);
+  assert.doesNotMatch(page, /(?:bg|text|border|ring)-(?:gray|blue)-\d/, 'an old gray-/blue- utility is left');
+  assert.doesNotMatch(page, /aria-label="Back"/, 'the own bare header is gone');
+  const routes = readFileSync(join(root, 'src/AppRoutes.jsx'), 'utf8');
+  assert.match(routes, /<Route path="\/job-map"\s+element=\{<JobMap auth=\{auth\} sync=\{sync\} \/>\} \/>/, 'the route passes the sync state to the bar');
+  assert.doesNotMatch(routes, /import JobMap\b/, 'the page stays a lazy chunk');
+});
