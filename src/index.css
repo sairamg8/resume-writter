@@ -202,11 +202,13 @@ body {
     color: var(--color-cv-ink);
   }
   .cv-notice-warn {
+    overflow-wrap: anywhere;
     background: var(--color-cv-warn-soft);
     color: var(--color-cv-warn);
     border-radius: var(--radius-cv-control);
   }
   .cv-notice-bad {
+    overflow-wrap: anywhere;
     background: var(--color-cv-bad-soft);
     color: var(--color-cv-bad);
     border-radius: var(--radius-cv-control);

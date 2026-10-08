@@ -119,7 +119,7 @@ export function Dialog({
             data-state={state}
             inert={closing || undefined}
             className={cx(
-              'relative flex w-full flex-col overflow-hidden rounded-lg bg-cv-surface shadow-pop ring-1 ring-cv-hairline outline-none',
+              'relative flex w-full flex-col overflow-hidden break-words rounded-lg bg-cv-surface shadow-pop ring-1 ring-cv-hairline outline-none',
               'max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)]',
               SIZES[size] ?? SIZES.md,
               large && 'max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none max-sm:ring-0',
