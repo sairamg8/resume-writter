@@ -44,7 +44,7 @@ it('below md: the search and a "Filters" button with the count; the filters open
     assert.ok(search, 'the toolbar has its search');
     const searchBox = search.parentNode;
     const bar = searchBox.parentNode;
-    assert.deepEqual(tokens(bar), ['flex', 'flex-wrap', 'items-center', 'gap-1.5', 'px-4', 'py-3', 'md:px-8'], 'the toolbar itself is as it was');
+    assert.deepEqual(tokens(bar), ['flex', 'flex-wrap', 'items-center', 'gap-1.5', 'px-4', 'py-3', 'md:px-8', 'md:max-xl:flex-nowrap', 'md:max-xl:overflow-x-auto'], 'the toolbar is as it was, but between md and xl it stays one row that pans sideways (B17 sweep) instead of wrapping to three');
 
     // The search shares its row with the button (it took a whole row of its own: w-full), and is 13rem from md up.
     const box = tokens(searchBox);

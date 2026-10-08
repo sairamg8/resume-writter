@@ -13,7 +13,7 @@ import { useBoardStore } from '@/hooks/useBoardStore';
 export function ProjectTabs({ boardId }) {
   const box = useRef(null);
   useEffect(() => {
-    box.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+    box.current?.querySelector?.('[aria-current="page"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
   }, [boardId]);
   return (
     <div ref={box} className="min-w-0">
