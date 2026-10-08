@@ -70,7 +70,7 @@ it('R4-DVIS-24: the score card, the plain-text card and the scanner\'s header go
 
     const outOf = all().find((el) => el.tagName === 'SPAN' && el.textContent === '/100');
     assert.ok(outOf, 'the score badge is on the tab');
-    const badge = upTo(outOf, 'rounded-2xl');
+    const badge = upTo(outOf, 'rounded-cv-card');
     assert.ok(tokens(badge).has('self-stretch') && tokens(badge).has('@md:self-auto'), 'the badge spans the stacked card, and sits beside the title from @md');
     assert.equal(tokens(badge).has('sm:self-auto'), false, 'not on the window\'s width');
 

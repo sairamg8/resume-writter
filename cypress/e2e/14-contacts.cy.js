@@ -78,8 +78,8 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
 describe('cover letter contact style and layout: the panel shows what the letter prints', () => {
   /** A chip of one row ("Contact Style" / "Contact Layout") in the Cover Letter panel. */
   const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
-  const on = (row, label) => chip(row, label).should('have.class', 'bg-blue-600');
-  const off = (row, label) => chip(row, label).should('not.have.class', 'bg-blue-600');
+  const on = (row, label) => chip(row, label).should('have.class', 'bg-cv-brand');
+  const off = (row, label) => chip(row, label).should('not.have.class', 'bg-cv-brand');
 
   it('a letter with no style or layout of its own shows and prints the résumé\'s, until a chip sets its own', () => {
     cy.visitEditor('classic', { settings: { contactStyle: 'bullet', contactLayout: 'single' }, tab: 'coverletter' });

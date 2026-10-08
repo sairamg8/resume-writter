@@ -187,7 +187,7 @@ describe('cover letter', () => {
   it('Contact Layout "2 Grid" beside the name switches headerLayout to 2grid and updates preview and store (W2a-4.1-NB2)', () => {
     const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
     chip('Contact Layout', '2 Grid').click();
-    chip('Contact Layout', '2 Grid').should('have.class', 'bg-blue-600');
+    chip('Contact Layout', '2 Grid').should('have.class', 'bg-cv-brand');
     cy.store().should((s) => {
       expect(active(s).coverLetter.headerLayout).to.eq('2grid');
     });
@@ -203,9 +203,9 @@ describe('cover letter — a résumé that stores no contact style', () => {
     cy.visitEditor('classic', { tab: 'coverletter', settings: { contactStyle: undefined, contactLayout: undefined } });
     cy.store().should((s) => expect(active(s).settings).not.to.have.any.keys('contactStyle', 'contactLayout'));
     const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
-    chip('Contact Style', 'Icon').should('have.class', 'bg-blue-600');
-    for (const label of ['Bullet', 'Bar']) chip('Contact Style', label).should('not.have.class', 'bg-blue-600');
-    chip('Contact Layout', 'Justify').should('have.class', 'bg-blue-600');
+    chip('Contact Style', 'Icon').should('have.class', 'bg-cv-brand');
+    for (const label of ['Bullet', 'Bar']) chip('Contact Style', label).should('not.have.class', 'bg-cv-brand');
+    chip('Contact Layout', 'Justify').should('have.class', 'bg-cv-brand');
     // The letter prints icons: no "|" between its contacts.
     letter().should('contain.text', 'alex@example.com').and('not.contain.text', '|');
   });

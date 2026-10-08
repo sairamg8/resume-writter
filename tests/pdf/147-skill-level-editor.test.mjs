@@ -52,7 +52,7 @@ describe('the Skills editor: a level for each skill (R2-147)', () => {
     assert.deepEqual(await lists(item({ skills: ' , ' })), []);
     const { SkillItem } = await leaf();
     const html = renderToStaticMarkup(createElement(SkillItem, { item: item({ hiddenFields: ['skills'], skillLevels: { Alpha: 2 } }), onUpdate() {}, onRemove() {}, defaultOpen: true }));
-    assert.match(html, /<div class="opacity-50"><div class="text-xs text-gray-500 mb-1">Skill levels/);
+    assert.match(html, /<div class="opacity-50"><div class="text-xs text-cv-muted mb-1">Skill levels/);
     assert.match(html, /aria-label="Level of Alpha"/);
   });
 

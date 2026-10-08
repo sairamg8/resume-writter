@@ -28,7 +28,7 @@ describe('ATS dock', () => {
   });
 
   it('scores the open résumé out of 100 with a grade, a pass/suggestion/critical tally and six categories', () => {
-    cy.contains('h2', 'ATS Score & Parser Checker').parents('.rounded-2xl').first().within(() => {
+    cy.contains('h2', 'ATS Score & Parser Checker').parents('.rounded-cv-card').first().within(() => {
       cy.contains(/^\d{1,3}\/100$/).invoke('text').then((text) => {
         const score = Number(text.split('/')[0]);
         expect(score).to.be.within(0, 100);
