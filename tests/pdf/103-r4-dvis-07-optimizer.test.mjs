@@ -25,7 +25,7 @@ it('R4-DVIS-07: the Bullet Optimizer is the kit\'s Dialog, in a portal, drawn as
     assert.ok(!o.view.container.contains(dialog), 'at the end of <body>, outside the editor that opened it');
 
     const panel = classes(dialog);
-    for (const token of ['rounded-lg', 'ring-1', 'shadow-2xl']) assert.ok(panel.includes(token), `the panel has ${token}: ${panel.join(' ')}`);
+    for (const token of ['rounded-lg', 'ring-1', 'shadow-pop']) assert.ok(panel.includes(token), `the panel has ${token}: ${panel.join(' ')}`);
     for (const token of ['rounded-2xl', 'border-gray-200']) assert.ok(!panel.includes(token), `and not ${token}: ${panel.join(' ')}`);
 
     const title = o.find('H2', 'Bullet Optimizer & STAR Formula');
