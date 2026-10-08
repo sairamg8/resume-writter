@@ -115,7 +115,10 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
   return (
     <div className="space-y-4 py-2">
 
+      {/* One per letter: the Editor (and this panel) stays mounted from /resume/A to /resume/B, and the
+          Target Role typed for A's letter would otherwise start B's generator and write into its subject. */}
       <CoverLetterGeneratorModal
+        key={resume?.id}
         isOpen={generatorOpen}
         onClose={() => setGeneratorOpen(false)}
         resume={effectiveResume}
