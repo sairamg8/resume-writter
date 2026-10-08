@@ -21,7 +21,7 @@ export function ListsSection({ settings, updateSetting, onReset }) {
         <Label>Bullet</Label>
         <SegmentControl options={BULLET_OPTIONS} value={bulletStyleOf(settings.bulletStyle)} onChange={v => updateSetting('bulletStyle', v)} />
       </div>
-      <p className="text-[11px] text-gray-400 leading-relaxed">
+      <p className="text-[11px] text-cv-faint leading-relaxed">
         Every bulleted list in the summary, the entries&rsquo; descriptions and the cover letter. Numbered lists keep their numbers, and the text stays where it is. The Markdown and ATS text exports keep their plain &ldquo;-&rdquo; and &ldquo;*&rdquo;.
       </p>
     </DesignSection>

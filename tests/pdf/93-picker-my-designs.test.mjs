@@ -89,7 +89,7 @@ describe('Save my design (B4)', () => {
     const html2 = renderToString(createElement((await loadModule('/src/components/DesignPanel.jsx')).default,
       { resume: picked, designs, updateSetting: noop, setTemplate: noop, resetSettings: noop, saveDesign: noop }));
     const card = html2.split(`data-testid="design-${id}"`)[0].split('<button').at(-1) + html2.split(`data-testid="design-${id}"`)[1].split('>')[0];
-    assert.match(card, /border-blue-500/, 'and its card is the one selected');
+    assert.match(card, /(^|\s)border-cv-brand(\s|$)/, 'and its card is the one selected');
   });
 
   it('a Job Title size or Title Spacing left unset is part of the look: picked where they are set, it unsets them', async () => {

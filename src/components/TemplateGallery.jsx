@@ -54,7 +54,7 @@ export const TemplateGallery = memo(function TemplateGallery({ open, onClose, re
             <Chip key={f.id} size="sm" tone="info" onClick={() => toggle(f.id)} pressed={filters.includes(f.id)} data-filter={f.id}>{f.label}</Chip>
           ))}
         </div>
-        {!shown.length && <p className="py-8 text-center text-sm text-gray-500">No template has all of these. Turn a filter off to see more.</p>}
+        {!shown.length && <p className="py-8 text-center text-sm text-cv-muted">No template has all of these. Turn a filter off to see more.</p>}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {shown.map((c) => {
             const on = selected(c);
@@ -64,20 +64,20 @@ export const TemplateGallery = memo(function TemplateGallery({ open, onClose, re
                 type="button"
                 data-testid={`gallery-${c.testid}`}
                 onClick={() => pick(c)}
-                className={`flex flex-col gap-2 p-2 rounded-xl border text-left transition-all ${on ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                className={`flex flex-col gap-2 p-2 rounded-cv-card border text-left transition-all ${on ? 'border-cv-brand bg-cv-brand-soft' : 'border-cv-hairline hover:border-cv-field hover:bg-cv-ground'}`}
               >
-                <div className="relative rounded-md ring-1 ring-gray-200 bg-gray-50">
+                <div className="relative rounded-cv-control ring-1 ring-cv-hairline bg-cv-ground">
                   <TemplateThumb card={c} size="lg" picture />
                   {/* Its letterhead (F1), in the corner. */}
-                  <span className="absolute bottom-1 right-1 rounded shadow ring-1 ring-gray-200 bg-white"><TemplateThumb card={c} letter /></span>
+                  <span className="absolute bottom-1 right-1 rounded shadow ring-1 ring-cv-hairline bg-cv-surface"><TemplateThumb card={c} letter /></span>
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className={`text-sm font-medium truncate ${on ? 'text-blue-700' : 'text-gray-800'}`}>{c.label}</p>
-                    {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
+                    <p className={`text-sm font-medium truncate ${on ? 'text-cv-brand-text' : 'text-cv-ink'}`}>{c.label}</p>
+                    {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-cv-good-soft text-cv-good">ATS</span>}
                   </div>
-                  <p className="text-[11px] leading-snug text-gray-500 line-clamp-2">{c.desc}</p>
-                  {on && <p className="text-[11px] font-semibold text-blue-600 mt-0.5">Selected</p>}
+                  <p className="text-[11px] leading-snug text-cv-muted line-clamp-2">{c.desc}</p>
+                  {on && <p className="text-[11px] font-semibold text-cv-brand-text mt-0.5">Selected</p>}
                 </div>
               </button>
             );

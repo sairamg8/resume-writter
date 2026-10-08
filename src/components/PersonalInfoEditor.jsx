@@ -36,25 +36,25 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
   return (
     <div>
       <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-        <span className="text-[10px] text-cv-faint shrink-0">{iconLabel}</span>
+        <span className="text-[10px] text-gray-400 shrink-0">{iconLabel}</span>
         <button
           type="button"
           onClick={() => onOpenPicker?.(fieldKey)}
           title="Click to choose icon"
-          className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-cv-hairline bg-cv-ground hover:bg-cv-brand-soft hover:border-cv-brand-soft-border transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50 hover:bg-blue-50/50 hover:border-blue-300 transition-colors cursor-pointer"
         >
-          <ContactIcon field={fieldKey} settings={s} size={14} className="text-cv-muted" />
+          <ContactIcon field={fieldKey} settings={s} size={14} className="text-gray-600" />
         </button>
         <button
           type="button"
           onClick={() => onOpenPicker?.(fieldKey)}
-          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-cv-brand-text bg-cv-brand-soft hover:bg-cv-brand-soft border border-cv-brand-soft-border rounded-cv-control transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors cursor-pointer"
           title="Select from header icon library"
         >
-          <Sparkles size={11} className="text-cv-brand-text" />
+          <Sparkles size={11} className="text-blue-600" />
           Choose Icon
         </button>
-        <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-cv-muted border border-cv-hairline rounded-cv-control hover:bg-cv-ground cursor-pointer">
+        <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
           <ImagePlus size={11} />
           {customIcon ? 'Replace' : 'Upload'}
           <input
@@ -72,7 +72,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
           <button
             type="button"
             onClick={() => setCustomIcon(fieldKey, null)}
-            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-cv-bad hover:bg-cv-bad-soft rounded cursor-pointer"
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded cursor-pointer"
             title="Remove custom icon"
           >
             <X size={11} /> Clear
@@ -80,7 +80,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
         )}
       </div>
       {unprintable && (
-        <p className="text-[11px] text-cv-warn mt-1" data-testid="icon-unprintable">
+        <p className="text-[11px] text-amber-700 mt-1" data-testid="icon-unprintable">
           {UNPRINTABLE_ICON}
         </p>
       )}
@@ -165,8 +165,8 @@ function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal
       />
 
       <div>
-        <p className="text-[11px] font-bold text-cv-muted uppercase tracking-widest mb-3">Fields</p>
-        <p className="text-[11px] text-cv-faint mb-3">Toggle eye icon to show/hide on resume</p>
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Fields</p>
+        <p className="text-[11px] text-gray-400 mb-3">Toggle eye icon to show/hide on resume</p>
         <div className="space-y-2.5">
           {FIELDS.map(({ key, label, icon: Icon, placeholder, required, hasUrl, contactIcon }) => {
             const isHidden = hidden.has(key);
@@ -180,14 +180,14 @@ function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal
               // (R4-DVIS-30). Each field, not the whole editor: the icon picker's fixed overlay stays outside it.
               <div key={key} className="@container">
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor={uid + key} className="text-xs font-medium text-cv-muted flex items-center gap-1">
-                    <Icon size={13} className="text-cv-faint" />
+                  <label htmlFor={uid + key} className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <Icon size={13} className="text-gray-400" />
                     {label}
                   </label>
                   {!required && (
                     <button
                       onClick={() => toggleFieldVisibility(key)}
-                      className={`p-0.5 rounded transition-colors ${isHidden ? 'text-cv-faint hover:text-cv-faint' : 'text-cv-brand-text hover:text-cv-brand-pressed'}`}
+                      className={`p-0.5 rounded transition-colors ${isHidden ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
                       title={isHidden ? 'Show on resume' : 'Hide on resume'}
                     >
                       {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -201,14 +201,14 @@ function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal
                   onChange={e => updatePersonal(key, e.target.value)}
                   placeholder={placeholder}
                   // 16 px on a touch screen: iOS Safari zooms the page into a smaller field it focuses (R4-DPH-29).
-                  className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand focus:border-transparent transition-colors ${isHidden ? 'border-cv-hairline bg-cv-ground text-cv-faint' : 'border-cv-hairline bg-cv-surface'}`}
+                  className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${isHidden ? 'border-gray-100 bg-gray-50 text-gray-400' : 'border-gray-200 bg-white'}`}
                 />
                 {hasUrl && hasValue && (
                   // Side by side only once the field is 24rem wide: in a split panel dragged to 240–360 px (the window
                   // still over 640 px) the two ran past the card and cut the URL box. min-w-0: a text box keeps ~140 px otherwise.
                   <div className="mt-1 flex flex-col @sm:flex-row gap-1.5">
-                    <input type="text" aria-label={`${label} display label`} value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 min-w-0 px-2 py-1 text-xs pointer-coarse:text-base border border-cv-field rounded-cv-control focus:outline-none focus:ring-1 focus:ring-cv-brand bg-cv-ground text-cv-muted placeholder-cv-faint" />
-                    <input type="text" aria-label={`${label} link URL`} value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 min-w-0 px-2 py-1 text-xs pointer-coarse:text-base border border-cv-field rounded-cv-control focus:outline-none focus:ring-1 focus:ring-cv-brand bg-cv-ground text-cv-muted placeholder-cv-faint" />
+                    <input type="text" aria-label={`${label} display label`} value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 min-w-0 px-2 py-1 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                    <input type="text" aria-label={`${label} link URL`} value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 min-w-0 px-2 py-1 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
                   </div>
                 )}
                 {showIconControls && (
@@ -230,10 +230,10 @@ function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[11px] font-bold text-cv-muted uppercase tracking-widest">Professional Summary</p>
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Professional Summary</p>
           <button
             onClick={() => toggleFieldVisibility('summary')}
-            className={`p-0.5 rounded transition-colors ${hidden.has('summary') ? 'text-cv-faint hover:text-cv-faint' : 'text-cv-brand-text hover:text-cv-brand-pressed'}`}
+            className={`p-0.5 rounded transition-colors ${hidden.has('summary') ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
             title={hidden.has('summary') ? 'Show summary on resume' : 'Hide summary from resume'}
           >
             {hidden.has('summary') ? <EyeOff size={12} /> : <Eye size={12} />}

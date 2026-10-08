@@ -27,16 +27,16 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }
       </FieldRow>
       {names.length > 0 && (
         <div className={itemHidden.has('skills') ? 'opacity-50' : ''}>
-          <div className="text-xs text-cv-muted mb-1">Skill levels <span className="text-cv-faint">(drawn by the Bars style)</span></div>
+          <div className="text-xs text-gray-500 mb-1">Skill levels <span className="text-gray-400">(drawn by the Bars style)</span></div>
           <div className="space-y-1.5">
             {names.map(name => (
               <div key={name} className="flex items-center gap-2">
-                <span className="flex-1 min-w-0 truncate text-sm text-cv-ink" title={name}>{name}</span>
+                <span className="flex-1 min-w-0 truncate text-sm text-gray-700" title={name}>{name}</span>
                 <select
                   aria-label={`Level of ${name}`}
                   value={skillLevelOf(item.skillLevels, name) ?? ''}
                   onChange={e => onUpdate(withSkillLevel(item, name, e.target.value))}
-                  className="w-36 min-w-0 shrink-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base text-cv-ink border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-surface"
+                  className="w-36 min-w-0 shrink-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Not set</option>
                   {SKILL_LEVELS.map(l => (
@@ -59,7 +59,7 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }
 function RowDuplicate({ onDuplicate }) {
   if (!onDuplicate) return null;
   return (
-    <button onClick={onDuplicate} title="Duplicate entry" aria-label="Duplicate entry" className="p-1.5 text-cv-faint hover:text-cv-brand-text shrink-0">
+    <button onClick={onDuplicate} title="Duplicate entry" aria-label="Duplicate entry" className="p-1.5 text-gray-400 hover:text-blue-600 shrink-0">
       <Copy size={13} />
     </button>
   );
@@ -87,13 +87,13 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
           value={item.language || ''}
           onChange={e => onUpdate({ ...item, language: e.target.value })}
           placeholder="Language"
-          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base text-cv-ink bg-cv-surface border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand"
+          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           aria-label="Proficiency"
           value={proficiency}
           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
-          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base text-cv-ink border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-surface"
+          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Not set</option>
           {PROFICIENCIES.map(p => (
@@ -106,13 +106,13 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
       </div>
       <button
         onClick={() => onUpdate({ ...item, visible: !visible })}
-        className={`p-1.5 shrink-0 ${visible ? 'text-cv-brand-text hover:text-cv-brand-pressed' : 'text-cv-faint hover:text-cv-muted'}`}
+        className={`p-1.5 shrink-0 ${visible ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'}`}
         title={visible ? 'Hide entry' : 'Show entry'}
       >
         {visible ? <Eye size={13} /> : <EyeOff size={13} />}
       </button>
       <RowDuplicate onDuplicate={onDuplicate} />
-      <button onClick={onRemove} aria-label="Delete entry" className="p-1.5 text-cv-faint hover:text-cv-bad shrink-0">
+      <button onClick={onRemove} className="p-1.5 text-gray-400 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
       </button>
     </div>
@@ -182,17 +182,17 @@ export function InterestItem({ item, onUpdate, onRemove, onDuplicate }) {
         value={item.interests || ''}
         onChange={e => onUpdate({ ...item, interests: e.target.value })}
         placeholder="e.g. Photography, Hiking, Open Source"
-        className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base text-cv-ink bg-cv-surface border border-cv-field rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand"
+        className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         onClick={() => onUpdate({ ...item, visible: !visible })}
-        className={`p-1.5 shrink-0 ${visible ? 'text-cv-brand-text hover:text-cv-brand-pressed' : 'text-cv-faint hover:text-cv-muted'}`}
+        className={`p-1.5 shrink-0 ${visible ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'}`}
         title={visible ? 'Hide entry' : 'Show entry'}
       >
         {visible ? <Eye size={13} /> : <EyeOff size={13} />}
       </button>
       <RowDuplicate onDuplicate={onDuplicate} />
-      <button onClick={onRemove} aria-label="Delete entry" className="p-1.5 text-cv-faint hover:text-cv-bad shrink-0">
+      <button onClick={onRemove} className="p-1.5 text-gray-400 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
       </button>
     </div>

@@ -9,7 +9,7 @@ import { useTypedNumber } from '@/hooks/useTypedNumber';
 /** A px value as the stepper shows it: whole numbers plain, a template's 1.33 px as "1.3". */
 export const formatPx = (px) => String(Math.round(px * 10) / 10);
 
-const STEP_BTN = 'w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none disabled:opacity-40 disabled:hover:bg-transparent';
+const STEP_BTN = 'w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none disabled:opacity-40 disabled:hover:bg-transparent';
 
 /**
  * One gap: label, −, the value, +, px — and ↺ once the user has set it. A typed value is written on
@@ -35,10 +35,10 @@ export function GapStepper({ row, onChange, onReset }) {
 
   return (
     <div className="flex items-center justify-between gap-2" data-gap={row.key}>
-      <span id={labelId} className="text-[11px] text-cv-muted">{row.label}</span>
+      <span id={labelId} className="text-[11px] text-gray-500">{row.label}</span>
       <div className="flex items-center gap-1">
         {set && (
-          <button type="button" onClick={onReset} className="p-1 text-cv-faint hover:text-cv-brand-pressed" title="Back to the template's spacing" aria-label={`Reset ${lower} to the template's spacing`}>
+          <button type="button" onClick={onReset} className="p-1 text-gray-400 hover:text-indigo-500" title="Back to the template's spacing" aria-label={`Reset ${lower} to the template's spacing`}>
             <RotateCcw size={11} aria-hidden="true" />
           </button>
         )}
@@ -60,10 +60,10 @@ export function GapStepper({ row, onChange, onReset }) {
             else typed.inputProps.onKeyDown(e);
           }}
           // 16 px on a touch screen, or iOS Safari zooms the page into the box; wider there so the digits fit (R4-DPH-29).
-          className={`w-12 pointer-coarse:w-16 text-center text-xs pointer-coarse:text-base border border-cv-hairline rounded h-6 focus:outline-none focus:ring-1 focus:ring-cv-brand ${set ? 'font-medium text-cv-ink' : 'text-cv-faint'}`}
+          className={`w-12 pointer-coarse:w-16 text-center text-xs pointer-coarse:text-base border border-gray-200 rounded h-6 focus:outline-none focus:ring-1 focus:ring-blue-400 ${set ? 'font-medium text-gray-700' : 'text-gray-400'}`}
         />
         <button type="button" onClick={() => onChange(up)} disabled={valuePx >= max} className={STEP_BTN} aria-label={`Increase ${lower}`}>+</button>
-        <span className="text-[11px] text-cv-faint w-4">px</span>
+        <span className="text-[11px] text-gray-400 w-4">px</span>
       </div>
     </div>
   );
@@ -83,12 +83,12 @@ export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, o
   return (
     <div role="group" aria-labelledby={titleId} className="space-y-2" data-testid="header-spacing">
       <div className="flex items-center justify-between">
-        <p id={titleId} className="text-xs font-semibold text-cv-ink">{title}</p>
-        <button type="button" onClick={() => onClear(allKeys)} disabled={!anySet} aria-label="Reset header spacing to the template's" className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-cv-muted border border-cv-hairline rounded hover:text-cv-brand-pressed hover:border-cv-brand-soft-border disabled:opacity-40 disabled:hover:text-cv-muted disabled:hover:border-cv-hairline">
+        <p id={titleId} className="text-xs font-semibold text-gray-700">{title}</p>
+        <button type="button" onClick={() => onClear(allKeys)} disabled={!anySet} aria-label="Reset header spacing to the template's" className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-gray-500 border border-gray-200 rounded hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:border-gray-200">
           <RotateCcw size={10} aria-hidden="true" /> Reset
         </button>
       </div>
-      {note && <p className="text-[10px] text-cv-faint leading-snug">{note}</p>}
+      {note && <p className="text-[10px] text-gray-400 leading-snug">{note}</p>}
       {rows.map((row) => (
         <GapStepper key={row.key} row={row} onChange={(v) => onChange(row.key, v)} onReset={() => onClear([row.key])} />
       ))}

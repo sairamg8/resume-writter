@@ -196,9 +196,9 @@ describe('Design → Section Headings marks what the PDF prints (R5-3)', () => {
     const buttons = [...html.matchAll(/<button[^>]*class="([^"]*)"[^>]*>([\s\S]*?)<\/button>/g)]
       .map(([, cls, inner]) => ({ cls, text: inner.replace(/<[^>]*>/g, '').replace(/<!-- -->/g, '').trim() }));
     return {
-      titleCase: buttons.find((b) => b.cls.includes('bg-blue-600'))?.text,
+      titleCase: buttons.find((b) => /(^|\s)bg-cv-brand(\s|$)/.test(b.cls))?.text,
       // Each chip draws an "ABC" sample above its label.
-      style: buttons.find((b) => b.cls.includes('border-blue-500'))?.text.replace(/^ABC/, ''),
+      style: buttons.find((b) => /(^|\s)border-cv-brand(\s|$)/.test(b.cls))?.text.replace(/^ABC/, ''),
     };
   }
 

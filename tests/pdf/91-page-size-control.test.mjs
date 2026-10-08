@@ -49,7 +49,7 @@ async function pageSizeRow(r) {
   assert.ok(group, 'the row\'s choices are grouped under its label');
   const buttons = () => [...elements(group)].filter((el) => el.tagName === 'BUTTON');
   return {
-    options: buttons().map((el) => ({ text: el.textContent.trim(), selected: el.className.includes('bg-blue-600') })),
+    options: buttons().map((el) => ({ text: el.textContent.trim(), selected: /(^|\s)bg-cv-brand(\s|$)/.test(el.className) })),
     click(text) {
       const button = buttons().find((el) => el.textContent.trim() === text);
       assert.ok(button, `the "${text}" button`);

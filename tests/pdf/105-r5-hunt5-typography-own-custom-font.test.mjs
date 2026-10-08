@@ -47,7 +47,7 @@ async function withPanel(saved, settings, fn) {
 
 const chipButtons = (view, name) => [...elements(view.container)]
   .filter((el) => el.tagName === 'BUTTON' && el.textContent.trim() === name);
-const isSelected = (el) => /border-blue-400/.test(el.parentNode.getAttribute('class') || '');
+const isSelected = (el) => /(^|\s)border-cv-brand-soft-border(\s|$)/.test(el.parentNode.getAttribute('class') || '');
 
 describe('Font Family marks the résumé\'s custom font missing from this browser\'s list (R5-HUNT5)', () => {
   it('shows it as the selected chip', async () => {
@@ -94,7 +94,7 @@ describe('Font Family marks the résumé\'s custom font missing from this browse
     await withPanel([], { font: 'inter', customFont: '   ' }, async (view) => {
       assert.ok(!view.container.textContent.includes('Your custom fonts'), 'no blank chip');
       const inter = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Inter');
-      assert.match(inter.getAttribute('class') || '', /border-blue-400/, 'Inter, which the PDF prints, is selected');
+      assert.match(inter.getAttribute('class') || '', /(^|\s)border-cv-brand-soft-border(\s|$)/, 'Inter, which the PDF prints, is selected');
     });
   });
 

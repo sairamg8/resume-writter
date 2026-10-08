@@ -18,8 +18,8 @@ const openOptions = (title) => {
 const options = () => cy.contains('p', 'Section Options').parent();
 const row = (label) => options().contains('span', new RegExp(`^${label}$`));
 const chip = (label, option) => row(label).parent().contains('button', option);
-const on = (row, label) => chip(row, label).should('have.class', 'bg-cv-brand');
-const off = (row, label) => chip(row, label).should('not.have.class', 'bg-cv-brand');
+const on = (row, label) => chip(row, label).should('have.class', 'bg-blue-600');
+const off = (row, label) => chip(row, label).should('not.have.class', 'bg-blue-600');
 
 /** The preview (the PDF's own text) prints `a` before `b`. */
 const leads = (a, b) => cy.preview().invoke('text').should((t) => {

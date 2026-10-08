@@ -178,7 +178,7 @@ describe('regressions — resume store', () => {
   const selected = (picked = 'classic') => {
     cy.openDesign();
     ['executive', 'classic', 'modern', 'minimal', 'sidebar']
-      .forEach((id) => cy.get(`[data-testid="template-${id}"]`).should(id === picked ? 'have.class' : 'not.have.class', 'border-blue-500'));
+      .forEach((id) => cy.get(`[data-testid="template-${id}"]`).should(id === picked ? 'have.class' : 'not.have.class', 'border-cv-brand'));
   };
   const importAs = (template, name) => {
     cy.visitDashboard(dashboardState());

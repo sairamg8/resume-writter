@@ -52,7 +52,7 @@ describe('typography regressions', () => {
     openTypography();
     cy.contains('button', /^Large$/).click();
     cy.store().should((s) => expect(active(s).settings.fontSizeBase).to.eq(12));
-    cy.contains('button', /^Large$/).should('have.class', 'bg-blue-600');
+    cy.contains('button', /^Large$/).should('have.class', 'bg-cv-brand');
     cy.contains('button', /^Small$/).click();
     cy.store().should((s) => expect(active(s).settings.fontSizeBase).to.eq(10));
     cy.exportPdf().then((pdf) => {

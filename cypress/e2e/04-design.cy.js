@@ -48,8 +48,8 @@ describe('design — templates', () => {
   it('the selected template is marked in the template list', () => {
     cy.visitEditor('minimal');
     openDesign();
-    cy.get('[data-testid="template-minimal"]').should('have.class', 'border-blue-500');
-    cy.get('[data-testid="template-classic"]').should('not.have.class', 'border-blue-500');
+    cy.get('[data-testid="template-minimal"]').should('have.class', 'border-cv-brand');
+    cy.get('[data-testid="template-classic"]').should('not.have.class', 'border-cv-brand');
   });
 
   /** Set the colour input labelled `label` to `color`, as its picker does (React reads the input event). */
@@ -177,7 +177,7 @@ describe('design — colours show what the PDF prints', () => {
       cy.visitEditor(template, { settings: { textColor: '' } });
       openDesign('Colors');
       cy.get('input[aria-label="Custom text color"]').should('have.value', color);
-      cy.get('button[title="Near Black"]').should(color === '#1a1a1a' ? 'have.class' : 'not.have.class', 'border-blue-500');
+      cy.get('button[title="Near Black"]').should(color === '#1a1a1a' ? 'have.class' : 'not.have.class', 'border-cv-brand');
     });
   }
 });
@@ -237,8 +237,8 @@ describe('design — Title case shows what the PDF prints (V2W2b-5)', () => {
     cy.visitEditor('classic', { settings: { sectionTitleCase: 'title' } });
     renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
     openDesign('Section Headings');
-    cy.contains('button', /^Abc$/).should('have.class', 'bg-blue-600');
-    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-blue-600');
+    cy.contains('button', /^Abc$/).should('have.class', 'bg-cv-brand');
+    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-cv-brand');
   });
 });
 
@@ -271,15 +271,15 @@ describe('design — Section Headings shows what the PDF prints (R5-3)', () => {
     it(`${template}: with no stored heading style the panel marks ${label}, not Ruled`, () => {
       cy.visitEditor(template, UNSET);
       openDesign('Section Headings');
-      cy.contains('button', label).should('have.class', 'border-blue-500');
-      cy.contains('button', 'Ruled').should('not.have.class', 'border-blue-500');
+      cy.contains('button', label).should('have.class', 'border-cv-brand');
+      cy.contains('button', 'Ruled').should('not.have.class', 'border-cv-brand');
     });
   }
 
   it('classic: the marked "Line after" is the style the PDF prints — an accent section title', () => {
     cy.visitEditor('classic', { settings: { headingStyle: '', sectionTitleCase: '', accentColor: '#e11d48' } });
     openDesign('Section Headings');
-    cy.contains('button', 'Line after').should('have.class', 'border-blue-500');
+    cy.contains('button', 'Line after').should('have.class', 'border-cv-brand');
     // 'line' prints the title in the accent colour; 'ruled' prints it neutral grey (#374151).
     cy.exportPdf().then((pdf) => {
       const title = pdf.runs.find((r) => r.str.includes('ROFESSIONAL'));
@@ -291,14 +291,14 @@ describe('design — Section Headings shows what the PDF prints (R5-3)', () => {
     cy.visitEditor('executive', UNSET);
     renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
     openDesign('Section Headings');
-    cy.contains('button', /^Abc$/).should('have.class', 'bg-blue-600');
-    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-blue-600');
+    cy.contains('button', /^Abc$/).should('have.class', 'bg-cv-brand');
+    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-cv-brand');
   });
 
   it('classic: with no stored title case the panel keeps "ABC", as the PDF upper-cases', () => {
     cy.visitEditor('classic', UNSET);
     renderedText().should('contain', 'PROFESSIONAL EXPERIENCE');
     openDesign('Section Headings');
-    cy.contains('button', /^ABC$/).should('have.class', 'bg-blue-600');
+    cy.contains('button', /^ABC$/).should('have.class', 'bg-cv-brand');
   });
 });

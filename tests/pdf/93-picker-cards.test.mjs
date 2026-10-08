@@ -34,7 +34,7 @@ async function panel(template, settings = {}, extra = {}) {
   return {
     view, calls, byTestid,
     click: (id) => view.act(() => reactProps(byTestid(id)).onClick()),
-    selected: (id) => /border-blue-500/.test(byTestid(id).className),
+    selected: (id) => /(^|\s)border-cv-brand(\s|$)/.test(byTestid(id).className),
   };
 }
 

@@ -4,7 +4,7 @@ import { useTypedNumber } from '@/hooks/useTypedNumber';
 import { coalescedWriter } from '@/utils/coalescedWrite';
 
 export function Label({ children }) {
-  return <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">{children}</p>;
+  return <p className="text-[11px] font-semibold text-cv-faint uppercase tracking-wide mb-2">{children}</p>;
 }
 
 // SizeRow and NumberRow write a typed value on Enter or on leaving the box, and only when it differs
@@ -26,16 +26,16 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40, unit = 'pt'
 
   return (
     <div className="flex items-center justify-between">
-      <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
+      <span id={labelId} className="text-xs text-cv-muted w-28">{label}</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onChange(Math.max(min, current - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+        <button onClick={() => onChange(Math.max(min, current - 1))} className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none">−</button>
         <input
           type="text"
           aria-labelledby={labelId}
           {...typed.inputProps}
-          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
+          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-cv-ink border border-cv-hairline rounded focus:outline-none focus:ring-1 focus:ring-cv-brand focus:border-cv-brand-soft-border h-6 cursor-text"
         />
-        <button onClick={() => onChange(Math.min(max, current + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+        <button onClick={() => onChange(Math.min(max, current + 1))} className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none">+</button>
       </div>
     </div>
   );
@@ -73,16 +73,16 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
 
   return (
     <div className="flex items-center justify-between">
-      <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
+      <span id={labelId} className="text-xs text-cv-muted w-28">{label}</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onChange(Math.max(min, down))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+        <button onClick={() => onChange(Math.max(min, down))} className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none">−</button>
         <input
           type="text"
           aria-labelledby={labelId}
           {...typed.inputProps}
-          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
+          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-cv-ink border border-cv-hairline rounded focus:outline-none focus:ring-1 focus:ring-cv-brand focus:border-cv-brand-soft-border h-6 cursor-text"
         />
-        <button onClick={() => onChange(Math.min(max, up))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+        <button onClick={() => onChange(Math.min(max, up))} className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none">+</button>
       </div>
     </div>
   );
@@ -97,8 +97,8 @@ export function SegmentControl({ options, value, onChange }) {
           onClick={() => onChange(opt.value)}
           className={`flex-1 py-1.5 text-xs font-medium rounded border transition-all ${
             value === opt.value
-              ? 'bg-blue-600 border-blue-600 text-white'
-              : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+              ? 'bg-cv-brand border-cv-brand text-white'
+              : 'border-cv-hairline text-cv-muted hover:border-cv-brand hover:text-cv-brand-text'
           }`}
         >
           {opt.label}
@@ -119,26 +119,26 @@ export function DesignSection({ title, defaultOpen = false, open: kept, onOpenCh
   const open = controlled ? kept : own;
   const setOpen = (next) => (controlled ? onOpenChange(next(open)) : setOwn(next));
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-cv-hairline rounded-cv-card overflow-hidden">
       <div className="flex items-center">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex-1 flex items-center justify-between pl-4 pr-2 py-3 hover:bg-gray-50 transition-colors text-left"
+          className="flex-1 flex items-center justify-between pl-4 pr-2 py-3 hover:bg-cv-ground transition-colors text-left"
         >
-          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">{title}</span>
-          <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''} ml-2`} />
+          <span className="text-xs font-bold text-cv-ink uppercase tracking-wider">{title}</span>
+          <ChevronDown size={14} className={`text-cv-faint transition-transform duration-200 ${open ? 'rotate-180' : ''} ml-2`} />
         </button>
         {onReset && (
           <button
             onClick={e => { e.stopPropagation(); onReset(); }}
-            className="px-3 py-3 text-gray-300 hover:text-indigo-500 transition-colors shrink-0"
+            className="px-3 py-3 text-cv-faint hover:text-cv-brand-text transition-colors shrink-0"
             title={`Reset ${title} to defaults`}
           >
             <RotateCcw size={11} />
           </button>
         )}
       </div>
-      {open && <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">{children}</div>}
+      {open && <div className="px-4 pb-4 pt-2 border-t border-cv-hairline space-y-4">{children}</div>}
     </div>
   );
 }

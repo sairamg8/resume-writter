@@ -275,7 +275,7 @@ describe('a Fields Position the panel does not offer (V2FIDB-51-1)', () => {
         coverLetter: { fieldsPosition }, personal: { name: 'Pat Sample', ...CONTACTS }, settings: {}, template: 'classic', updateCoverLetter: () => {},
       }));
       return [...out.matchAll(/<button class="w-full text-left[^"]*"><div class="font-medium">([^<]*)<\/div>/g)]
-        .map((m) => (/bg-cv-brand(?![-\w])/.test(m[0]) ? `[${m[1]}]` : m[1]));
+        .map((m) => (m[0].includes('bg-blue-600') ? `[${m[1]}]` : m[1]));
     };
     assert.deepEqual(marked('below-all'), ['Right of Name', 'Below Name', '[Below Everything]'], 'the three options, in order');
     assert.deepEqual(marked('below-name'), ['Right of Name', '[Below Name]', 'Below Everything']);

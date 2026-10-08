@@ -56,7 +56,7 @@ function cardIn(html, testid) {
   const body = html.split(`data-testid="${testid}"`)[1]?.split('</button>')[0];
   assert.ok(body, `the ${testid} card`);
   const cls = html.split(`data-testid="${testid}"`)[0].split('<button').at(-1) + body;
-  return { selected: /border-blue-500/.test(cls), ats: />ATS<\/span>/.test(body) };
+  return { selected: /(^|\s)border-cv-brand(\s|$)/.test(cls), ats: />ATS<\/span>/.test(body) };
 }
 
 const cv = (template = 'classic', settings = {}) => resume({

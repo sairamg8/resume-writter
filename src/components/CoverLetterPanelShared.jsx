@@ -11,14 +11,14 @@ export function Field({ label, value, onChange, placeholder, children }) {
   const id = useId();
   return (
     <div className="relative">
-      <label htmlFor={id} className="block text-xs font-medium text-cv-muted mb-1">{label}</label>
+      <label htmlFor={id} className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <input
         id={id}
         type="text"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-cv-hairline rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand ${children ? 'pr-14' : ''}`}
+        className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${children ? 'pr-14' : ''}`}
       />
       {children}
     </div>
@@ -31,8 +31,8 @@ export function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`flex-1 py-1.5 text-xs font-medium rounded border transition-all ${
         active
-          ? 'bg-cv-brand border-cv-brand text-white'
-          : 'border-cv-hairline text-cv-muted hover:border-cv-brand-soft-border hover:text-cv-brand-text'
+          ? 'bg-blue-600 border-blue-600 text-white'
+          : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
       }`}
     >
       {children}
@@ -43,16 +43,16 @@ export function Chip({ active, onClick, children }) {
 export function SectionBlock({ title, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-cv-surface border border-cv-hairline rounded-cv-card shadow-sm overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <button
-        className="w-full flex items-center gap-2 px-4 py-3 bg-cv-ground text-left select-none"
+        className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 text-left select-none"
         onClick={() => setOpen(o => !o)}
       >
-        <span className="text-sm font-semibold text-cv-ink flex-1">{title}</span>
-        {open ? <ChevronUp size={14} className="text-cv-faint" /> : <ChevronDown size={14} className="text-cv-faint" />}
+        <span className="text-sm font-semibold text-gray-700 flex-1">{title}</span>
+        {open ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
       </button>
       {open && (
-        <div className="p-4 border-t border-cv-hairline space-y-4">
+        <div className="p-4 border-t border-gray-100 space-y-4">
           {children}
         </div>
       )}

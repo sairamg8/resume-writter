@@ -82,7 +82,7 @@ async function typography(r) {
     },
     sizeButton(label) {
       const el = button(label);
-      return { el, selected: el.className.includes('bg-blue-600') };
+      return { el, selected: /(^|\s)bg-cv-brand(\s|$)/.test(el.className) };
     },
     row(label) {
       const span = find((el) => el.tagName === 'SPAN' && el.textContent.trim() === label, `the ${label} row`);

@@ -40,7 +40,7 @@ async function panel(template, settings = {}) {
       return [...writes];
     },
     /** The active button of row `id` (SegmentControl marks it blue). */
-    active: (id) => buttons(id).find((b) => /bg-blue-600/.test(b.getAttribute('class') || ''))?.textContent.trim(),
+    active: (id) => buttons(id).find((b) => /(^|\s)bg-cv-brand(\s|$)/.test(b.getAttribute('class') || ''))?.textContent.trim(),
     /** Width's box: its text, and `type(v)` — typed and left, as a person does. */
     width() {
       const input = [...elements(row('layout-width'))].find((el) => el.tagName === 'INPUT');

@@ -20,7 +20,7 @@ export function LinksSection({ settings, updateSetting, onReset }) {
         <Label>Style</Label>
         <SegmentControl options={LINK_OPTIONS} value={linkStyleOf(settings.linkStyle)} onChange={v => updateSetting('linkStyle', v)} />
       </div>
-      <p className="text-[11px] text-gray-400 leading-relaxed">
+      <p className="text-[11px] text-cv-faint leading-relaxed">
         Contacts, entries&rsquo; URLs and links in descriptions. Plain prints them as the text around them; on a banner or the Sidebar&rsquo;s column, Accent takes the shade of it that reads there. The Markdown and ATS text exports print the words only.
       </p>
     </DesignSection>

@@ -166,7 +166,7 @@ describe('Design → Section Headings → Icons prints an icon before every sect
     const { sectionReset, defaultSettings } = await loadModule('/src/utils/defaultData.js');
     const html = renderToString(createElement(HeadingControls, { settings: { sectionIcons: true }, template: 'classic', updateSetting: () => {} }));
     assert.match(html, />Off<\/button>/);
-    assert.match(html, /bg-blue-600[^>]*>On<\/button>/, 'On is marked');
+    assert.match(html, /bg-cv-brand(?: [^">]*)?"[^>]*>On<\/button>/, 'On is marked');
     for (const template of TEMPLATES) {
       assert.equal(defaultSettings(template).sectionIcons, false, template);
       assert.equal(sectionReset(template, ['sectionIcons'], { sectionIcons: true }).sectionIcons, false, template);

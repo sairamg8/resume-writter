@@ -123,8 +123,8 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
         onApply={handleApplyGenerated}
       />
 
-      <p className="flex items-start gap-1.5 text-[11px] text-cv-muted leading-snug">
-        <Palette size={12} className="mt-0.5 shrink-0 text-cv-faint" aria-hidden="true" />
+      <p className="flex items-start gap-1.5 text-[11px] text-gray-500 leading-snug">
+        <Palette size={12} className="mt-0.5 shrink-0 text-gray-400" aria-hidden="true" />
         <span>Header style follows your résumé template (<strong>{templateLabel(template)}</strong>). Change the template in Design.</span>
       </p>
 
@@ -134,14 +134,14 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
           {/* Preview / upload target */}
           <div
             onClick={() => photoInputRef.current?.click()}
-            className="w-14 h-14 rounded-full border-2 border-dashed border-cv-field flex items-center justify-center cursor-pointer hover:border-cv-brand hover:bg-cv-brand-soft transition-colors overflow-hidden shrink-0"
+            className="w-14 h-14 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors overflow-hidden shrink-0"
           >
             {cl.clPhoto ? (
               <img src={cl.clPhoto} alt="" className="w-full h-full object-cover" />
             ) : resumePhoto ? (
               <img src={resumePhoto} alt="" className="w-full h-full object-cover opacity-50" />
             ) : (
-              <div className="flex flex-col items-center gap-0.5 text-cv-faint">
+              <div className="flex flex-col items-center gap-0.5 text-gray-400">
                 <Camera size={16} />
                 <span className="text-[9px]">Photo</span>
               </div>
@@ -150,15 +150,15 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
           <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
 
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-cv-ink">Cover Letter Photo</p>
-            <p className={`text-[11px] mt-0.5 ${photoNote.warn ? 'text-cv-warn' : 'text-cv-faint'}`} data-testid="letter-photo-note">
+            <p className="text-xs font-medium text-gray-700">Cover Letter Photo</p>
+            <p className={`text-[11px] mt-0.5 ${photoNote.warn ? 'text-amber-700' : 'text-gray-400'}`} data-testid="letter-photo-note">
               {photoNote.text}
             </p>
             <div className="flex gap-2 mt-1.5">
               {cl.clPhoto && (
                 <button
                   onClick={() => updateCoverLetter('clPhoto', null)}
-                  className="text-[11px] text-cv-bad hover:text-cv-bad"
+                  className="text-[11px] text-red-500 hover:text-red-600"
                 >
                   Remove own
                 </button>
@@ -170,7 +170,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
           {hasPhoto && (
             <button
               onClick={() => updateCoverLetter('showPhoto', photoShown ? false : true)}
-              className={`p-1.5 rounded transition-colors ${photoShown ? 'text-cv-brand-text hover:text-cv-brand-text' : 'text-cv-faint hover:text-cv-faint'}`}
+              className={`p-1.5 rounded transition-colors ${photoShown ? 'text-blue-500 hover:text-blue-600' : 'text-gray-300 hover:text-gray-400'}`}
               title={photoShown ? 'Hide photo from cover letter' : 'Show photo on cover letter'}
             >
               {photoShown ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -180,11 +180,11 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
         {/* Photo text position — only when photo is shown, beside the name */}
         {photoShown && hasPhoto && centered && (
-          <p className="text-[11px] text-cv-faint">Centred header: the photo sits above the name.</p>
+          <p className="text-[11px] text-gray-400">Centred header: the photo sits above the name.</p>
         )}
         {photoShown && hasPhoto && !centered && (
           <div>
-            <p className="text-xs font-semibold text-cv-ink mb-1.5">Text Position (relative to photo)</p>
+            <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position (relative to photo)</p>
             {/* The same list the résumé's panel offers and the PDF draws (AUD-25). */}
             <div className="flex gap-2">
               {PHOTO_OPTIONS.photoTextAlign.map(({ val, label }) => (
@@ -201,13 +201,13 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
       <SectionBlock title="Header Layout" defaultOpen={true}>
         {/* Fields position — 3 clear layout options; a centred letterhead stacks them instead */}
         {centered ? (
-          <p className="text-[11px] text-cv-muted leading-snug">
+          <p className="text-[11px] text-gray-500 leading-snug">
             Centred like your résumé&apos;s header: photo, name and contacts on the centre line
             (Personal Info → Header Customization → Text Alignment).
           </p>
         ) : (
           <div>
-            <p className="text-xs font-semibold text-cv-ink mb-2">Fields Position</p>
+            <p className="text-xs font-semibold text-gray-700 mb-2">Fields Position</p>
             <div className="space-y-1.5">
               {[
                 { val: 'right',      label: 'Right of Name',   desc: '[Photo · Name/Title] ··· [Fields →]' },
@@ -219,12 +219,12 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
                   onClick={() => updateCoverLetter('fieldsPosition', val)}
                   className={`w-full text-left px-3 py-2 rounded border text-xs transition-all ${
                     fieldsPosition === val
-                      ? 'bg-cv-brand border-cv-brand text-white'
-                      : 'border-cv-hairline text-cv-muted hover:border-cv-brand-soft-border hover:text-cv-brand-text'
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
                   }`}
                 >
                   <div className="font-medium">{label}</div>
-                  <div className={`text-[10px] mt-0.5 font-mono ${fieldsPosition === val ? 'text-cv-brand-soft' : 'text-cv-faint'}`}>{desc}</div>
+                  <div className={`text-[10px] mt-0.5 font-mono ${fieldsPosition === val ? 'text-blue-100' : 'text-gray-400'}`}>{desc}</div>
                 </button>
               ))}
             </div>
@@ -240,7 +240,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
         {/* Contact Style */}
         <div>
-          <p className="text-xs font-semibold text-cv-ink mb-2">Contact Style</p>
+          <p className="text-xs font-semibold text-gray-700 mb-2">Contact Style</p>
           <div className="flex gap-2">
             {[
               { val: 'icon',   label: '⊕ Icon' },
@@ -256,7 +256,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
         {/* Contact Layout */}
         <div>
-          <p className="text-xs font-semibold text-cv-ink mb-2">Contact Layout</p>
+          <p className="text-xs font-semibold text-gray-700 mb-2">Contact Layout</p>
           <div className="flex gap-2">
             {[
               { val: 'single',  label: 'Single' },
@@ -272,7 +272,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
         {/* Field Visibility */}
         <div>
-          <p className="text-xs font-semibold text-cv-ink mb-2">Visible Contact Fields</p>
+          <p className="text-xs font-semibold text-gray-700 mb-2">Visible Contact Fields</p>
           <div className="space-y-1.5">
             {CONTACT_FIELDS.map(({ key, label }) => {
               const Icon = ICONS[key];
@@ -280,15 +280,15 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
               const isHidden = hiddenSet.has(key);
               return (
                 <div key={key} className="flex items-center justify-between">
-                  <span className={`text-xs flex items-center gap-1.5 ${isHidden ? 'text-cv-faint' : 'text-cv-ink'}`}>
-                    <Icon size={12} className="text-cv-faint" />
+                  <span className={`text-xs flex items-center gap-1.5 ${isHidden ? 'text-gray-400' : 'text-gray-700'}`}>
+                    <Icon size={12} className="text-gray-400" />
                     {label}
-                    {val && <span className="text-cv-faint font-normal truncate max-w-[100px]">— {val}</span>}
+                    {val && <span className="text-gray-400 font-normal truncate max-w-[100px]">— {val}</span>}
                   </span>
                   <button
                     onClick={() => toggleField(key)}
                     title={isHidden ? `Show ${label} on the cover letter` : `Hide ${label} from the cover letter`}
-                    className={`p-0.5 rounded transition-colors ${isHidden ? 'text-cv-faint hover:text-cv-faint' : 'text-cv-brand-text hover:text-cv-brand-text'}`}
+                    className={`p-0.5 rounded transition-colors ${isHidden ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
                   >
                     {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
@@ -306,7 +306,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
             <button
               type="button"
               onClick={() => updateCoverLetter('date', todayLetterDate())}
-              className="absolute right-1.5 bottom-1.5 px-1.5 py-0.5 text-[11px] font-medium text-cv-brand-text hover:bg-cv-brand-soft rounded"
+              className="absolute right-1.5 bottom-1.5 px-1.5 py-0.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 rounded"
             >
               Today
             </button>
@@ -321,13 +321,13 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
       {/* ── Letter Body ───────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-semibold text-cv-faint uppercase tracking-wide">Letter Body</p>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Letter Body</p>
           <button
             type="button"
             onClick={() => setGeneratorOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-cv-brand-pressed bg-cv-brand-soft hover:bg-cv-brand-soft border border-cv-brand-soft-border rounded-cv-control transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors shadow-xs"
           >
-            <Sparkles size={13} className="text-cv-brand-text" />
+            <Sparkles size={13} className="text-blue-600" />
             <span>Auto-Generate from Resume</span>
           </button>
         </div>
@@ -342,11 +342,11 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
       {/* ── Closing & Signature ───────────────────────────────────────────── */}
       <div>
-        <p className="text-[11px] font-semibold text-cv-faint uppercase tracking-wide mb-3">Closing & Signature</p>
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Closing & Signature</p>
         <div className="space-y-2.5">
           <Field label="Closing Phrase" placeholder="Sincerely" {...f('closing')} />
           <div>
-            <p className="block text-xs font-medium text-cv-muted mb-1">Signature Space</p>
+            <p className="block text-xs font-medium text-gray-500 mb-1">Signature Space</p>
             <div className="flex gap-2">
               {[
                 { val: 'tight', label: 'Tight' },

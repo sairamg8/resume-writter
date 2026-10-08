@@ -47,11 +47,7 @@ describe('the Import dialog is not cut off on a phone (R4-DPH-25)', () => {
       assert.ok(tokens(centring).includes('p-4'), '16 px of margin on a phone');
       const layer = centring.parentNode;
       assert.ok(tokens(layer).includes('fixed') && tokens(layer).includes('inset-0'), `a layer over the whole screen: ${tokens(layer).join(' ')}`);
-      // The kit's Portal (src/components/ui/Portal.jsx) draws a layer in a `contents` wrapper (no box of its own) that is
-      // the last child of <body>: the layer is in that wrapper, and the wrapper is at the end of <body>.
-      const wrapper = layer.parentNode;
-      assert.ok(wrapper?.getAttribute('data-ui-portal') !== null && tokens(wrapper).includes('contents'), `the layer sits in the kit Portal's \`contents\` wrapper (its parent is <${wrapper?.tagName}> ${wrapper ? tokens(wrapper).join(' ') : ''})`);
-      assert.ok(wrapper.parentNode === view.document.body, `and the wrapper is drawn at the end of <body>, not inside the header's row (its parent is <${wrapper.parentNode?.tagName}>)`);
+      assert.equal(layer.parentNode, view.document.body, 'drawn in a portal at the end of <body>, not inside the header\'s row');
       assert.ok(!view.container.contains(dialog), 'and so not clipped by the header it was opened from');
     } finally { await view.unmount(); }
   });

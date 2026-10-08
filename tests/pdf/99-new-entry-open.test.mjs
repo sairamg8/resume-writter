@@ -13,10 +13,8 @@ after(teardown);
 const noop = () => {};
 const inputs = (el) => [...elements(el)].filter((e) => e.tagName === 'INPUT' && e.getAttribute('aria-label') !== 'Section title');
 /** The entry cards of the section, each with its title and the text boxes it shows. */
-// An entry card is the box around its header (data-testid entry-header), whatever classes it is drawn with.
 const cards = (view) => [...elements(view.container)]
-  .filter((e) => e.getAttribute('data-testid') === 'entry-header')
-  .map((header) => header.parentNode)
+  .filter((e) => e.tagName === 'DIV' && /\bborder rounded-lg overflow-hidden\b/.test(e.getAttribute('class') || ''))
   .map((card) => ({ title: card.childNodes[0].textContent, fields: inputs(card).length }));
 
 async function editor(sec, addItem = noop, justAdded = false) {

@@ -103,7 +103,7 @@ test('a design saved on one résumé is picked on another and deleted (B4)', asy
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   const card = page.locator('[data-testid^="design-design_"]');
   await expect(card).toHaveCount(1);
-  await expect(card).toHaveClass(/border-blue-500/);
+  await expect(card).toHaveClass(/border-cv-brand(\s|$)/);
   const id = (await card.getAttribute('data-testid')).slice('design-'.length);
 
   await page.goto('/#/resume/test_other');

@@ -129,8 +129,8 @@ async function useEach(page, [from, to]) {
 /** Open every collapsed Design section (its header toggles it; its content follows the header row). */
 const openSections = (page) => page.evaluate(() => {
   const title = (box) => box.querySelector(':scope > div > button > span')?.textContent.trim().toLowerCase();
-  const template = [...document.querySelectorAll('div.rounded-xl.overflow-hidden')].find((b) => title(b) === 'template');
-  const boxes = template ? [...template.parentElement.children].filter((b) => b.matches('div.rounded-xl.overflow-hidden') && title(b)) : [];
+  const template = [...document.querySelectorAll('div.rounded-cv-card.overflow-hidden')].find((b) => title(b) === 'template');
+  const boxes = template ? [...template.parentElement.children].filter((b) => b.matches('div.rounded-cv-card.overflow-hidden') && title(b)) : [];
   for (const box of boxes) if (box.children.length < 2) box.querySelector(':scope > div > button').click();
   return boxes.length;
 });
@@ -141,8 +141,8 @@ const openSections = (page) => page.evaluate(() => {
  */
 const markSections = (page, titles) => page.evaluate((titles) => {
   const title = (box) => box.querySelector(':scope > div > button > span')?.textContent.trim().toLowerCase();
-  const template = [...document.querySelectorAll('div.rounded-xl.overflow-hidden')].find((b) => title(b) === 'template');
-  const boxes = template ? [...template.parentElement.children].filter((b) => b.matches('div.rounded-xl.overflow-hidden') && title(b)) : [];
+  const template = [...document.querySelectorAll('div.rounded-cv-card.overflow-hidden')].find((b) => title(b) === 'template');
+  const boxes = template ? [...template.parentElement.children].filter((b) => b.matches('div.rounded-cv-card.overflow-hidden') && title(b)) : [];
   for (const box of boxes) {
     // A section's own header row — its open/close toggle and its ↺ — is not a design control: the toggle
     // would fold away the controls after it.
@@ -214,7 +214,7 @@ test.describe('every design control changes the preview, through the UI', () => 
     // And Languages' — its Level (Text, Dots, Bar) is its own (R2-147): its card is the one titled Languages.
     await page.evaluate(() => {
       const title = [...document.querySelectorAll('input[aria-label="Section title"]')].find((i) => i.value === 'Languages');
-      title.closest('div.rounded-xl').dataset.pwLanguages = '1';
+      title.closest('div.rounded-cv-card').dataset.pwLanguages = '1';
     });
     await page.locator('[data-pw-languages] button[title="Section options"]').click();
     // The ⋯ menu opens in a portal at the end of <body>, not inside the card (R4-DPH-24): its open menu.
@@ -223,8 +223,8 @@ test.describe('every design control changes the preview, through the UI', () => 
     // sections' options — not the rest of Personal Info (the summary's editor opens the STAR optimizer).
     await page.evaluate(() => {
       const byText = (t) => [...document.querySelectorAll('button')].find((x) => [...x.querySelectorAll('p')].some((p) => p.textContent.trim() === t));
-      byText('Header Customization').closest('div.rounded-xl').dataset.pwRoot = 'header';
-      byText('Photo').closest('div.rounded-xl').dataset.pwRoot = 'photo';
+      byText('Header Customization').closest('div.rounded-cv-card').dataset.pwRoot = 'header';
+      byText('Photo').closest('div.rounded-cv-card').dataset.pwRoot = 'photo';
       for (const eye of document.querySelectorAll('button[title="Hide on resume"], button[title="Hide summary from resume"]')) eye.parentElement.dataset.pwRoot = 'eye';
       for (const so of [...document.querySelectorAll('p')].filter((p) => p.textContent.trim() === 'Section Options')) so.parentNode.dataset.pwRoot = 'section';
     });

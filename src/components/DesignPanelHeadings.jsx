@@ -38,7 +38,7 @@ function BorderPtBox({ pt, min, max, disabled, onChange }) {
       min={min}
       max={max}
       {...typed.inputProps}
-      className="w-10 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
+      className="w-10 text-center text-xs pointer-coarse:text-base font-medium text-cv-ink border border-cv-hairline rounded focus:outline-none focus:ring-1 focus:ring-cv-brand disabled:bg-cv-ground disabled:cursor-not-allowed h-6"
     />
   );
 }
@@ -79,12 +79,12 @@ export function HeadingControls({ settings, template, updateSetting }) {
       {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082), and
           Mixed prints its short sections with the main ones' headings (R2-147-col). */}
       {headerTemplateId(template, settings) === 'sidebar' && columnsOf(settings) === 'two' && (
-        <p className="text-[11px] text-gray-400 leading-relaxed">
+        <p className="text-[11px] text-cv-faint leading-relaxed">
           These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case and Icons apply there.
         </p>
       )}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">Title case</span>
+        <span className="text-xs text-cv-muted">Title case</span>
         <div className="flex gap-1">
           {[{ value: 'upper', label: 'ABC' }, { value: 'normal', label: 'Abc' }].map(opt => (
             <button
@@ -92,8 +92,8 @@ export function HeadingControls({ settings, template, updateSetting }) {
               onClick={() => updateSetting('sectionTitleCase', opt.value)}
               className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
                 titleCase === opt.value
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-gray-200 text-gray-500 hover:border-blue-300'
+                  ? 'bg-cv-brand border-cv-brand text-white'
+                  : 'border-cv-hairline text-cv-muted hover:border-cv-brand'
               }`}
             >{opt.label}</button>
           ))}
@@ -103,7 +103,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
       {/* A small icon before each title, one per section type, in its colour and size (R2-147): the
           PDF (= the preview) only — the words print as before, and Word, Markdown and ATS text keep them alone. */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">Icons</span>
+        <span className="text-xs text-cv-muted">Icons</span>
         <div className="flex gap-1">
           {[{ value: false, label: 'Off' }, { value: true, label: 'On' }].map(opt => (
             <button
@@ -111,8 +111,8 @@ export function HeadingControls({ settings, template, updateSetting }) {
               onClick={() => updateSetting('sectionIcons', opt.value)}
               className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
                 !!settings.sectionIcons === opt.value
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-gray-200 text-gray-500 hover:border-blue-300'
+                  ? 'bg-cv-brand border-cv-brand text-white'
+                  : 'border-cv-hairline text-cv-muted hover:border-cv-brand'
               }`}
             >{opt.label}</button>
           ))}
@@ -120,55 +120,55 @@ export function HeadingControls({ settings, template, updateSetting }) {
       </div>
 
       <div className={`flex items-center justify-between ${!borderControls.thickness ? 'opacity-40' : ''}`}>
-        <span className="text-xs text-gray-500">Border thickness</span>
+        <span className="text-xs text-cv-muted">Border thickness</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             disabled={!borderControls.thickness}
             onClick={() => setBorderPt(borderPt - 1)}
-            className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 enabled:hover:bg-gray-100 disabled:cursor-not-allowed text-base leading-none"
+            className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted enabled:hover:bg-cv-sunken disabled:cursor-not-allowed text-base leading-none"
           >−</button>
           <BorderPtBox pt={borderPt} min={1 + extraPt} max={8 + extraPt} disabled={!borderControls.thickness} onChange={setBorderPt} />
           <button
             type="button"
             disabled={!borderControls.thickness}
             onClick={() => setBorderPt(borderPt + 1)}
-            className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 enabled:hover:bg-gray-100 disabled:cursor-not-allowed text-base leading-none"
+            className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted enabled:hover:bg-cv-sunken disabled:cursor-not-allowed text-base leading-none"
           >+</button>
           {/* Points, as the PDF prints it — every saved value keeps its look (VM3-3, as R3-7) */}
-          <span className="text-[11px] text-gray-400 ml-1">pt</span>
+          <span className="text-[11px] text-cv-faint ml-1">pt</span>
         </div>
       </div>
       {extraPt > 0 && (
-        <p className="text-[11px] text-gray-400 leading-relaxed">A left bar is {extraPt} pt wider than a rule, so it starts at {1 + extraPt} pt.</p>
+        <p className="text-[11px] text-cv-faint leading-relaxed">A left bar is {extraPt} pt wider than a rule, so it starts at {1 + extraPt} pt.</p>
       )}
       {!borderControls.thickness && headingStyle === 'box' && (
-        <p className="text-[11px] text-gray-400 leading-relaxed">
+        <p className="text-[11px] text-cv-faint leading-relaxed">
           {boxLook.chip ? 'Boxed has no border line: it prints a filled tag in the Border color.' : 'Boxed has no border line.'}
         </p>
       )}
       {!borderControls.thickness && headingStyle === 'plain' && (
-        <p className="text-[11px] text-gray-400 leading-relaxed">Plain has no border.</p>
+        <p className="text-[11px] text-cv-faint leading-relaxed">Plain has no border.</p>
       )}
 
       <div className={`flex items-center justify-between ${!borderControls.color ? 'opacity-40' : ''}`}>
-        <span className="text-xs text-gray-500">Border color</span>
+        <span className="text-xs text-cv-muted">Border color</span>
         <div className="flex items-center gap-2">
           <ColorInput
             disabled={!borderControls.color}
             value={settings.sectionBorderColor || borderDefault?.color || settings.accentColor || '#374151'}
             onCommit={v => updateSetting('sectionBorderColor', v)}
-            className="h-6 w-10 rounded border border-gray-200 cursor-pointer disabled:cursor-not-allowed p-0.5"
+            className="h-6 w-10 rounded border border-cv-hairline cursor-pointer disabled:cursor-not-allowed p-0.5"
             title="Pick border color"
             aria-label="Section border color"
           />
-          <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || (borderDefault && !borderDefault.accent ? 'template' : 'accent')}</span>
+          <span className="text-[11px] text-cv-faint font-mono">{settings.sectionBorderColor || (borderDefault && !borderDefault.accent ? 'template' : 'accent')}</span>
           {settings.sectionBorderColor && (
             <button
               type="button"
               disabled={!borderControls.color}
               onClick={() => updateSetting('sectionBorderColor', '')}
-              className="text-[11px] text-gray-400 enabled:hover:text-gray-600 disabled:cursor-not-allowed"
+              className="text-[11px] text-cv-faint enabled:hover:text-cv-muted disabled:cursor-not-allowed"
               title={borderDefault && !borderDefault.accent ? "Reset to the template's color" : 'Reset to accent color'}
             >↺</button>
           )}
@@ -180,7 +180,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
           const active = headingStyle === opt.value;
           const accent = settings.accentColor || '#374151';
           return (
-            <button key={opt.value} onClick={() => updateSetting('headingStyle', opt.value)} className={`px-2 py-2 rounded-lg border text-left transition-all ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+            <button key={opt.value} onClick={() => updateSetting('headingStyle', opt.value)} className={`px-2 py-2 rounded-cv-control border text-left transition-all ${active ? 'border-cv-brand bg-cv-brand-soft' : 'border-cv-hairline hover:border-cv-field'}`}>
               <div className="mb-1">
                 {opt.value === 'ruled'     && <div><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: ruledLook.text }}>ABC</span><div className="h-px mt-0.5" style={{ backgroundColor: ruledLook.ruled }} /></div>}
                 {opt.value === 'leftbar'   && <div className="flex items-center gap-1"><div className="w-0.5 self-stretch rounded-full" style={{ backgroundColor: accent }} /><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span></div>}
@@ -189,7 +189,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
                 {opt.value === 'box'       && <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={boxLook.chip ? { color: boxLook.text, backgroundColor: boxLook.box } : { color: accent, backgroundColor: accent + '18' }}>ABC</span>}
                 {opt.value === 'plain'     && <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span>}
               </div>
-              <span className={`text-[10px] ${active ? 'text-blue-700 font-medium' : 'text-gray-500'}`}>{opt.label}</span>
+              <span className={`text-[10px] ${active ? 'text-cv-brand-text font-medium' : 'text-cv-muted'}`}>{opt.label}</span>
             </button>
           );
         })}

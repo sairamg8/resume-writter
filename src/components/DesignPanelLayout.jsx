@@ -17,12 +17,12 @@ export function SidebarColumnsLayout({ settings, updateSetting }) {
   return (
     <div className="mt-3 space-y-2.5">
       <div data-testid="layout-columns" className="space-y-1.5">
-        <p className="text-xs text-gray-600">Columns</p>
+        <p className="text-xs text-cv-muted">Columns</p>
         <SegmentControl options={segments('layoutColumns')} value={columns} onChange={(v) => updateSetting('layoutColumns', v)} />
       </div>
       {columns === 'two' && (
         <div data-testid="layout-details" className="space-y-1.5">
-          <p className="text-xs text-gray-600">Details · photo, name and contacts</p>
+          <p className="text-xs text-cv-muted">Details · photo, name and contacts</p>
           <SegmentControl options={segments('layoutDetails')} value={layoutOption('layoutDetails', settings.layoutDetails)} onChange={(v) => updateSetting('layoutDetails', v)} />
         </div>
       )}
@@ -37,7 +37,7 @@ export function SidebarColumnsLayout({ settings, updateSetting }) {
           unit="%"
         />
       </div>
-      <p className="text-[10px] text-gray-400">
+      <p className="text-[10px] text-cv-faint">
         {columns === 'mixed'
           ? 'Mixed: your details on a band across the top, the main sections across the page, then skills, education, languages, certifications, interests and references two to a row, one entry to a line. The width is the left one\'s, % of the paper.'
           : 'Side column: skills, education, languages, certifications, interests and references beside the main sections, with your details at the top of the column — or on a band across the page (Top). The width is the column\'s, % of the paper.'}

@@ -97,9 +97,9 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
 
   return (
     <Dialog open onClose={onClose} size="md" title="Share a public link">
-      <div className="space-y-3 text-xs text-cv-ink">
+      <div className="space-y-3 text-xs text-gray-700">
         {view.state === 'loading' && <p>Checking whether this résumé is published…</p>}
-        {view.state === 'error' && <p role="alert" className="text-cv-bad">Could not reach your account to check this résumé's link. Check your connection and try again.</p>}
+        {view.state === 'error' && <p role="alert" className="text-red-700">Could not reach your account to check this résumé's link. Check your connection and try again.</p>}
         {view.state === 'ready' && (
           <>
             {share ? (
@@ -108,47 +108,47 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
                 <div className="flex items-center gap-1.5">
                   {/* 16 px on a touch screen: a tap focuses it (and selects the link), and iOS zooms the page
                       into any focused field under 16 px (R4-DPH-36). A mouse keeps 12 px. */}
-                  <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 text-xs pointer-coarse:text-base border border-cv-hairline rounded-cv-control bg-cv-ground text-cv-ink" />
-                  <button onClick={() => copyText(url).then(() => setCopied('Copied'), () => setCopied('Copy failed'))} className="flex items-center gap-1 px-2 py-1.5 border border-cv-hairline rounded-cv-control hover:bg-cv-ground shrink-0">
+                  <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-lg bg-gray-50 text-gray-800" />
+                  <button onClick={() => copyText(url).then(() => setCopied('Copied'), () => setCopied('Copy failed'))} className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
                     <Copy size={12} aria-hidden="true" /> {copied || 'Copy'}
                   </button>
-                  <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1.5 border border-cv-hairline rounded-cv-control hover:bg-cv-ground shrink-0">
+                  <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
                     <ExternalLink size={12} aria-hidden="true" /> Open
                   </a>
                 </div>
-                <p className="text-cv-muted">Published {timeAgo(share.publishedAt).toLowerCase()}.{current ? '' : ' You have changed the résumé since: the link still shows it as it was until you update it.'}</p>
+                <p className="text-gray-500">Published {timeAgo(share.publishedAt).toLowerCase()}.{current ? '' : ' You have changed the résumé since: the link still shows it as it was until you update it.'}</p>
               </>
             ) : (
               <p>Publish a read-only copy of this résumé at a web address anyone with the link can open, and download as a PDF. It stays public until you unpublish it.</p>
             )}
             <div>
-              <p className="font-semibold text-cv-ink">{share ? 'What is public:' : 'What would be public:'}</p>
+              <p className="font-semibold text-gray-800">{share ? 'What is public:' : 'What would be public:'}</p>
               <ul className="list-disc pl-5 mt-1 space-y-0.5">
                 {shown.map((line, i) => <li key={i}>{line}</li>)}
               </ul>
-              <p className="mt-1 text-cv-muted">Fields and sections you hid, the cover letter and this résumé's name in your list stay private.</p>
+              <p className="mt-1 text-gray-500">Fields and sections you hid, the cover letter and this résumé's name in your list stay private.</p>
             </div>
-            {error && <p role="alert" className="text-cv-bad">{error}</p>}
+            {error && <p role="alert" className="text-red-700">{error}</p>}
             <div className="flex flex-wrap gap-2 pt-1">
               {(!share || !current) && (
-                <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-brand text-white font-semibold hover:bg-cv-brand disabled:opacity-60">
+                <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60">
                   {share ? 'Update the public copy' : 'Publish'}
                 </button>
               )}
               {share && !confirmUnpublish && (
-                <button onClick={() => setConfirmUnpublish(true)} disabled={busy} className="px-3 py-1.5 rounded-cv-control border border-cv-bad text-cv-bad font-semibold hover:bg-cv-bad-soft disabled:opacity-60">
+                <button onClick={() => setConfirmUnpublish(true)} disabled={busy} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 font-semibold hover:bg-red-50 disabled:opacity-60">
                   Unpublish
                 </button>
               )}
             </div>
             {share && confirmUnpublish && (
-              <div className="p-3 rounded-cv-card border border-cv-bad bg-cv-bad-soft space-y-2">
-                <p className="text-cv-bad">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
+              <div className="p-3 rounded-xl border border-red-200 bg-red-50 space-y-2">
+                <p className="text-red-800">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-bad text-white font-semibold hover:bg-cv-bad disabled:opacity-60">
+                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60">
                     Yes, unpublish
                   </button>
-                  <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-cv-control bg-cv-sunken text-cv-ink font-semibold hover:bg-cv-stage disabled:opacity-60">
+                  <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 disabled:opacity-60">
                     Cancel
                   </button>
                 </div>

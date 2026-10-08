@@ -65,20 +65,20 @@ export function EditorResumeTab({
       <div className="flex justify-end">
         <button
           onClick={toggleAllSections}
-          className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-cv-muted hover:text-cv-brand-text hover:bg-cv-brand-soft border border-cv-hairline rounded-cv-control transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 rounded-lg transition-colors"
         >
           {allExpanded ? <><ChevronsDownUp size={12} /> Collapse All</> : <><ChevronsUpDown size={12} /> Expand All</>}
         </button>
       </div>
 
-      <div className="cv-card overflow-hidden">
-        <button className="w-full flex items-center gap-2 px-4 py-3 bg-cv-ground text-left select-none" onClick={() => setPersonalOpen(o => !o)}>
-          <User size={14} className="text-cv-faint shrink-0" />
-          <span className="text-sm font-semibold text-cv-ink flex-1">Personal Info</span>
-          {personalOpen ? <ChevronUp size={14} className="text-cv-faint" /> : <ChevronDown size={14} className="text-cv-faint" />}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 text-left select-none" onClick={() => setPersonalOpen(o => !o)}>
+          <User size={14} className="text-gray-400 shrink-0" />
+          <span className="text-sm font-semibold text-gray-700 flex-1">Personal Info</span>
+          {personalOpen ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </button>
         {personalOpen && (
-          <div className="p-4 border-t border-cv-hairline">
+          <div className="p-4 border-t border-gray-100">
             <PersonalInfoEditor
               resume={resumeId}
               getResume={getResume}
@@ -121,22 +121,22 @@ export function EditorResumeTab({
         </SortableContext>
       </DndContext>
 
-      <div className="border border-dashed border-cv-field rounded-cv-card overflow-hidden">
+      <div className="border border-dashed border-gray-300 rounded-xl overflow-hidden">
         <button
           onClick={() => setAddSectionOpen(o => !o)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-cv-muted hover:text-cv-ink hover:bg-cv-ground transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <Plus size={15} /> Add Section
           {addSectionOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
         {addSectionOpen && (
-          <div className="px-3 pb-3 pt-1 space-y-3 border-t border-cv-hairline">
+          <div className="px-3 pb-3 pt-1 space-y-3 border-t border-gray-100">
             {SECTION_GROUPS.map(group => (
               <div key={group.label}>
-                <p className="text-[10px] font-bold text-cv-faint uppercase tracking-widest mb-1.5 px-1">{group.label}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">{group.label}</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {group.types.map(({ type, label }) => (
-                    <button key={type} onClick={() => { setAddedSectionId(actions.addSection(type)); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-cv-body bg-cv-surface border border-cv-hairline rounded-cv-control hover:border-cv-brand-soft-border hover:text-cv-brand-text hover:bg-cv-brand-soft text-left transition-colors">
+                    <button key={type} onClick={() => { setAddedSectionId(actions.addSection(type)); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 text-left transition-colors">
                       {label}
                     </button>
                   ))}

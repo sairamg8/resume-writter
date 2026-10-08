@@ -37,14 +37,14 @@ export default function NewLetterModal({ isOpen, sources, onPick, onClose }) {
               type="button"
               data-autofocus={i === 0 ? '' : undefined}
               onClick={() => pick(r.id)}
-              className="w-full text-left p-3 rounded-cv-card border border-cv-hairline hover:border-cv-brand hover:bg-cv-brand-soft focus-visible:border-cv-brand transition-all flex items-center justify-between gap-3 group"
+              className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-purple-400 hover:bg-purple-50/40 focus-visible:border-purple-500 transition-all flex items-center justify-between gap-3 group"
             >
               <div className="min-w-0">
-                <p className="text-sm font-bold text-cv-ink truncate">{r.name}</p>
-                <p className="text-xs text-cv-muted truncate">{who || 'No name yet'}</p>
-                {when && <p className="text-[11px] text-cv-faint">{i === 0 ? 'Last edited' : 'Edited'} {when}</p>}
+                <p className="text-sm font-bold text-gray-900 truncate">{r.name}</p>
+                <p className="text-xs text-gray-500 truncate">{who || 'No name yet'}</p>
+                {when && <p className="text-[11px] text-gray-400">{i === 0 ? 'Last edited' : 'Edited'} {when}</p>}
               </div>
-              <ArrowRight size={15} className="text-cv-faint group-hover:text-cv-brand-text shrink-0 transition-colors" aria-hidden="true" />
+              <ArrowRight size={15} className="text-gray-300 group-hover:text-purple-600 shrink-0 transition-colors" aria-hidden="true" />
             </button>
           );
         })}
@@ -52,12 +52,12 @@ export default function NewLetterModal({ isOpen, sources, onPick, onClose }) {
         <button
           type="button"
           onClick={() => pick(null)}
-          className="w-full text-left p-3 rounded-cv-card border-2 border-dashed border-cv-hairline hover:border-cv-brand hover:bg-cv-brand-soft transition-all flex items-center gap-3"
+          className="w-full text-left p-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-400 hover:bg-purple-50/40 transition-all flex items-center gap-3"
         >
-          <FileText size={16} className="text-cv-faint shrink-0" aria-hidden="true" />
+          <FileText size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
           <div>
-            <p className="text-sm font-bold text-cv-ink">Blank letter</p>
-            <p className="text-xs text-cv-faint">No name or contacts yet: fill them in under Personal Info.</p>
+            <p className="text-sm font-bold text-gray-800">Blank letter</p>
+            <p className="text-xs text-gray-400">No name or contacts yet: fill them in under Personal Info.</p>
           </div>
         </button>
       </div>

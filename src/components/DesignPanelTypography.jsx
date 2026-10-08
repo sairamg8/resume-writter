@@ -21,12 +21,12 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
   const custom = [...new Set([...customFonts, ...(value && !FONTS.some((f) => f.id === value) ? [value] : [])])];
   return (
     <div className="flex items-center justify-between gap-3">
-      <label htmlFor={id} className="text-xs text-gray-600">{label}</label>
+      <label htmlFor={id} className="text-xs text-cv-muted">{label}</label>
       <select
         id={id}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs pointer-coarse:text-base border border-cv-hairline rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-surface"
       >
         <option value="">Same as text</option>
         {FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -142,10 +142,10 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
               onClick={() => { updateSetting('font', font.id); updateSetting('customFont', ''); setCustomFontInput(''); setFontError(null); }}
               style={{ fontFamily: font.family }}
               title={font.title}
-              className={`px-1.5 py-1.5 text-xs rounded-md border transition-all text-left truncate ${
+              className={`px-1.5 py-1.5 text-xs rounded-cv-control border transition-all text-left truncate ${
                 activeFont === font.id
-                  ? 'bg-blue-50 border-blue-400 text-blue-700'
-                  : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  ? 'bg-cv-brand-soft border-cv-brand-soft-border text-cv-brand-text'
+                  : 'border-cv-hairline text-cv-ink hover:border-cv-field hover:bg-cv-ground'
               }`}
             >
               {font.label}
@@ -154,12 +154,12 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
         </div>
         {customFonts.length > 0 && (
           <div className="mb-2">
-            <p className="text-[11px] text-gray-400 mb-1">Your custom fonts</p>
+            <p className="text-[11px] text-cv-faint mb-1">Your custom fonts</p>
             <div className="flex flex-wrap gap-1">
               {customFonts.map(name => {
                 const active = ownFont === name;
                 return (
-                  <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-cv-brand-soft-border bg-cv-brand-soft text-cv-brand-text' : 'border-cv-hairline text-cv-muted hover:border-cv-field'}`}>
                     <button style={{ fontFamily: `'${name}', sans-serif` }} onClick={() => chooseCustomFont(name)} className="leading-none">{name}</button>
                     <button
                       onClick={() => {
@@ -168,7 +168,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
                         // A removed font leaves every place it was chosen: Font Family, Name Font, Heading Font.
                         for (const key of ['customFont', 'nameFont', 'headingFont']) if ((key === 'customFont' ? ownFont : settings[key]) === name) updateSetting(key, '');
                       }}
-                      className="text-gray-300 hover:text-red-400 leading-none ml-0.5"
+                      className="text-cv-faint hover:text-cv-bad leading-none ml-0.5"
                       title="Remove font"
                       aria-label={`Remove ${name}`}
                     >×</button>
@@ -178,7 +178,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             </div>
           </div>
         )}
-        <label htmlFor="custom-font-input" className="block text-[11px] text-gray-400 mb-1">Add a Google Font:</label>
+        <label htmlFor="custom-font-input" className="block text-[11px] text-cv-faint mb-1">Add a Google Font:</label>
         {/* min-w-0: the box narrows below its default 20 characters, so Add stays in the section in a
             panel dragged to 240-280 px — it was pushed past the edge and cut off (R4-DVIS-35). */}
         <div className="flex gap-1.5">
@@ -191,19 +191,19 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             placeholder="e.g. Nunito, Raleway, Poppins"
             aria-invalid={fontError ? 'true' : undefined}
             aria-describedby={fontError ? 'custom-font-error' : undefined}
-            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-cv-hairline rounded-cv-control focus:outline-none focus:ring-2 focus:ring-cv-brand"
           />
           <button
             onClick={() => { if (customFontInput.trim()) applyCustomFont(customFontInput.trim()); }}
             disabled={checking}
-            className="px-2.5 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60"
+            className="px-2.5 py-1.5 text-xs font-semibold bg-cv-brand text-white rounded-cv-control hover:bg-cv-brand-pressed disabled:opacity-60"
           >
             {checking ? 'Checking…' : 'Add'}
           </button>
         </div>
-        {fontError && <p id="custom-font-error" role="alert" className="mt-1 text-[11px] text-red-600">{fontError}</p>}
+        {fontError && <p id="custom-font-error" role="alert" className="mt-1 text-[11px] text-cv-bad">{fontError}</p>}
         {standIns.length > 0 && (
-          <p data-word-fonts className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+          <p data-word-fonts className="mt-2 text-[11px] text-cv-faint leading-relaxed">
             Word does not embed fonts: where they are not installed, {standIns.map((f) => `${f.font} shows as ${f.standIn.name}`).join(', ')}. The PDF prints them as chosen.
           </p>
         )}
@@ -250,7 +250,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082);
             nor does Mixed, whose short sections print as the main ones (R2-147-col). */}
         {headerTemplateId(template, settings) === 'sidebar' && columnsOf(settings) === 'two' && (
-          <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+          <p className="mt-2 text-[11px] text-cv-faint leading-relaxed">
             Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text), spaced by Title Spacing.
           </p>
         )}

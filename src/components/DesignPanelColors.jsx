@@ -71,15 +71,15 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
               key={p.color}
               onClick={() => updateSetting('accentColor', p.color)}
               title={p.label}
-              className={`h-8 rounded-md border-2 transition-all ${settings.accentColor === p.color ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'}`}
+              className={`h-8 rounded-cv-control border-2 transition-all ${settings.accentColor === p.color ? 'border-cv-ink scale-110' : 'border-transparent hover:scale-105'}`}
               style={{ backgroundColor: p.color }}
             />
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor={uid + 'accentColor'} className="text-xs text-gray-500">Custom:</label>
-          <ColorInput id={uid + 'accentColor'} aria-label="Custom accent color" value={swatch(printed.accentColor)} onCommit={v => updateSetting('accentColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-          <span className="text-xs text-gray-400 font-mono">{printed.accentColor}</span>
+          <label htmlFor={uid + 'accentColor'} className="text-xs text-cv-muted">Custom:</label>
+          <ColorInput id={uid + 'accentColor'} aria-label="Custom accent color" value={swatch(printed.accentColor)} onCommit={v => updateSetting('accentColor', v)} className="h-7 w-16 rounded border border-cv-hairline cursor-pointer p-0.5" />
+          <span className="text-xs text-cv-faint font-mono">{printed.accentColor}</span>
         </div>
       </div>
 
@@ -91,52 +91,52 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
               key={p.color}
               onClick={() => updateSetting('textColor', p.color)}
               title={p.label}
-              className={`h-8 flex-1 rounded-md border-2 transition-all ${textColor === p.color ? 'border-blue-500 scale-105' : 'border-transparent hover:scale-105'}`}
+              className={`h-8 flex-1 rounded-cv-control border-2 transition-all ${textColor === p.color ? 'border-cv-brand scale-105' : 'border-transparent hover:scale-105'}`}
               style={{ backgroundColor: p.color }}
             />
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor={uid + 'textColor'} className="text-xs text-gray-500">Custom:</label>
-          <ColorInput id={uid + 'textColor'} aria-label="Custom text color" value={textColor} onCommit={v => updateSetting('textColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-          <span className="text-xs text-gray-400 font-mono">{textColor}</span>
+          <label htmlFor={uid + 'textColor'} className="text-xs text-cv-muted">Custom:</label>
+          <ColorInput id={uid + 'textColor'} aria-label="Custom text color" value={textColor} onCommit={v => updateSetting('textColor', v)} className="h-7 w-16 rounded border border-cv-hairline cursor-pointer p-0.5" />
+          <span className="text-xs text-cv-faint font-mono">{textColor}</span>
         </div>
       </div>
 
       {onBand && (
-        <div className="pt-1 border-t border-gray-100">
+        <div className="pt-1 border-t border-cv-hairline">
           <Label>Header Text Color</Label>
-          <p className="text-[10px] text-gray-400 mb-2">
+          <p className="text-[10px] text-cv-faint mb-2">
             {header === 'sidebar' ? 'Color for name text in the sidebar header. One too faint on the Sidebar Background prints a readable tint of it.' : 'Color for name & text in the colored header banner. One too faint on the Accent Color prints a readable tint of it.'}
           </p>
           <div className="flex items-center gap-2">
-            <label htmlFor={uid + 'headerTextColor'} className="text-xs text-gray-500">Color:</label>
-            <ColorInput id={uid + 'headerTextColor'} aria-label="Header text color" value={settings.headerTextColor || '#ffffff'} onCommit={v => updateSetting('headerTextColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-            <span className="text-xs text-gray-400 font-mono">{settings.headerTextColor || '#ffffff'}</span>
+            <label htmlFor={uid + 'headerTextColor'} className="text-xs text-cv-muted">Color:</label>
+            <ColorInput id={uid + 'headerTextColor'} aria-label="Header text color" value={settings.headerTextColor || '#ffffff'} onCommit={v => updateSetting('headerTextColor', v)} className="h-7 w-16 rounded border border-cv-hairline cursor-pointer p-0.5" />
+            <span className="text-xs text-cv-faint font-mono">{settings.headerTextColor || '#ffffff'}</span>
             {settings.headerTextColor && settings.headerTextColor !== '#ffffff' && (
-              <button onClick={() => updateSetting('headerTextColor', '#ffffff')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to white">↺</button>
+              <button onClick={() => updateSetting('headerTextColor', '#ffffff')} className="text-[11px] text-cv-faint hover:text-cv-muted" title="Reset to white">↺</button>
             )}
           </div>
         </div>
       )}
 
-      <div className="pt-1 border-t border-gray-100 space-y-3">
+      <div className="pt-1 border-t border-cv-hairline space-y-3">
         <Label>Name &amp; Title Colors</Label>
         {[
           { key: 'nameColor',     label: 'Name color',     placeholder: 'Template default' },
           { key: 'jobTitleColor', label: 'Job title color', placeholder: 'Template default' },
         ].map(({ key, label, placeholder }) => (
           <div key={key} className="flex items-center justify-between gap-2">
-            <span className="text-xs text-gray-600">{label}</span>
+            <span className="text-xs text-cv-muted">{label}</span>
             {/* min-w-0: without it this group cannot narrow below the full "Template default", so in a panel
                 dragged to 240 px the row ran past the section's edge and was cut mid-letter. Now the value
                 text gives way with an ellipsis; the swatch and ↺ keep their size (shrink-0). */}
             <div className="flex items-center gap-2 min-w-0">
-              <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 shrink-0 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
+              <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 shrink-0 rounded border border-cv-hairline cursor-pointer p-0.5" title={label} aria-label={label} />
               {/* Room for "Template default", what every résumé starts with: a fixed w-16 cut it to "Templat…" (R4-DVIS-34). */}
-              <span className="text-[11px] text-gray-400 font-mono max-w-28 truncate">{settings[key] || placeholder}</span>
+              <span className="text-[11px] text-cv-faint font-mono max-w-28 truncate">{settings[key] || placeholder}</span>
               {settings[key] && (
-                <button onClick={() => updateSetting(key, '')} className="shrink-0 text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>
+                <button onClick={() => updateSetting(key, '')} className="shrink-0 text-[11px] text-cv-faint hover:text-cv-muted" title="Reset to template default">↺</button>
               )}
             </div>
           </div>
@@ -144,7 +144,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
       </div>
 
       {header === 'sidebar' && (
-        <div className="pt-1 border-t border-gray-100">
+        <div className="pt-1 border-t border-cv-hairline">
           <Label>Sidebar Background</Label>
           <div className="grid grid-cols-4 gap-2 mb-2">
             {SIDEBAR_BG_PRESETS.map(p => (
@@ -152,17 +152,17 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
                 key={p.color}
                 onClick={() => updateSetting('sidebarBg', p.color)}
                 title={p.label}
-                className={`h-8 rounded-md border-2 transition-all ${(settings.sidebarBg || '#1e293b') === p.color ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'}`}
+                className={`h-8 rounded-cv-control border-2 transition-all ${(settings.sidebarBg || '#1e293b') === p.color ? 'border-cv-ink scale-110' : 'border-transparent hover:scale-105'}`}
                 style={{ backgroundColor: p.color }}
               />
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <label htmlFor={uid + 'sidebarBg'} className="text-xs text-gray-500">Custom:</label>
-            <ColorInput id={uid + 'sidebarBg'} aria-label="Custom sidebar background" value={settings.sidebarBg || '#1e293b'} onCommit={v => updateSetting('sidebarBg', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-            <span className="text-xs text-gray-400 font-mono">{settings.sidebarBg || '#1e293b'}</span>
+            <label htmlFor={uid + 'sidebarBg'} className="text-xs text-cv-muted">Custom:</label>
+            <ColorInput id={uid + 'sidebarBg'} aria-label="Custom sidebar background" value={settings.sidebarBg || '#1e293b'} onCommit={v => updateSetting('sidebarBg', v)} className="h-7 w-16 rounded border border-cv-hairline cursor-pointer p-0.5" />
+            <span className="text-xs text-cv-faint font-mono">{settings.sidebarBg || '#1e293b'}</span>
             {settings.sidebarBg && settings.sidebarBg !== '#1e293b' && (
-              <button onClick={() => updateSetting('sidebarBg', '#1e293b')} className="text-[11px] text-gray-400 hover:text-gray-600">↺</button>
+              <button onClick={() => updateSetting('sidebarBg', '#1e293b')} className="text-[11px] text-cv-faint hover:text-cv-muted">↺</button>
             )}
           </div>
         </div>

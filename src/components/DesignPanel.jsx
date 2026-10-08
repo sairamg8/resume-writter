@@ -220,7 +220,7 @@ export default function DesignPanel({
             type="button"
             data-testid="browse-templates"
             onClick={onBrowseTemplates}
-            className="w-full mb-2 px-3 py-2 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+            className="w-full mb-2 px-3 py-2 text-xs font-semibold rounded-cv-control border border-cv-brand-soft-border bg-cv-brand-soft text-cv-brand-text hover:bg-cv-brand-soft-border"
           >
             Browse templates ({cards.length}) · pictures and filters
           </button>
@@ -229,15 +229,15 @@ export default function DesignPanel({
           {cards.filter((c) => !c.preset).map(card)}
           {/* The designs (R2-138): a named look over a template the app draws — its engine and a bundle
               of design settings. Picked, it goes through the store as a template switch does. */}
-          <p className="pt-2 text-[11px] font-semibold text-gray-500">Designs · a named look over a template</p>
+          <p className="pt-2 text-[11px] font-semibold text-cv-muted">Designs · a named look over a template</p>
           {cards.filter((c) => c.preset && !c.own).map(card)}
-          <p className="text-[10px] text-gray-400">A design brings its font, colours and heading style too; picking its template plainly takes back what you kept of them, and Reset returns to the design.</p>
+          <p className="text-[10px] text-cv-faint">A design brings its font, colours and heading style too; picking its template plainly takes back what you kept of them, and Reset returns to the design.</p>
           {(saveDesign || designs.length > 0) && (
             <SavedDesigns cards={cards.filter((c) => c.own)} isOn={selected} onPick={pick} saveDesign={saveDesign} deleteDesign={deleteDesign} engine={current} />
           )}
         </div>
         {current === 'sidebar' && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-cv-hairline">
             <Label>Layout</Label>
             <SegmentControl
               options={[
@@ -247,7 +247,7 @@ export default function DesignPanel({
               value={!!settings.sidebarSingleColumn}
               onChange={v => updateSetting('sidebarSingleColumn', v)}
             />
-            <p className="text-[10px] text-gray-400 mt-2">
+            <p className="text-[10px] text-cv-faint mt-2">
               Single column reads cleanly in every applicant-tracking system. The two-column look can interleave when a portal parses it.
             </p>
             {/* The two columns' own choices (R2-147-col): none in Single · ATS-safe, Classic's page. */}
@@ -255,23 +255,23 @@ export default function DesignPanel({
           </div>
         )}
         {current === 'academic' && (
-          <p className="text-[10px] text-gray-400 mt-2">
+          <p className="text-[10px] text-cv-faint mt-2">
             Academic brings its own type and spacing: a serif, a centred header, section titles at the body&apos;s size and tighter Spacing. Every one of them can be changed below.
           </p>
         )}
         {current === 'compact' && (
-          <p className="text-[10px] text-gray-400 mt-2">
+          <p className="text-[10px] text-cv-faint mt-2">
             Compact brings its own type and spacing: 9 pt text, narrow margins, the job title beside the name and tighter Spacing, and lays skills, certifications, awards, languages and references out two to a row (each section&apos;s Grids). Every one of them can be changed.
           </p>
         )}
-        <p className="text-[10px] text-gray-400 mt-2">{templateSwitchNote()}</p>
+        <p className="text-[10px] text-cv-faint mt-2">{templateSwitchNote()}</p>
         <LetterheadNote card={onCard} />
       </DesignSection>
 
       <ColorsSection resume={resume} settings={settings} updateSetting={updateSetting} onReset={() => resetSection(COLOR_KEYS)} />
 
       <DesignSection title="Contact icons" defaultOpen onReset={() => resetSection(ICON_KEYS)}>
-        <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">
+        <p className="text-[11px] text-cv-faint mb-2 leading-relaxed">
           {contactIconHint(current, settings, resume?.coverLetter)}
         </p>
         <div className="space-y-2">
@@ -288,18 +288,18 @@ export default function DesignPanel({
                   // style too, and the one a switch to Classic brings back: left alone (R9-4).
                   if (!drawsIcons) updateSetting('contactStyle', 'icon');
                 }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
-                  active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                className={`w-full text-left px-3 py-2.5 rounded-cv-control border transition-all ${
+                  active ? 'border-cv-brand bg-cv-brand-soft' : 'border-cv-hairline hover:border-cv-field hover:bg-cv-ground'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div>
-                    <p className={`text-sm font-medium ${active ? 'text-blue-700' : 'text-gray-700'}`}>{opt.label}</p>
-                    <p className="text-[10px] text-gray-400">{opt.desc}</p>
+                    <p className={`text-sm font-medium ${active ? 'text-cv-brand-text' : 'text-cv-ink'}`}>{opt.label}</p>
+                    <p className="text-[10px] text-cv-faint">{opt.desc}</p>
                   </div>
-                  {active && <span className="text-[10px] font-semibold text-blue-600">Selected</span>}
+                  {active && <span className="text-[10px] font-semibold text-cv-brand-text">Selected</span>}
                 </div>
-                <div className={`flex items-center gap-2.5 ${active ? 'text-blue-700' : 'text-gray-600'}`}>
+                <div className={`flex items-center gap-2.5 ${active ? 'text-cv-brand-text' : 'text-cv-muted'}`}>
                   {CONTACT_FIELDS.map(({ key, label }) => (
                     <span key={key} className="inline-flex w-5 h-5 items-center justify-center" title={label}>
                       <ContactIcon field={key} settings={previewSettings} size={16} />
@@ -310,21 +310,21 @@ export default function DesignPanel({
             );
           })}
         </div>
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
-          <span className="text-xs text-gray-500">Icon size</span>
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-cv-hairline">
+          <span className="text-xs text-cv-muted">Icon size</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => updateSetting('iconSize', Math.max(ICON_SIZE.min, (settings.iconSize ?? 11) - 1))}
-              className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
+              className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none"
             >−</button>
-            <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">
+            <span className="w-10 text-center text-xs font-medium text-cv-ink border border-cv-hairline rounded h-6 flex items-center justify-center">
               {settings.iconSize ?? 11}px
             </span>
             <button
               type="button"
               onClick={() => updateSetting('iconSize', Math.min(ICON_SIZE.max, (settings.iconSize ?? 11) + 1))}
-              className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
+              className="w-6 h-6 flex items-center justify-center border border-cv-hairline rounded text-cv-muted hover:bg-cv-sunken text-base leading-none"
             >+</button>
           </div>
         </div>
@@ -335,9 +335,9 @@ export default function DesignPanel({
       <DesignSection title="Spacing" onReset={() => resetSection(SPACING_KEYS)}>
         <div className="space-y-3">
           {/* Smart Page Fit Presets */}
-          <div className="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-blue-900">
-              <span className="flex items-center gap-1.5"><Sparkles size={12} className="text-blue-600" /> Smart Page Fit Presets</span>
+          <div className="p-2.5 bg-cv-brand-soft border border-cv-brand-soft-border rounded-cv-card space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-cv-brand-text">
+              <span className="flex items-center gap-1.5"><Sparkles size={12} className="text-cv-brand-text" /> Smart Page Fit Presets</span>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
               <button
@@ -345,7 +345,7 @@ export default function DesignPanel({
                 onClick={fitToOnePage}
                 disabled={fitting}
                 title={`Fit more onto 1 page by tightening margins, gaps and line heights — and, if that is not enough, reducing the text size (down to ${MIN_FIT_BASE_PT} pt)`}
-                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-cv-control bg-cv-surface border border-cv-brand-soft-border text-cv-brand-text hover:bg-cv-brand-soft-border shadow-2xs transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
                 {fitting ? 'Fitting…' : '📄 1-Page Fit'}
               </button>
@@ -353,7 +353,7 @@ export default function DesignPanel({
                 type="button"
                 onClick={() => applySpacing(SPACING_PRESETS.balanced)}
                 title="Standard ATS-optimized balanced spacing"
-                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-cv-control bg-cv-surface border border-cv-hairline text-cv-ink hover:bg-cv-sunken shadow-2xs transition-all text-center cursor-pointer"
               >
                 ⚖️ Balanced
               </button>
@@ -361,26 +361,26 @@ export default function DesignPanel({
                 type="button"
                 onClick={() => applySpacing(SPACING_PRESETS.spacious)}
                 title="Generous spacing for 2-page or senior resumes"
-                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-cv-control bg-cv-surface border border-cv-hairline text-cv-ink hover:bg-cv-sunken shadow-2xs transition-all text-center cursor-pointer"
               >
                 📑 Spacious
               </button>
             </div>
-            {fitNotice && <p className="text-[11px] text-amber-800">{fitNotice}</p>}
+            {fitNotice && <p className="text-[11px] text-cv-warn">{fitNotice}</p>}
           </div>
 
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.1} />
-          <div className="h-px bg-gray-100" />
+          <div className="h-px bg-cv-sunken" />
           {/* The paper the résumé and its cover letter print on (R2-136): the PDF, the preview and both
               Word files read it (pageSizeOf). None stored reads as A4, the page every résumé printed on
               before, so A4 shows selected for it. */}
           <div role="group" aria-labelledby={pageSizeLabelId} className="space-y-1.5">
-            <p id={pageSizeLabelId} className="text-xs text-gray-600">Page size</p>
+            <p id={pageSizeLabelId} className="text-xs text-cv-muted">Page size</p>
             <SegmentControl options={PAGE_SIZE_OPTIONS} value={pageSizeOf(settings)} onChange={v => updateSetting('pageSize', v)} />
           </div>
           <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
-          <div className="h-px bg-gray-100" />
+          <div className="h-px bg-cv-sunken" />
           <NumberRow label="Between Sections" value={settings.sectionGap ?? 16} onChange={v => updateSetting('sectionGap', v)} min={SECTION_GAP_PX.min} max={SECTION_GAP_PX.max} step={1} unit="px" />
           <NumberRow label="Between Items" value={settings.itemGap ?? ATS_DEFAULTS.itemGap} onChange={v => updateSetting('itemGap', v)} min={ITEM_GAP_PX.min} max={ITEM_GAP_PX.max} step={1} unit="px" />
         </div>
@@ -399,11 +399,11 @@ export default function DesignPanel({
       {/* The buttons go under the text when the row cannot hold both — in a panel dragged under about
           320 px Yes, Reset and Cancel ran out of the box and were cut off (R4-DVIS-35). The text takes
           the room left (flex-1), so at the usual widths they stay beside it as before. */}
-      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+      <div className="p-3 bg-cv-warn-soft border border-cv-warn rounded-cv-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex-1 min-w-24">
-            <p className="text-xs font-semibold text-amber-800">Reset Design Settings</p>
-            <p className="text-[10px] text-amber-600 mt-0.5">
+            <p className="text-xs font-semibold text-cv-warn">Reset Design Settings</p>
+            <p className="text-[10px] text-cv-warn mt-0.5">
               {confirmReset
                 ? 'This will reset all design settings to this template\'s ATS-safe defaults. Resume content and uploaded contact icons are kept.'
                 : 'Resets font, colors, spacing, and layout settings to this template\'s ATS-safe defaults.'}
@@ -411,11 +411,11 @@ export default function DesignPanel({
           </div>
           {confirmReset ? (
             <div className="flex gap-1.5 shrink-0">
-              <button onClick={() => { resetSettings?.(); setConfirmReset(false); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">Yes, Reset</button>
-              <button onClick={() => setConfirmReset(false)} className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+              <button onClick={() => { resetSettings?.(); setConfirmReset(false); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-cv-bad hover:bg-cv-bad rounded-cv-control transition-colors">Yes, Reset</button>
+              <button onClick={() => setConfirmReset(false)} className="px-3 py-1.5 text-xs font-semibold text-cv-muted bg-cv-sunken hover:bg-cv-stage rounded-cv-control transition-colors">Cancel</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmReset(true)} className="px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg transition-colors shrink-0">Reset</button>
+            <button onClick={() => setConfirmReset(true)} className="px-3 py-1.5 text-xs font-semibold text-cv-warn bg-cv-warn-soft hover:bg-cv-warn-soft border border-cv-warn rounded-cv-control transition-colors shrink-0">Reset</button>
           )}
         </div>
       </div>

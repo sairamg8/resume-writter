@@ -25,9 +25,9 @@ async function leads(template, settings, sectionSettings = {}) {
   const html = renderToString(createElement(SectionCustomizer, {
     section: r.sections[0], template: r.template, settings: r.settings, updateSectionSettings: () => {},
   }));
-  // SegmentRow marks the chosen option bg-cv-brand; the Order row's options are "Co. / Role" and "Role / Co.".
+  // SegmentRow marks the chosen option bg-blue-600; the Order row's options are "Co. / Role" and "Role / Co.".
   const chosen = [...html.matchAll(/<button[^>]*class="([^"]*)"[^>]*>(Co\. \/ Role|Role \/ Co\.)<\/button>/g)]
-    .filter(([, cls]) => /(^|\s)bg-cv-brand(\s|$)/.test(cls)).map(([, , label]) => label);
+    .filter(([, cls]) => cls.includes('bg-blue-600')).map(([, , label]) => label);
   assert.equal(chosen.length, 1, `${template}: exactly one Order option is highlighted (${chosen})`);
   const editor = chosen[0] === 'Role / Co.' ? 'role' : 'company';
   return { pdf, word, editor };

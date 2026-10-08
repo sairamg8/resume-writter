@@ -9,7 +9,7 @@ import { InputField, DateField, FieldRow, ItemCard } from '@/components/SectionE
  */
 function CurrentBox({ item, onUpdate, label }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-cv-muted cursor-pointer">
+    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
       <input type="checkbox" checked={item.current || false} onChange={e => onUpdate({ ...item, current: e.target.checked })} className="rounded" />
       {label}
     </label>

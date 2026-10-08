@@ -156,7 +156,7 @@ describe('R2-110: Grids stored as text or out of range', () => {
     const html = renderToString(createElement(SectionCustomizer, { section: r.sections[0], template: r.template, updateSectionSettings: () => {}, settings: r.settings }));
     const grids = html.slice(html.indexOf('>Grids<'));
     const active = [...grids.slice(0, grids.indexOf('</div></div>') + 12).matchAll(/<button[^>]*class="([^"]*)"[^>]*>(\d)<\/button>/g)]
-      .filter(([, cls]) => /(^|\s)bg-cv-brand(\s|$)/.test(cls)).map(([, , n]) => n);
+      .filter(([, cls]) => cls.includes('bg-blue-600')).map(([, , n]) => n);
     assert.deepEqual(active, ['2']);
     const ys = async (x) => {
       const pages = await read(await render(x));
