@@ -59,9 +59,11 @@ const PAGES = {
     cy.contains('button', 'Header Customization').click();
     cy.contains('button', /^Photo/).click();
     cy.get(ENTRY_HEADER).click({ multiple: true });
+    // The Add Section picker first, then Section Options: the options open in a popover that an outside press
+    // (the Add Section button) closes, so the picker is opened before it and both are open for the scan.
+    cy.contains('button', 'Add Section').click();
     cy.get('input[value="Professional Experience"]').parent().find('button[title="Section options"]').click();
     cy.contains('button', 'Customize layout').click();
-    cy.contains('button', 'Add Section').click();
     cy.contains('p', 'Section Options').should('exist');
     // Opened: entry fields, month pickers, rich text, header steppers, the options' own fields.
     ['Institution', 'Start Date', 'Description', 'Before', 'Company'].forEach((l) => cy.contains('label', l).should('exist'));
