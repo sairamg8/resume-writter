@@ -302,7 +302,15 @@ jobs:
       - name: Playwright
         env:
           SPECS: ${{ (inputs.playwright != 'all' && inputs.playwright != '') && inputs.playwright || '' }}
-        run: ./node_modules/.bin/playwright test $SPECS --shard=${{ matrix.shard }}/3 --pass-with-no-tests
+        run: |
+          # --pass-with-no-tests is for a shard that holds none of the named specs. It would also pass a name
+          # that matches no spec at all (a typo): all three shards empty, green, nothing run. Each name must
+          # match a spec file (Playwright reads it as a pattern on the path; ":12" line suffixes are dropped).
+          for name in $SPECS; do
+            pattern=${name%%:[0-9]*}
+            ls tests/playwright/*.spec.* | grep -qE -- "$pattern" || { echo "::error::no Playwright spec matches '$name'"; exit 1; }
+          done
+          ./node_modules/.bin/playwright test $SPECS --shard=${{ matrix.shard }}/3 --pass-with-no-tests
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
