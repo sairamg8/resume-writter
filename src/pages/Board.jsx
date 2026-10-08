@@ -17,6 +17,7 @@ import { boardCollision } from '@/utils/boardDnd';
 import { boardLists, boardSprint, columnDeletion, columnRecategorization, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
 import { filterIssues, liveFilters, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
+import { countLabel } from '@/utils/uiFormat';
 import { COLUMN_CATEGORIES } from '@/constants/boards';
 
 // Constants, not literals in the render: a new options object each time gives DndContext new sensors,
@@ -274,7 +275,7 @@ export function Board() {
           <span>
             {sprint && <><span className="font-semibold text-cv-ink">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}{sprint.goal && <> · {sprint.goal}</>}. </>}
             {!sprint && board.mode === 'scrum' && <>No sprint is active, so every issue is shown. <Link className="font-medium text-cv-brand-text hover:underline" to={`/boards/${encodeURIComponent(board.id)}/backlog`}>Plan one in the backlog</Link>. </>}
-            {hiddenDone > 0 && <>{hiddenDone} done issue{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
+            {hiddenDone > 0 && <>{hiddenDone} done issue{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {countLabel(board.hideDoneAfterDays, 'day')} ago.</>}
           </span>
         </p>
       )}

@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { MoreHorizontal } from 'lucide-react';
 import { Button, Dialog, IconButton, Menu, TextField, cx } from '@/components/ui';
 import { COLUMN_CATEGORIES } from '@/constants/boards';
+import { countLabel } from '@/utils/uiFormat';
 import { InlineCreate } from './InlineCreate';
 
 /**
@@ -32,7 +33,7 @@ export function BoardColumn({
           <h2 className="min-w-0 truncate text-[12px] font-semibold uppercase tracking-[0.03em] text-cv-muted">{list.title || 'Untitled'}</h2>
           <span
             className={cx('shrink-0 text-[12px] font-semibold', list.wip === 'over' ? 'rounded-[3px] bg-[#ffd5d2] px-1 text-[#ae2e24]' : 'text-cv-faint')}
-            title={list.limit ? `${list.cards.length} issues, limit ${list.limit}` : `${list.cards.length} issues`}
+            title={list.limit ? `${countLabel(list.cards.length, 'issue')}, limit ${list.limit}` : countLabel(list.cards.length, 'issue')}
           >
             {list.limit ? `${list.cards.length}/${list.limit}` : list.cards.length}
           </span>

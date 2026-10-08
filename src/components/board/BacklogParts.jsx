@@ -8,7 +8,7 @@ import { StatusMenu } from '@/components/tracker/Lozenge';
 import { DEFAULT_SPRINT_DAYS } from '@/constants/boards';
 import { addDays, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
 import { epicProgress, epicsOf, pointsByCategory } from '@/utils/boardQuery';
-import { formatShortDay } from '@/utils/uiFormat';
+import { countLabel, formatShortDay } from '@/utils/uiFormat';
 import { openOnKey } from '@/utils/cardKeys';
 import { EpicLozenge } from './IssueFields';
 import { InlineCreate } from './InlineCreate';
@@ -114,7 +114,7 @@ export function EpicPanel({ board, selected = [], onToggle, onOpen, onCreate, on
                 <button type="button" onClick={() => onOpen(issueKey(board, e))} className="shrink-0 text-[12px] text-cv-muted hover:text-cv-brand-text hover:underline">{issueKey(board, e)}</button>
               </div>
               <ProgressBar className="mt-2" value={p.done} max={Math.max(p.total, 1)} autoTone label={`${e.title} progress`} valueText={`${p.done} of ${p.total} done`} />
-              <p className="mt-1 text-[11px] text-cv-faint">{p.done} of {p.total} issues done{p.points ? ` · ${p.donePoints}/${p.points} points` : ''}</p>
+              <p className="mt-1 text-[11px] text-cv-faint">{p.done} of {countLabel(p.total, 'issue')} done{p.points ? ` · ${p.donePoints}/${p.points} points` : ''}</p>
             </li>
           );
         })}
