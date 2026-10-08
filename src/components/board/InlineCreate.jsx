@@ -45,9 +45,10 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
   return (
     <div
       className={cx('flex flex-col gap-2 rounded-cv-control border-2 border-cv-brand bg-cv-surface p-2', variant === 'row' && 'sm:flex-row sm:items-center', className)}
-      // Leaving the box with nothing typed puts the composer away. The type picker's menu is a
+      // Leaving the box with nothing typed puts the composer away. The type picker menu is a
       // portal outside this box: focus going into it (open, or an arrow to the next type) is
-      // still the composer, or choosing a type before typing a summary closed it.
+      // still the composer, or choosing a type before typing a summary closed it. (No apostrophe
+      // in this comment: tests/unit/cursor-pointer.unit.mjs reads quotes in a tag as text.)
       onBlur={(e) => {
         const to = e.relatedTarget;
         if (e.currentTarget.contains(to) || to?.closest?.('[data-menu-root]')) return;
