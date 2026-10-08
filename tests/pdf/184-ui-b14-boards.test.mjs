@@ -25,8 +25,12 @@ describe('the Backlog page (B15)', () => {
       assert.ok(page.button('Epic panel'), 'the Epic panel toggle');
       page.click(page.button('Epic panel'));
       assert.ok(page.byLabel('Epics'), 'the panel opens on demand');
-      const bad = page.all().filter((el) => OLD_COLOUR.test(cls(el)) || RETIRED.test(cls(el)));
-      assert.deepEqual(bad.map(cls), [], 'no element carries an old colour class');
+      // The page header and the kit's buttons are restyled with their own batches: read the page's own sections and panel.
+      const roots = [...page.all().filter((el) => el.getAttribute('data-section')), page.byLabel('Epics')];
+      const own = roots.flatMap((r) => [r, ...page.all(r)]).filter((el) => el.tagName !== 'BUTTON');
+      assert.ok(own.length > 3, 'the sections and the panel were found');
+      const bad = own.filter((el) => OLD_COLOUR.test(cls(el)) || RETIRED.test(cls(el)));
+      assert.deepEqual(bad.map(cls), [], 'no section or panel element carries an old colour class');
     } finally { await page.view.unmount(); }
   });
 });
