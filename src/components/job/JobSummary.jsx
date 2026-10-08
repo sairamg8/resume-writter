@@ -59,7 +59,10 @@ export function JobSummary({ jobs, onOpen }) {
   const s = jobStats(jobs);
   const funnel = funnelCounts(jobs);
   const top = Math.max(1, funnel[0]?.count ?? 0);
-  const soon = jobs.filter((j) => isDeadlineUpcoming(j)).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6);
+  const ahead = jobs.filter((j) => isDeadlineUpcoming(j)).sort((a, b) => a.deadline.localeCompare(b.deadline));
+  const soon = ahead.slice(0, 6);
+  // The rest are counted, as the follow-ups' are: a seventh deadline was hidden without a word.
+  const moreAhead = ahead.length - soon.length;
   // The most overdue first, as the deadlines are by date: in board order the six shown were
   // whichever sat first, and the rest were hidden without a word (R5-HUNT1).
   const due = jobs.filter((j) => isFollowUpDue(j)).sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
@@ -101,7 +104,12 @@ export function JobSummary({ jobs, onOpen }) {
           {parts.length ? <Donut parts={parts} caption="jobs" /> : <p className="text-sm text-ink-subtlest">No jobs yet.</p>}
         </Card>
         <Card title="Upcoming deadlines" description="Open applications with a deadline ahead.">
-          {soon.length ? <ul className="-mx-2 flex flex-col">{soon.map((j) => <JobRow key={j.id} job={j} date={j.deadline} onOpen={onOpen} />)}</ul> : <p className="text-sm text-ink-subtlest">No deadlines ahead.</p>}
+          {soon.length ? (
+            <>
+              <ul className="-mx-2 flex flex-col">{soon.map((j) => <JobRow key={j.id} job={j} date={j.deadline} onOpen={onOpen} />)}</ul>
+              {moreAhead > 0 && <p className="text-[12px] text-ink-subtlest">+{moreAhead} more {moreAhead === 1 ? 'deadline' : 'deadlines'} ahead</p>}
+            </>
+          ) : <p className="text-sm text-ink-subtlest">No deadlines ahead.</p>}
         </Card>
         <Card title="Follow-ups due" description="Open applications whose follow-up date has come.">
           {followUps.length ? (

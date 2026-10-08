@@ -41,6 +41,19 @@ export function checkData(data) {
   return '';
 }
 
+/**
+ * `f` as it applies to `rows`: a function, level or stack that none of the rows has is dropped. The
+ * selects list only the values of the rows shown, so one chosen in another country matched nothing, drew
+ * as "Any …" (a select with no matching option shows its first), and the page said "0 roles" under it.
+ */
+export function filtersFor(rows, f) {
+  const out = { ...f };
+  for (const [key, field] of [['fn', ROW.fn], ['level', ROW.level], ['track', ROW.track]]) {
+    if (f[key] && !rows.some((r) => r[field] === f[key])) out[key] = '';
+  }
+  return out;
+}
+
 /** Rows that pass the filters. `q` matches the title, company and location, every word of it. */
 export function filterRows(rows, companies, { fn = '', level = '', track = '', q = '' } = {}) {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);

@@ -7,7 +7,7 @@ import AuthBar from '@/components/AuthBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { Button, Select } from '@/components/ui';
 import { controlClass } from '@/components/ui/Field.jsx';
-import { ROW, FUNCTION_LABELS, checkData, filterRows, distinct, roleHref } from '@/utils/jobMapData';
+import { ROW, FUNCTION_LABELS, checkData, filterRows, filtersFor, distinct, roleHref } from '@/utils/jobMapData';
 
 /**
  * The account menu's Job Map item (AuthBar loads this page's code only when the menu opens, so the page and the item
@@ -54,7 +54,8 @@ export default function JobMap({ auth, sync }) {
   }, [meta, country]);
 
   const companies = meta?.companies ?? [];
-  const shown = useMemo(() => filterRows(rows, companies, f), [rows, companies, f]);
+  const active = useMemo(() => filtersFor(rows, f), [rows, f]); // what the selects show, and what filters
+  const shown = useMemo(() => filterRows(rows, companies, active), [rows, companies, active]);
   if (auth.authLoading) return <div className={LOADING}>Loading…</div>;
   if (!auth.user || allowed === false) return <Navigate to="/" replace />;
   if (allowed === null) return <div className={LOADING}>Loading…</div>;
@@ -95,15 +96,15 @@ export default function JobMap({ auth, sync }) {
               <Select size="sm" value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country" className="min-w-0">
                 {countries.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
               </Select>
-              <Select size="sm" value={f.fn} onChange={set('fn')} aria-label="Function" className="min-w-0">
+              <Select size="sm" value={active.fn} onChange={set('fn')} aria-label="Function" className="min-w-0">
                 <option value="">Any function</option>
                 {distinct(rows, ROW.fn).map((v) => <option key={v} value={v}>{FUNCTION_LABELS[v] ?? v}</option>)}
               </Select>
-              <Select size="sm" value={f.level} onChange={set('level')} aria-label="Level" className="min-w-0">
+              <Select size="sm" value={active.level} onChange={set('level')} aria-label="Level" className="min-w-0">
                 <option value="">Any level</option>
                 {distinct(rows, ROW.level).map((v) => <option key={v} value={v}>{v}</option>)}
               </Select>
-              <Select size="sm" value={f.track} onChange={set('track')} aria-label="Stack" className="min-w-0">
+              <Select size="sm" value={active.track} onChange={set('track')} aria-label="Stack" className="min-w-0">
                 <option value="">Any stack</option>
                 {distinct(rows, ROW.track).map((v) => <option key={v} value={v}>{v}</option>)}
               </Select>
