@@ -271,8 +271,12 @@ body {
   body:has([data-testid="editor-pill"]) [aria-label="Notifications"] {
     bottom: 5rem;
   }
-  /* The workspace's phone tab bar (BottomTabBar: 72 px, md:hidden, so the same complement): a notice (an Undo after a
-     delete, "marked done") covered its tabs. */
+}
+
+/* The workspace's phone tab bar (BottomTabBar: 72 px, md:hidden): a notice (an Undo after a delete, "marked done") covered its
+   tabs. In rem, the exact complement of Tailwind's md: with a larger text size in the browser md is wider than 768 px, and the tab
+   bar is on screen up to there. */
+@media not all and (min-width: 48rem) {
   body:has([data-testid="bottom-tab-bar"]) [aria-label="Notifications"] {
     bottom: 5rem;
   }

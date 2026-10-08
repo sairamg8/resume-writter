@@ -60,8 +60,10 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   const entry = `${location.key} ${location.pathname}`;
   const [drawerEntry, setDrawerEntry] = useState(entry);
   // md and up the drawer is only hidden by CSS: left open, it stayed a modal that turned every
-  // shortcut off (useHotkeys) until the next page. Widening the window past it closes it.
-  const wide = useMediaQuery('(min-width: 768px)');
+  // shortcut off (useHotkeys) until the next page. Widening the window past it closes it. In rem, as
+  // Tailwind's md is: with a larger text size in the browser md is wider than 768 px, and a px query
+  // closed the drawer the moment the menu button (shown below md) opened it.
+  const wide = useMediaQuery('(min-width: 48rem)');
   if (drawerEntry !== entry || (wide && drawerOpen)) {
     setDrawerEntry(entry);
     setDrawerOpen(false);

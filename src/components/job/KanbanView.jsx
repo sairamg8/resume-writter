@@ -225,7 +225,9 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
       }}
       onDragCancel={() => setActiveId(null)}
     >
-      <div ref={containerRef} className="flex snap-x snap-mandatory items-start gap-2 overflow-x-auto pb-4 md:snap-none">
+      {/* On a phone each swipe settles on one column. Snapping is off while a card is dragged: dnd-kit's auto-scroll
+          toward a far column moves a few pixels a frame, and a mandatory snap pulled each step back to the column it started on. */}
+      <div ref={containerRef} className={`flex items-start gap-2 overflow-x-auto pb-4${activeId === null ? ' snap-x snap-mandatory md:snap-none' : ''}`}>
         {JOB_STATUSES.map(status => (
           <KanbanColumn
             key={status.id}

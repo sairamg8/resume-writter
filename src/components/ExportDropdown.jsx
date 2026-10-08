@@ -52,7 +52,7 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
       </button>
 
       {open && (
-        <div ref={menuRef} style={menuStyle} className={`${letter ? 'w-72' : 'w-52'} overflow-y-auto bg-cv-surface border border-cv-hairline rounded-cv-control shadow-lg z-20 py-1`}>
+        <div ref={menuRef} style={menuStyle} className={`${letter ? 'w-72' : 'w-52'} overflow-y-auto overscroll-contain bg-cv-surface border border-cv-hairline rounded-cv-control shadow-lg z-20 py-1`}>
           <button
             onClick={() => { onExportPDF(); setOpen(false); }}
             disabled={!!exporting}

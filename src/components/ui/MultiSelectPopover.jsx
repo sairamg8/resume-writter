@@ -132,7 +132,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
           className="h-8 w-full rounded-md border border-cv-hairline bg-cv-ground pr-2 pl-8 text-[13px] text-cv-ink placeholder:text-cv-faint focus:border-brand focus:bg-cv-surface focus:outline-none focus:ring-2 focus:ring-brand/25 pointer-coarse:h-10 pointer-coarse:text-base"
         />
       </div>
-      <ul ref={listRef} id={`${id}-list`} role="listbox" aria-multiselectable="true" aria-label={title ?? searchPlaceholder} className="max-h-64 overflow-y-auto p-1 pt-0">
+      <ul ref={listRef} id={`${id}-list`} role="listbox" aria-multiselectable="true" aria-label={title ?? searchPlaceholder} className="max-h-64 overflow-y-auto overscroll-contain p-1 pt-0">
         {rows.map((row, i) => {
           const selected = !row.create && chosen.has(row.value);
           const Icon = row.icon;
