@@ -15,6 +15,7 @@ import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { dialogButton, importDialog, importDialogUp } from './import-dialog.mjs';
 
 before(async () => {
+  process.stderr.write('[103-trace] before: setup\n');
   patchFakeDom();
   await setup();
 });
@@ -24,13 +25,18 @@ const tokens = (el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Bool
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
 const click = { preventDefault() {}, stopPropagation() {}, detail: 1, nativeEvent: {} };
 
+const trace = (m) => process.stderr.write(`[103-trace] ${m}\n`); // TEMP diagnostic
 async function open(props) {
+  trace('open: start');
   const { default: ImportDialog } = await loadModule('/src/components/ImportDialog.jsx');
   const { ORIGINALS_HINT } = await loadModule('/src/constants/cardHints.js');
   const picks = [];
   let closed = 0;
+  trace('open: modules loaded');
   const view = mount(ImportDialog, { isOpen: true, onPick: (keep) => picks.push(keep), onClose: () => { closed += 1; }, ...props });
+  trace('open: mounted');
   const dialog = await importDialogUp(view);
+  trace('open: dialog up');
   return { view, dialog, picks, closed: () => closed, ORIGINALS_HINT };
 }
 
