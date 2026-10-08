@@ -78,9 +78,11 @@ export function CoverLetterTemplatePDF({ data }) {
         ) : data._preview ? (
           // Writing hint for the live preview only — an exported letter never contains it. It signs
           // off with nothing of its own: the closing and signature below are the ones that print (R2-134).
+          // It names no place: the writing box is on the left only in the split view, never on a phone's
+          // Preview or in Preview only, and the document switch is in the bar, not a tab on the left.
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: baseSize, color: '#9ca3af', lineHeight: lineH }}>
-              {'Dear Hiring Manager,\n\nStart writing your cover letter in the "Cover Letter" tab on the left...'}
+              {'Dear Hiring Manager,\n\nStart writing your cover letter in the editor...'}
             </Text>
           </View>
         ) : null}
