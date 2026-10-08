@@ -1,6 +1,6 @@
 import { cx } from './compose.js';
 
-const SHIMMER = 'bg-[linear-gradient(90deg,var(--color-slate-100)_0%,var(--color-slate-200)_50%,var(--color-slate-100)_100%)] bg-[length:200%_100%] motion-safe:animate-ui-shimmer';
+const SHIMMER = 'bg-[linear-gradient(90deg,var(--color-cv-sunken)_0%,var(--color-cv-hairline)_50%,var(--color-cv-sunken)_100%)] bg-[length:200%_100%] motion-safe:animate-ui-shimmer';
 
 /**
  * A placeholder block while content loads: a soft shimmer (still under reduced motion). Hidden

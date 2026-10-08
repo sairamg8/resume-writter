@@ -40,11 +40,11 @@ export function ConfirmDialog({
       {(body || danger) && (
         <div className="flex gap-3">
           {danger && (
-            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600" aria-hidden="true">
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-cv-bad-soft text-cv-bad" aria-hidden="true">
               <TriangleAlert size={16} />
             </span>
           )}
-          {body && <div className="min-w-0 pt-1 text-sm leading-6 text-slate-600">{body}</div>}
+          {body && <div className="min-w-0 pt-1 text-sm leading-6 text-cv-muted">{body}</div>}
         </div>
       )}
     </Dialog>

@@ -9,7 +9,7 @@ export function isMacPlatform() {
 }
 
 const TONES = {
-  light: 'border-slate-200 bg-white text-slate-600 shadow-[0_1px_0_0_rgb(226_232_240)]',
+  light: 'border-cv-hairline bg-cv-surface text-cv-muted shadow-[0_1px_0_0_var(--color-cv-hairline)]',
   dark: 'border-white/20 bg-white/10 text-white/90',
 };
 

@@ -34,10 +34,10 @@ it('R4-DVIS-06: Save key, Add, Delete column and Cancel are the kit\'s small but
 
     page.openDeleteStrip();
     const row = page.find('data-column', 'c1');
-    tokens(page.button('Delete column', row), 'the strip\'s Delete column', { has: ['h-7', 'rounded', 'bg-[#c9372c]'], hasNot: ['bg-red-600', 'rounded-lg'] });
+    tokens(page.button('Delete column', row), 'the strip\'s Delete column', { has: ['h-7', 'rounded', 'bg-cv-bad'], hasNot: ['bg-red-600', 'rounded-lg'] });
     tokens(page.button('Cancel', row), 'Cancel', { has: ['h-7', 'rounded'], hasNot: ['font-semibold'] });
     // The page's own kit button: the strip's red is now the same red.
-    tokens(page.button('Delete project'), 'Delete project', { has: ['bg-[#c9372c]'] });
+    tokens(page.button('Delete project'), 'Delete project', { has: ['bg-cv-bad'] });
   } finally {
     await page.close();
   }
@@ -50,7 +50,7 @@ it('R4-DVIS-06: the move and delete icons are the kit\'s small icon buttons', as
     for (const label of ['Move column up', 'Move column down', 'Delete column']) {
       tokens(page.byLabel(label, row), label, { has: ['size-7', 'rounded'], hasNot: ['p-1', 'text-gray-300'] });
     }
-    tokens(page.byLabel('Delete label', page.find('data-label', 'l1')), 'Delete label', { has: ['size-7', 'rounded', 'hover:text-red-700'], hasNot: ['p-1', 'text-gray-300'] });
+    tokens(page.byLabel('Delete label', page.find('data-label', 'l1')), 'Delete label', { has: ['size-7', 'rounded', 'hover:text-cv-bad'], hasNot: ['p-1', 'text-gray-300'] });
   } finally {
     await page.close();
   }
@@ -60,7 +60,7 @@ it('R4-DVIS-06: every field wears the kit\'s control; a select in a row keeps it
   const page = await mountSettings();
   try {
     page.openDeleteStrip();
-    const kitControl = { has: ['rounded', 'border', 'border-[#8590a2]/70', 'focus:ring-1', 'focus:border-brand'], hasNot: ['rounded-lg', 'border-line', 'focus:ring-2'] };
+    const kitControl = { has: ['rounded', 'border', 'border-cv-field', 'focus:ring-1', 'focus:border-brand'], hasNot: ['rounded-lg', 'border-line', 'focus:ring-2'] };
     for (const label of ['Project name', 'Project key', 'Project description', 'Project mode', 'Column title', 'Column category', 'WIP limit',
       'Move its issues to', 'New column', 'Label name', 'Label colour', 'New label', 'New label colour', 'Days before done issues are hidden']) {
       tokens(page.byLabel(label), label, kitControl);

@@ -2,10 +2,10 @@ import { cx } from './compose.js';
 
 const TONES = {
   indigo: 'bg-brand',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
-  neutral: 'bg-slate-400',
+  success: 'bg-cv-good',
+  warning: 'bg-cv-warn',
+  danger: 'bg-cv-bad',
+  neutral: 'bg-cv-faint',
 };
 
 /**
@@ -31,11 +31,11 @@ export function ProgressBar({ value = 0, max = 100, label, valueText, tone = 'in
         aria-valuemax={max}
         aria-valuenow={clamped}
         aria-valuetext={valueText ?? `${clamped} of ${max}`}
-        className={cx('relative flex-1 overflow-hidden rounded-full bg-slate-200/80', size === 'md' ? 'h-1.5' : 'h-1')}
+        className={cx('relative flex-1 overflow-hidden rounded-full bg-cv-hairline', size === 'md' ? 'h-1.5' : 'h-1')}
       >
         <div className={cx('h-full rounded-full transition-[width] duration-200 ease-out', fill)} style={{ width: `${percent}%` }} />
       </div>
-      {showValue && <span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-500">{clamped}/{max}</span>}
+      {showValue && <span className="shrink-0 text-[11px] font-medium tabular-nums text-cv-faint">{clamped}/{max}</span>}
     </div>
   );
 }

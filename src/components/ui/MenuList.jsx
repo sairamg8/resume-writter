@@ -133,13 +133,13 @@ export function MenuList({
         data-menu-root={rootId}
         onKeyDown={onKeyDown}
         style={{ ...style, minWidth }}
-        className="z-[70] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl outline-none animate-ui-pop-in"
+        className="z-[70] overflow-y-auto rounded-xl border border-cv-hairline bg-cv-surface p-1 shadow-pop outline-none animate-ui-pop-in"
       >
         {items.map((item, index) => {
-          if (item?.type === 'separator') return <div key={`sep-${index}`} role="separator" className="-mx-1 my-1 h-px bg-slate-100" />;
+          if (item?.type === 'separator') return <div key={`sep-${index}`} role="separator" className="-mx-1 my-1 h-px bg-cv-sunken" />;
           if (item?.type === 'label') {
             return (
-              <div key={`label-${index}`} role="presentation" className="px-2 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <div key={`label-${index}`} role="presentation" className="px-2 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-cv-faint">
                 {item.label}
               </div>
             );
@@ -162,8 +162,8 @@ export function MenuList({
               onPointerMove={() => hover(index)}
               className={cx(
                 'flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] leading-5 outline-none transition-colors duration-100 pointer-coarse:min-h-11',
-                item.disabled ? 'cursor-default text-slate-400' : item.danger ? 'text-red-600 focus:bg-red-50' : 'text-slate-700 focus:bg-slate-100 focus:text-slate-900',
-                submenu.index === index && 'bg-slate-100',
+                item.disabled ? 'cursor-default text-cv-faint' : item.danger ? 'text-cv-bad focus:bg-cv-bad-soft' : 'text-cv-muted focus:bg-cv-sunken focus:text-cv-ink',
+                submenu.index === index && 'bg-cv-sunken',
               )}
             >
               {hasChecks && (
@@ -171,13 +171,13 @@ export function MenuList({
                   {item.checked && <Check size={14} className="text-brand" />}
                 </span>
               )}
-              {Icon && <Icon size={15} aria-hidden="true" className={cx('shrink-0', item.danger ? 'text-red-500' : 'text-slate-400')} />}
+              {Icon && <Icon size={15} aria-hidden="true" className={cx('shrink-0', item.danger ? 'text-cv-bad' : 'text-cv-faint')} />}
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{item.label}</span>
-                {item.description && <span className="block truncate text-xs text-slate-500">{item.description}</span>}
+                {item.description && <span className="block truncate text-xs text-cv-faint">{item.description}</span>}
               </span>
               {item.shortcut && <Kbd combo={item.shortcut} className="ml-3 shrink-0" />}
-              {item.items?.length > 0 && <ChevronRight size={14} aria-hidden="true" className="-mr-0.5 shrink-0 text-slate-400" />}
+              {item.items?.length > 0 && <ChevronRight size={14} aria-hidden="true" className="-mr-0.5 shrink-0 text-cv-faint" />}
             </button>
           );
         })}

@@ -41,7 +41,7 @@ it('the search box is the kit’s small control: its border and text, 16 px on t
     const kitTokens = controlClass({ size: 'sm' }).split(/\s+/).filter(Boolean);
     const missing = kitTokens.filter((t) => !tokens.includes(t));
     assert.deepEqual(missing, [], `the kit's control classes it lacks (its own: ${tokens.join(' ')})`);
-    assert.ok(tokens.includes('border-[#8590a2]/70'), 'the kit border');
+    assert.ok(tokens.includes('border-cv-field'), 'the kit border');
     assert.ok(!tokens.includes('border-line'), 'not the pale hand-rolled border');
     assert.ok(!tokens.includes('text-sm'), 'the small kit control is 13 px, not 14');
     // Its own size and room for the magnifier and the key cap, as before.

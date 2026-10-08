@@ -34,7 +34,7 @@ async function render(path, name, props) {
 /** The kit's small danger IconButton, not the hand-rolled box; in the reveal-on-hover row. */
 function assertKitDelete(del, where) {
   const own = classes(del);
-  for (const token of ['size-7', 'hover:bg-red-50', 'hover:text-red-700']) assert.ok(own.includes(token), `${where}: ${token} in ${own.join(' ')}`);
+  for (const token of ['size-7', 'hover:bg-cv-bad-soft', 'hover:text-cv-bad']) assert.ok(own.includes(token), `${where}: ${token} in ${own.join(' ')}`);
   for (const token of ['p-1', 'p-1.5']) assert.ok(!own.includes(token), `${where}: the hand-rolled ${token} is gone: ${own.join(' ')}`);
   assert.equal(del.getAttribute('title'), 'Delete application', `${where}: the title the browser specs click by`);
   assert.ok(classes(del.parentNode).includes('no-hover:opacity-100'), `${where}: still in the row that shows on a touch screen`);

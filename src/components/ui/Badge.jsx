@@ -5,13 +5,13 @@ import { cx } from './compose.js';
  * Exported so Chip and DatePill colour the same way.
  */
 export const TONE_CLASSES = {
-  neutral: 'bg-slate-100 text-slate-700 ring-slate-200/70',
-  indigo: 'bg-brand-subtle text-brand ring-indigo-200/70',
-  success: 'bg-emerald-50 text-emerald-700 ring-emerald-200/70',
-  warning: 'bg-amber-50 text-amber-800 ring-amber-200/80',
-  danger: 'bg-red-50 text-red-700 ring-red-200/70',
-  info: 'bg-sky-50 text-sky-700 ring-sky-200/70',
-  violet: 'bg-violet-50 text-violet-700 ring-violet-200/70',
+  neutral: 'bg-cv-sunken text-cv-muted ring-cv-hairline',
+  indigo: 'bg-brand-subtle text-brand ring-cv-brand-soft-border',
+  success: 'bg-cv-good-soft text-cv-good ring-cv-good-soft',
+  warning: 'bg-cv-warn-soft text-cv-warn ring-cv-warn-soft',
+  danger: 'bg-cv-bad-soft text-cv-bad ring-cv-bad-soft',
+  info: 'bg-cv-brand-soft text-cv-brand-text ring-cv-brand-soft-border',
+  violet: 'bg-cv-sunken text-cv-body ring-cv-hairline',
 };
 
 const SIZES = {

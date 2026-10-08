@@ -36,7 +36,7 @@ export function DatePill({
   const look = cx(
     'inline-flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap rounded-md font-medium tabular-nums',
     size === 'sm' ? 'h-5 px-1.5 text-[11px]' : 'h-6 px-2 text-xs',
-    info ? cx('ring-1 ring-inset', TONE_CLASSES[info.tone]) : 'border border-dashed border-slate-300 bg-white text-slate-500',
+    info ? cx('ring-1 ring-inset', TONE_CLASSES[info.tone]) : 'border border-dashed border-cv-field bg-cv-surface text-cv-faint',
     className,
   );
   const shown = info ? pillText(info, prefix) : emptyLabel;

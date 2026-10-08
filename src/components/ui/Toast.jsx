@@ -11,10 +11,10 @@ const EXIT_MS = 150;
 
 const TONES = {
   neutral: null,
-  success: { icon: CircleCheck, className: 'text-emerald-600' },
-  danger: { icon: CircleAlert, className: 'text-red-600' },
-  warning: { icon: TriangleAlert, className: 'text-amber-600' },
-  info: { icon: Info, className: 'text-sky-600' },
+  success: { icon: CircleCheck, className: 'text-cv-good' },
+  danger: { icon: CircleAlert, className: 'text-cv-bad' },
+  warning: { icon: TriangleAlert, className: 'text-cv-warn' },
+  info: { icon: Info, className: 'text-cv-brand-text' },
 };
 
 /**
@@ -46,14 +46,14 @@ export function Toast({ toast, paused, onDismiss }) {
     <div
       data-toast=""
       className={cx(
-        'pointer-events-auto flex w-full items-start gap-3 rounded-xl bg-white p-3 pr-2 shadow-lg ring-1 ring-slate-900/10',
+        'pointer-events-auto flex w-full items-start gap-3 rounded-xl bg-cv-surface p-3 pr-2 shadow-pop ring-1 ring-cv-hairline',
         leaving ? 'animate-ui-fade-out' : 'animate-ui-toast-in',
       )}
     >
       {Icon && <Icon size={18} className={cx('mt-px shrink-0', TONES[tone].className)} aria-hidden="true" />}
       <div className="min-w-0 flex-1 py-px">
-        {title && <p className="text-[13px] font-semibold leading-5 text-slate-900">{title}</p>}
-        {description && <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{description}</p>}
+        {title && <p className="text-[13px] font-semibold leading-5 text-cv-ink">{title}</p>}
+        {description && <p className="mt-0.5 text-[13px] leading-5 text-cv-muted">{description}</p>}
       </div>
       {action && (
         <button

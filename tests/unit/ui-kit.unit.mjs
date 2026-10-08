@@ -194,7 +194,7 @@ describe('small pieces', () => {
     const now = new Date(2026, 8, 24, 10);
     const late = html(h(ui.DatePill, { value: '2026-09-20', now }));
     assert.match(late, /4d overdue/);
-    assert.match(late, /bg-red-50/);
+    assert.match(late, /bg-cv-bad-soft/);
     assert.match(late, /<span class="sr-only">Sun, Sep 20, 2026 · overdue by 4 days<\/span>/);
     assert.match(html(h(ui.DatePill, { value: '2026-09-24', now, prefix: 'Due' })), /Due today/);
     assert.equal(html(h(ui.DatePill, { value: '', now })), '');

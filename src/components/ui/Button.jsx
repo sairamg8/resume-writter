@@ -22,7 +22,7 @@ const VARIANTS = {
   secondary: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink active:bg-brand-subtle active:text-brand',
   ghost: 'text-ink-subtle hover:bg-neutral-fill hover:text-ink active:bg-neutral-fill-hover',
   subtle: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink active:bg-neutral-fill-hover',
-  danger: 'bg-[#c9372c] text-white hover:bg-[#ae2e24] active:bg-[#5d1f1a]',
+  danger: 'bg-cv-bad text-white hover:opacity-90 active:opacity-80',
 };
 
 const SIZES = {

@@ -6,7 +6,7 @@ const VARIANTS = {
   ghost: 'text-ink-subtle hover:bg-neutral-fill hover:text-ink active:bg-neutral-fill-hover',
   subtle: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink',
   secondary: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink',
-  danger: 'text-ink-subtle hover:bg-red-50 hover:text-red-700 active:bg-red-100',
+  danger: 'text-ink-subtle hover:bg-cv-bad-soft hover:text-cv-bad active:bg-cv-bad-soft',
   primary: 'bg-brand text-white hover:bg-brand-hover',
 };
 

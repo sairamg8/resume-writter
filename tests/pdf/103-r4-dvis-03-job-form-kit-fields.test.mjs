@@ -38,7 +38,7 @@ for (const path of ['/jobs/new', '/jobs/a/edit']) {
       const control = (tag, field) => page.all().find((el) => el.tagName === tag && (el.getAttribute('id') || '').endsWith(field));
       const labelOf = (el) => page.all().find((l) => l.tagName === 'LABEL' && l.getAttribute('for') === el.getAttribute('id'));
       const kitControl = {
-        has: ['w-full', 'rounded', 'border', 'border-[#8590a2]/70', 'h-9', 'pointer-coarse:h-11', 'text-sm', 'pointer-coarse:text-base'],
+        has: ['w-full', 'rounded', 'border', 'border-cv-field', 'h-9', 'pointer-coarse:h-11', 'text-sm', 'pointer-coarse:text-base'],
         hasNot: ['rounded-md', 'border-line', 'py-2.5'],
       };
       const kitLabel = { has: ['text-[12px]', 'font-semibold', 'leading-5'], hasNot: ['text-xs', 'mb-1.5'] };

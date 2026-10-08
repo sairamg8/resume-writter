@@ -16,12 +16,12 @@ export function useFieldIds(id, { hint, error } = {}) {
 /** The border and ring of every text-like control, red when `invalid`. */
 export function controlClass({ invalid = false, size = 'md' } = {}) {
   return cx(
-    'w-full rounded border bg-white text-ink transition-[border-color,box-shadow,background-color] duration-150',
-    'placeholder:text-ink-subtlest hover:bg-hovered focus:bg-white focus:outline-none focus-visible:outline-none',
-    'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500',
+    'w-full rounded border bg-cv-surface text-ink transition-[border-color,box-shadow,background-color] duration-150',
+    'placeholder:text-ink-subtlest hover:bg-hovered focus:bg-cv-surface focus:outline-none focus-visible:outline-none',
+    'disabled:cursor-not-allowed disabled:bg-cv-ground disabled:text-cv-faint',
     invalid
-      ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30'
-      : 'border-[#8590a2]/70 focus:border-brand focus:ring-1 focus:ring-brand',
+      ? 'border-cv-bad focus:border-cv-bad focus:ring-2 focus:ring-cv-bad/30'
+      : 'border-cv-field focus:border-brand focus:ring-1 focus:ring-brand',
     // 16 px on touch screens: iOS zooms the page into any smaller field it focuses.
     size === 'sm' ? 'text-[13px] pointer-coarse:text-base' : 'text-sm pointer-coarse:text-base',
   );
@@ -39,14 +39,14 @@ export function Field({ ids, label, hint, error, required = false, className, la
       {label && (
         <label htmlFor={ids.controlId} className={cx('text-[12px] font-semibold leading-5 text-ink-subtle', labelClassName)}>
           {label}
-          {required && <span className="ml-0.5 text-red-600" aria-hidden="true">*</span>}
+          {required && <span className="ml-0.5 text-cv-bad" aria-hidden="true">*</span>}
         </label>
       )}
       {children}
       {error ? (
-        <p id={ids.errorId} role="alert" className="text-xs font-medium leading-4 text-red-600">{error}</p>
+        <p id={ids.errorId} role="alert" className="text-xs font-medium leading-4 text-cv-bad">{error}</p>
       ) : hint ? (
-        <p id={ids.hintId} className="text-xs leading-4 text-slate-500">{hint}</p>
+        <p id={ids.hintId} className="text-xs leading-4 text-cv-faint">{hint}</p>
       ) : null}
     </div>
   );

@@ -96,7 +96,7 @@ export function Dialog({
       <div className="fixed inset-0 z-50" onKeyDown={onKeyDown}>
         <div
           aria-hidden="true"
-          className={cx('absolute inset-0 bg-[#091e427a]', closing ? 'animate-ui-fade-out' : 'animate-ui-fade-in')}
+          className={cx('absolute inset-0 bg-cv-ink/50', closing ? 'animate-ui-fade-out' : 'animate-ui-fade-in')}
         />
         <div
           className={cx(
@@ -119,7 +119,7 @@ export function Dialog({
             data-state={state}
             inert={closing || undefined}
             className={cx(
-              'relative flex w-full flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-slate-900/5 outline-none',
+              'relative flex w-full flex-col overflow-hidden rounded-lg bg-cv-surface shadow-pop ring-1 ring-cv-hairline outline-none',
               'max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)]',
               SIZES[size] ?? SIZES.md,
               large && 'max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none max-sm:ring-0',
@@ -132,12 +132,12 @@ export function Dialog({
               className,
             )}
           >
-            {sheet && <div aria-hidden="true" className={cx('mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-slate-200 md:hidden', large && 'max-sm:hidden')} />}
+            {sheet && <div aria-hidden="true" className={cx('mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-cv-hairline md:hidden', large && 'max-sm:hidden')} />}
             {(title || !hideClose || headerActions) && (
               <div className="flex shrink-0 items-start gap-3 px-5 pt-4 pb-3">
                 <div className="min-w-0 flex-1">
                   {title && <h2 id={titleId} className="text-xl font-medium leading-7 text-ink">{title}</h2>}
-                  {description && <p id={descriptionId} className="mt-0.5 text-[13px] leading-5 text-slate-500">{description}</p>}
+                  {description && <p id={descriptionId} className="mt-0.5 text-[13px] leading-5 text-cv-faint">{description}</p>}
                 </div>
                 {headerActions && <div className="flex shrink-0 items-center gap-1">{headerActions}</div>}
                 {!hideClose && (
@@ -149,7 +149,7 @@ export function Dialog({
               {children}
             </div>
             {footer && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-cv-hairline bg-cv-ground px-5 py-3">
                 {footer}
               </div>
             )}
