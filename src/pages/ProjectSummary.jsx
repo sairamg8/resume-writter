@@ -83,7 +83,10 @@ export function ProjectSummary() {
                   return (
                     <li key={`${issue.id}-${entry.id}`} className="flex gap-3 text-sm">
                       <Avatar name="You" size="sm" decorative />
-                      <p className="min-w-0 text-cv-ink">
+                      {/* anywhere, not break-word: a title that is one pasted link has to count its break points in
+                          the line's minimum width too, or this flex row, the card and the grid column it sits in
+                          stay as wide as the link and push the page past a phone's edge. */}
+                      <p className="min-w-0 [overflow-wrap:anywhere] text-cv-ink">
                         <span className="font-semibold">You</span> {d.text}{d.to !== null && <> to <span className="font-medium">{d.to}</span></>} on{' '}
                         <button type="button" onClick={() => route.open(key)} className="inline-flex items-center gap-1 align-bottom font-medium text-cv-brand-text hover:underline">
                           <IssueTypeIcon type={issue.type} size={14} decorative />{key}: {issue.title}
