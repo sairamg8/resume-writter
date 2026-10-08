@@ -45,7 +45,14 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
   return (
     <div
       className={cx('flex flex-col gap-2 rounded-cv-control border-2 border-cv-brand bg-cv-surface p-2', variant === 'row' && 'sm:flex-row sm:items-center', className)}
-      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget) && !text.trim()) setOpen(false); }}
+      // Leaving the box with nothing typed puts the composer away. The type picker's menu is a
+      // portal outside this box: focus going into it (open, or an arrow to the next type) is
+      // still the composer, or choosing a type before typing a summary closed it.
+      onBlur={(e) => {
+        const to = e.relatedTarget;
+        if (e.currentTarget.contains(to) || to?.closest?.('[data-menu-root]')) return;
+        if (!text.trim()) setOpen(false);
+      }}
     >
       <textarea
         ref={ref}
@@ -65,7 +72,10 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         className="min-w-0 flex-1 resize-none bg-transparent text-sm text-cv-ink placeholder:text-cv-faint focus:outline-none pointer-coarse:text-base"
       />
       <div className="flex items-center gap-2">
-        {showType && <div className="w-32"><TypePicker value={type} onChange={setType} allowEpic={false} /></div>}
+        {/* A press on the picker keeps the focus in the summary field: Safari and Firefox on a Mac give a
+            pressed button no focus, so the field blurred with nothing to say where focus went, and an
+            empty composer closed before the picker's click could open its menu. */}
+        {showType && <div className="w-32" onMouseDown={(e) => e.preventDefault()}><TypePicker value={type} onChange={setType} allowEpic={false} /></div>}
         <button type="button" onClick={create} disabled={!text.trim()} className="ml-auto h-7 rounded-cv-control bg-cv-brand px-2.5 text-[13px] font-medium text-white transition-colors hover:bg-cv-brand-pressed disabled:opacity-50">
           Create
         </button>
