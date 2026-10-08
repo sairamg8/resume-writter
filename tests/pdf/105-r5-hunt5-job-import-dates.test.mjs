@@ -22,13 +22,13 @@ const rowText = (page, label) => {
 describe('the Details box shows days written another way', () => {
   it('timestamps as their days; an unreadable day as written', async () => {
     const job = {
-      ...acme, appliedDate: '2020-09-20T00:00:00.000Z', deadline: '2030-10-15T00:00:00.000Z', followUpDate: 'next week',
+      ...acme, appliedDate: '2020-09-20T00:00:00.000Z', deadline: '2099-10-15T00:00:00.000Z', followUpDate: 'next week',
     };
     const { JobDetail } = await loadModule('/src/pages/JobDetail.jsx');
     const page = await atRoute('/jobs/a', { '/jobs/:id': h(JobDetail, { store: { appState: { resumes: [] } } }) }, [job]);
     try {
       assert.match(rowText(page, 'Applied'), /Sep 20, 2020/);
-      assert.match(rowText(page, 'Deadline'), /Oct 15, 2030/);
+      assert.match(rowText(page, 'Deadline'), /Oct 15, 2099/);
       assert.equal(rowText(page, 'Follow up'), 'next week');
     } finally {
       await page.view.unmount();
