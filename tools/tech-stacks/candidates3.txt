@@ -1,0 +1,165 @@
+# software
+Aircall
+Airship
+Alteryx
+Ambassador
+Amperity
+Apollo GraphQL
+AppLovin
+Armory
+Arcimoto
+Artsy
+Attio
+Avalara
+Axon
+Bandwidth
+Benchling
+BigPanda
+Bitsight
+Blameless
+Bluecore
+BounceX
+Braintree
+BrowserStack
+Calendly
+Cameo
+Cerebral
+Chorus
+Clearbit
+Clever
+Clockwise
+CloudBees
+CloudHealth
+Cohere Health
+Collective Health
+Contentful
+Coursera
+Crossbeam
+Cruise
+Dagster
+Datafold
+Datavant
+Deel
+Dialpad
+Digital Ocean
+Discord Inc
+Doma
+Dune Analytics
+Dutchie
+Earnest
+Elation Health
+Embark Trucks
+Emburse
+EngageSmart
+Enigma
+Envestnet
+Eventbrite Inc
+Everlywell
+Expensify
+Faire Wholesale
+Fanatics
+Fetch Rewards
+Fieldguide
+Flatfile
+Forward Networks
+Foursquare
+Front
+Gitlab Inc
+Gladly
+Gloo
+Gong.io
+GumGum
+Handshake
+Headway
+Heroku
+Hims
+Hinge Health
+Hopper
+Houzz
+Housecall Pro
+Hugging
+Ibotta
+Ionic
+Iterable
+Jamf
+Jobvite
+Justworks
+Kayak
+Kiva
+Knotel
+Lattice HR
+Lob
+Lucidworks
+Lumen
+Machinify
+Maven Clinic
+Mavenir
+Memfault
+Metabase
+Mighty
+Modal Labs
+Monte Carlo
+Motion
+Namely
+Neuralink
+Nuna
+Numerator
+Oddity
+Offerup
+Olive AI
+OpenTable
+Orbital
+Outschool
+PatientPing
+Persona Identities
+Pilot.com
+Plex
+PlayStation
+PolicyGenius
+Portworx
+Pave
+Quizlet Inc
+Quip
+Ro Health
+Roam
+Rover
+Samsara Inc
+Scribd
+SeatGeek Inc
+Segment.io
+Shipt
+Sift Science
+Skydio Inc
+SmartAsset
+Sonder Holdings
+Spring Health Inc
+Stytch
+SurveyMonkey Inc
+Sweep
+Swimlane
+TaskRabbit
+Thatgamecompany
+Thoughtworks
+Thumbtack Inc
+Tonal Inc
+Toptal
+Trace3
+Tubi TV
+Turing
+Turo Inc
+Tyler Technologies
+Unity Technologies
+Upstart Network
+Vanta Inc
+Vercel Inc
+Vts
+Wag
+Walnut
+Wizeline
+WorkOS
+Yubico
+Zenefits
+Zillow Group
+Zip
+Zscaler Inc
+Ziplines
