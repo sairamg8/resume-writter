@@ -198,7 +198,7 @@ describe('Design → Section Headings marks what the PDF prints (R5-3)', () => {
     return {
       titleCase: buttons.find((b) => /(^|\s)bg-cv-brand(\s|$)/.test(b.cls))?.text,
       // Each chip draws an "ABC" sample above its label.
-      style: buttons.find((b) => /(^|\s)border-cv-brand(\s|$)/.test(b.cls))?.text.replace(/^ABC/, ''),
+      style: buttons.find((b) => /(^|\s)border-cv-brand(\s|$)/.test(b.cls) && /(^|\s)bg-cv-brand-soft(\s|$)/.test(b.cls))?.text.replace(/^ABC/, ''),
     };
   }
 
