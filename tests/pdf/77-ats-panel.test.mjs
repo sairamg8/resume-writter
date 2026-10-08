@@ -71,7 +71,7 @@ async function atsTab(r) {
     chips(kind) {
       const els = kind === 'missing'
         ? buttons().filter((el) => el.getAttribute('title') === 'Click to add to Skills')
-        : all().filter((el) => el.tagName === 'SPAN' && /bg-emerald-50 text-emerald-800/.test(el.getAttribute('class') || ''));
+        : all().filter((el) => el.tagName === 'SPAN' && /bg-cv-good-soft text-cv-good/.test(el.getAttribute('class') || ''));
       return els.map(text);
     },
     saved: () => store.appState.resumes[0],

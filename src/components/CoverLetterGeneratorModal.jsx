@@ -77,7 +77,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
       closeOnOverlay={untouched}
       footer={(
         <>
-          <p className="mr-auto text-[11px] text-gray-500">
+          <p className="mr-auto text-[11px] text-cv-muted">
             Replaces existing letter fields and body with the generated content.
           </p>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -90,46 +90,46 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
             smaller field it focuses (R4-DPH-36). A mouse keeps 12 px. */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Building size={12} className="text-gray-400" /> Target Company
+            <label className="block text-xs font-semibold text-cv-ink mb-1 flex items-center gap-1.5">
+              <Building size={12} className="text-cv-faint" /> Target Company
             </label>
             <input
               type="text"
               value={company}
               onChange={e => setCompany(e.target.value)}
               placeholder="e.g. Google, Stripe"
-              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-cv-field rounded-cv-control focus:outline-hidden focus:ring-2 focus:ring-cv-brand focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Briefcase size={12} className="text-gray-400" /> Target Role
+            <label className="block text-xs font-semibold text-cv-ink mb-1 flex items-center gap-1.5">
+              <Briefcase size={12} className="text-cv-faint" /> Target Role
             </label>
             <input
               type="text"
               value={role}
               onChange={e => setRole(e.target.value)}
               placeholder={resume?.personal?.title || "e.g. Staff Software Engineer"}
-              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-cv-field rounded-cv-control focus:outline-hidden focus:ring-2 focus:ring-cv-brand focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <User size={12} className="text-gray-400" /> Recipient Name
+            <label className="block text-xs font-semibold text-cv-ink mb-1 flex items-center gap-1.5">
+              <User size={12} className="text-cv-faint" /> Recipient Name
             </label>
             <input
               type="text"
               value={recipient}
               onChange={e => setRecipient(e.target.value)}
               placeholder="e.g. Hiring Manager"
-              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-cv-field rounded-cv-control focus:outline-hidden focus:ring-2 focus:ring-cv-brand focus:border-transparent"
             />
           </div>
         </div>
 
         {/* Archetype Selector */}
         <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-2">
+          <label className="block text-xs font-semibold text-cv-ink mb-2">
             Writing Archetype & Tone
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -140,20 +140,20 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
                   key={a.id}
                   type="button"
                   onClick={() => setArchetype(a.id)}
-                  className={`p-3 rounded-xl border text-left transition-all relative ${
+                  className={`p-3 rounded-cv-card border text-left transition-all relative ${
                     active
-                      ? 'border-blue-500 bg-blue-50/40 ring-1 ring-blue-500 text-blue-950'
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50 text-gray-800'
+                      ? 'border-cv-brand bg-cv-brand-soft ring-1 ring-cv-brand text-cv-brand-pressed'
+                      : 'border-cv-hairline bg-cv-surface hover:border-cv-field hover:bg-cv-ground text-cv-ink'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold">{a.name}</span>
-                    {active && <Check size={14} className="text-blue-600" />}
+                    {active && <Check size={14} className="text-cv-brand-text" />}
                   </div>
-                  <span className="inline-block text-[10px] font-medium text-blue-700 bg-blue-100/60 px-1.5 py-0.5 rounded mb-1">
+                  <span className="inline-block text-[10px] font-medium text-cv-brand-pressed bg-cv-brand-soft px-1.5 py-0.5 rounded mb-1">
                     {a.badge}
                   </span>
-                  <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">
+                  <p className="text-[11px] text-cv-muted line-clamp-2 leading-relaxed">
                     {a.description}
                   </p>
                 </button>
@@ -163,18 +163,18 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
         </div>
 
         {nothingToDrawOn && (
-          <p data-testid="generator-no-details" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p data-testid="generator-no-details" className="text-xs text-cv-warn bg-cv-warn-soft border border-cv-warn rounded-cv-control px-3 py-2">
             This letter has no résumé details to draw on: add experience and skills on the Resume tab, or start the letter from a résumé.
           </p>
         )}
 
         {/* Generated Preview */}
-        <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+        <div className="border border-cv-hairline rounded-cv-card p-4 bg-cv-ground">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+            <span className="text-xs font-bold text-cv-ink uppercase tracking-wide">
               Live Letter Preview
             </span>
-            <span className="text-[11px] text-gray-500">
+            <span className="text-[11px] text-cv-muted">
               Subject: {generated.subject}
             </span>
           </div>
@@ -182,7 +182,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
               From sm it scrolls in its own box, as before; on a phone, where the dialog fills the
               screen, it grows in the body's one scroll area rather than nesting a second (R4-DPH-37). */}
           <div
-            className="prose prose-sm max-w-none text-xs text-gray-700 leading-relaxed sm:max-h-56 sm:overflow-y-auto bg-white p-3.5 rounded-lg border border-gray-200"
+            className="prose prose-sm max-w-none text-xs text-cv-ink leading-relaxed sm:max-h-56 sm:overflow-y-auto bg-cv-surface p-3.5 rounded-cv-control border border-cv-hairline"
             dangerouslySetInnerHTML={{ __html: sanitizeRichText(generated.body) }}
           />
         </div>
