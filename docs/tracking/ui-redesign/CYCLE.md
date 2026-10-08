@@ -22,6 +22,8 @@ Only the wake-ups below are pending at any time: the window-end wake (`send_late
 - Branches `master-backup` and `backup/master-2026-10-08-00c7283` = master `00c7283` (Job Map and weekly refresh, push gate green) before the new UI.
 - Tag pushes are refused by the git proxy, so backups are branches. Before each later master push, add `backup/master-<date>-<sha>` for the then-current master.
 
+## STATUS 2026-10-08 ~16:25Z (owner's order, supersedes the cadence below): NO ROUTINES. The 3-hour / 2-hour cadence is OVER: every wake and check-in (window end, resume, CI check-ins) was deleted and `list_triggers` shows none enabled; do not create a `send_later` or a trigger for this project unless the owner asks. The owner ordered (1) every branch merged with master, new UI included, with the old UI kept as a backup, and (2) ONE LAST BUG HUNT across everything, then done. Branch audit: `revamp-ui`, `job-map`, `job-map-refresh` were already inside master; `claude/cool-sagan-3aw06l` (tools/tech-stacks) was merged into the work branch; the work branch reaches master with the final push. Old UI backup: `master-backup` and `backup/master-2026-10-08-00c7283` (= `00c7283`), plus `backup/master-2026-10-08-2546e6c` and `-aebb5a3`.
+
 ## STATUS 2026-10-08 15:27Z: MIGRATED (master = f43f020). The rule below was followed; it stays for every later push to master.
 
 ## Migration rule (the owner's "once completed, migrate to master")
