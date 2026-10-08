@@ -5,7 +5,7 @@
 // a phone. With a search slot the wordmark waits for sm (sr-only: the link keeps its name), the areas for xl (the
 // sidebar and the tab bar lead to the same pages) and the search slot is the one that grows. A bar without a search
 // slot (Documents, Terms, Privacy) is as it was. fake-dom has no layout: the classes are read.
-// Run: node --test tests/pdf/cyc1-workspace-app-bar-fit.test.mjs
+// Run: node --test tests/pdf/194-cyc1-workspace-app-bar-fit.test.mjs
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';

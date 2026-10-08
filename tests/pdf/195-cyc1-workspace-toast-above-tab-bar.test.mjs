@@ -2,7 +2,7 @@
 // (16 px) on a phone, over the 72 px tab bar and hiding its tabs; only the editor's Edit | Preview pill had a rule that lifts
 // the stack. The same lift now applies while the tab bar is on the page, in the same phone-only media query (the tab bar is
 // md:hidden), outside any layer so it outranks the stack's bottom-4. fake-dom has no layout: the stylesheet and the sources are read.
-// Run: node --test tests/pdf/cyc1-workspace-toast-above-tab-bar.test.mjs
+// Run: node --test tests/pdf/195-cyc1-workspace-toast-above-tab-bar.test.mjs
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
