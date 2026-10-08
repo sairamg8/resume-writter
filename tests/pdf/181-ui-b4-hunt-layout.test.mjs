@@ -39,6 +39,14 @@ describe('the alerts row', () => {
   });
 });
 
+describe('the document switch at xl', () => {
+  it('is wide enough for "Cover Letter" beside its icon (a 240 px switch cut it to "Cover Le..." in the 1440 px screenshot)', () => {
+    const on = classesOf('components/EditorDocSwitch.jsx', 'order-5 xl:order-20');
+    assert.ok(on.includes('xl:w-72'), on.join(' '));
+    assert.ok(!on.includes('xl:w-60'));
+  });
+});
+
 describe('the stage toolbar runs to the edges of the preview box', () => {
   it('takes the box\'s full width over its padding and keeps sticking to the top (no left-0: it cannot act in a box that is as wide as its parent)', () => {
     const on = classesOf('components/EditorPreviewPane.jsx', 'data-testid="stage-toolbar"');
