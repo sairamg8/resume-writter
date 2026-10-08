@@ -109,7 +109,7 @@ export function JobForm({ store }) {
   // A new job's untouched applied date follows the status: none for Saved (J-10).
   const setStatus = v => setForm(f => withFormStatus(f, v, { isNew: !isEdit }));
   const canSave = Boolean((form.company || '').trim() || (form.role || '').trim());
-  const backPath = isEdit && existing ? `/jobs/${id}` : '/jobs';
+  const backPath = isEdit && existing ? `/jobs/${encodeURIComponent(id)}` : '/jobs';
   const confirm = useConfirmOptional();
   // Typed something the job does not hold yet: the same test the save writes by (formPatch).
   const dirty = Object.keys(formPatch(start, form)).length > 0;
@@ -187,7 +187,7 @@ export function JobForm({ store }) {
     if (!canSave || gone || accountLeft) return;
     if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addOnce()}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
-    if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${id}`); }
+    if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${encodeURIComponent(id)}`); }
   }
 
   // Enter in a field saves, as in any form: the page had no <form>, so Enter did nothing (J-36).
@@ -233,7 +233,7 @@ export function JobForm({ store }) {
           // screen and hid this page's crumb, so it truncates at a width of its own.
           ...(isEdit && existing ? [{
             label: <span title={company} className="block max-w-40 truncate md:max-w-xs">{company}</span>,
-            to: `/jobs/${id}`,
+            to: `/jobs/${encodeURIComponent(id)}`,
           }] : []),
           { label: title },
         ]}

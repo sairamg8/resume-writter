@@ -10,17 +10,40 @@ const SCANNED = 'That PDF looks like a scanned image: its pages have no text lay
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
 const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
-const LOCKED = 'That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
+/** The most pages of a PDF the import reads: far past any résumé, short of a file made to stall the page. */
+export const MAX_PDF_PAGES = 200;
+const TOO_MANY_PAGES = `That PDF has more than ${MAX_PDF_PAGES} pages, far more than a résumé. Import the résumé itself as a PDF, Word, text or JSON file.`;
+const LOCKED ='That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
 
 // ── Word (.docx) ─────────────────────────────────────────────────────────────
 
 const decode = (bytes) => new TextDecoder().decode(bytes);
 
+/**
+ * The most a part of a Word file may inflate to: a résumé's text is a few hundred kilobytes. A file of 20 MB
+ * (MAX_IMPORT_BYTES) made to deflate a thousandfold would fill the tab's memory before a word was read.
+ */
+export const MAX_INFLATED_BYTES = 32 * 1024 * 1024;
+const BOMB = 'That Word file holds far more text than a résumé can, so it was not opened. Import the résumé as a PDF, text or JSON file instead.';
+
 /** Deflated bytes inflated with the browser's own DecompressionStream: no library to download. */
 async function inflateRaw(bytes) {
   if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open Word files. Update it, or import the résumé as PDF, text or JSON.');
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+  const parts = [];
+  let total = 0;
+  for (let part = await reader.read(); !part.done; part = await reader.read()) {
+    total += part.value.length;
+    if (total > MAX_INFLATED_BYTES) {
+      reader.cancel().catch(() => {});
+      throw Object.assign(new Error(BOMB), { bomb: true });
+    }
+    parts.push(part.value);
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const part of parts) { out.set(part, at); at += part.length; }
+  return out;
 }
 
 /** One file of a zip archive (a .docx is one), found through its central directory; null if absent. */
@@ -46,7 +69,7 @@ export async function unzipEntry(bytes, name) {
       if (start + size > bytes.length) throw new Error(DAMAGED);
       const data = bytes.subarray(start, start + size);
       if (method === 0) return data;
-      if (method === 8) return inflateRaw(data).catch(() => { throw new Error(DAMAGED); });
+      if (method === 8) return inflateRaw(data).catch((e) => { throw e?.bomb ? e : new Error(DAMAGED); });
       throw new Error('That Word file is compressed in a way this import cannot read.');
     }
     p += 46 + skip;
@@ -961,6 +984,8 @@ export async function pdfLines(bytes, lib) {
   try {
     // A PDF that needs a password to open: pdf.js's own words are "No password given".
     const doc = await task.promise.catch((e) => { throw e?.name === 'PasswordException' ? new Error(LOCKED) : e; });
+    // A résumé is a few pages; a file whose page tree lists hundreds of thousands (a few MB can) would keep the tab reading for minutes.
+    if (doc.numPages > MAX_PDF_PAGES) throw new Error(TOO_MANY_PAGES);
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
       const page = await doc.getPage(i);

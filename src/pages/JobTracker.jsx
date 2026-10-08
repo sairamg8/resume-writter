@@ -134,7 +134,7 @@ export function JobTracker({ store }) {
     { label: 'Offers', value: counts.offers },
   ];
   const filtering = Boolean(search.trim() || filterStatus);
-  const open = id => navigate(`/jobs/${id}`);
+  const open = id => navigate(`/jobs/${encodeURIComponent(id)}`);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

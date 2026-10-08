@@ -2,6 +2,8 @@
 // firestore.rules). Pure functions, relative imports only: Node's test runner loads this file as it is
 // (tests/unit/job-map.unit.mjs). The rows are written by tools/job-map/build-data.mjs.
 
+import { safeHref } from './richText.js';
+
 /** A row's fields, by position (build-data.mjs). */
 export const ROW = { company: 0, fn: 1, track: 2, level: 3, title: 4, location: 5, url: 6, position: 7, careers: 8 };
 
@@ -10,6 +12,16 @@ export const FUNCTION_LABELS = {
   product: 'Product & projects', risk: 'Risk, audit & insurance', finance: 'Finance & banking', hr: 'HR & recruiting',
   sales: 'Sales & business development', marketing: 'Marketing & comms', support: 'Customer support', ops: 'Operations & admin', other: 'Other',
 };
+
+/**
+ * Where a role's link goes: its posting's http(s) address ("company.com/jobs/1" gets https://), else null and the
+ * row is not a link. The rows come from crawled job boards and are shared by every allowed account, so a posting
+ * address of javascript:, data:, vbscript: or file: must not reach an href.
+ */
+export function roleHref(url) {
+  const href = safeHref(url);
+  return href && /^https?:\/\//i.test(href) ? href : null;
+}
 
 /** The document ids of one country's chunks: `US-0` … `US-<n-1>` for `count` rows of CHUNK each. */
 export function chunkIds(country, count, chunk = 1200) {
