@@ -5,14 +5,14 @@ import { InlineEdit, cx } from '../ui/index.js';
 function Breadcrumbs({ items }) {
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-1 text-sm text-ink-subtle">
+      <ol className="flex min-w-0 items-center gap-1 text-sm text-cv-muted">
         {items.map((crumb, i) => {
           const last = i === items.length - 1;
           return (
             <li key={`${crumb.label}-${i}`} className={cx('flex items-center gap-1', last ? 'min-w-0' : 'shrink-0')}>
-              {i > 0 && <span aria-hidden="true" className="shrink-0 px-0.5 text-ink-subtlest">/</span>}
+              {i > 0 && <span aria-hidden="true" className="shrink-0 px-0.5 text-cv-faint">/</span>}
               {crumb.to && !last ? (
-                <Link to={crumb.to} className="rounded transition-colors hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+                <Link to={crumb.to} className="rounded transition-colors hover:text-cv-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
                   {crumb.label}
                 </Link>
               ) : (
@@ -41,7 +41,7 @@ function Breadcrumbs({ items }) {
  */
 export function PageHeader({ title, onTitleChange, titleLabel = 'Title', subtitle, icon, breadcrumbs, actions, tabs, className, children }) {
   return (
-    <header className={cx('z-20 shrink-0 bg-white md:sticky md:top-0', tabs && 'border-b border-line', className)}>
+    <header className={cx('z-20 shrink-0 bg-cv-surface md:sticky md:top-0', tabs && 'border-b border-cv-hairline', className)}>
       <div className={cx('flex flex-col gap-1 px-4 pt-4 md:px-8', tabs ? 'pb-1' : 'pb-3')}>
         {breadcrumbs?.length > 0 && (
           <div className="flex items-center gap-2">
@@ -52,12 +52,12 @@ export function PageHeader({ title, onTitleChange, titleLabel = 'Title', subtitl
           <div className="flex min-w-0 flex-1 basis-56 items-center gap-2 md:gap-3">
             {icon}
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl font-semibold leading-8 tracking-tight text-ink">
+              <h1 className="truncate text-2xl font-semibold leading-8 tracking-tight text-cv-ink">
                 {onTitleChange
                   ? <InlineEdit value={title} onCommit={onTitleChange} label={titleLabel} className="truncate" />
                   : title}
               </h1>
-              {subtitle && <p className="truncate text-[13px] leading-5 text-ink-subtlest">{subtitle}</p>}
+              {subtitle && <p className="truncate text-[13px] leading-5 text-cv-faint">{subtitle}</p>}
             </div>
           </div>
           {actions && <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>}

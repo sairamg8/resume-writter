@@ -4,6 +4,7 @@ import { ConfirmProvider, ToastProvider } from '../ui/index.js';
 import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
+import BottomTabBar from '../BottomTabBar.jsx';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { WorkspaceContext } from './workspaceContext.js';
@@ -93,11 +94,11 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
     <WorkspaceContext.Provider value={workspace}>
       <ToastProvider>
         <ConfirmProvider>
-          <div data-ui-motion="" className="flex h-dvh flex-col overflow-hidden bg-white text-ink">
+          <div data-ui-motion="" className="flex h-dvh flex-col overflow-hidden bg-cv-ground text-cv-ink">
             <button
               type="button"
               onClick={() => mainRef.current?.focus()}
-              className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-[100] focus-visible:rounded-lg focus-visible:bg-white focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-lg focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:outline-none"
+              className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-[100] focus-visible:rounded-lg focus-visible:bg-white focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-pop focus-visible:ring-2 focus-visible:ring-cv-brand/60 focus-visible:outline-none"
             >
               Skip to content
             </button>
@@ -115,7 +116,7 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
               ref={mainRef}
               tabIndex={-1}
               onScroll={onMainScroll}
-              className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain focus:outline-none"
+              className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain focus:outline-none max-md:pb-[72px]"
             >
               {/* A page that crashes takes only itself down: the sidebar still leads elsewhere,
                   and the next path starts with a fresh boundary. */}
@@ -124,6 +125,7 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
               </ErrorBoundary>
             </main>
             </div>
+            <BottomTabBar />
             {renderCreate?.({ open: createDefaults !== null, defaults: createDefaults ?? {}, onClose: () => setCreateDefaults(null) })}
           </div>
         </ConfirmProvider>

@@ -41,7 +41,7 @@ it('a header with breadcrumbs, actions and tabs sticks from md up and is static 
   assert.ok(!tokens.includes('sticky'), 'a bare `sticky` pins the header on a phone too');
   assert.ok(!tokens.includes('top-0'), 'no bare top-0 either');
   // What it keeps at every width: its layer, its size and its tab border.
-  for (const token of ['z-20', 'shrink-0', 'bg-white', 'border-b', 'border-line']) assert.ok(tokens.includes(token), `keeps ${token}`);
+  for (const token of ['z-20', 'shrink-0', 'bg-cv-surface', 'border-b', 'border-cv-hairline']) assert.ok(tokens.includes(token), `keeps ${token}`);
 });
 
 it('a plain header (a title only) behaves the same', () => {

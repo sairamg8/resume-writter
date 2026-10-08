@@ -11,15 +11,15 @@ const NAV = [
   { to: '/', label: 'Résumés', icon: FileText, match: (p) => p === '/' },
 ];
 
-const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60';
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60';
 
 /** A row's look: brand blue on its subtle fill, with a bar at the left edge, when it is the page. */
 const rowClass = (active, collapsed, extra) => cx(
-  'group relative flex h-9 items-center gap-2.5 rounded text-sm font-medium transition-colors duration-150 pointer-coarse:h-10',
+  'group relative flex h-9 items-center gap-2.5 rounded-cv-control text-sm font-medium transition-colors duration-150 pointer-coarse:h-10',
   collapsed ? 'w-10 justify-center self-center' : 'px-2',
   active
-    ? 'bg-brand-subtle text-brand before:absolute before:top-2 before:bottom-2 before:-left-2 before:w-1 before:rounded-r before:bg-brand'
-    : 'text-ink-subtle hover:bg-neutral-fill hover:text-ink',
+    ? 'bg-cv-brand-soft text-cv-brand-text before:absolute before:top-2 before:bottom-2 before:-left-2 before:w-1 before:rounded-r before:bg-cv-brand'
+    : 'text-cv-muted hover:bg-cv-sunken hover:text-cv-ink',
   FOCUS, extra,
 );
 
@@ -53,7 +53,7 @@ function ProjectMark({ project, size = 'size-6' }) {
 /** The views of the project the page is in, as a tree under its row (Summary … List, settings). */
 function ProjectViews({ project }) {
   return (
-    <ul aria-label={`${project.name} views`} className="mt-0.5 mb-1 ml-5 flex flex-col gap-0.5 border-l border-line pl-2">
+    <ul aria-label={`${project.name} views`} className="mt-0.5 mb-1 ml-5 flex flex-col gap-0.5 border-l border-cv-hairline pl-2">
       {[...PROJECT_VIEWS, PROJECT_SETTINGS].map((view) => (
         <li key={view.id} className="flex flex-col">
           <NavLink
@@ -86,10 +86,10 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
   return (
     <div className="flex h-full min-h-0 flex-col">
       {onClose && (
-        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-3">
+        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-cv-hairline px-3">
           <Link to="/" aria-label="CPWT-CV — résumés" className={cx('flex min-w-0 items-center gap-2.5 rounded-lg p-1', FOCUS)}>
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-[11px] font-bold tracking-tight text-white">CV</span>
-            <span className="truncate text-[15px] font-semibold tracking-tight text-ink">CPWT-CV</span>
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-cv-brand text-[11px] font-bold tracking-tight text-white">CV</span>
+            <span className="truncate text-[15px] font-semibold tracking-tight text-cv-ink">CPWT-CV</span>
           </Link>
           <IconButton icon={X} label="Close navigation" onClick={onClose} className="ml-auto" tooltip={false} />
         </div>
@@ -106,9 +106,9 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
 
         <div className="mt-5 flex flex-col">
           {collapsed ? (
-            <div aria-hidden="true" className="mx-auto mb-2 h-px w-6 bg-line" />
+            <div aria-hidden="true" className="mx-auto mb-2 h-px w-6 bg-cv-hairline" />
           ) : (
-            <h2 className="mb-1 px-2 text-[11px] font-bold uppercase tracking-wider text-ink-subtlest">Projects</h2>
+            <h2 className="mb-1 px-2 text-[11px] font-bold uppercase tracking-wider text-cv-faint">Projects</h2>
           )}
           <ul className="flex flex-col gap-0.5" aria-label={collapsed ? 'Projects' : undefined}>
             {listed.map((project) => {
@@ -124,17 +124,17 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
                       <span className="flex shrink-0 items-center gap-1.5">
                         {project.starred && (
                           <>
-                            <Star size={12} aria-hidden="true" className="fill-amber-400 text-amber-400" />
+                            <Star size={12} aria-hidden="true" className="fill-cv-warn text-cv-warn" />
                             <span className="sr-only">Starred</span>
                           </>
                         )}
-                        {project.key && <span className="font-mono text-[11px] font-medium text-ink-subtlest">{project.key}</span>}
+                        {project.key && <span className="font-mono text-[11px] font-medium text-cv-faint">{project.key}</span>}
                         {open ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" className="opacity-0 group-hover:opacity-100 no-hover:opacity-100" />}
                       </span>
                     )}
                     active={false}
                     collapsed={collapsed}
-                    className={open ? 'text-ink' : undefined}
+                    className={open ? 'text-cv-ink' : undefined}
                   />
                   {open && !collapsed && <ProjectViews project={project} />}
                 </li>
@@ -142,7 +142,7 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
             })}
             {hidden > 0 && !collapsed && (
               <li className="flex flex-col">
-                <Link to="/boards" className={cx('flex h-8 items-center rounded px-2 text-[13px] text-ink-subtlest transition-colors hover:bg-neutral-fill hover:text-ink pointer-coarse:h-10', FOCUS)}>
+                <Link to="/boards" className={cx('flex h-8 items-center rounded-cv-control px-2 text-[13px] text-cv-faint transition-colors hover:bg-cv-sunken hover:text-cv-ink pointer-coarse:h-10', FOCUS)}>
                   View all projects ({projects.length})
                 </Link>
               </li>
@@ -161,7 +161,7 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
       </nav>
 
       {onToggleCollapsed && (
-        <div className={cx('flex shrink-0 border-t border-line p-3', collapsed ? 'justify-center' : 'justify-end')}>
+        <div className={cx('flex shrink-0 border-t border-cv-hairline p-3', collapsed ? 'justify-center' : 'justify-end')}>
           <IconButton
             icon={collapsed ? PanelLeftOpen : PanelLeftClose}
             label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

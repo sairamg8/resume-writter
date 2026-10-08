@@ -23,7 +23,7 @@ export function Sidebar({ projects, collapsed, onToggleCollapsed, drawerOpen, on
       <aside
         aria-label="Sidebar"
         className={cx(
-          'hidden shrink-0 border-r border-line bg-white transition-[width] duration-200 ease-out md:block',
+          'hidden shrink-0 border-r border-cv-hairline bg-cv-surface transition-[width] duration-200 ease-out md:block',
           collapsed ? 'w-16' : 'w-[240px]',
         )}
       >
@@ -54,7 +54,7 @@ export function Sidebar({ projects, collapsed, onToggleCollapsed, drawerOpen, on
               aria-label="Navigation"
               tabIndex={-1}
               className={cx(
-                'absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col bg-white shadow-xl outline-none',
+                'absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col bg-cv-surface shadow-pop outline-none',
                 state === 'open' ? 'animate-ui-drawer-in' : 'animate-ui-drawer-out',
               )}
             >
