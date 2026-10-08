@@ -3,4 +3,4 @@
 // Button component on the start-up path (71-startup-chunks). Button.jsx re-exports it.
 
 /** The kit's focus ring: every interactive element wears it for keyboard focus only. */
-export const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-white';
+export const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-cv-surface';
