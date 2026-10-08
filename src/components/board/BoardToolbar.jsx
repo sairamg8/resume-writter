@@ -49,7 +49,7 @@ function FilterButton({ label, count, className, ...rest }) {
  *
  * Below md the search sits beside one "Filters" button (with how many are set) that shows the rest
  * under it: wrapped over three or four rows they took about 150px of a phone's height, above a
- * board that scrolls in what is left (R4-DPH-06). From md up it is the one row it always was.
+ * board that scrolls in what is left (R4-DPH-06). From md up it is one row; between md and xl it pans sideways instead of wrapping to three rows (B17 sweep).
  */
 export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy, right, withEpics = false }) {
   const [open, setOpen] = useState(false);
@@ -60,14 +60,14 @@ export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy
   // The values ticked and the quick filter; the search needs no count, its text is in the box.
   const activeCount = filters.epicIds.length + filters.types.length + filters.labelIds.length + filters.priorities.length + (filters.due ? 1 : 0);
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 md:px-8">
+    <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 md:px-8 md:max-xl:flex-nowrap md:max-xl:overflow-x-auto">
       <SearchInput
         value={filters.text}
         onChange={(text) => set({ text })}
         placeholder="Search this project"
         aria-label="Search this project"
         size="sm"
-        className="mr-1 min-w-0 flex-1 md:w-52 md:flex-initial"
+        className="mr-1 min-w-0 flex-1 md:w-52 md:flex-initial md:shrink-0"
       />
       <FilterButton label="Filters" count={activeCount} aria-expanded={open} onClick={() => setOpen((o) => !o)} className="md:hidden" />
       {/* Below md a row of its own under the search, while "Filters" is open. From md up `contents`
@@ -125,7 +125,7 @@ export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy
             Clear filters
           </button>
         )}
-        <span className="ml-auto flex items-center gap-1.5">
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {right}
           {onGroupBy && (
             <Menu

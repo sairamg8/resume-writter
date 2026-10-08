@@ -70,3 +70,11 @@ it('the project tabs pan sideways below lg with a faded right edge as the cue', 
   assert.ok(tokens.some((t) => t.startsWith('max-lg:[mask-image:linear-gradient(to_right')), `the right edge fades out below lg: ${tokens.join(' ')}`);
   assert.match(src('src/components/board/ProjectTabs.jsx'), /scrollIntoView\?\.\(\{ inline: 'nearest', block: 'nearest' \}\)/);
 });
+
+it('the board filter bar is one row that pans sideways between md and xl, with Group by at its end', () => {
+  const s = src('src/components/board/BoardToolbar.jsx');
+  assert.match(s, /className="flex flex-wrap items-center gap-1\.5 px-4 py-3 md:px-8 md:max-xl:flex-nowrap md:max-xl:overflow-x-auto"/);
+  assert.match(s, /<span className="ml-auto flex shrink-0 items-center gap-1\.5">/);
+  assert.match(s, /md:flex-initial md:shrink-0/);
+  assert.ok(s.indexOf('ml-auto flex shrink-0') < s.indexOf('label="Group by"'), 'Group by sits in the shrink-0 end box');
+});
