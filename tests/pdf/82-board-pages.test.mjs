@@ -83,7 +83,7 @@ const project = (extra = {}) => ({
   labels: [{ id: 'l1', name: 'Urgent', color: '#ef4444' }],
   sprints: [],
   issues: [
-    issue('i1', 1, 'Fix the tap', 'c1', { labelIds: ['l1'], due: '2030-01-02' }),
+    issue('i1', 1, 'Fix the tap', 'c1', { labelIds: ['l1'], due: '2099-01-02' }),
     issue('i2', 2, 'Paint the fence', 'c2'),
     issue('i3', 3, 'Buy nails', 'c1', { checklist: [{ id: 'k1', text: 'Box of 100', done: true }, { id: 'k2', text: 'Hammer', done: false }] }),
   ],
@@ -116,7 +116,7 @@ it('/boards/:id shows each status column with its issues in rank order: keys, la
   assert.match(columns[2], /^ Done 0 /);
   assert.doesNotMatch(columns[2], /Fix the tap|Buy nails|Paint the fence/);
   const t = text(html);
-  assert.match(t, /Jan 2, 2030/, 'the due date');
+  assert.match(t, /Jan 2, 2099/, 'the due date');
   assert.match(t, /1\/2/, 'the checklist\'s progress');
   assert.match(html, /title="Urgent"/, 'the label, by the board\'s own label');
   assert.match(html, /aria-label="Medium priority"/, 'each card names its priority');
