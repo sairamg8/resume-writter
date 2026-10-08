@@ -382,7 +382,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       {letterUsed && (
         <Lazy
           load="letter"
-          fallback={() => <LetterFallback asked={letterModalOpen} make={() => (moved.current ? setLetterModalOpen(false) : newLetter(letterSourceList[0]?.id ?? null))} />}
+          fallback={() => <LetterFallback asked={letterModalOpen} make={() => {
+            if (moved.current) { setLetterModalOpen(false); return; }
+            const from = letterSourceList[0];
+            newLetter(from?.id ?? null);
+            if (from) setImportError(`Made from ${from.name}: the picker could not load.`);
+          }} />}
           isOpen={letterModalOpen}
           sources={letterSourceList}
           onPick={newLetter}
