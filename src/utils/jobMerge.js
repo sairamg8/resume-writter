@@ -110,6 +110,15 @@ export function mergeImport(current, incoming, now = Date.now()) {
       skipped += 1;
       continue;
     }
+    // A row with no usable id (another tool's export, a hand-made list, ids that are numbers) has no
+    // id to find its job by, so each import of the file added every row again. A job that was here
+    // before this import and is the same job is the row's copy: skipped. Only jobs from before the
+    // import are compared, so two equal rows in one file are still both added (once).
+    if (typeof kept.id !== 'string' || !kept.id) {
+      const twin = current.find((j) => (j.company ?? '') === (theirs.company ?? '') && (j.role ?? '') === (theirs.role ?? '')
+        && stable(j) === stable({ ...asOver(theirs, kept, j), id: j.id }));
+      if (twin) { skipped += 1; continue; }
+    }
     const job = i === undefined ? theirs : { ...theirs, id: newId('job') };
     at.set(job.id, jobs.length);
     jobs.push(job);
