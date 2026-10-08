@@ -12,7 +12,7 @@ import { cx } from './compose.js';
  */
 export function NavTabs({ items, 'aria-label': ariaLabel, className }) {
   return (
-    <nav aria-label={ariaLabel} className={cx('flex items-end gap-5 overflow-x-auto', className)}>
+    <nav aria-label={ariaLabel} className={cx('flex items-end gap-5 overflow-x-auto overflow-y-hidden', className)}>
       {items.map((tab) => {
         const Icon = tab.icon;
         return (

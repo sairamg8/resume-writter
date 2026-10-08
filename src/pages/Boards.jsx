@@ -45,7 +45,7 @@ export function Boards() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader title="Projects" actions={<Button variant="primary" leftIcon={Plus} onClick={() => setCreating('1')}>Create project</Button>} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex flex-col gap-4 px-4 py-4 md:px-8">

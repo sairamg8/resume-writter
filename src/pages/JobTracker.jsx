@@ -36,7 +36,7 @@ const knownView = (v) => (VIEWS.some((x) => x.id === v) ? v : undefined);
  */
 function ViewTabs({ view, onChange }) {
   return (
-    <nav aria-label="Job tracker views" className="flex items-end gap-5 overflow-x-auto">
+    <nav aria-label="Job tracker views" className="flex items-end gap-5 overflow-x-auto overflow-y-hidden">
       {VIEWS.map((v) => (
         <button
           key={v.id}
@@ -137,7 +137,7 @@ export function JobTracker({ store }) {
   const open = id => navigate(`/jobs/${encodeURIComponent(id)}`);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Job Tracker"
         subtitle={`${jobs.length} application${jobs.length === 1 ? '' : 's'} tracked`}

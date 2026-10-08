@@ -50,7 +50,7 @@ export function Tabs({ id, items, value, onChange, 'aria-label': ariaLabel, clas
   };
 
   return (
-    <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className={cx('flex items-end gap-5 overflow-x-auto', className)}>
+    <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className={cx('flex items-end gap-5 overflow-x-auto overflow-y-hidden', className)}>
       {items.map((tab) => {
         const selected = tab.value === value;
         const ids = tabIds(id, tab.value);
