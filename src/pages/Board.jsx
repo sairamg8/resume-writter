@@ -65,7 +65,7 @@ function NoMatch({ onClear, className = 'py-8' }) {
 /** A swimlane's heading: fold it, its name (an epic's, a priority's, a type's), how many issues. */
 function LaneHeader({ lane, open, onToggle }) {
   return (
-    <button type="button" aria-expanded={open} onClick={onToggle} className="sticky left-0 flex items-center gap-2 rounded-cv-control px-1 py-2 text-sm font-semibold text-cv-ink hover:bg-cv-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
+    <button type="button" aria-expanded={open} onClick={onToggle} className="sticky left-0 flex items-center gap-2 self-start rounded-cv-control px-1 py-2 text-sm font-semibold text-cv-ink hover:bg-cv-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cv-brand/60">
       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
       {lane.kind === 'type' && <IssueTypeIcon type={lane.id} decorative />}
       {lane.kind === 'priority' && <PriorityIcon priority={lane.id} decorative />}
@@ -319,6 +319,7 @@ export function Board() {
               </div>
             </>
           ) : (
+            <>
             <div className="flex w-max min-w-full flex-col gap-1">
               <div className="sticky top-0 z-10 flex gap-2 bg-cv-surface pb-1">
                 {shownLists.map((list) => (
@@ -327,7 +328,6 @@ export function Board() {
                   </div>
                 ))}
               </div>
-              {lanes.length === 0 && <NoMatch onClear={clearFilters} />}
               {lanes.map((lane) => {
                 const open = !folded.has(lane.id);
                 const inLane = new Set(lane.issues.map((i) => i.id));
@@ -345,6 +345,9 @@ export function Board() {
                 );
               })}
             </div>
+            {/* Outside the w-max row: inside it the line was as wide as every column together and centred in that, off a phone's screen. */}
+            {lanes.length === 0 && <NoMatch onClear={clearFilters} />}
+            </>
           )}
         </div>
         <DragOverlay dropAnimation={null}>
