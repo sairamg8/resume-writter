@@ -75,7 +75,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
               <tr
                 key={job.id}
                 onClick={() => onNavigate(job.id)}
-                className="group h-11 cursor-pointer border-b border-cv-hairline-subtle transition-colors last:border-0 hover:bg-hovered"
+                className="group h-11 cursor-pointer border-b border-line-subtle transition-colors last:border-0 hover:bg-hovered"
               >
                 <td className="px-3">
                   <div className="flex items-center gap-2">
