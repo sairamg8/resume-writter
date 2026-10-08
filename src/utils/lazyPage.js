@@ -11,7 +11,9 @@
 export const RELOADED_KEY = 'cpwtcv_chunk_reload';
 
 const browser = () => ({
-  storage: globalThis.sessionStorage,
+  // Read where it is used, inside a try: with site data blocked the property itself throws (SecurityError), and
+  // read here it threw out of loadPage, so no page's code could load at all.
+  get storage() { return globalThis.sessionStorage; },
   online: globalThis.navigator?.onLine !== false,
   reload: () => globalThis.location?.reload(),
 });
