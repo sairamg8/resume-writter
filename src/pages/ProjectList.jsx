@@ -9,6 +9,7 @@ import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { InlineCreate } from '@/components/board/InlineCreate';
 import { EpicLozenge, LabelPill } from '@/components/board/IssueFields';
 import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
+import { countLabel } from '@/utils/uiFormat';
 import { StatusMenu } from '@/components/tracker/Lozenge';
 import { IssueTypeIcon, Points, PriorityIcon, priorityOf } from '@/components/tracker/TrackerIcons';
 import { filterIssues, sortIssues } from '@/utils/boardQuery';
@@ -83,7 +84,7 @@ export function ProjectList() {
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
-      <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics right={<span className="text-[13px] text-cv-faint">{rows.length} of {board.issues.length} issues</span>} />
+      <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics right={<span className="text-[13px] text-cv-faint">{rows.length} of {countLabel(board.issues.length, 'issue')}</span>} />
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
         <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[64rem]">
           <caption className="sr-only">Issues of {board.title}</caption>

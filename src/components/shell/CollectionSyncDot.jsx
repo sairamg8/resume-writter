@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
-import { SyncDot } from '../AuthBar.jsx';
+import { SyncDot, clip } from '../AuthBar.jsx';
 import { collectionSyncStatus, syncHeld, worstSyncStatus } from '../../utils/collectionSyncMeta.js';
 
 // The browser's online flag, as the résumés' icon reads it (useCloudSync, cloudSyncBrowser.js).
@@ -14,8 +14,6 @@ const subscribeOnline = (changed) => {
 };
 const browserOnline = () => window.navigator.onLine !== false;
 const alwaysOnline = () => true;
-
-const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
 
 /**
  * The lists a workspace page shows: the Job Tracker's pages show the jobs, and every page shows the

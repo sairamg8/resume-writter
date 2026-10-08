@@ -113,7 +113,7 @@ export function Boards() {
                   })}
                 </tbody>
               </table>
-              {rows.length === 0 && <p className="py-8 text-center text-sm text-cv-faint">No projects match “{query.trim()}”.</p>}
+              {rows.length === 0 && <p className="py-8 text-center text-sm break-words text-cv-faint">No projects match “{query.trim()}”.</p>}
             </div>
           </>
         )}

@@ -135,7 +135,7 @@ function QuickSearch({ search }) {
           // them and nothing could reach them (R5-JOB-03).
           <div className="absolute top-10 right-0 left-0 z-50 max-h-[min(24rem,calc(100dvh-4.5rem))] overflow-y-auto overscroll-contain rounded-cv-card border border-cv-hairline bg-cv-surface py-1 shadow-pop">
             {results.length === 0 ? (
-              <p className="px-3 py-3 text-sm text-cv-muted">No issues or projects match “{query.trim()}”.</p>
+              <p className="px-3 py-3 text-sm break-words text-cv-muted">No issues or projects match “{query.trim()}”.</p>
             ) : (
               <ul ref={listRef} id={listId} role="listbox" aria-label="Search results">
                 {results.map((hit, i) => (

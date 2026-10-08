@@ -46,7 +46,7 @@ export function Toast({ toast, paused, onDismiss }) {
     <div
       data-toast=""
       className={cx(
-        'pointer-events-auto flex w-full items-start gap-3 rounded-xl bg-cv-surface p-3 pr-2 shadow-pop ring-1 ring-cv-hairline',
+        'pointer-events-auto flex w-full items-start gap-3 break-words rounded-xl bg-cv-surface p-3 pr-2 shadow-pop ring-1 ring-cv-hairline',
         leaving ? 'animate-ui-fade-out' : 'animate-ui-toast-in',
       )}
     >
