@@ -2496,6 +2496,408 @@
       "ats": "greenhouse",
       "slug": "zyngacareers",
       "sector": "consumer, media, social"
+    },
+    {
+      "name": "Acquia",
+      "ats": "greenhouse",
+      "slug": "acquia",
+      "sector": "software"
+    },
+    {
+      "name": "Aleph Alpha",
+      "ats": "lever",
+      "slug": "aleph",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "AlphaSense",
+      "ats": "greenhouse",
+      "slug": "alphasense",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Automox",
+      "ats": "greenhouse",
+      "slug": "automox",
+      "sector": "software"
+    },
+    {
+      "name": "Axiom",
+      "ats": "greenhouse",
+      "slug": "axiom",
+      "sector": "software"
+    },
+    {
+      "name": "Axios",
+      "ats": "greenhouse",
+      "slug": "axios",
+      "sector": "games and media"
+    },
+    {
+      "name": "Branch Metrics",
+      "ats": "greenhouse",
+      "slug": "branchmetrics",
+      "sector": "software"
+    },
+    {
+      "name": "Canonical",
+      "ats": "greenhouse",
+      "slug": "canonical",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "CarGurus",
+      "ats": "greenhouse",
+      "slug": "cargurus",
+      "sector": "software"
+    },
+    {
+      "name": "Carvana",
+      "ats": "greenhouse",
+      "slug": "carvana",
+      "sector": "software"
+    },
+    {
+      "name": "Cherry Servers",
+      "ats": "greenhouse",
+      "slug": "cherry",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Cision",
+      "ats": "greenhouse",
+      "slug": "cision",
+      "sector": "software"
+    },
+    {
+      "name": "Cognition",
+      "ats": "greenhouse",
+      "slug": "cognitionlabs",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Collibra",
+      "ats": "greenhouse",
+      "slug": "collibra",
+      "sector": "software"
+    },
+    {
+      "name": "Contentstack",
+      "ats": "greenhouse",
+      "slug": "contentstack",
+      "sector": "software"
+    },
+    {
+      "name": "Cortex",
+      "ats": "greenhouse",
+      "slug": "cortex",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Cresta",
+      "ats": "greenhouse",
+      "slug": "cresta",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Crunchyroll",
+      "ats": "greenhouse",
+      "slug": "crunchyroll",
+      "sector": "games and media"
+    },
+    {
+      "name": "Descript",
+      "ats": "greenhouse",
+      "slug": "descript",
+      "sector": "software"
+    },
+    {
+      "name": "Disney Streaming",
+      "ats": "greenhouse",
+      "slug": "disney",
+      "sector": "games and media"
+    },
+    {
+      "name": "Earnin",
+      "ats": "greenhouse",
+      "slug": "earnin",
+      "sector": "software"
+    },
+    {
+      "name": "Everlaw",
+      "ats": "greenhouse",
+      "slug": "everlaw",
+      "sector": "software"
+    },
+    {
+      "name": "EverlyWell",
+      "ats": "lever",
+      "slug": "everlywell",
+      "sector": "fintech more"
+    },
+    {
+      "name": "EverQuote",
+      "ats": "greenhouse",
+      "slug": "everquote",
+      "sector": "software"
+    },
+    {
+      "name": "Flowcode",
+      "ats": "greenhouse",
+      "slug": "flowcode",
+      "sector": "software"
+    },
+    {
+      "name": "fuboTV",
+      "ats": "greenhouse",
+      "slug": "fubotv",
+      "sector": "games and media"
+    },
+    {
+      "name": "Gem",
+      "ats": "lever",
+      "slug": "gemcareers",
+      "sector": "software"
+    },
+    {
+      "name": "GoGuardian",
+      "ats": "greenhouse",
+      "slug": "goguardian",
+      "sector": "software"
+    },
+    {
+      "name": "Greenlight",
+      "ats": "lever",
+      "slug": "greenlight",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Human Interest",
+      "ats": "greenhouse",
+      "slug": "humaninterest",
+      "sector": "software"
+    },
+    {
+      "name": "Imbue",
+      "ats": "greenhouse",
+      "slug": "imbue",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Incode",
+      "ats": "greenhouse",
+      "slug": "incode",
+      "sector": "software"
+    },
+    {
+      "name": "Kentik",
+      "ats": "greenhouse",
+      "slug": "kentik",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Lightricks",
+      "ats": "greenhouse",
+      "slug": "lightricks",
+      "sector": "software"
+    },
+    {
+      "name": "LogicMonitor",
+      "ats": "greenhouse",
+      "slug": "logicmonitor",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Lucid Software",
+      "ats": "greenhouse",
+      "slug": "lucidsoftware",
+      "sector": "software"
+    },
+    {
+      "name": "Magic",
+      "ats": "greenhouse",
+      "slug": "magic",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Moonshot",
+      "ats": "greenhouse",
+      "slug": "moonshot",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Mozilla",
+      "ats": "greenhouse",
+      "slug": "mozilla",
+      "sector": "software"
+    },
+    {
+      "name": "Noyo",
+      "ats": "greenhouse",
+      "slug": "noyocareers",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Observe.AI",
+      "ats": "greenhouse",
+      "slug": "observeai",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Obsidian Security",
+      "ats": "greenhouse",
+      "slug": "obsidiansecurity",
+      "sector": "software"
+    },
+    {
+      "name": "Oportun",
+      "ats": "greenhouse",
+      "slug": "oportun",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Orca",
+      "ats": "greenhouse",
+      "slug": "orca",
+      "sector": "software"
+    },
+    {
+      "name": "Pantheon",
+      "ats": "greenhouse",
+      "slug": "pantheon",
+      "sector": "software"
+    },
+    {
+      "name": "Parloa",
+      "ats": "greenhouse",
+      "slug": "parloa",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Pilot",
+      "ats": "greenhouse",
+      "slug": "pilothq",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Platform.sh",
+      "ats": "greenhouse",
+      "slug": "platformsh",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "PolyAI",
+      "ats": "greenhouse",
+      "slug": "polyai",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Roadie",
+      "ats": "greenhouse",
+      "slug": "roadie",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Rumble",
+      "ats": "greenhouse",
+      "slug": "rumble",
+      "sector": "games and media"
+    },
+    {
+      "name": "Scaleway",
+      "ats": "lever",
+      "slug": "scaleway",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Self Financial",
+      "ats": "greenhouse",
+      "slug": "selffinancial",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Sezzle",
+      "ats": "greenhouse",
+      "slug": "sezzle",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Splice",
+      "ats": "greenhouse",
+      "slug": "splice",
+      "sector": "games and media"
+    },
+    {
+      "name": "Spreedly",
+      "ats": "lever",
+      "slug": "spreedly",
+      "sector": "software"
+    },
+    {
+      "name": "Stackadapt",
+      "ats": "greenhouse",
+      "slug": "stackadapt",
+      "sector": "software"
+    },
+    {
+      "name": "Thrive",
+      "ats": "greenhouse",
+      "slug": "thrive",
+      "sector": "games and media"
+    },
+    {
+      "name": "Truebill",
+      "ats": "greenhouse",
+      "slug": "truebill",
+      "sector": "fintech more"
+    },
+    {
+      "name": "Tubi",
+      "ats": "greenhouse",
+      "slug": "tubi",
+      "sector": "games and media"
+    },
+    {
+      "name": "Typeface",
+      "ats": "greenhouse",
+      "slug": "typeface",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Unqork",
+      "ats": "greenhouse",
+      "slug": "unqork",
+      "sector": "software"
+    },
+    {
+      "name": "Upbound",
+      "ats": "greenhouse",
+      "slug": "upbound",
+      "sector": "cloud and infra more"
+    },
+    {
+      "name": "Upwork",
+      "ats": "greenhouse",
+      "slug": "upwork",
+      "sector": "software"
+    },
+    {
+      "name": "xAI",
+      "ats": "greenhouse",
+      "slug": "xai",
+      "sector": "ai and robotics"
+    },
+    {
+      "name": "Zeta",
+      "ats": "lever",
+      "slug": "zeta",
+      "sector": "software"
+    },
+    {
+      "name": "Ziprecruiter",
+      "ats": "greenhouse",
+      "slug": "ziprecruiter",
+      "sector": "fintech more"
     }
   ]
 }
