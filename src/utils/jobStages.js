@@ -68,8 +68,9 @@ let listening = false;
 /**
  * The list now. `uid` is the signed-in account (null: nobody); asked for another account's than
  * the last call's, the list is that account's, read from its own key. An account that has no list
- * here yet starts from the browser's own, as a first sync merges the browser's jobs into the
- * account's (nothing is written until a change).
+ * here yet starts empty: the browser's own names are the signed-out list's, and carrying them into
+ * an account would hand one person's stage names to the next account to sign in on this browser.
+ * Its stages come from its own cloud list (jobStagesCloud.js).
  */
 export function stagesSnapshot(uid = account) {
   if ((uid || null) !== account) {
@@ -79,7 +80,6 @@ export function stagesSnapshot(uid = account) {
   if (!current) {
     ({ stages: current, unreadable } = load());
     seen = rawNow();
-    if (account && seen === null) current = load(KEY).stages;
     // Another tab's list is taken as it is saved, so a change here builds on it. globalThis is
     // window in the browser; under Node, only what a test puts there (job-stages.unit.mjs).
     if (!listening) {
