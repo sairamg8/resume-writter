@@ -12,8 +12,8 @@ import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const A = { uid: 'A', email: 'a@example.com' };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 60;
-const STEPS = 70;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 4000;
+const STEPS = 110;
 const SKEW = [0, -2500, 1800];
 
 /** mulberry32: the same numbers for a seed on every machine. */
