@@ -16,6 +16,7 @@ import {
   RenderBullets,
   shadesOf,
   entryTextWidth,
+  belowDescription,
 } from './PdfSections';
 import { EmployerHeader, headPresence, itemHeadPresence } from './PdfItemHeader';
 import { lineBox, textWidth, wrappedLines } from './pdfMeasure';
@@ -36,6 +37,7 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   const body       = shadesOf(settings).body;
   // An entry's header fields, as ItemHeader prints them.
   const roleOf = (item) => ((item.hiddenFields || []).includes('role') ? '' : (item.role || ''));
+  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
   const head = (item) => {
     const iH  = item.hiddenFields || [];
     const company = iH.includes('company') ? '' : (item.company || '');
@@ -48,6 +50,8 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
       sub: (titleOrder === 'role' ? company : role) || undefined,
       loc: loc || undefined,
       dateStr: showDates ? dateRange(sd, ed, settings) : '',
+      // What its header keeps under it for the description's first block, when that never splits.
+      below: belowDescription(settings, descOf(item), entrySize, lineH, cols),
     };
   };
   // Section Options → "Group roles by company" (R2-147): consecutive roles at one employer print under
@@ -58,9 +62,8 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   // The title keeps the first entry's header and the lines it keeps with it (R2-047): a group's employer
   // line and its first role's, two lines as a Stacked header.
   const presence = !visibleItems.length ? 0
-    : groups?.[0].length > 1 ? itemHeadPresence({ primary: employerOf(groups[0][0]), sub: roleOf(groups[0][0]) || undefined, settings, centered, width: entryTextWidth(settings, cols) })
+    : groups?.[0].length > 1 ? itemHeadPresence({ primary: employerOf(groups[0][0]), sub: roleOf(groups[0][0]) || undefined, settings, centered, width: entryTextWidth(settings, cols), below: head(groups[0][0]).below })
     : itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) });
-  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
   const one = (item) => {
     const desc = descOf(item);
     return (
@@ -92,14 +95,14 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
           settings={settings}
           italicSub={italicSubs}
           centered={centered}
-          keep={itemHeadPresence({ primary: roleOf(g[0]), loc: places.roles[0] || undefined, dateStr: head(g[0]).dateStr, settings, titleStyle, centered, width: entryTextWidth(settings, cols) })}
+          keep={itemHeadPresence({ primary: roleOf(g[0]), loc: places.roles[0] || undefined, dateStr: head(g[0]).dateStr, settings, titleStyle, centered, width: entryTextWidth(settings, cols), below: head(g[0]).below })}
         />
         {g.map((item, k) => {
           const desc = descOf(item);
           return (
             <View key={k} style={k ? { marginTop: itemGap / 2 } : null}>
               {SPACER}
-              <ItemHeader primary={roleOf(item)} loc={places.roles[k] || undefined} dateStr={head(item).dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
+              <ItemHeader primary={roleOf(item)} loc={places.roles[k] || undefined} dateStr={head(item).dateStr} settings={settings} titleStyle={titleStyle} centered={centered} below={head(item).below} />
               {hasRichText(desc) && (
                 <PdfRichText html={desc} style={{ fontSize: entrySize, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
@@ -330,6 +333,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
       sub: sub || undefined,
       loc: (showLoc && item.location ? item.location : '') || undefined,
       dateStr: showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
+      below: belowDescription(settings, item.description, entrySize - 0.5, lineH, cols),
     };
   };
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
