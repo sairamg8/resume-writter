@@ -46,7 +46,7 @@ function device(cloud, index) {
   const { seen, report } = recorder();
   const net = { online: true, signedIn: false, clock: 0 };
   const sync = createCollectionSync({
-    name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: memoryMeta(), report, timers,
+    name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: memoryMeta({ uid: null, versions: {}, revs: {}, device: `dev-${index}`, order: null, stashed: {} }), report, timers,
     online: () => net.online, now: () => net.clock,
   });
   return {
