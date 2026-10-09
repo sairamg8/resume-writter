@@ -10,6 +10,8 @@ import { isLetter } from './letters.js';
 
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** The latest time, either side of 1970, a Date holds (ms): a status time past it prints 'Invalid Date'. */
+const MAX_DATE_MS = 8.64e15;
 
 /** Text as search compares it: lower case, accents aside ('Zürich' finds 'zurich'). */
 const fold = (v) => {
@@ -284,7 +286,7 @@ export function historyLabels(history) {
     return {
       status: h.status,
       label: STATUS_MAP[h.status].label,
-      at: Number.isFinite(h.changedAt) ? h.changedAt : null,
+      at: Number.isFinite(h.changedAt) && Math.abs(h.changedAt) <= MAX_DATE_MS ? h.changedAt : null,
       closed,
       current: i === list.length - 1,
       reopened: closed && Boolean(next) && PIPELINE_STATUSES.includes(next.status),

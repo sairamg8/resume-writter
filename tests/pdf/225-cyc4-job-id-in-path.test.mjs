@@ -66,7 +66,8 @@ it('the edit form\'s breadcrumb to the job writes the id encoded', async () => {
 });
 
 it('the tracker\'s row, the form\'s Save and back path all encode the id', () => {
-  assert.match(src('src/pages/JobTracker.jsx'), /navigate\(`\/jobs\/\$\{encodeURIComponent\(id\)\}`\)/);
+  // The row's navigate also marks its entry (state.fromTracker, tests/pdf/487): the id is encoded all the same.
+  assert.match(src('src/pages/JobTracker.jsx'), /navigate\(`\/jobs\/\$\{encodeURIComponent\(id\)\}`(, \{ state: \{ fromTracker: true \} \})?\)/);
   const form = src('src/pages/JobForm.jsx');
   assert.match(form, /backPath = isEdit && existing \? `\/jobs\/\$\{encodeURIComponent\(id\)\}`/);
   assert.match(form, /leaveTo\(`\/jobs\/\$\{encodeURIComponent\(id\)\}`\)/);
