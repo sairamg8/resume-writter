@@ -4,16 +4,17 @@
 # Every page: the browser may not guess a type for a file (a user-made file named .js is not run as a
 # script), the site may be framed by itself only (a page that frames it to trick a click is refused),
 # a link out sends the site's address and no more, and the camera, the microphone and the location
-# are off (the app uses none). Not set: a Content-Security-Policy, and a Cross-Origin-Opener-Policy,
-# which breaks the Google sign-in popup; a CSP has to be written against a real browser session of the
-# whole app (the PDF worker, pdf.js, Firebase and the jsDelivr fonts), not blind.
+# are off (the app uses none).
+#
+# Not set, on purpose:
+#  - a Content-Security-Policy: it has to be written against a real browser session of the whole app
+#    (the PDF worker, pdf.js, Firebase and the jsDelivr fonts), not blind;
+#  - a Cross-Origin-Opener-Policy: it breaks the Google sign-in popup;
+#  - a long Cache-Control for assets/: wrangler.jsonc answers a path that is no file with index.html (a
+#    single-page app), and a rule by path would let a browser keep that page for a year under the name of
+#    a script that was not there yet. The default (asked about every time, answered 304) is kept.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-
-# The build names every file under assets/ by its content, so one never changes under its name: a
-# returning visitor keeps them without asking again. index.html (not here) is asked about every time.
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
