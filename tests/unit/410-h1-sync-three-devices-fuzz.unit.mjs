@@ -108,6 +108,8 @@ function device(cloud, index, link) {
     items: () => d.list, replace: (next) => d.set(next),
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     fromCloud: (x) => x, label: (j) => j.company, conflictCopy: jobConflictCopy,
+    // The first visit's demo job: one id on every browser, untouched until someone writes in it.
+    seed: (j) => j.id === 'demo' && j.notes === '', seedIds: ['demo'],
   };
   const record = () => memoryMeta({ uid: null, versions: {}, revs: {}, device: `dev-${index}-${d.wipes}`, order: null, stashed: {} });
   d.meta = record();
@@ -127,9 +129,9 @@ function device(cloud, index, link) {
   d.user = () => (d.account ? USERS[d.account] : null);
   d.start = async (user = d.user()) => { d.sync.start(user); await settle(d.turns); };
   d.fire = async () => { await d.timers.fire(); await settle(d.turns); };
-  d.wipe = () => {
+  d.wipe = (list) => {
     d.wipes += 1;
-    d.list = [];
+    d.list = list;
     d.meta = record();
     d.account = null;
     d.lastDeleted = null;
@@ -195,10 +197,13 @@ async function replay(ops, seed, trace = false) {
     d.account = account;
     await d.start();
   }
-  // Device 0 starts with two jobs; the others join the account.
+  // Every browser shows the demo job at first; device 0 starts with two jobs more, the others join the account.
+  const demo = (d) => job('demo', '', stamp(d));
   devices[0].account = 'A';
-  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0]))]);
-  say('d0 starts with j1, j2');
+  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0])), demo(devices[0])]);
+  devices[1].set([demo(devices[1])]);
+  devices[2].set([demo(devices[2])]);
+  say('d0 starts with j1, j2 and the demo job, the others with the demo job');
   for (const d of devices) await signIn(d, 'A');
 
   /** The device's sync run until it has nothing more to send. */
@@ -313,7 +318,7 @@ async function replay(ops, seed, trace = false) {
       if (!d.account || !d.online || pending[d.index].length || Object.keys(d.meta.read().stashed).length) continue;
       await quiesce(d);
       say(`d${d.index} clears the site data`);
-      d.wipe();
+      d.wipe([demo(d)]);
       await d.start(null);
     } else {
       await settle(2);
