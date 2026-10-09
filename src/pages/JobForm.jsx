@@ -67,7 +67,7 @@ function LeaveGuard({ shouldBlock, asking, ask, onDiscard }) {
   return null;
 }
 
-export function JobForm({ store }) {
+export function JobForm({ store, auth }) {
   const navigate = useNavigate();
   const { id } = useParams();
   // The app's router is a data router, which can hold a navigation; a test's plain one cannot.
@@ -77,7 +77,7 @@ export function JobForm({ store }) {
   const { jobs, persistError, addJob, updateJob, left } = useJobStore();
   const { appState } = store;
   const resumes = appState.resumes;
-  const { customStages, addCustomStage, removeCustomStage } = useJobStages();
+  const { customStages, addCustomStage, removeCustomStage } = useJobStages(auth?.user?.uid);
   const uid = useId();
   const formId = uid + 'form';
 

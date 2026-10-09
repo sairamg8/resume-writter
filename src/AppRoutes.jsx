@@ -111,8 +111,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
         {/* The account (sign in, sign out) in the workspace's top bar too (R4-DUX-07). */}
         <Route element={<WorkspaceRoute auth={auth} />}>
           <Route path="/jobs"                element={<JobTracker store={store} />} />
-          <Route path="/jobs/new"            element={<JobForm    store={store} />} />
-          <Route path="/jobs/:id/edit"       element={<JobForm    store={store} />} />
+          <Route path="/jobs/new"            element={<JobForm    store={store} auth={auth} />} />
+          <Route path="/jobs/:id/edit"       element={<JobForm    store={store} auth={auth} />} />
           <Route path="/jobs/:id"            element={<JobDetail  store={store} />} />
           <Route path="/boards"              element={<Boards />} />
           <Route path="/work"                element={<YourWork />} />
