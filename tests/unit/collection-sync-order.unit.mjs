@@ -210,7 +210,7 @@ test('R2-140: a saved list that could not be read in full forgets the order too'
   const storage = new MemoryStorage();
   storage.setItem(JOBS_KEY, JSON.stringify({ uid: 'A', versions: {}, order: ['j1', 'j2'], stashed: {} }));
   forgetSynced(JOBS_KEY, () => storage);
-  assert.deepEqual(localMeta(JOBS_KEY, () => storage).read(), { uid: 'A', versions: {}, order: null, stashed: {} });
+  assert.deepEqual(localMeta(JOBS_KEY, () => storage).read(), { uid: 'A', versions: {}, revs: {}, device: null, order: null, stashed: {} }, 'the versions and the revs go; the record\'s other fields (cyc-D: revs, device) read as none');
 });
 
 test('R2-140: planFirstSync merges the order on its base', () => {

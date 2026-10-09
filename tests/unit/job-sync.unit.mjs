@@ -84,7 +84,10 @@ test('R2-145: the first sync merges this browser\'s jobs with the account\'s —
   assert.equal(d.seen.status, 'synced');
   assert.deepEqual(d.ids().toSorted(), ['job_cloud', 'job_local']);
   assert.equal(d.job('job_cloud').company, 'Globex');
-  assert.deepEqual(cloud.doc(jobPath('A', 'job_local')), job('job_local', 'Initech', 2), 'the local job is in the account');
+  // The job as an older reader sees it: the sync adds a version and a writer to the document (cyc-D, 11-sync-versions.md).
+  const { syncRev, syncBy, ...stored } = cloud.doc(jobPath('A', 'job_local'));
+  assert.deepEqual(stored, job('job_local', 'Initech', 2), 'the local job is in the account');
+  assert.deepEqual([syncRev, typeof syncBy], [1, 'string'], 'with its version and writer');
   assert.equal(cloud.doc(jobPath('A', 'job_cloud')).company, 'Globex');
   assert.deepEqual(cloud.doc(metaPath('A')).order, d.ids());
   const m = d.meta.read();
