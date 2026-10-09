@@ -14,7 +14,7 @@ import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-fires
 const A = { uid: 'A', email: 'a@example.com' };
 const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 600;
 const STEPS = 110;
-const SKEW = [0, -2500, 1800];
+const SKEW = [3, -2537, 1811];
 
 /** mulberry32: the same numbers for a seed on every machine. */
 function random(seed) {
