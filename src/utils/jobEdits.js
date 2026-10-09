@@ -174,8 +174,6 @@ export function toggleTodo(todos, id, now = Date.now()) {
   });
 }
 
-const DAY = 24 * 60 * 60 * 1000;
-
 /** The id of the demo job a first visit shows (demoJobs): the same on every browser. */
 export const DEMO_JOB_ID = 'demo_1';
 
@@ -193,10 +191,11 @@ export function demoJobs(now = new Date()) {
     { status: 'phone_screen', changedAt: at(3, 15) },
     { status: 'interview', changedAt: Math.min(at(7, 10), now.getTime()) },
   ];
+  // Five calendar days on, not 120 hours: across a daylight-saving change a day is 23 or 25 hours long.
   return [{
     id: DEMO_JOB_ID, company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
     url: '', location: 'Mountain View, CA', salary: '$180k – $250k',
-    appliedDate: todayLocalISO(appliedDay), deadline: todayLocalISO(new Date(now.getTime() + 5 * DAY)),
+    appliedDate: todayLocalISO(appliedDay), deadline: todayLocalISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5)),
     contact: 'Sarah Kim (Recruiter) · sarah@google.com',
     notes: '<p>Referred by college contact. L5 level. Focus on systems design round.</p>',
     todos: [
