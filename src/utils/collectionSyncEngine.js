@@ -351,7 +351,8 @@ export function createCollectionSync({
         await io.commit(uid, { sets: [x], stamps, expect: only(expect, [x.id]) });
         sent.push(x);
       } catch (e) {
-        if (failureKind(e, online()) !== 'stop') throw e;
+        // The cloud's copy changed since it was read: not a refusal, nothing to hold — the caller decides again.
+        if (isStale(e) || failureKind(e, online()) !== 'stop') throw e;
         held.set(x.id, x);
         heldChanged();
       }
