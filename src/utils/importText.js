@@ -939,7 +939,9 @@ const DOCUMENT_TITLE = /^(?:curriculum\s+vit(?:ae|a)|r[eé]sum[eé]|cv|c\.v\.)\s
 const NEXT_LABEL = /(?<=\S) (?=(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|portfolio|url|address|location)\s*:)/i;
 const labelled = (piece) => {
   const parts = piece.split(NEXT_LABEL);
-  return parts.length > 1 && parts.every((p) => contactOf(p)) ? parts : [piece];
+  // Each of a different kind: "Email: a@b.co Email: c@d.co" is not a run of contacts.
+  const keys = parts.map((p) => contactOf(p)?.key);
+  return parts.length > 1 && keys.every(Boolean) && new Set(keys).size === keys.length ? parts : [piece];
 };
 
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
