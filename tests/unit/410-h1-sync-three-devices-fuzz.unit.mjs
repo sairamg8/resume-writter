@@ -80,22 +80,24 @@ function asUser(fs, account, onWrite = () => {}) {
     getDocFromServer: async (ref) => { check(ref.path); return fs.getDocFromServer(ref); },
     writeBatch: (db) => {
       const paths = [];
+      const named = [];
       const batch = fs.writeBatch(db);
       return {
-        set: (ref, ...rest) => { paths.push(ref.path); return batch.set(ref, ...rest); },
-        delete: (ref) => { paths.push(ref.path); return batch.delete(ref); },
-        commit: async () => { paths.forEach(check); onWrite('batch', paths); return batch.commit(); },
+        set: (ref, ...rest) => { paths.push(ref.path); named.push(`set ${ref.path}`); return batch.set(ref, ...rest); },
+        delete: (ref) => { paths.push(ref.path); named.push(`del ${ref.path}`); return batch.delete(ref); },
+        commit: async () => { paths.forEach(check); onWrite('batch', named); return batch.commit(); },
       };
     },
     runTransaction: (db, update) => fs.runTransaction(db, async (tx) => {
       const paths = [];
+      const named = [];
       const result = await update({
         get: async (ref) => { check(ref.path); return tx.get(ref); },
-        set: (ref, ...rest) => { paths.push(ref.path); return tx.set(ref, ...rest); },
-        delete: (ref) => { paths.push(ref.path); return tx.delete(ref); },
+        set: (ref, ...rest) => { paths.push(ref.path); named.push(`set ${ref.path}`); return tx.set(ref, ...rest); },
+        delete: (ref) => { paths.push(ref.path); named.push(`del ${ref.path}`); return tx.delete(ref); },
       });
       paths.forEach(check);
-      onWrite('tx', paths);
+      onWrite('tx', named);
       return result;
     }),
   };
