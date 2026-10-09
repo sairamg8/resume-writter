@@ -250,6 +250,33 @@ export function createCollectionSync({
     return copies;
   }
 
+  /**
+   * `own`, this browser's list, with the items kept aside at the last sign-out (`items`) joined to it: `{ list, names }`.
+   * An item on both sides under one id (a file imported again while signed out) was this list's alone, and the edit kept
+   * aside was dropped. The later of the two stays and the other is kept as a copy (`names`: the items they are of), but
+   * for one the account holds already (`docs`: the file's copy is that).
+   */
+  function withStash(own, items, docs) {
+    const list = [...own];
+    const copies = [];
+    const names = [];
+    const at = (x) => (Number.isFinite(x.updatedAt) ? x.updatedAt : 0);
+    for (const x of items) {
+      const i = list.findIndex((o) => o.id === x.id);
+      if (i < 0) { list.push(x); continue; }
+      const o = list[i];
+      if (o === x || sameContent(o, x, store.conflictApart)) continue;
+      const [keep, older] = at(x) > at(o) ? [x, o] : [o, x];
+      list[i] = keep;
+      if (!store.conflictCopy || docs.some((d) => d.id === older.id && sameContent(d, older, store.conflictApart))) continue;
+      const copy = store.conflictCopy(older, [...list, ...docs, ...copies]);
+      if (hasTwin(copy, [...list, ...docs, ...copies])) continue;
+      copies.push(copy);
+      names.push(store.label(keep));
+    }
+    return { list: [...list, ...copies], names };
+  }
+
   function dropQueue() {
     timers.clear(s.timer);
     s.timer = null;
@@ -446,7 +473,7 @@ export function createCollectionSync({
       const knew = record.uid === uid ? early : record;
       const mine = knew.uid === uid;
       const stash = stashOf(knew, uid);
-      const local = [...own, ...stash.items.filter((x) => !own.some((o) => o.id === x.id))];
+      const { list: local, names: joined } = withStash(own, stash.items, docs);
       // An id the cloud cannot name is in no copy of it: its version (a nested document an older
       // build wrote) would have the job dropped here as removed from the cloud.
       const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? seen : {}) })
@@ -541,7 +568,7 @@ export function createCollectionSync({
       // key of its own, a copy of one id): `next` queued the project as it was before, over the one that was kept.
       changed(store.items());
       // Both sides changed these since the last sync: the older copies are kept beside them, and said.
-      if (plan.conflicts.length) report.conflict?.(plan.conflicts.map((c) => store.label(plan.merged.find((x) => x.id === c.id))));
+      if (joined.length || plan.conflicts.length) report.conflict?.([...joined, ...plan.conflicts.map((c) => store.label(plan.merged.find((x) => x.id === c.id)))]);
       if (!s.timer) settled();
     } catch (e) {
       if (gen !== s.gen) return;

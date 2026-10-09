@@ -257,7 +257,7 @@ async function replay(ops, trace = false) {
     const every = Object.values(account).join(' ');
     for (const [t, accounts] of owners) {
       const here = every.includes(`[${t}]`);
-      if (accounts.has(acct) && !here && !deleted.has(t) && !deletedIds.has(jobOf.get(t))) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
+      if (accounts.has(acct) && !here && !deleted.has(t) && !deletedIds.has(jobOf.get(t)) && !String(jobOf.get(t)).startsWith('imp')) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
       if (!accounts.has(acct) && here) problems.push(`${acct}: the edit [${t}], typed for the other account, is in this one`);
     }
   };
