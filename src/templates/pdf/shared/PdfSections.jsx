@@ -1,7 +1,7 @@
 import { View } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { headingFace } from './pdfFaces';
-import { PdfRichText } from './PdfRichText';
+import { PdfRichText, firstChunkKeep } from './PdfRichText';
 import { ColumnRoom, columnRoom } from './keepTogether';
 import { sectionPrints } from '@/utils/entryPrints';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
@@ -53,6 +53,15 @@ export function getColumnWidth(cols) {
  * a Grids cell's share of it (getColumnWidth). For a section title's presence (R4-DOUT-04, R4-DOUT-07).
  */
 export const entryTextWidth = (settings, cols = 1) => mainTextWidthPt(settings) * (parseFloat(getColumnWidth(cols)) / 100);
+
+/**
+ * What an entry's header keeps under it for the first block of its description `html` (firstChunkKeep),
+ * pt, laid out at `fontSize` and `lineHeight` in a section of `cols` Grids columns: 0 where that block
+ * splits, so the header's own two lines are enough.
+ */
+export const belowDescription = (settings, html, fontSize, lineHeight, cols = 1) => (
+  html ? firstChunkKeep({ html, settings, fontSize, lineHeight, width: entryTextWidth(settings, cols) }) : 0
+);
 
 /** `color` at `opacity`, for fills and text (see pdfColors.js for borders). */
 export const hexAlpha = (color, opacity) => tint(color, opacity);

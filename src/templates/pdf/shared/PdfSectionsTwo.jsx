@@ -20,6 +20,7 @@ import {
   entryTextWidth,
   getDateColor,
   shadesOf,
+  belowDescription,
 } from './PdfSections';
 import { CentredLine, EndRow, centredLines, endField, endRowLines, fieldGap, headPresence, headerKeep, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { wrappedLines } from './pdfMeasure';
@@ -130,6 +131,8 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const first      = visibleItems[0];
   const nameBox    = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' };
   const metaBox    = { fontFamily: font, fontSize: baseSize };
+  // What a project's header keeps under it for its description's first block, when that never splits.
+  const belowOf    = (item) => belowDescription(settings, item.description, entrySize - 0.5, lineH, cols);
   const headLines  = (item) => {
     const width = entryTextWidth(settings, cols);
     const date = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
@@ -141,7 +144,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const presence   = first ? headPresence({
     lines: headLines(first),
     styles: [nameBox, metaBox],
-    keep: headerKeep(settings),
+    keep: headerKeep(settings, belowOf(first)),
     extra: 2,
   }) : 0;
 
@@ -163,7 +166,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
           const dateStyle = { fontSize: baseSize, color: dateColor, lineHeight: onBaselineOf({ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }) };
           return (
             <View>
-              <View wrap={false} minPresenceAhead={headerKeep(settings)} style={{ alignItems: flexAlign, marginBottom: 2 }}>
+              <View wrap={false} minPresenceAhead={headerKeep(settings, belowOf(item))} style={{ alignItems: flexAlign, marginBottom: 2 }}>
                 {centered
                   ? <CentredLine first={item.name ? name : null} date={dateStr} dateStyle={dateStyle} sepColor={shade.muted} gap={fieldGap(baseSize)} />
                   : <EndRow left={name} leftMin={wordRoom([item.name, { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }])}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
@@ -248,7 +251,7 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
   const dateOf     = (item) => (showDates ? formatDate(item.date || '', settings) : '');
   // An award's title, issuer and date keep two lines of its description with them; with none, no keep:
   // react-pdf would move the block to make room for lines that never come.
-  const keepOf     = (item) => (hasRichText(item.description) ? headerKeep(settings) : 0);
+  const keepOf     = (item) => (hasRichText(item.description) ? headerKeep(settings, belowDescription(settings, item.description, baseSize, lineH, cols)) : 0);
   // The section's title keeps the first award's block and what the block keeps with it: its own three
   // lines were less, and it was left alone at the foot of a page while that block moved on (R2-047).
   // The title and issuer each wrapped at the entry's width (a Grids cell's), as Projects' header is
@@ -313,6 +316,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
     sub: item.org || undefined,
     loc: (showLoc && item.location ? item.location : '') || undefined,
     dateStr: showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
+    below: belowDescription(settings, item.description, entrySize - 0.5, lineH, cols),
   });
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
   const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) }) : 0;

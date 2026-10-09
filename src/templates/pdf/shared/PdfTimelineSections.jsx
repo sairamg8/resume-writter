@@ -1,6 +1,6 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { PdfRichText } from './PdfRichText';
+import { PdfRichText, firstChunkKeep } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
@@ -129,9 +129,11 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   const body = shadesOf(settings).body;
   const textAlign = centered ? 'center' : 'left';
 
+  // What an entry's header keeps under it for its description's first block, when that never splits.
+  const belowOf = (f) => (f.desc ? firstChunkKeep({ html: f.desc, settings, fontSize: entrySize - f.step, lineHeight: lineH, width: railTextWidth(settings, s.columns || 1) }) : 0);
   const head = (item) => {
     const f = fields(item, s, settings);
-    return { primary: f.primary, sub: f.sub || undefined, subLine: f.subLine, subText: f.subText, loc: f.loc || undefined, dateStr: f.dateStr, titleStyle: f.stacked ? 'stacked' : (s.titleStyle || 'stacked') };
+    return { primary: f.primary, sub: f.sub || undefined, subLine: f.subLine, subText: f.subText, loc: f.loc || undefined, dateStr: f.dateStr, titleStyle: f.stacked ? 'stacked' : (s.titleStyle || 'stacked'), below: belowOf(f) };
   };
 
   // Experience's "Group roles by company" (R2-147, roleGroups): a group is one entry on the rail — the
@@ -171,6 +173,7 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
           titleStyle={f.stacked ? 'stacked' : (s.titleStyle || 'stacked')}
           italicSub={italicSubs}
           centered={centered}
+          below={belowOf(f)}
         />
         {hasRichText(f.desc) && <PdfRichText html={f.desc} style={{ ...text, marginTop: 2 }} />}
         <RenderBullets bullets={item.bullets} style={text} />
@@ -199,6 +202,7 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
                 settings={settings}
                 titleStyle={s.titleStyle || 'stacked'}
                 centered={centered}
+                below={belowOf(f)}
               />
               {hasRichText(f.desc) && <PdfRichText html={f.desc} style={{ ...text, marginTop: 2 }} />}
               <RenderBullets bullets={item.bullets} style={text} />

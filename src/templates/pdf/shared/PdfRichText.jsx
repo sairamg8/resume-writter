@@ -4,7 +4,8 @@ import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
 import { splitHugeBlocks } from './splitHugeBlock';
-import { ColumnRoom, fitsPage } from './keepTogether';
+import { ColumnRoom, columnRoom, fitsPage } from './keepTogether';
+import { wrappedLines } from './pdfMeasure';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -60,6 +61,35 @@ const isBullet = (marker) => marker.length === 1;
 /** Marker column width for a list level: room for its longest marker ("•", "9." … "viii."). */
 function markerWidth(chars, fontSize) {
   return Math.max(chars * fontSize * 0.55, fontSize * 0.6) + MARKER_GAP;
+}
+
+/**
+ * What an entry's header must keep under it, pt, so that the first thing its description prints starts
+ * on the header's page: that block's own height when it cannot be split, else 0 (the header's two lines
+ * are enough). A list item kept whole (the rule PdfRichText draws it by), and a paragraph of up to three
+ * lines (textkit never splits one under four: two lines on each page), move to the next page as a whole.
+ * The header kept only two lines, so a 3-line bullet that did not fit the room left under it went to the
+ * next page and the header stayed alone at the foot of the page above it. `width`: the pt the text has in
+ * its column (entryTextWidth); `fontSize`, `lineHeight` and `marginTop` as the description is drawn with.
+ */
+export function firstChunkKeep({ html, settings, fontSize, lineHeight, width, marginTop = 2 }) {
+  const blocks = splitHugeBlocks(parseRichText(html));
+  const block = blocks[0];
+  if (!block) return 0;
+  const text = block.runs.map((r) => r.text).join('');
+  const style = { fontFamily: settings?._pdfFontFamily, fontSize };
+  let across = width;
+  let whole;
+  if (block.marker) {
+    const longest = Math.max(...blocks.filter((b) => b.marker && b.indent === block.indent && isBullet(b.marker) === isBullet(block.marker)).map((b) => b.marker.length));
+    across = width - (block.indent - 1) * INDENT - markerWidth(longest, fontSize);
+    whole = text.length <= KEEP_TOGETHER_CHARS && fitsPage({ text, fontSize, lineHeight, width: across, height: columnRoom(settings, width).height, fontFamily: style.fontFamily });
+  } else {
+    across = width - Math.max(0, block.indent) * INDENT;
+  }
+  const lines = wrappedLines(text, style, across);
+  if (block.marker ? !whole : lines >= 4) return 0;
+  return Math.ceil(lines * fontSize * lineHeight + marginTop);
 }
 
 /**
