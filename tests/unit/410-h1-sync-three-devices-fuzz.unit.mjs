@@ -87,16 +87,24 @@ async function replay(ops, trace = false) {
   const deleted = new Set(); // marks of the edits that were in a job deleted in the script
   const stamp = (d) => { tick += 1; return 1_000_000 + tick * 100 + SKEW[d.index]; };
   const say = (text) => script.push(text);
-  const mark = (d, id, fixed) => {
+  const own = (token, account) => owners.set(token, new Set([...(owners.get(token) ?? []), account]));
+  // A job belongs to the account its browser's list belongs to (the sync record names it once an account has synced);
+  // until then it is the browser's own, and goes to whichever account syncs it first.
+  const mark = (d, fixed) => {
     serial += 1;
     const token = fixed ?? serial;
-    if (d.account) owners.set(token, new Set([...(owners.get(token) ?? []), d.account]));
+    const account = d.meta.read().uid;
+    if (account) own(token, account);
     else pending[d.index].push(token);
     return `[${token}]`;
   };
-  const claim = (d) => { // signed in: what was typed signed out is this account's
-    for (const t of pending[d.index]) owners.set(t, new Set([...(owners.get(t) ?? []), d.account]));
-    pending[d.index] = [];
+  const claimAll = () => {
+    for (const d of devices) {
+      const account = d.meta.read().uid;
+      if (!account || !pending[d.index].length) continue;
+      for (const t of pending[d.index]) own(t, account);
+      pending[d.index] = [];
+    }
   };
   const short = (n) => n.replace(/\s+/g, '');
   const dump = () => {
@@ -110,12 +118,11 @@ async function replay(ops, trace = false) {
 
   async function signIn(d, account) {
     d.account = account;
-    claim(d);
     await d.start();
   }
   // Device 0 starts with two jobs; the others join the account.
   devices[0].account = 'A';
-  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0]))]);
+  devices[0].set([job('j1', mark(devices[0]), stamp(devices[0])), job('j2', mark(devices[0]), stamp(devices[0]))]);
   say('d0 starts with j1, j2');
   for (const d of devices) await signIn(d, 'A');
 
@@ -126,6 +133,7 @@ async function replay(ops, trace = false) {
   }
 
   for (const op of ops) {
+    claimAll();
     dump();
     const d = devices[op.d];
     const { roll } = op;
@@ -133,19 +141,19 @@ async function replay(ops, trace = false) {
     if (roll < 0.20) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
-      const text = mark(d, target.id);
+      const text = mark(d);
       say(`d${d.index} edits ${target.id} ${text}`);
       d.set(d.list.map((x) => (x.id === target.id ? { ...x, notes: `${x.notes} ${text}`, updatedAt: stamp(d) } : x)));
     } else if (roll < 0.28) {
       const id = `n${serial + 1}`;
-      const text = mark(d, id);
+      const text = mark(d);
       say(`d${d.index} adds ${id} ${text}`);
       d.set([...d.list, job(id, text, stamp(d))]);
     } else if (roll < 0.31) {
       const k = pick(IMPORTED);
       const id = `imp${k}`;
       if (d.list.some((x) => x.id === id)) continue;
-      const text = mark(d, id, 1000 + k);
+      const text = mark(d, 1000 + k);
       say(`d${d.index} imports ${id}`);
       d.set([...d.list, job(id, text, 50)]);
     } else if (roll < 0.36) {
@@ -229,6 +237,7 @@ async function replay(ops, trace = false) {
       await settle(2);
     }
   }
+  claimAll();
   dump();
 
   const problems = [];
@@ -257,9 +266,9 @@ async function replay(ops, trace = false) {
       for (const d of devices) {
         d.online = true;
         d.account = account;
-        claim(d);
         d.clock += 10_000;
         await quiesce(d);
+        claimAll();
         if (trace && round < 2) { say(`final ${account}, round ${round}, d${d.index} synced`); dump(); }
       }
     }
