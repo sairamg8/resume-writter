@@ -1175,9 +1175,8 @@ function readHeader(type, header) {
   // the title after them, with no title line anywhere over it — how UK CVs set their jobs and schools
   // (dates in the left column). What follows the date is the entry's title there, not its place; it
   // went to the Location, and the company and role (or school and degree) came out empty. Only where
-  // this line is all the header has, and the text is no place alone ("Portland, OR", "Remote").
-  const titleAfterDate = (p, alone) => alone && !(PLACE.test(p) && (REGION_END.test(p) || p.split(',').length <= 2) && !ROLE.test(p))
-    && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))) || p.split(/\s+/).length >= 2);
+  // this line is all the header has, and the text names a role, a degree or a school.
+  const titleAfterDate = (p, alone) => alone && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))));
   // The text fields the line above gave: two when it held the role and the company ("Role ⇥ Company",
   // "Role — Company", a job's "Role, Company"); one a line when they are stacked (the Sidebar's school).
   let above = 0;

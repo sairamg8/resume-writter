@@ -15,7 +15,7 @@ EMPLOYMENT HISTORY
 2019 - present\tAudit Manager, Hargreaves & Co, Leeds
 - Lead a team of 8 on audits of listed clients
 
-2014 - 2019\tSenior Auditor, Pennine LLP, Manchester
+2014 - 2019\tSenior Accountant, Pennine LLP, Manchester
 - Planned and delivered 25 audits a year
 
 EDUCATION
@@ -31,7 +31,7 @@ test('a job with its title after its date has a role and a company, and no locat
   assert.equal(jobs[0].startDate, '2019');
   assert.equal(jobs[0].current, true);
   assert.ok(!/Audit Manager/.test(jobs[0].location), 'the title is not the location');
-  assert.equal(jobs[1].role, 'Senior Auditor');
+  assert.equal(jobs[1].role, 'Senior Accountant');
   assert.match(jobs[1].company, /Pennine/);
   assert.equal(jobs[1].endDate, '2019');
 });
