@@ -90,9 +90,15 @@ describe('the signature stays with its closing (R1-6)', () => {
       const desigPage = items.findLast((t) => t.str.includes('Engineer'))?.page;
       assert.equal(sincPage, namePage, `marginV ${mv}mm: closing and name split`);
       assert.equal(namePage, desigPage, `marginV ${mv}mm: name and designation split`);
+      // The body's last paragraph goes with the closing when the page breaks between them (H3-457, a
+      // page never opens with the closing alone), so the block that moves as a unit is that paragraph
+      // and the closing: the break is reached when the closing is on a later page than the paragraph
+      // before the last one.
       const bodyItems = items.filter((t) => t.str.includes('billing platform'));
+      const beforeLastPage = bodyItems[bodyItems.length - 2]?.page;
       const lastBodyPage = bodyItems[bodyItems.length - 1]?.page;
-      if (sincPage > lastBodyPage) reachedBreak = true;
+      assert.equal(sincPage, lastBodyPage, `marginV ${mv}mm: the closing is not alone on a page: the last paragraph is with it`);
+      if (sincPage > beforeLastPage) reachedBreak = true;
     }
     assert.ok(reachedBreak, 'the walk proved the signature block broke cleanly to a new page as a unit');
   });
