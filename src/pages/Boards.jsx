@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FolderKanban, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Avatar, Button, EmptyState, IconButton, Menu, SearchInput, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
+import { withSearchParam } from '@/hooks/useUrlState';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { CreateProjectDialog } from '@/components/board/CreateProjectDialog';
 import { ProjectAvatar } from '@/components/board/ProjectTabs';
@@ -29,7 +30,17 @@ export function Boards() {
   const store = useBoardStore();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
+  const location = useLocation();
   const [creating, setCreating] = useUrlState('create', null);
+  // The create step opened from this list is a history entry of its own (marked in the router state), so
+  // Back from the new board, which replaces that entry, lands on the list, and Cancel steps back to it.
+  // Another page's link (?create=1: the sidebar, the top bar, Your work) has no list entry to keep.
+  const createFromList = location.state?.createFromList === true;
+  const openCreate = () => {
+    if (creating === '1') return;
+    navigate({ pathname: location.pathname, search: withSearchParam(location.search, 'create', '1'), hash: location.hash }, { state: { createFromList: true } });
+  };
+  const closeCreate = () => (createFromList ? navigate(-1) : setCreating(null));
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
   const rows = store.boards
@@ -46,7 +57,7 @@ export function Boards() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="Projects" actions={<Button variant="primary" leftIcon={Plus} onClick={() => setCreating('1')}>Create project</Button>} />
+      <PageHeader title="Projects" actions={<Button variant="primary" leftIcon={Plus} onClick={openCreate}>Create project</Button>} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex flex-col gap-4 px-4 py-4 md:px-8">
         {store.boards.length === 0 ? (
@@ -54,7 +65,7 @@ export function Boards() {
             icon={FolderKanban}
             title="Plan your work and your life in projects"
             description="A project holds issues on a board, in a backlog, on a timeline and a calendar. Start from Kanban, Scrum, Personal or a blank one."
-            action={<Button variant="primary" leftIcon={Plus} onClick={() => setCreating('1')}>Create project</Button>}
+            action={<Button variant="primary" leftIcon={Plus} onClick={openCreate}>Create project</Button>}
           />
         ) : (
           <>
@@ -119,7 +130,7 @@ export function Boards() {
           </>
         )}
       </div>
-      <CreateProjectDialog open={creating === '1'} onClose={() => setCreating(null)} onCreated={(b) => navigate(`/boards/${encodeURIComponent(b.id)}`, { replace: true })} />
+      <CreateProjectDialog open={creating === '1'} onClose={closeCreate} onCreated={(b) => navigate(`/boards/${encodeURIComponent(b.id)}`, { replace: true })} />
     </div>
   );
 }
