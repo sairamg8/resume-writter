@@ -7,7 +7,7 @@ import AuthBar from '@/components/AuthBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { Button, Select } from '@/components/ui';
 import { controlClass } from '@/components/ui/Field.jsx';
-import { ROW, FUNCTION_LABELS, checkData, filterRows, filtersFor, distinct, roleHref } from '@/utils/jobMapData';
+import { ROW, FUNCTION_LABELS, checkData, filterRows, filtersFor, distinct, roleHref, startCountry } from '@/utils/jobMapData';
 
 /**
  * The account menu's Job Map item (AuthBar loads this page's code only when the menu opens, so the page and the item
@@ -49,7 +49,8 @@ export default function JobMap({ auth, sync }) {
   const [attempt, setAttempt] = useState(0);
   const allowed = useJobMapAccess(auth.user, attempt);
   const [meta, setMeta] = useState(null);       // null: not asked yet; false: nothing loaded
-  const [country, setCountry] = useState('IN');
+  // The country picked in the select; until one is (or when the data no longer has it) the page starts on the data's own.
+  const [picked, setPicked] = useState(null);
   const [rows, setRows] = useState([]);
   const [status, setStatus] = useState('');
   const [f, setF] = useState({ fn: '', level: '', track: '', q: '' });
@@ -60,6 +61,7 @@ export default function JobMap({ auth, sync }) {
     const io = await import('@/utils/jobMapIo');
     setMeta((await io.loadMeta()) || false);
   }
+  const country = picked && meta?.counts?.[picked] ? picked : startCountry(meta?.counts);
   useEffect(() => { if (allowed === true) refresh().catch((e) => setStatus(e.message)); }, [allowed]);
   useEffect(() => {
     if (!meta || !meta.counts[country]) { setRows([]); return undefined; }
@@ -113,7 +115,7 @@ export default function JobMap({ auth, sync }) {
           <>
             <p className="text-xs text-cv-muted mb-3">{companies.length} companies · crawled {meta.crawled}</p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-              <Select size="sm" value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country" className="min-w-0">
+              <Select size="sm" value={country} onChange={(e) => setPicked(e.target.value)} aria-label="Country" className="min-w-0">
                 {countries.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
               </Select>
               <Select size="sm" value={active.fn} onChange={set('fn')} aria-label="Function" className="min-w-0">

@@ -23,6 +23,17 @@ export function roleHref(url) {
   return href && /^https?:\/\//i.test(href) ? href : null;
 }
 
+/**
+ * The country the page opens on: India when the data has roles there (the owner's first market), else the
+ * country with the most roles. A fixed 'IN' left the Country select with no matching option and an empty
+ * list, until a country was picked, when the data had none. `counts` is meta.counts ({ CODE: rows }).
+ */
+export function startCountry(counts) {
+  if (counts?.IN > 0) return 'IN';
+  const [best] = Object.entries(counts ?? {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  return best ? best[0] : 'IN';
+}
+
 /** The document ids of one country's chunks: `US-0` … `US-<n-1>` for `count` rows of CHUNK each. */
 export function chunkIds(country, count, chunk = 1200) {
   return Array.from({ length: Math.ceil(count / chunk) }, (_, i) => `${country}-${i}`);
