@@ -43,9 +43,23 @@ export const hasTwin = (copy, items) => items.some((x) => x.id === copy.id || sa
  */
 const copyId = (item, prefix) => {
   if (!Number.isFinite(item.updatedAt) || typeof item.id !== 'string' || !item.id) return newId(prefix);
-  const base = item.id.replace(/[^\w-]/g, '_');
+  const clean = item.id.replace(/[^\w-]/g, '_');
+  // Ids that differ only in the characters this replaced (an imported file's "ジョブ" and "仕事", "job.1" and "job_1") would
+  // share a copy's id when their times are equal, and the second copy was taken for the first and never made: a mark of
+  // the id as it was keeps them apart. An id with nothing replaced is unchanged, as every device has always made it.
+  const base = clean === item.id ? clean : `${clean}-${shortHash(item.id)}`;
   return `${base.startsWith(`${prefix}_`) ? base : `${prefix}_${base}`}-conflict-${item.updatedAt}`;
 };
+
+/** A short text that follows `text` (FNV-1a, 32 bits, base 36): the same on every device. */
+function shortHash(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
 
 /** A job's older copy: the same data under an id made from the job's, its company (else its role) marked. */
 export function jobConflictCopy(job) {
