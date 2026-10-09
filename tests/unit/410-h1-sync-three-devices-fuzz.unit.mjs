@@ -149,6 +149,7 @@ async function replay(ops, seed, trace = false) {
   let tick = 0;
   let serial = 0;
   const owners = new Map(); // token → the accounts it was typed for
+  const unowned = new Set(); // typed before any account had synced the browser's list: it may reach the account of a sync a start replaced
   const pending = [[], [], []]; // typed while signed out: for whichever account the device signs in as next
   const deleted = new Set(); // marks of the edits that were in a job deleted in the script, and of those typed on one
   const deletedIds = new Set(); // ids of jobs deleted in the script
@@ -164,7 +165,7 @@ async function replay(ops, seed, trace = false) {
     jobOf.set(token, id);
     const account = d.meta.read().uid;
     if (account) own(token, account);
-    else pending[d.index].push(token);
+    else { pending[d.index].push(token); unowned.add(token); }
     return `[${token}]`;
   };
   const claimAll = () => {
@@ -179,10 +180,15 @@ async function replay(ops, seed, trace = false) {
   const dump = () => {
     if (!trace) return;
     for (const acct of ['A', 'B']) {
-      const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}`);
+      const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}${v.syncBy?.replace('dev-', 'd')}`);
       if (docs.length) script.push(`      cloud ${acct}: ${docs.join(' ')}`);
     }
-    for (const x of devices) script.push(`      d${x.index}${x.account ? ` (${x.account})` : ' (out)'}${x.online ? '' : ' (off)'}: ${x.list.map((j) => `${j.id.replace('job_', '')}=${short(j.notes)}@${j.updatedAt - 1_000_000}`).join(' ')}`);
+    for (const x of devices) {
+      script.push(`      d${x.index}${x.account ? ` (${x.account})` : ' (out)'}${x.online ? '' : ' (off)'}: ${x.list.map((j) => `${j.id.replace('job_', '')}=${short(j.notes)}@${j.updatedAt - 1_000_000}`).join(' ')}`);
+      const m = x.meta.read();
+      const seenIds = Object.keys(m.versions).map((id) => `${id.replace('job_', '')}:${m.versions[id] - (m.versions[id] > 1000 ? 1_000_000 : 0)}/r${m.revs[id] ?? '-'}`);
+      script.push(`           record ${m.uid ?? '-'} ${seenIds.join(' ')}`);
+    }
   };
 
   async function signIn(d, account) {
@@ -331,7 +337,7 @@ async function replay(ops, seed, trace = false) {
     for (const [t, accounts] of owners) {
       const here = every.includes(`[${t}]`);
       if (accounts.has(acct) && !here && !deleted.has(t) && !deletedIds.has(jobOf.get(t)) && !String(jobOf.get(t)).startsWith('imp')) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
-      if (!accounts.has(acct) && here) problems.push(`${acct}: the edit [${t}], typed for the other account, is in this one`);
+      if (!accounts.has(acct) && here && !unowned.has(t)) problems.push(`${acct}: the edit [${t}], typed for the other account, is in this one`);
     }
   };
 

@@ -547,6 +547,16 @@ export function createCollectionSync({
         ...revsOf(docs.filter((d) => !plan.deletes.includes(d.id)), cloud.stamps),
         ...revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))),
       };
+      // An item edited here while the sync read the cloud, whose merged copy is the cloud's: the edit was made on the copy
+      // before it, which this browser has not seen. The record keeps what it had for it, so the edit's own write finds the
+      // cloud's copy moved and this one changed, and keeps the older of the two as a conflict copy — claimed as seen, the
+      // edit went over the cloud's copy with no trace.
+      for (const id of edited.keys()) {
+        if (!(versions[id] > DELETED) || sets.some((x) => x.id === id) || plan.deletes.includes(id) || !docs.some((d) => d.id === id)) continue;
+        cloudVersions[id] = versions[id];
+        if (Number.isFinite(baseRevs[id])) cloudRevs[id] = baseRevs[id];
+        else delete cloudRevs[id];
+      }
       const { [uid]: _gone, ...stashed } = record.stashed;
       // The record names the account the list now belongs to: refused (storage full), every later
       // guard took the list for no account's — changes were never sent though the icon said
