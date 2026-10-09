@@ -1177,6 +1177,19 @@ function readHeader(type, header) {
   // went to the Location, and the company and role (or school and degree) came out empty. Only where
   // this line is all the header has, and the text names a role, a degree or a school.
   const titleAfterDate = (p, alone) => alone && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))));
+  const field = (p) => {
+    // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
+    // certificate's URL; another type's description keeps it.
+    const meta = metaOf(p) || (ADDRESS.test(p) ? { key: 'link', value: p } : null);
+    if (meta) out.meta[meta.key] = out.meta[meta.key] ? `${out.meta[meta.key]}, ${meta.value}` : meta.value;
+    if (meta) out.named.push({ key: meta.key, text: p });
+    return Boolean(meta);
+  };
+  const place = (p) => {
+    if (!PLACED.has(type) || out.location) return false;
+    out.location = p;
+    return true;
+  };
   // The text fields the line above gave: two when it held the role and the company ("Role ⇥ Company",
   // "Role — Company", a job's "Role, Company"); one a line when they are stacked (the Sidebar's school).
   let above = 0;
