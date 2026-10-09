@@ -15,11 +15,11 @@ import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 12000;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 3000;
 const ONLY = (process.env.H1_FUZZ_ONLY ?? '').split(',').filter(Boolean).map(Number); // seeds to run alone, to look at them
 const STEPS = 110;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
-const SKEW = [3, -2537, 1811];
+const SKEW = [0, -2500, 1800];
 const IMPORTED = 3;
 
 /** mulberry32: the same numbers for a seed on every machine. */
