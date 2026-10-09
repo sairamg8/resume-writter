@@ -1158,6 +1158,12 @@ function sectionOf(type, title, items) {
  */
 function readHeader(type, header) {
   const out = { parts: [], date: null, location: '', meta: {}, named: [] };
+  // "2019 - present ⇥ Audit Manager, Hargreaves & Co, Leeds": a line that opens with its dates and holds
+  // the title after them, with no title line anywhere over it — how UK CVs set their jobs and schools
+  // (dates in the left column). What follows the date is the entry's title there, not its place; it
+  // went to the Location, and the company and role (or school and degree) came out empty. Only where
+  // this line is all the header has, and the text names a role, a degree or a school.
+  const titleAfterDate = (p, alone) => alone && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))));
   const field = (p) => {
     // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
     // certificate's URL; another type's description keeps it.
@@ -1194,7 +1200,7 @@ function readHeader(type, header) {
       if (!p || field(p)) return;
       // After the date on its line; or at the right tab of the line under the title. Under a date
       // alone ("Mar 2021 – Present" over "Role ⇥ Company", the Timeline's) that tab parts two fields.
-      if (at >= 0 && j > at && place(p)) return;
+      if (at >= 0 && j > at && !titleAfterDate(p, header.length === 1 && k === 0 && at === 0 && titled === 0) && place(p)) return;
       if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && titled && place(p)) return;
       // A place alone on its line: at the right margin, or a job's, right under the line that held its
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
