@@ -596,10 +596,11 @@ export function createCollectionSync({
       // click) put back a job the next first sync took for one typed before signing in whose id the account deleted: dropped,
       // here and from the list, with the user's Undo. Kept, it is a change after the deletion, as an Undo right after it is.
       const listedDeleted = new Set(cloud.deleted);
-      const listed = new Set(next.map((x) => x.id));
+      // The ones put back by Undo while this sync was on its way are in the list and in no copy this sync wrote or read: the
+      // record keeps the deletion as their base, as it does for an edit typed then.
       let tombstones = 0;
       for (const id of Object.keys(seen)) {
-        if (seen[id] !== DELETED || id in cloudVersions || !listedDeleted.has(id) || listed.has(id)) continue;
+        if (seen[id] !== DELETED || id in cloudVersions || !listedDeleted.has(id)) continue;
         if (tombstones >= MAX_TOMBSTONES) break;
         cloudVersions[id] = DELETED;
         tombstones += 1;
