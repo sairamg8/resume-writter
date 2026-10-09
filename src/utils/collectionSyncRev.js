@@ -71,7 +71,12 @@ export function movedInCloud({ stamp = NO_STAMP, updatedAt, baseRev, baseTime, d
   if (ownTime !== undefined && updatedAt === ownTime) return false;
   const seenTime = Number.isFinite(baseTime) ? baseTime : null;
   if (Number.isFinite(baseRev)) {
-    if (stamp.rev > baseRev) return stamp.by !== device;
+    if (stamp.rev > baseRev) {
+      // A rewrite that changed nothing (the same updatedAt as the copy seen: no new edit) is no move. This browser's own write is
+      // not one either — unless its updatedAt is not the one handed over (`ownTime`): the previous site rewrote it since.
+      if (stamp.by === device) return ownTime !== undefined;
+      return !(seenTime !== null && updatedAt === seenTime);
+    }
     return seenTime !== null && updatedAt !== seenTime;
   }
   if (seenTime !== null) return updatedAt !== seenTime;

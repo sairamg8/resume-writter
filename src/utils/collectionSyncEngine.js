@@ -256,6 +256,10 @@ export function createCollectionSync({
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
   function start(user) {
     s.gen += 1;
+    // A flush's write that never settles (a cache with no server to answer) must not hold up the ones after it for good:
+    // a start (another account, a retry, going online) begins a new line, and what the old one still does is dropped
+    // (`current()`), its copies being checked by the write itself (collectionSyncIo.commit).
+    s.turn = Promise.resolve();
     timers.clear(s.retry);
     s.retryOnShow = false;
     if ((user?.uid ?? null) !== (s.user?.uid ?? null)) {
@@ -351,7 +355,8 @@ export function createCollectionSync({
         await io.commit(uid, { sets: [x], stamps, expect: only(expect, [x.id]) });
         sent.push(x);
       } catch (e) {
-        if (failureKind(e, online()) !== 'stop') throw e;
+        // The cloud's copy changed since it was read: not a refusal, nothing to hold — the caller decides again.
+        if (isStale(e) || failureKind(e, online()) !== 'stop') throw e;
         held.set(x.id, x);
         heldChanged();
       }
@@ -599,6 +604,7 @@ export function createCollectionSync({
         return view.later(x.id, d, x) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
+      const decidedOn = new Map(queued.map((x) => [x.id, x.updatedAt]));
       sets = queued.filter((x) => !skip.has(x.id));
       // Changed here AND in the cloud since this browser last saw the cloud's copy (its record, or
       // what it sent itself since): whichever is older would be dropped. Kept as a copy beside the
@@ -641,7 +647,9 @@ export function createCollectionSync({
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
         // An item edited here while the batch read the cloud is newer still: that edit stays, and its
         // own write is queued (taken over, it vanished here while the queue still sent it).
-        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && !(x.updatedAt > n.updatedAt) ? n : x; };
+        // Only the copy the decision was made on is replaced (by its updatedAt, equal — not a clock: a copy put back by Undo, or queued
+        // twice, is that copy and is replaced by the cloud's whatever it is stamped).
+        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && x.updatedAt === decidedOn.get(x.id) ? n : x; };
         const list = store.items().map(take);
         s.prev = (s.prev || []).map(take);
         store.replace(list);
@@ -653,7 +661,8 @@ export function createCollectionSync({
     }
 
     try {
-      await before;
+      // Behind a flush that has not landed: a wait that ends in the deadline is a failure like any, tried again later.
+      await withDeadline(before);
       for (let tries = 1; ; tries += 1) {
         if (!current()) return;
         try {
