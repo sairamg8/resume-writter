@@ -41,7 +41,12 @@ const DELETE_CHUNK = 400;
 const ABSENT_GUARD = 100;
 
 /** A write that kept finding the cloud's copies changed: tried again later, as any temporary failure is. */
-const keptChanging = () => Object.assign(new Error('The cloud kept changing under this sync.'), { code: 'aborted' });
+// `stale`: the last STALE it ended on; the SDK's own code behind it (collectionSyncIo.commit), when it gave one, is kept as `cause`.
+const keptChanging = (stale) => {
+  const cause = stale?.cause ?? stale;
+  const last = cause?.code ? ` (last: ${cause.code})` : '';
+  return Object.assign(new Error(`The cloud kept changing under this sync${last}.`), { code: 'aborted', ...(cause ? { cause } : {}) });
+};
 
 /**
  * createCollectionSync({ name, io, store, meta, report, ... }):
@@ -402,7 +407,8 @@ export function createCollectionSync({
    */
   function failed(e, user, what, sets = [], apart = false) {
     const { kind, status: said, log: line } = failureReport(e, online(), `${name} ${what}`);
-    if (line) log(...line);
+    // What the SDK said behind a copy that kept changing, if it said (keptChanging): the code in the line is 'aborted'.
+    if (line) log(...line, ...(e?.cause?.code ? [`(cause: ${e.cause.code})`] : []));
     s.ready = false;
     status(said);
     if (kind === 'config') s.disabled = true;
@@ -619,7 +625,7 @@ export function createCollectionSync({
       // The cloud's copies changed between the read and the write: decide again from what is there now.
       if (isStale(e)) {
         if (stale + 1 < STALE_TRIES) return firstSync(user, gen, again, stale + 1);
-        failed(keptChanging(), user, 'sync', []);
+        failed(keptChanging(e), user, 'sync', []);
         return;
       }
       failed(e, user, 'sync', sets);
@@ -838,7 +844,7 @@ export function createCollectionSync({
           return;
         } catch (e) {
           if (!isStale(e)) throw e;
-          if (tries >= STALE_TRIES) throw keptChanging();
+          if (tries >= STALE_TRIES) throw keptChanging(e);
         }
       }
     } catch (e) {
