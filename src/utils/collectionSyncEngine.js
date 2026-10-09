@@ -248,8 +248,7 @@ export function createCollectionSync({
    * handed over (`s.sent`) is no move — and `changed(x)` whether the queued `x` differs from the copy the record
    * holds (its updatedAt is not the recorded one: an item put back by Undo is the copy it was).
    */
-  function cloudView(stamps) {
-    const m = meta.read();
+  function cloudView(stamps, m = meta.read()) {
     const device = deviceId();
     return {
       synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
@@ -751,6 +750,10 @@ export function createCollectionSync({
       // stopped the sync (R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS).
       const gone = [...q.deletes].filter(([id]) => cloudCanName(id));
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
+      // The record as it was BEFORE the read: every tab shares it, and another tab's flush landing during this read writes it
+      // ahead of the copies read here. The copy read was then older than the record's, and counted as a move since — an
+      // older copy of the cloud's replaced this tab's newer edit, here and in the account (as the first sync reads it, below).
+      const known = meta.read();
       const read = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
       if (!current()) return;
       let docs = read.docs;
@@ -763,7 +766,7 @@ export function createCollectionSync({
       const here = new Set(store.items().map((x) => x.id));
       queued = queued.filter((x) => here.has(x.id));
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
-      const view = cloudView(cloudStamps);
+      const view = cloudView(cloudStamps, known);
       // The cloud's copy replaces this edit when it is later — unless nobody wrote it since this browser last saw
       // it: then this edit is the only change, and it goes whatever the clocks say (a device behind the
       // others stamps its edits earlier than the copy it was made on). Written by another device since and
