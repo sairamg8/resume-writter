@@ -37,8 +37,13 @@ const STALE_TRIES = 3;
  */
 const DELETE_CHUNK = 400;
 
-/** How many items a write can be for its absent copies to be checked too (expectOf). */
-const ABSENT_GUARD = 100;
+/**
+ * How many items a write can be for its absent copies to be checked too (expectOf). Each is a read of a transaction
+ * that holds 500 writes at most: this many items and the three writes of the deletion list and the order (400 + 3) fit,
+ * and a write beyond it (an import of hundreds) goes as a plain batch, as before. It was 100, and an import of 101 to 400
+ * jobs was the one left open to another device writing the same ids meanwhile.
+ */
+const ABSENT_GUARD = 400;
 
 /** A write that kept finding the cloud's copies changed: tried again later, as any temporary failure is. */
 // `stale`: the last STALE it ended on; the SDK's own code behind it (collectionSyncIo.commit), when it gave one, is kept as `cause`.
