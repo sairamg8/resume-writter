@@ -67,7 +67,8 @@ function weave(lead, other) {
  * item both sides changed: `{ id, copy }`, `copyOf(older, everyItem)` making each; none without it;
  * `apart`: the fields whose difference alone is no conflict, a project's star and colour; `revs`, `stamps`
  * (id → stamp) and `device`: the versions this browser last saw, the cloud's now and this browser's id,
- * collectionSyncRev.js) }.
+ * collectionSyncRev.js; `fresh`: this browser's list was never this account's, so an item both hold that it
+ * never synced was edited on both from the same start) }.
  * Nothing typed is lost:
  *   - an item on one side only is new there and joins the list — unless the account deleted it
  *     for good, or it is one this browser knew and deleted since;
@@ -88,7 +89,7 @@ function weave(lead, other) {
  * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
  * cloud's wins: the device that sent first.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [], revs = {}, stamps = new Map(), device = '' }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [], revs = {}, stamps = new Map(), device = '', fresh = false }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
@@ -126,11 +127,18 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
       const synced = known(id) && versions[id] > DELETED;
-      const here = synced && changedSince(mine);
-      const there = synced && movedSince(theirs);
+      // An item this browser never synced, in a list new to the account (the demo job has one id on every browser,
+      // an imported file's jobs the same): there is no copy to have changed since, both sides are edits of one start —
+      // the cloud's copy written by another device, this browser's not the untouched demo. A pristine demo in the
+      // cloud is no edit, and an untouched one here never wins (below).
+      const fromStart = fresh && !known(id) && !seed(mine);
+      const based = synced || fromStart;
+      const here = based && (synced ? changedSince(mine) : true);
+      const there = based && (synced ? movedSince(theirs)
+        : !seed(theirs) && movedInCloud({ stamp: stamps.get(id) ?? NO_STAMP, updatedAt: time(theirs), device }));
       const conflict = Boolean(copyOf) && here && there && !sameContent(mine, theirs, apart);
       // Only one side changed it since: that side stays, whatever the two clocks say.
-      const oneSide = synced && here !== there;
+      const oneSide = based && here !== there;
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
