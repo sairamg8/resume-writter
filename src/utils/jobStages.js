@@ -150,7 +150,11 @@ export function addCustomStage(label) {
   const next = [...stages, trimmed];
   persist(next);
   update(next);
-  if (account) changed({ uid: account, added: trimmed });
+  if (account) {
+    // Added again after a removal made here: the removal no longer waits to be sent.
+    writeGone(account, readGone(account).filter(s => s !== trimmed));
+    changed({ uid: account, added: trimmed });
+  }
   return trimmed;
 }
 
@@ -160,7 +164,36 @@ export function removeCustomStage(label) {
   const next = stages.filter(s => s !== label);
   persist(next);
   update(next);
-  if (account) changed({ uid: account, removed: label });
+  if (account) {
+    // Kept until the cloud has the removal (confirmStageRemoved), so a removal made offline, or
+    // one the cloud refused, still beats the copy the cloud holds when the next form opens.
+    const gone = readGone(account);
+    if (!gone.includes(label)) writeGone(account, [...gone, label].slice(-MAX_CLOUD_TOMBSTONES));
+    changed({ uid: account, removed: label });
+  }
+}
+
+// The removals this browser made for an account that the account's cloud has not been told yet
+// (tombstones, jobStagesCloud.js): their own key, next to the list's, so the list's key keeps
+// the shape every version reads.
+const GONE_KEY = 'cpwtcv_job_stages_gone_v1';
+function readGone(uid) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(`${GONE_KEY}_${uid}`));
+    return Array.isArray(saved) ? saved.filter(s => typeof s === 'string') : [];
+  } catch { return []; }
+}
+function writeGone(uid, names) {
+  try {
+    if (names.length) localStorage.setItem(`${GONE_KEY}_${uid}`, JSON.stringify(names));
+    else localStorage.removeItem(`${GONE_KEY}_${uid}`);
+  } catch { /* not remembered: the removal still stands on this device */ }
+}
+
+/** The cloud has the removal of `name` for account `uid`: it no longer waits to be sent. */
+export function confirmStageRemoved(uid, name) {
+  const gone = readGone(uid);
+  if (gone.includes(name)) writeGone(uid, gone.filter(s => s !== name));
 }
 
 // Signed in, the account's list is also kept in the cloud (jobStagesCloud.js): it hears each change
@@ -180,23 +213,41 @@ export const MAX_CLOUD_STAGE_LENGTH = 80;
 /** Whether the cloud list can hold this name. */
 export const cloudStageName = (s) => typeof s === 'string' && s.trim() === s && s !== '' && s.length <= MAX_CLOUD_STAGE_LENGTH;
 
+/** The most removed names the account's cloud remembers (tombstones): the oldest go first. */
+export const MAX_CLOUD_TOMBSTONES = 100;
+
 /**
- * The names `fromCloud` holds for account `uid`, taken into the list shown (a name differing only
- * in case from one already there is not added twice). Returns the names this browser has that the
- * cloud lacks, for the cloud to take, as many as its list has room for. Nothing when `uid` is not
- * the account shown.
+ * The names `fromCloud` holds for account `uid`, and the names it has `removedInCloud`, taken into
+ * the list shown. A name the cloud holds is offered here (one differing only in case from a name
+ * already there is not added twice) unless it was removed here and the cloud has not heard yet. A
+ * name this browser holds that the cloud has removed, and holds no more, is a stale copy: a
+ * removal wins over it, as a deletion wins over a copy a device only held in the jobs' sync. A name
+ * in both lists is alive (a device that added it again after the removal). Returns what the cloud
+ * is to be told: `add`, the names this browser has that it lacks (as many as its list has room
+ * for), and `remove`, the removals made here that it lacks. Nothing when `uid` is not the
+ * account shown.
  */
-export function mergeAccountStages(uid, fromCloud) {
-  if (!uid || uid !== account) return [];
+export function mergeAccountStages(uid, fromCloud, removedInCloud = []) {
+  if (!uid || uid !== account) return { add: [], remove: [] };
+  const usable = (list) => (Array.isArray(list) ? list : []).filter(cloudStageName);
+  const theirs = usable(fromCloud).slice(0, MAX_CLOUD_STAGES);
+  const buried = new Set(usable(removedInCloud));
+  const waiting = readGone(uid);
+  const remove = waiting.filter(s => !buried.has(s));
+  if (remove.length !== waiting.length) writeGone(uid, remove);
+  const mineGone = new Set(waiting);
+  const alive = new Set(theirs);
   const mine = freshStages();
-  const theirs = (Array.isArray(fromCloud) ? fromCloud : []).filter(cloudStageName).slice(0, MAX_CLOUD_STAGES);
-  const known = new Set([...PREDEFINED_STAGES, ...mine].map(s => s.toLowerCase()));
-  const added = theirs.filter(s => !known.has(s.toLowerCase()) && known.add(s.toLowerCase()));
-  if (added.length) {
-    const next = [...mine, ...added];
+  const kept = mine.filter(s => alive.has(s) || !buried.has(s));
+  const known = new Set([...PREDEFINED_STAGES, ...kept].map(s => s.toLowerCase()));
+  const added = theirs.filter(s => !mineGone.has(s) && !known.has(s.toLowerCase()) && known.add(s.toLowerCase()));
+  if (kept.length !== mine.length || added.length) {
+    const next = [...kept, ...added];
     persist(next);
     update(next);
   }
-  const held = new Set(theirs);
-  return mine.filter(s => cloudStageName(s) && !held.has(s)).slice(0, MAX_CLOUD_STAGES - theirs.length);
+  return {
+    add: kept.filter(s => cloudStageName(s) && !alive.has(s)).slice(0, MAX_CLOUD_STAGES - theirs.length),
+    remove,
+  };
 }
