@@ -127,11 +127,15 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
       const synced = known(id) && versions[id] > DELETED;
+      // Deleted from here, put back since (Undo, and maybe edited), and a copy in the cloud again: another device wrote
+      // it after the deletion, so both are changes of one start, as with an item never synced (below). The older of the
+      // two used to be dropped with no copy.
+      const undone = known(id) && versions[id] === DELETED && !seed(mine);
       // An item this browser never synced, in a list new to the account (the demo job has one id on every browser,
       // an imported file's jobs the same): there is no copy to have changed since, both sides are edits of one start —
       // the cloud's copy written by another device, this browser's not the untouched demo. A pristine demo in the
       // cloud is no edit, and an untouched one here never wins (below).
-      const fromStart = fresh && !known(id) && !seed(mine);
+      const fromStart = (fresh && !known(id) && !seed(mine)) || undone;
       const based = synced || fromStart;
       const here = based && (synced ? changedSince(mine) : true);
       const there = based && (synced ? movedSince(theirs)

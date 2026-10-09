@@ -220,6 +220,8 @@ export function createCollectionSync({
     const device = deviceId();
     return {
       synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
+      // Deleted from here, and this copy put back since (Undo): the deletion is the base, any copy in the cloud is a later write.
+      undone: (id) => m.versions[id] === DELETED,
       changed: (x) => x.updatedAt !== m.versions[x.id],
       // The cloud's copy `d` of `id` is the later of the two, `x` this browser's (a tie goes to the greater writer id).
       later: (id, d, x) => theirsLater(d.updatedAt, x.updatedAt, (stamps.get(id) ?? NO_STAMP).by, device),
@@ -240,7 +242,7 @@ export function createCollectionSync({
     for (const x of writes) {
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
-      if (!theirs || !view.synced(x.id) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
+      if (!theirs || !(view.synced(x.id) || view.undone(x.id)) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
       const older = view.later(x.id, d, x) ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -646,7 +648,7 @@ export function createCollectionSync({
       const newer = queued.map((x) => {
         const d = cloudCopy.get(x.id);
         if (!d || !Number.isFinite(d.updatedAt)) return null;
-        if (view.synced(x.id)) {
+        if (view.synced(x.id) || view.undone(x.id)) {
           if (!view.moved(x.id, d)) return null;
           if (!view.changed(x)) return store.fromCloud(d);
         }
