@@ -10,12 +10,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCollectionSync } from '../../src/utils/collectionSyncEngine.js';
 import { collectionIo } from '../../src/utils/collectionSyncIo.js';
-import { jobConflictCopy } from '../../src/utils/collectionSyncConflict.js';
+import { BOARD_COSMETIC, boardConflictCopy, jobConflictCopy } from '../../src/utils/collectionSyncConflict.js';
 import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 400;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 1800;
 const ONLY = (process.env.H1_FUZZ_ONLY ?? '').split(',').filter(Boolean).map(Number); // seeds to run alone, to look at them
 const STEPS = 110;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
@@ -38,6 +38,25 @@ const job = (id, notes, updatedAt) => ({
   id, company: 'Acme', role: 'Engineer', status: 'applied', todos: [], notes,
   statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt,
 });
+// A project: every one has the same key to begin with, and the store gives a later one with a key another has a key of its own.
+const board = (id, notes, updatedAt) => ({ id, key: 'KEY', title: 'Acme', notes, starred: false, color: '', issues: [], updatedAt });
+
+/** What differs between the two lists the engine syncs: the item, its copy, the store's own pass over a list it takes. */
+const KINDS = {
+  jobs: { name: 'jobs', make: job, label: (j) => j.company, copy: jobConflictCopy, apart: [], addressable: (list) => list },
+  boards: {
+    name: 'boards', make: board, label: (b) => b.title, copy: boardConflictCopy, apart: BOARD_COSMETIC,
+    addressable: (list) => {
+      const keys = new Set();
+      return list.map((b) => {
+        let key = b.key;
+        for (let n = 2; keys.has(key); n += 1) key = `${b.key}${n}`;
+        keys.add(key);
+        return key === b.key ? b : { ...b, key };
+      });
+    },
+  },
+};
 
 /**
  * `fs` with a random pause before each call to the server (none, or a few turns of the event loop): the syncs of different
@@ -104,14 +123,14 @@ function asUser(fs, account, onWrite = () => {}) {
 }
 
 /** One browser: its list, its sync record, its engine (booted again by a reload), and what it is signed in as. */
-function device(cloud, index, link) {
+function device(cloud, index, link, kind) {
   const d = { turns: 5, index, list: [], online: true, account: null, clock: 0, wipes: 0, lastDeleted: null };
   const listeners = new Set();
   d.set = (next) => { d.list = next; listeners.forEach((l) => l()); };
   const store = {
-    items: () => d.list, replace: (next) => d.set(next),
+    items: () => d.list, replace: (next) => d.set(kind.addressable(next)),
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
-    fromCloud: (x) => x, label: (j) => j.company, conflictCopy: jobConflictCopy,
+    fromCloud: (x) => x, label: kind.label, conflictCopy: kind.copy, conflictApart: kind.apart,
     // The first visit's demo job: one id on every browser, untouched until someone writes in it.
     seed: (j) => j.id === 'demo' && j.notes === '', seedIds: ['demo'],
   };
@@ -125,7 +144,7 @@ function device(cloud, index, link) {
     const { seen, report } = recorder();
     d.seen = seen;
     d.sync = createCollectionSync({
-      name: 'jobs', io: collectionIo(served, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
+      name: kind.name, io: collectionIo(served, cloud.db, kind.name), store, meta: d.meta, report, timers: d.timers,
       online: () => d.online, now: () => d.clock,
     });
   };
@@ -145,12 +164,13 @@ function device(cloud, index, link) {
 }
 
 async function replay(ops, seed, trace = false) {
+  const kind = KINDS[seed % 3 === 0 ? 'boards' : 'jobs'];
   const cloud = fakeFirestore();
   // Calm: a step ends when its syncs have. Jittered: a step ends soon, and its syncs go on among the next steps'.
   const jitter = seed % 2 === 0 ? random(seed * 7919 + 13) : null;
-  const onWrite = (d) => (kind, paths) => writes.push(`d${d.index} ${kind}: ${paths.map((p) => p.replace('users/', '').replace('/jobs/', '/').replace('/meta/jobs', '/meta')).join(' ')}`);
+  const onWrite = (d) => (kind, paths) => writes.push(`d${d.index} ${kind}: ${paths.map((p) => p.replace('users/', '').replace(`/${kind.name}/`, '/').replace(`/meta/${kind.name}`, '/meta')).join(' ')}`);
   const link = (d) => (jitter ? jittered(asUser(cloud.fs, () => d.account, onWrite(d)), jitter) : asUser(cloud.fs, () => d.account, onWrite(d)));
-  const devices = [0, 1, 2].map((i) => device(cloud, i, link));
+  const devices = [0, 1, 2].map((i) => device(cloud, i, link, kind));
   for (const d of devices) d.turns = jitter ? 3 : 5;
   const script = [];
   let tick = 0;
@@ -192,7 +212,7 @@ async function replay(ops, seed, trace = false) {
     shownWrites = writes.length;
     if (written.length) script.push(`      wrote: ${written.join(' | ')}`);
     for (const acct of ['A', 'B']) {
-      const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}${v.syncBy?.replace('dev-', 'd')}`);
+      const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/${kind.name}/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}${v.syncBy?.replace('dev-', 'd')}`);
       if (docs.length) script.push(`      cloud ${acct}: ${docs.join(' ')}`);
     }
     for (const x of devices) {
@@ -208,9 +228,9 @@ async function replay(ops, seed, trace = false) {
     await d.start();
   }
   // Every browser shows the demo job at first; device 0 starts with two jobs more, the others join the account.
-  const demo = (d) => job('demo', '', stamp(d));
+  const demo = (d) => kind.make('demo', '', stamp(d));
   devices[0].account = 'A';
-  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0])), demo(devices[0])]);
+  devices[0].set([kind.make('j1', mark(devices[0], 'j1'), stamp(devices[0])), kind.make('j2', mark(devices[0], 'j2'), stamp(devices[0])), demo(devices[0])]);
   devices[1].set([demo(devices[1])]);
   devices[2].set([demo(devices[2])]);
   say('d0 starts with j1, j2 and the demo job, the others with the demo job');
@@ -241,14 +261,14 @@ async function replay(ops, seed, trace = false) {
       const id = `n${serial + 1}`;
       const text = mark(d, id);
       say(`d${d.index} adds ${id} ${text}`);
-      d.set([...d.list, job(id, text, stamp(d))]);
+      d.set([...d.list, kind.make(id, text, stamp(d))]);
     } else if (roll < 0.31) {
       const k = pick(IMPORTED);
       const id = `imp${k}`;
       if (d.list.some((x) => x.id === id)) continue;
       const text = mark(d, id, 1000 + k);
       say(`d${d.index} imports ${id}`);
-      d.set([...d.list, job(id, text, 50)]);
+      d.set([...d.list, kind.make(id, text, 50)]);
     } else if (roll < 0.36) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
@@ -330,6 +350,12 @@ async function replay(ops, seed, trace = false) {
       say(`d${d.index} clears the site data`);
       d.wipe([demo(d)]);
       await d.start(null);
+    } else if (roll < 0.97) {
+      // A star or a colour: a change of looks alone, which is no conflict (a project's).
+      if (kind.name !== 'boards' || !d.list.length) continue;
+      const target = d.list[pick(d.list.length)];
+      say(`d${d.index} stars ${target.id}`);
+      d.set(d.list.map((x) => (x.id === target.id ? { ...x, starred: !x.starred, updatedAt: stamp(d) } : x)));
     } else {
       await settle(2);
     }
@@ -340,7 +366,7 @@ async function replay(ops, seed, trace = false) {
 
   const problems = [];
   const shapeOf = (list) => JSON.stringify(list.map((x) => [x.id, x.notes]).toSorted());
-  const inCloud = (acct) => Object.fromEntries([...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => [p.split('/').at(-1), v.notes]));
+  const inCloud = (acct) => Object.fromEntries([...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/${kind.name}/`)).map(([p, v]) => [p.split('/').at(-1), v.notes]));
   const check = (acct) => {
     const account = inCloud(acct);
     const cloudShape = JSON.stringify(Object.entries(account).toSorted());
