@@ -1,10 +1,10 @@
 // H1-SYNC-26: a start (the connection back, a refresh) begins a new line and drops the result of a flush it finds on its way;
-// the request that flush had handed to the cloud still lands. The new line's first sync read the cloud before it landed and
-// wrote its record after: a "Clear all" whose deletion landed after the user's Undo and after the restart's read left every
-// job in the list with a version, and in the cloud with none — the record's deletion (noted when the request landed) was
-// overwritten by the copies the first sync had read, and the next first sync took the jobs for ones deleted on another device
-// and dropped them here: the Undo lost. Now a first sync's record keeps what landed during it for the ids it did not write
-// itself, and the jobs put back are sent again at once.
+// the request that flush had handed to the cloud still lands. The new line's first sync read the cloud meanwhile, and when the
+// request landed after that read, the first sync's record claimed copies the cloud no longer had: a "Clear all" whose deletion
+// landed after the user's Undo and after the restart's read left every job in the list with a version, and in the cloud with
+// none — the next first sync took them for jobs deleted on another device, and dropped them here: the Undo lost. Now a first sync
+// waits for what an older line left on its way (a few seconds at most, as a flush waits for the cloud), and reads after it has
+// landed: the Undo is a change after the deletion it finds recorded.
 // The real engine, plan and io over a fake Firestore; the flush's request and the restart's read each wait at a gate.
 // Run: yarn test:unit
 import { test } from 'node:test';
@@ -22,7 +22,7 @@ const job = (id, notes, updatedAt) => ({
 });
 const jobsIn = (cloud) => [...cloud.data.keys()].filter((p) => p.startsWith('users/A/jobs/')).toSorted();
 
-test('a deletion that landed during the restart\'s first sync, after an Undo: the jobs put back are kept and sent again', async () => {
+test('a first sync reads after the request an older line left on its way has landed: an Undo made meanwhile is kept', async () => {
   const cloud = fakeFirestore();
   let list = [job('j1', '[1]', 100), job('j2', '[2]', 110)];
   const listeners = new Set();
@@ -73,14 +73,11 @@ test('a deletion that landed during the restart\'s first sync, after an Undo: th
   await settle(10);
   read.resolve();
   await settle(10);
-  await timers.fire(); // the jobs put back are sent again
+  sync.start(A); // and the next first sync
+  await settle(10);
+  await timers.fire();
   await settle(10);
   assert.deepEqual(list.map((x) => x.id).toSorted(), ['j1', 'j2'], 'both jobs are still here');
   assert.deepEqual(jobsIn(cloud), ['users/A/jobs/j1', 'users/A/jobs/j2'], 'and in the account');
   assert.equal(seen.status, 'synced');
-
-  sync.start(A); // and the next first sync keeps them
-  await settle(10);
-  assert.deepEqual(list.map((x) => x.id).toSorted(), ['j1', 'j2']);
-  assert.deepEqual(jobsIn(cloud), ['users/A/jobs/j1', 'users/A/jobs/j2']);
 });

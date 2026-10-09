@@ -97,6 +97,8 @@ export function createCollectionSync({
     readAt: -Infinity,
     unsubscribe: null,
     turn: Promise.resolve(), // the last flush's batch handed to Firestore
+    flights: new Set(), // the flushes of this line not yet landed or failed (a promise each)
+    behind: null, // the flushes an earlier line left on their way, which the first sync of this one waits for (a few seconds at most)
     sent: new Map(), // id → the updatedAt of the copy this browser last handed to Firestore (its record only has it once acknowledged)
     device: null, // this browser's id as a writer, until its record holds one
   };
@@ -351,6 +353,11 @@ export function createCollectionSync({
     // a start (another account, a retry, going online) begins a new line, and what the old one still does is dropped
     // (`current()`), its copies being checked by the write itself (collectionSyncIo.commit).
     s.turn = Promise.resolve();
+    // What the old line still has on its way lands whatever becomes of its result, and the first sync of this one reads the
+    // cloud after it has: read before, its copies were gone from the cloud by the time its record claimed them (a deletion
+    // landing after an Undo, the job then dropped as one deleted elsewhere).
+    if (s.flights.size) s.behind = [...(s.behind ?? []), ...s.flights];
+    s.flights = new Set();
     timers.clear(s.retry);
     s.retryOnShow = false;
     if ((user?.uid ?? null) !== (s.user?.uid ?? null)) {
@@ -477,6 +484,12 @@ export function createCollectionSync({
       // So is the order it last saw the cloud hold: another tab's move sent meanwhile wrote its new
       // order to the record, the cloud's old order just read no longer matched it and led, and the
       // move was undone here and then on every device (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD).
+      if (s.behind) {
+        const behind = s.behind;
+        s.behind = null;
+        await landing(behind);
+        if (gen !== s.gen) return;
+      }
       const early = meta.read();
       const seen = early.uid === uid ? early.versions : {};
       const seenRevs = early.uid === uid ? early.revs ?? {} : {};
@@ -596,24 +609,6 @@ export function createCollectionSync({
         ...revsOf(docs.filter((d) => !plan.deletes.includes(d.id)), cloud.stamps),
         ...revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))),
       };
-      // What landed while this sync ran — a flush an older line left on its way (a start does not wait for it), another tab's
-      // flush — is newer than the copies read here: the record keeps what it says for the ids this sync did not write itself, or
-      // a deletion landing after an Undo and after this read was overwritten by the copies read before it, and the jobs put back
-      // were taken at the next sync for ones deleted on another device.
-      const meanwhile = meta.read();
-      const lateIds = new Set();
-      if (early.uid === uid && meanwhile.uid === uid) {
-        const mine = new Set([...sets.map((x) => x.id), ...plan.deletes]);
-        for (const id of new Set([...Object.keys(meanwhile.versions), ...Object.keys(seen)])) {
-          if (mine.has(id) || meanwhile.versions[id] === seen[id]) continue;
-          lateIds.add(id);
-          if (Number.isFinite(meanwhile.versions[id])) {
-            cloudVersions[id] = meanwhile.versions[id];
-            if (Number.isFinite(meanwhile.revs?.[id])) cloudRevs[id] = meanwhile.revs[id];
-            else delete cloudRevs[id];
-          } else { delete cloudVersions[id]; delete cloudRevs[id]; }
-        }
-      }
       // An item edited here while the sync read the cloud, whose merged copy is the cloud's: the edit was made on the copy
       // before it, which this browser has not seen. The record keeps what it had for it, so the edit's own write finds the
       // cloud's copy moved and this one changed, and keeps the older of the two as a conflict copy — claimed as seen, the
@@ -646,8 +641,7 @@ export function createCollectionSync({
       if (!meta.write(written) && meta.read().uid !== uid) {
         throw noRoom('this account\'s list could not be recorded');
       }
-      // The jobs put back that a deletion landing meanwhile took from the account are not the account's: sent again.
-      s.prev = plan.merged.filter((x) => !(lateIds.has(x.id) && cloudVersions[x.id] === DELETED));
+      s.prev = plan.merged;
       s.ready = true;
       s.readAt = now();
       s.attempts = 0;
@@ -702,6 +696,14 @@ export function createCollectionSync({
     status('syncing');
     const { user } = s;
     s.timer = timers.set(() => flush(user), flushDelay);
+  }
+
+  /** Waits for `promises` to settle, for the cloud timeout at most: what they did is done, and nothing of their result is wanted. */
+  async function landing(promises) {
+    let id;
+    const late = new Promise((resolve) => { id = timers.set(resolve, cloudTimeout); });
+    await Promise.race([Promise.allSettled(promises), late]);
+    timers.clear(id);
   }
 
   /** `promise`, or a deadline-exceeded failure (retried) once cloudTimeout passes without its answer. */
@@ -882,6 +884,10 @@ export function createCollectionSync({
       if (!s.timer) settled();
     }
 
+    const flights = s.flights;
+    let landedFlight;
+    const flight = new Promise((resolve) => { landedFlight = resolve; });
+    flights.add(flight);
     try {
       // Behind a flush that has not landed: a wait that ends in the deadline is a failure like any, tried again later.
       await withDeadline(before);
@@ -902,6 +908,8 @@ export function createCollectionSync({
       failed(e, user, 'flush', sets, sets.length > 1 || (!sets.length && queued.length > 0));
     } finally {
       handedOver();
+      flights.delete(flight);
+      landedFlight();
     }
   }
 
