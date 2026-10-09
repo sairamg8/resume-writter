@@ -146,13 +146,14 @@ export function createCollectionSync({
   /**
    * A write that landed after a start replaced the sync that sent it (whose result is dropped, record and list alike): the
    * record says so for what this browser's list holds, or those items are ones never seen here at the next sync, and an edit of
-   * another device's meanwhile, against one made here since, is settled by the clocks alone with the older dropped. Not for
-   * what the list does not hold (a conflict copy the plan made): noted, it would be taken at the next sync for an item
-   * deleted here, and deleted from the account.
+   * another device's meanwhile, against one made here since, is settled by the clocks alone with the older dropped. So is an
+   * item deleted here meanwhile (`known`: what this browser held when the write was decided): in the account with no version,
+   * it came back at the next sync, as one never seen here. Not a conflict copy the plan made (in neither): noted, it would be
+   * taken at the next sync for an item deleted here, and deleted from the account.
    */
-  function landed(uid, sets, deletes, order, stamps) {
+  function landed(uid, sets, deletes, order, stamps, known = []) {
     if (!sets.length && !deletes.length) return;
-    const held = new Set(store.items().map((x) => x.id));
+    const held = new Set([...store.items().map((x) => x.id), ...known]);
     const mine = sets.filter((x) => held.has(x.id));
     noteVersions(uid, mine, deletes, order, revsOfStamps(new Map(mine.map((x) => [x.id, stamps.get(x.id)]))));
   }
@@ -540,7 +541,7 @@ export function createCollectionSync({
           }
         }
         if (gen !== s.gen) {
-          landed(uid, sets, plan.deletes, null, stamps);
+          landed(uid, sets, plan.deletes, null, stamps, ownIds);
           return;
         }
       }
@@ -769,7 +770,7 @@ export function createCollectionSync({
       }
       await io.commit(user.uid, { sets, deletes: many ? [] : deletes, order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect });
       if (!current()) {
-        landed(user.uid, sets, deletes, order, stamps);
+        landed(user.uid, sets, deletes, order, stamps, queued.map((x) => x.id));
         return;
       }
       noteSent(sets);
