@@ -26,6 +26,7 @@
 | [08-testing.md](08-testing.md) | The node:test PDF and unit suites, Playwright, Cypress, CI |
 | [09-file-map.md](09-file-map.md) | Directory map |
 | [10-open-source-goals.md](10-open-source-goals.md) | Sharing plan, repo hygiene, community checklist |
+| [11-sync-versions.md](11-sync-versions.md) | The version counter in the jobs' and projects' sync: the four conflicts it closes, rollback safety |
 
 ## Related project files (outside this folder)
 
