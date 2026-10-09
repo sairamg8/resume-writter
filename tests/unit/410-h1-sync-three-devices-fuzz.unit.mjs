@@ -16,6 +16,7 @@ import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-fires
 
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
 const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 12000;
+const ONLY = (process.env.H1_FUZZ_ONLY ?? '7792').split(',').filter(Boolean).map(Number); // seeds to run alone, to look at them
 const STEPS = 110;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
 const SKEW = [3, -2537, 1811];
@@ -179,8 +180,12 @@ async function replay(ops, seed, trace = false) {
     }
   };
   const short = (n) => n.replace(/\s+/g, '');
+  let shownCommits = 0;
   const dump = () => {
     if (!trace) return;
+    const written = cloud.commits.slice(shownCommits).map((ops) => ops.map(([op, path, value]) => `${op === 'delete' ? 'del' : 'set'} ${path.replace('users/', '').replace('/jobs/', '/').replace('/meta/jobs', '/meta')}${path.includes('/meta/') ? `{${Object.keys(value).join(',')}}` : ''}`).join('; '));
+    shownCommits = cloud.commits.length;
+    if (written.length) script.push(`      wrote: ${written.join(' | ')}`);
     for (const acct of ['A', 'B']) {
       const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}${v.syncBy?.replace('dev-', 'd')}`);
       if (docs.length) script.push(`      cloud ${acct}: ${docs.join(' ')}`);
@@ -389,7 +394,7 @@ test(`three devices, two accounts, ${SEEDS} random scripts: they converge and no
   const failures = [];
   const seen = new Set();
   let failed = 0;
-  for (let seed = 1; seed <= SEEDS; seed += 1) {
+  for (const seed of ONLY.length ? ONLY : Array.from({ length: SEEDS }, (_, i) => i + 1)) {
     const ops = generate(seed);
     const { problems } = await replay(ops, seed);
     if (!problems.length) continue;
