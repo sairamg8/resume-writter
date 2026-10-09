@@ -5,6 +5,13 @@
 import { newId } from './ids.js';
 import { deriveKey } from './boardModel.js';
 
+/**
+ * The fields of a project that are only looks (the starred flag, the colour): a difference in them
+ * alone is no conflict — the newer copy wins them — so no whole-project copy is made for a star.
+ * Everything else (title, description, columns, sprints, labels, mode, issues, key) is typed work.
+ */
+export const BOARD_COSMETIC = ['starred', 'color'];
+
 /** What a conflict copy's name ends with. */
 export const CONFLICT_MARK = '(conflict copy)';
 

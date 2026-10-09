@@ -9,7 +9,7 @@ import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/u
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
-import { boardConflictCopy, jobConflictCopy } from '@/utils/collectionSyncConflict';
+import { BOARD_COSMETIC, boardConflictCopy, jobConflictCopy } from '@/utils/collectionSyncConflict';
 import { DEMO_JOB_ID, isUntouchedDemoJob } from '@/utils/jobEdits';
 import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, savedJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
@@ -49,6 +49,7 @@ export const boardSync = {
     label: (b) => b.title || 'Untitled project',
     seed: isUntouchedDemoBoard, seedIds: [DEMO_BOARD_ID],
     conflictCopy: boardConflictCopy,
+    conflictApart: BOARD_COSMETIC,
     leaveRecovery: leaveBoardsRecovery,
   },
   meta: () => localMeta(BOARDS_SYNC_KEY),

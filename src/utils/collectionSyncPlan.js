@@ -63,7 +63,8 @@ function weave(lead, other) {
  * list left this browser (leaveList), which leads `local`'s own order. Returns { merged (the list,
  * in order), sets (items to write), deletes (ids to remove and list as deleted), order (the ids in
  * order: written when it differs from the cloud's), conflicts (the older copies kept beside an
- * item both sides changed: `{ id, copy }`, `copyOf(older, everyItem)` making each; none without it) }.
+ * item both sides changed: `{ id, copy }`, `copyOf(older, everyItem)` making each; none without it;
+ * `apart`: the fields whose difference alone is no conflict, a project's star and colour) }.
  * Nothing typed is lost:
  *   - an item on one side only is new there and joins the list — unless the account deleted it
  *     for good, or it is one this browser knew and deleted since;
@@ -84,7 +85,7 @@ function weave(lead, other) {
  * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
  * cloud's wins: the device that sent first.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [] }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
@@ -116,7 +117,7 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
       const conflict = Boolean(copyOf) && known(id) && versions[id] > DELETED && time(mine) > versions[id] && time(theirs) > versions[id]
-        && !sameContent(mine, theirs);
+        && !sameContent(mine, theirs, apart);
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.

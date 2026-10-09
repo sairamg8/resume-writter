@@ -33,7 +33,8 @@ const noRoom = (what = 'the last account\'s list could not be set aside') => Obj
  *             → the item as the store holds one (null: not one), label(item) → its name, seed(item)
  *             → whether it is the first visit's demo, untouched (optional), conflictCopy(older, every
  *             item) → the older copy of an item both devices changed, kept beside the newer one under
- *             a new id (collectionSyncConflict.js; optional: none, the older copy is dropped), leaveRecovery() → the list's
+ *             a new id (collectionSyncConflict.js; optional: none, the older copy is dropped), conflictApart → the fields
+ *             whose difference alone is no conflict (optional), leaveRecovery() → the list's
  *             recovery notice and backups forgotten as it leaves this browser (optional), saved() → the
  *             list storage holds, which differs from items() when storage refused a save (optional:
  *             items()) }
@@ -162,7 +163,7 @@ export function createCollectionSync({
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
       const base = Math.max(Number.isFinite(known[x.id]) ? known[x.id] : 0, s.sent.get(x.id) ?? 0);
-      if (!theirs || !(base > DELETED && x.updatedAt > base && theirs.updatedAt > base) || sameContent(x, theirs)) continue;
+      if (!theirs || !(base > DELETED && x.updatedAt > base && theirs.updatedAt > base) || sameContent(x, theirs, store.conflictApart)) continue;
       const older = theirs.updatedAt > x.updatedAt ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -368,7 +369,7 @@ export function createCollectionSync({
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
       const moved = mine ? { baseOrder: seenOrder } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy });
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy, apart: store.conflictApart });
 
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
