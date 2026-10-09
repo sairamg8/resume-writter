@@ -28,13 +28,15 @@ export async function walkVariant(variant) {
   const P = await loadPanels();
   const base = () => baseResume(variant.template, variant.settings);
   const at = (context) => applyWrites(base(), context, null);
-  const setting = (spy) => (key, value) => spy({ kind: 'setting', key, value });
+  // As useResumeStore.updateSetting: a function is applied to the key's value as it is when the write happens
+  // (the résumé the panel shows, `r`), so the write recorded is the value, never a function (the icon map is written so).
+  const setting = (spy, r) => (key, value) => spy({ kind: 'setting', key, value: typeof value === 'function' ? value(r.settings?.[key]) : value });
   const keep = (actions) => actions.filter((a) => !a.writes.every(isContent));
 
   const design = keep(walkPanel((spy, ctx) => {
     const r = at(ctx);
     return [guarded(P.DesignPanel), {
-      resume: r, updateSetting: setting(spy),
+      resume: r, updateSetting: setting(spy, r),
       // A design (R2-138) is picked as its engine and its id: a write of its own.
       setTemplate: (value, preset) => spy(preset ? { kind: 'preset', value: preset } : { kind: 'template', value }),
       resetSettings: () => spy({ kind: 'resetAll' }),
@@ -46,7 +48,7 @@ export async function walkVariant(variant) {
       personal: r.personal, settings: r.settings, template: r.template, coverLetter: r.coverLetter,
       updatePersonal: (key, value) => spy({ kind: 'personal', key, value }),
       toggleFieldVisibility: (key) => spy({ kind: 'hide', key }),
-      updateSetting: setting(spy),
+      updateSetting: setting(spy, r),
       clearSettings: (keys) => spy({ kind: 'clear', keys: [...keys] }),
     }];
   }));
