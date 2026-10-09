@@ -79,6 +79,12 @@ jobs:
           done
           command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
           pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
+          # tests/pdf/85-ats-pdfminer-dates runs only where pdfminer.six imports: install it (distro package,
+          # else pip), and warn, not fail, if neither works, so the gate never hangs on a mirror.
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pdfminer > /dev/null 2>&1 \
+            || { DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pip > /dev/null 2>&1 \
+                 && python3 -m pip install -q --break-system-packages pdfminer.six; } || true
+          python3 -c 'import pdfminer, pdfminer.high_level; print("pdfminer", pdfminer.__version__)' || echo "::warning::pdfminer.six is not installed: tests/pdf/85-ats-pdfminer-dates will skip"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -126,6 +132,12 @@ jobs:
           done
           command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
           pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
+          # tests/pdf/85-ats-pdfminer-dates runs only where pdfminer.six imports: install it (distro package,
+          # else pip), and warn, not fail, if neither works, so the gate never hangs on a mirror.
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pdfminer > /dev/null 2>&1 \
+            || { DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pip > /dev/null 2>&1 \
+                 && python3 -m pip install -q --break-system-packages pdfminer.six; } || true
+          python3 -c 'import pdfminer, pdfminer.high_level; print("pdfminer", pdfminer.__version__)' || echo "::warning::pdfminer.six is not installed: tests/pdf/85-ats-pdfminer-dates will skip"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -191,6 +203,12 @@ jobs:
           done
           command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
           pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
+          # tests/pdf/85-ats-pdfminer-dates runs only where pdfminer.six imports: install it (distro package,
+          # else pip), and warn, not fail, if neither works, so the gate never hangs on a mirror.
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pdfminer > /dev/null 2>&1 \
+            || { DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 python3-pip > /dev/null 2>&1 \
+                 && python3 -m pip install -q --break-system-packages pdfminer.six; } || true
+          python3 -c 'import pdfminer, pdfminer.high_level; print("pdfminer", pdfminer.__version__)' || echo "::warning::pdfminer.six is not installed: tests/pdf/85-ats-pdfminer-dates will skip"
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

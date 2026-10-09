@@ -74,7 +74,8 @@ it('R4-DUX-18: with no jobs at all, the board says "No jobs yet" and offers Add 
     const add = page.all().filter((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Add job').at(-1);
     assert.ok(add);
     page.fire(add, 'onClick');
-    await new Promise((r) => { setTimeout(r, 20); }); // the router commits a navigation in a transition
+    // The router commits a navigation in a transition: wait (bounded) for the form, not a fixed 20 ms.
+    for (const end = Date.now() + 10_000; !/NEW JOB FORM/.test(page.text()) && Date.now() < end;) await new Promise((r) => { setTimeout(r, 10); });
     assert.match(page.text(), /NEW JOB FORM/);
   } finally {
     await page.done();

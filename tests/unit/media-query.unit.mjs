@@ -115,7 +115,8 @@ describe('useMediaQuery and useIsMobile answer for the viewport (R2-162)', () =>
     try {
       assert.equal(text(), 'query true · mobile false');
       view.update({ show: true, breakpoint: 1200 });
-      await settle();
+      // The re-render an effect schedules: wait (bounded) for it, not a fixed five turns.
+      for (const end = Date.now() + 10_000; text() !== 'query true · mobile true' && Date.now() < end;) { await settle(); view.act(() => {}); }
       assert.equal(text(), 'query true · mobile true', 'the answer for the new breakpoint');
       assert.ok(media.queries().includes('(min-width: 1200px)'));
       // One listener per hook call — the one for 768 px is gone, not left behind next to 1200 px's.

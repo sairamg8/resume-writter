@@ -50,6 +50,7 @@ describe('R4-DUX-28: export failure advice', () => {
         view.act(() => state.hook.setExportError(null));
         await state.hook[name]();
         await flush();
+        for (const end = Date.now() + 10_000; state.hook.exportError === null && Date.now() < end;) { await flush(); view.act(() => {}); }
         return state.hook.exportError;
       };
       for (const [name, label] of NETWORK) {

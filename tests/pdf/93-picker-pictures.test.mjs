@@ -113,8 +113,9 @@ describe('a résumé\'s dashboard picture (C1)', () => {
       for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); }
       view.act(() => current.renameResume('resume_a', 'A2'));
       for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); }
-      await new Promise((r) => { setTimeout(r, 700); });
-      view.act(() => {});
+      // The store writes a moment after the change: wait (bounded) for the write, not a fixed 700 ms.
+      const wrote = () => JSON.parse(storage.getItem('cpwtcv_v1')).resumes[0].name === 'A2' && savedPicture('resume_gone', 'h') === null;
+      for (const end = Date.now() + 10_000; !wrote() && Date.now() < end;) { await new Promise((r) => { setTimeout(r, 10); }); view.act(() => {}); }
       assert.equal(JSON.parse(storage.getItem('cpwtcv_v1')).resumes[0].name, 'A2', 'the store wrote');
       assert.equal(savedPicture('resume_gone', 'h'), null, 'the picture of a résumé it does not hold went');
       assert.equal(JSON.parse(storage.getItem(KEY)).resume_gone, undefined);

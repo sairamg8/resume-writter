@@ -64,7 +64,8 @@ describe('the résumé store’s saves while typing (R2-077)', () => {
       const saves = s.storage.saves;
       await s.type('Alexandra Q. Example');
       assert.ok(s.storage.saves - saves <= 2, `before: ${s.storage.saves - saves} whole-store writes for 20 keystrokes`);
-      await wait(700);
+      // The store writes a moment after the last key: wait (bounded) for it, not a fixed 700 ms.
+      for (const end = Date.now() + 10_000; s.savedName() !== 'Alexandra Q. Example' && Date.now() < end;) await wait(10);
       await s.settle();
       assert.equal(s.savedName(), 'Alexandra Q. Example');
     } finally { await s.close(); }
