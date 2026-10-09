@@ -112,14 +112,14 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       continue;
     }
     if (mine && theirs) {
-      // A first visit's demo (the store's `seed`), never synced here and never edited, carries
-      // nothing typed: the account's copy wins, however old — the demo is dated from the day it
-      // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
       // Changed on both sides since this browser last saw the cloud's copy, and not to the same
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
-      const conflict = Boolean(copyOf) && versions[id] > DELETED && time(mine) > versions[id] && time(theirs) > versions[id]
+      const conflict = Boolean(copyOf) && known(id) && versions[id] > DELETED && time(mine) > versions[id] && time(theirs) > versions[id]
         && !sameContent(mine, theirs);
+      // A first visit's demo (the store's `seed`), never synced here and never edited, carries
+      // nothing typed: the account's copy wins, however old — the demo is dated from the day it
+      // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
       if (time(theirs) > time(mine) || (!known(id) && seed(mine))) keep.set(id, theirs);
       else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict) sets.push(mine); }
       if (conflict) {
