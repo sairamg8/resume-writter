@@ -5,7 +5,8 @@
 // until the person thought to reload. Now the first such failure reloads the page once, onto the new
 // build's files; a second failure in a row, or one with no network, shows the ErrorBoundary as any
 // crash does (a reload loop helps nobody, and offline a reload loses the page). Relative imports
-// only, so Node's test runner loads this file as it is.
+// only (and React), so Node's test runner loads this file as it is.
+import { createElement, lazy, useState } from 'react';
 
 /** The session key that marks "reloaded once for a page's code": the names of the pages that did. */
 export const RELOADED_KEY = 'cpwtcv_chunk_reload';
@@ -68,4 +69,34 @@ export function loadPage(load, name, env = browser()) {
     }
     throw error;
   });
+}
+
+/**
+ * A route's page as a component: React.lazy over loadPage, that tries its file again after a failure. A lazy
+ * keeps a failed load for good, so a page whose file could not be fetched (offline, a flaky connection) stayed
+ * on the crash screen, with Try Again and every link back to it failing too, until the tab was reloaded. Now
+ * the next time the page mounts after a failure — Try Again, or the route left and opened again — it asks for
+ * its file anew. Never within one mount: a failure that replaced the lazy at once would have the page asking
+ * again, and failing again, in a loop no one sees, instead of showing the error. `env` is loadPage's.
+ */
+export function lazyPage(load, name, env) {
+  let Inner;
+  let failed = false;
+  const fresh = () => lazy(() => loadPage(load, name, env).catch((error) => {
+    failed = true;
+    throw error;
+  }));
+  Inner = fresh();
+  // One lazy per mount (a state initializer, so StrictMode's second call gets the same one back).
+  const take = () => {
+    if (failed) {
+      Inner = fresh();
+      failed = false;
+    }
+    return Inner;
+  };
+  return function Page(props) {
+    const [Loaded] = useState(take);
+    return createElement(Loaded, props);
+  };
 }

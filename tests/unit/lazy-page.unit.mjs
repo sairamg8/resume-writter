@@ -96,9 +96,13 @@ test("one page's reload never blocks another's: each page reloads the tab at mos
   assert.deepEqual(JSON.parse(e.map.get(RELOADED_KEY)), ['Board'], 'a load clears only its own page');
 });
 
-test('AppRoutes loads its lazy pages through loadPage', async () => {
+// The pin moved with the retry (tests/unit/480-h4-lazy-page-retry.unit.mjs): AppRoutes makes each page with
+// lazyPage, which builds its React.lazy over loadPage (and a page whose file failed asks again on its next mount).
+test('AppRoutes loads its lazy pages through lazyPage, which loads each through loadPage', async () => {
   const fs = await import('node:fs');
   const src = fs.readFileSync(new URL('../../src/AppRoutes.jsx', import.meta.url), 'utf8');
-  assert.match(src, /lazy\(\(\) => loadPage\(load, name\)\)/);
+  const lazyFile = fs.readFileSync(new URL('../../src/utils/lazyPage.js', import.meta.url), 'utf8');
+  assert.match(src, /const page = \(load, name\) => lazyPage\(load, name\);/);
+  assert.match(lazyFile, /lazy\(\(\) => loadPage\(load, name, env\)\.catch\(/);
   assert.doesNotMatch(src, /lazy\(\(\) => load\(\)\.then/, 'no page loads around it');
 });
