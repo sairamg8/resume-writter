@@ -15,7 +15,7 @@ import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 400;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 2500;
 const STEPS = 110;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
 const SKEW = [3, -2537, 1811];
@@ -164,8 +164,10 @@ async function replay(ops, trace = false) {
       const target = d.list[pick(d.list.length)];
       say(`d${d.index} deletes ${target.id}`);
       deletedIds.add(target.id);
-      for (const [, t] of target.notes.matchAll(/\[(\d+)\]/g)) deleted.add(Number(t));
-      d.lastDeleted = { job: target, index: d.list.indexOf(target), account: d.account };
+      const marks = [...target.notes.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+      for (const t of marks) deleted.add(t);
+      pending[d.index] = pending[d.index].filter((t) => !marks.includes(t)); // belongs to no account while it is gone
+      d.lastDeleted = { job: target, index: d.list.indexOf(target), account: d.account, marks };
       d.set(d.list.filter((x) => x.id !== target.id));
     } else if (roll < 0.38) {
       const was = d.lastDeleted;
@@ -173,6 +175,7 @@ async function replay(ops, trace = false) {
       say(`d${d.index} undoes the deletion of ${was.job.id}`);
       const rest = [...d.list];
       rest.splice(Math.min(was.index, rest.length), 0, was.job);
+      for (const t of was.marks) { const uid = d.meta.read().uid; if (uid) own(t, uid); else pending[d.index].push(t); }
       d.set(rest);
     } else if (roll < 0.41) {
       if (d.list.length < 2) continue;
