@@ -2,13 +2,13 @@
 // read by importText.js into a new résumé. JSON stays with the importers it always had (the
 // Dashboard's and the editor's); importDocument.js loads this on demand, and pdf.js only for a PDF.
 import { linkText, markdownLines, readDateRange, resumeFromText } from './importText.js';
+import { MAX_IMPORT_BYTES, TOO_BIG } from './importDocument.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 const SCANNED = 'That PDF looks like a scanned image: its pages have no text layer to read. Export the résumé again as a text PDF from the program it was written in, save it as a Word file, or run the scan through OCR (text recognition) first, and import that.';
 
-/** The largest file the import reads: a résumé is well under it; one over it would stall the page. */
-export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
-const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
+// The size cap is shared with the JSON import, which reads its file whole as text (importDocument.js).
+export { MAX_IMPORT_BYTES };
 const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
 /** The most pages of a PDF the import reads: far past any résumé, short of a file made to stall the page. */
 export const MAX_PDF_PAGES = 200;

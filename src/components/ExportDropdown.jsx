@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson, Globe } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/constants/cardHints';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
-import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, MAX_IMPORT_BYTES, TOO_BIG, isDocumentFile } from '@/utils/importDocument';
 import { useFloating } from '@/components/ui/useFloating';
 import { useOutsideClose } from '@/hooks/useOutsideClose';
 
@@ -152,6 +152,12 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
           if (isDocumentFile(file) && onImportFile) {
             e.target.value = '';
             onImportFile(file, asOriginal.current);
+            return;
+          }
+          // Read whole as text: a file over the document import's size is refused unread.
+          if (file.size > MAX_IMPORT_BYTES) {
+            onImportError?.(TOO_BIG);
+            e.target.value = '';
             return;
           }
           const reader = new FileReader();

@@ -13,7 +13,7 @@ import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
-import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, MAX_IMPORT_BYTES, TOO_BIG, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
 
 // The letter picker, Career History and a card's more menu load apart from the start-up path (lazyPiece.jsx).
 export const _lazyForTest = { loaders, warmed };
@@ -198,6 +198,13 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
         importBusy.current = false;
         if (mounted.current) setImporting(false);
       });
+      return;
+    }
+    // A JSON file is read whole as text: one picked by mistake (a video, a disk image) is refused unread,
+    // as a document over the same size is.
+    if (file.size > MAX_IMPORT_BYTES) {
+      setImportError(TOO_BIG);
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();
