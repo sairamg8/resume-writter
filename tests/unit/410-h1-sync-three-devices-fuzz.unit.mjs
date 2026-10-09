@@ -38,9 +38,34 @@ const job = (id, notes, updatedAt) => ({
   statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt,
 });
 
+/**
+ * `fs` with a random pause before each call to the server (none, or a few turns of the event loop): the syncs of different
+ * devices, started together or one after the other, then reach the account in many different orders.
+ */
+function jittered(fs, rand) {
+  const pause = async () => { for (let n = Math.floor(rand() * 4); n > 0; n -= 1) await new Promise((resolve) => { setImmediate(resolve); }); };
+  return {
+    ...fs,
+    getDocsFromServer: async (col) => { await pause(); return fs.getDocsFromServer(col); },
+    getDocFromServer: async (ref) => { await pause(); return fs.getDocFromServer(ref); },
+    writeBatch: (db) => {
+      const batch = fs.writeBatch(db);
+      return { set: (...a) => batch.set(...a), delete: (...a) => batch.delete(...a), commit: async () => { await pause(); return batch.commit(); } };
+    },
+    runTransaction: async (db, update) => {
+      await pause();
+      return fs.runTransaction(db, (tx) => update({
+        get: async (ref) => { await pause(); return tx.get(ref); },
+        set: (...a) => tx.set(...a),
+        delete: (...a) => tx.delete(...a),
+      }));
+    },
+  };
+}
+
 /** One browser: its list, its sync record, its engine (booted again by a reload), and what it is signed in as. */
-function device(cloud, index) {
-  const d = { index, list: [], online: true, account: null, clock: 0, wipes: 0, lastDeleted: null };
+function device(cloud, index, fs) {
+  const d = { turns: 5, index, list: [], online: true, account: null, clock: 0, wipes: 0, lastDeleted: null };
   const listeners = new Set();
   d.set = (next) => { d.list = next; listeners.forEach((l) => l()); };
   const store = {
@@ -57,14 +82,14 @@ function device(cloud, index) {
     const { seen, report } = recorder();
     d.seen = seen;
     d.sync = createCollectionSync({
-      name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
+      name: 'jobs', io: collectionIo(fs, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
       online: () => d.online, now: () => d.clock,
     });
   };
   d.boot();
   d.user = () => (d.account ? USERS[d.account] : null);
-  d.start = async (user = d.user()) => { d.sync.start(user); await settle(); };
-  d.fire = async () => { await d.timers.fire(); };
+  d.start = async (user = d.user()) => { d.sync.start(user); await settle(d.turns); };
+  d.fire = async () => { await d.timers.fire(); await settle(d.turns); };
   d.wipe = () => {
     d.wipes += 1;
     d.list = [];
@@ -76,9 +101,13 @@ function device(cloud, index) {
   return d;
 }
 
-async function replay(ops, trace = false) {
+async function replay(ops, seed, trace = false) {
   const cloud = fakeFirestore();
-  const devices = [0, 1, 2].map((i) => device(cloud, i));
+  // Calm: a step ends when its syncs have. Jittered: a step ends soon, and its syncs go on among the next steps'.
+  const jitter = seed % 2 === 0 ? random(seed * 7919 + 13) : null;
+  const fs = jitter ? jittered(cloud.fs, jitter) : cloud.fs;
+  const devices = [0, 1, 2].map((i) => device(cloud, i, fs));
+  for (const d of devices) d.turns = jitter ? 3 : 5;
   const script = [];
   let tick = 0;
   let serial = 0;
@@ -224,7 +253,7 @@ async function replay(ops, trace = false) {
       d.clock += 10_000;
       say(`d${d.index} is shown again`);
       d.sync.shown();
-      await settle();
+      await settle(d.turns);
     } else if (roll < 0.87) {
       if (!d.account || !d.online) continue;
       say(`d${d.index} restarts its sync`);
@@ -244,6 +273,7 @@ async function replay(ops, trace = false) {
       await settle(2);
     }
   }
+  for (const d of devices) d.turns = 80;
   claimAll();
   dump();
 
@@ -292,13 +322,13 @@ function generate(seed) {
 }
 
 /** The steps of `ops` that matter: left out one at a time for as long as the script still fails. */
-async function shrink(ops) {
+async function shrink(ops, seed) {
   let kept = ops;
   for (let again = true; again;) {
     again = false;
     for (let i = kept.length - 1; i >= 0; i -= 1) {
       const fewer = kept.filter((_, j) => j !== i);
-      if ((await replay(fewer)).problems.length) { kept = fewer; again = true; }
+      if ((await replay(fewer, seed)).problems.length) { kept = fewer; again = true; }
     }
   }
   return kept;
@@ -310,12 +340,12 @@ test(`three devices, two accounts, ${SEEDS} random scripts: they converge and no
   let failed = 0;
   for (let seed = 1; seed <= SEEDS; seed += 1) {
     const ops = generate(seed);
-    const { problems } = await replay(ops);
+    const { problems } = await replay(ops, seed);
     if (!problems.length) continue;
     failed += 1;
     if (failures.length >= 2) continue;
-    const small = await shrink(ops);
-    const { problems: left, script } = await replay(small, true);
+    const small = await shrink(ops, seed);
+    const { problems: left, script } = await replay(small, seed, true);
     const text = script.join('\n    ');
     if (seen.has(text)) continue;
     seen.add(text);
