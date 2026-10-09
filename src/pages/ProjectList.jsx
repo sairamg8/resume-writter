@@ -14,6 +14,7 @@ import { StatusMenu } from '@/components/tracker/Lozenge';
 import { IssueTypeIcon, Points, PriorityIcon, priorityOf } from '@/components/tracker/TrackerIcons';
 import { filterIssues, sortIssues } from '@/utils/boardQuery';
 import { issueKey, statusColumn } from '@/utils/boardModel';
+import { boardSprint } from '@/utils/boardView';
 import { relativeTime } from '@/utils/uiFormat';
 
 /**
@@ -73,7 +74,8 @@ export function ProjectList() {
   // A new issue the filters don't match never shows up: say it was made, and offer to open it, as
   // the Board does (R4-DUX-08), or "+ Create issue" looks like it failed (R5-HUNT3).
   const create = ({ title, type }) => {
-    const made = store.addIssue(board.id, { title, type });
+    // Into the running sprint when sprints are on, as the board column and the Create dialog do, or it lands in the backlog and is not on the board.
+    const made = store.addIssue(board.id, { title, type, sprintId: boardSprint(board)?.id ?? null });
     if (!made || filterIssues(board, filters, { issues: [made] }).length > 0) return;
     const key = issueKey(board, made);
     toast({ tone: 'success', title: `${key} created — hidden by your filters`, action: { label: 'Open', onClick: () => route.open(key) } });
