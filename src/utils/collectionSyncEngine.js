@@ -671,7 +671,11 @@ export function createCollectionSync({
       const prev = copies.length ? placeCopies(s.prev || [], copies) : (s.prev || []);
       const lacking = (list) => edited.filter((x) => !list.some((y) => y.id === x.id));
       const stillHeld = new Set(edited.filter((x) => !lacking(prev).some((y) => y.id === x.id)).map((x) => x.id));
-      const order = q.reordered || q.deletes.size || q.writes.size || edited.length
+      // The order is sent when this flush changes it: a move, a deletion, an item the cloud lacks (a new one, a copy, one
+      // brought back). An edit of items the cloud has changes nothing in it, and the order built from this browser's
+      // list, possibly read long ago, put another device's move of those jobs back.
+      const adds = queued.some((x) => !cloudCopy.has(x.id));
+      const order = q.reordered || q.deletes.size || adds || copies.length || edited.length
         ? [...prev, ...lacking(prev)].map((x) => x.id) : null;
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
       // Written only if the copies it was decided from are still the cloud's.
