@@ -127,14 +127,16 @@ account; a failing script is cut down to the steps that matter and printed with 
 - A stale error keeps the SDK's own code (`failed-precondition`, `already-exists`) as its `cause`, in its message and in the
   line logged when the sync gives up for the moment (422).
 - A deletion this browser sent stays in its record (as version `DELETED`) at the next first sync too, while the account lists the id
-  as deleted, up to 2,000 of them: an Undo made after a restart was a job "typed before signing in" whose id the account
-  deleted, and was dropped (424). One kept aside at a sign-out is not (a deletion already sent is not kept aside, as before).
+  as deleted, up to 2,000 of them, and for the jobs put back while a first sync was on its way (429): an Undo made after a restart
+  was a job "typed before signing in" whose id the account deleted, and was dropped (424). One kept aside at a sign-out is not (a deletion already sent is not kept aside, as before).
 - A job deleted while the first sync's batch is on its way keeps the copy it was deleted from as its base in the record, like an
   edit typed then: claimed as the account's newer copy, the deletion the sync queued deleted another device's edit the user
   had never seen (425).
-- A first sync waits (a few seconds at most, `cloudTimeout`) for what an older line left on its way, so its read of the cloud
-  comes after the request has landed: read before, a deletion landing after an Undo left the record claiming jobs the cloud no
-  longer had, and the next sync dropped them (426).
+- A first sync's record keeps what landed during the sync (a flush an older line left on its way, another tab's flush) for the ids
+  the sync did not write itself, and sends again the jobs put back that a deletion landing meanwhile took from the account: its
+  copies were read before the request landed, and its record, written after, overwrote the record of the deletion. The next sync took
+  the jobs put back for ones deleted on another device and dropped them (426). A start does not wait for such a flush: a write
+  that never settles must not hold the new line up (397).
 - A flush judges the copies it read by the record as it was before the read: two tabs share the record, and the other tab's
   flush landing during the read left the record ahead of the copy, which counted as a move and replaced the newer edit (427).
 - An untouched demo put back by Undo yields to the account's edit of it, as one never synced here does (428).
