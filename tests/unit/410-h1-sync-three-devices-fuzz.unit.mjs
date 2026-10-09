@@ -304,6 +304,7 @@ async function replay(ops, seed, trace = false) {
 
   async function signIn(d, account) {
     d.account = account;
+    d.lastDeleted = null; // an Undo lasts for seconds: not across a sign-out and a sign-in
     await d.start();
   }
   // Every browser shows the demo job at first; device 0 starts with two jobs more, the others join the account.
@@ -371,7 +372,8 @@ async function replay(ops, seed, trace = false) {
       for (const t of was.marks) {
         deleted.delete(t);
         const uid = d.meta.read().uid;
-        if (uid) own(t, uid); else pending[d.index].push(t);
+        if (uid) own(t, uid);
+        else { owners.delete(t); pending[d.index].push(t); unowned.add(t); } // put back where no account has the list: whichever syncs it first
       }
       d.lastDeleted = null;
       d.set(rest);
@@ -405,6 +407,7 @@ async function replay(ops, seed, trace = false) {
     } else if (roll < 0.69) {
       if (!d.account) continue;
       d.account = null;
+      d.lastDeleted = null;
       say(`d${d.index} signs out`);
       await d.start(null);
     } else if (roll < 0.73) {
