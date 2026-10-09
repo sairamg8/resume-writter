@@ -46,5 +46,6 @@ it('with allowBacklog off it offers the sprints only', async () => {
 
 it('the issue view turns Backlog off for a done issue in a sprint, and keeps it for an issue in no sprint', () => {
   const view = fs.readFileSync(new URL('../../src/components/board/IssueDetails.jsx', import.meta.url), 'utf8');
-  assert.match(view, /<SprintPicker [^>]*allowBacklog=\{!issue\.sprintId \|\| !isIssueDone\(board, issue\)\}/);
+  // `.*` and not `[^>]*`: the onChange arrow on the same line holds a ">".
+  assert.match(view, /<SprintPicker .*allowBacklog=\{!issue\.sprintId \|\| !isIssueDone\(board, issue\)\}/);
 });
