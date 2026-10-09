@@ -92,10 +92,22 @@ function ago(ms) {
   return `${Math.floor(days / 365)}y`;
 }
 
+/** The latest time, either side of 1970, a Date holds (ms). */
+const MAX_TIME = 8.64e15;
+
 /** A timestamp (ms or Date) as a finite number of ms, else null. */
 function toMs(value) {
   const ms = value instanceof Date ? value.getTime() : typeof value === 'number' ? value : NaN;
   return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * A moment as an ISO 8601 text for a `<time dateTime>`; undefined when it is not a time Date can hold
+ * (a finite number past +-8.64e15 ms, which `toISOString` throws a RangeError for).
+ */
+export function isoTime(value) {
+  const ms = toMs(value);
+  return ms !== null && Math.abs(ms) <= MAX_TIME ? new Date(ms).toISOString() : undefined;
 }
 
 /**
@@ -129,7 +141,7 @@ export function relativeDay(iso, now = new Date()) {
 /** "Sep 24, 2026, 3:45 PM" in local time — the absolute moment behind a relative one; '' when not a time. */
 export function formatDateTime(value) {
   const ms = toMs(value);
-  if (ms === null) return '';
+  if (ms === null || Math.abs(ms) > MAX_TIME) return '';
   const t = new Date(ms);
   const h = t.getHours();
   const minutes = String(t.getMinutes()).padStart(2, '0');

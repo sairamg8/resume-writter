@@ -14,6 +14,8 @@ import { isLocalISO } from './boardModel.js';
 export const isEntry = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
+/** A time in ms a Date can hold (+-8.64e15): a file from another tool may carry nanoseconds, which no page can show. */
+const isTime = (v) => isNumber(v) && Math.abs(v) <= 8.64e15;
 
 /**
  * A reader over one raw object: each method returns the field's value in the shape the pages use
@@ -48,7 +50,7 @@ function fields(raw) {
     /** A reference to another part by id: a string, else null (a dangling one is completeBoard's). */
     ref: (key) => (typeof raw[key] === 'string' && raw[key] ? raw[key] : null),
     /** A time in ms, else `fallback`. */
-    time: (key, fallback = 0) => (isNumber(raw[key]) ? raw[key] : fallback),
+    time: (key, fallback = 0) => (isTime(raw[key]) ? raw[key] : fallback),
     /** A list read entry by entry with `read`; not a list → [] (a loss when it held something). */
     list(key, read) {
       const v = raw[key];
@@ -88,7 +90,7 @@ export const readComment = entryReader((raw) => {
 
 /** A history entry: kept when it says when (`at`); from / to are shown as they are. */
 export const readActivity = entryReader((raw) => {
-  if (!isNumber(raw.at) || typeof raw.kind !== 'string') return { kept: null, lost: true };
+  if (!isTime(raw.at) || typeof raw.kind !== 'string') return { kept: null, lost: true };
   const value = (v) => (typeof v === 'string' || isNumber(v) || v === null ? v : v === undefined ? null : String(v));
   const field = typeof raw.field === 'string' ? raw.field : null;
   return { kept: { ...raw, id: idOf(raw), field, from: value(raw.from), to: value(raw.to) }, lost: false };
