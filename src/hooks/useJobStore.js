@@ -411,10 +411,7 @@ function savedJobs() {
 
 /** Replace the list with the cloud sync's result (or [] as the account's list leaves); the same list writes nothing. */
 function replaceJobs(jobs) {
-  const was = jobsNow();
-  // Another tab's save in flight is taken in by setJobs: the sync's list was built over `was`, so
-  // what that tab changed is kept over it, as keepUnsaved keeps what storage refused (CYC8-S4).
-  if (jobs !== was) setJobs((now) => (now === was ? jobs : keepUnsaved(now, jobs, was)));
+  if (jobs !== jobsNow()) setJobs(() => jobs);
 }
 
 /** Remove every job ("Clear all jobs"); returns the list as it was, for restoreJobs (Undo). */

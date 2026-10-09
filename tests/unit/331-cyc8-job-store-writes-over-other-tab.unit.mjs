@@ -1,9 +1,10 @@
 // CYC8-S4: another tab saves the job list and this tab, listening, has not yet heard the storage
 // event. setJobs takes that save in first (takeOtherTabsList) — but importJobs and moveJob had
 // already built their whole new list over this tab's OLD one and handed setJobs `() => list`,
-// which ignores its argument: the stale list was written over the other tab's change. replaceJobs
-// (the cloud sync's result) was the same. Now an import and a move are built over the list once
-// the other tab's save is taken in, and the sync's result keeps what that tab changed.
+// which ignores its argument: the stale list was written over the other tab's change. Now an import
+// and a move are built over the list once the other tab's save is taken in. (The cloud sync's
+// result, replaceJobs, stays as it was: keeping another tab's job over it also kept that job in
+// the list a sign-out empties, for the next account to upload.)
 // The real job store over a memory localStorage. Run: yarn test:unit
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -63,13 +64,4 @@ test('moving a job keeps the job the other tab saved meanwhile', () => {
   assert.equal(was.job.id, 'a');
   assert.deepEqual(storedIds(), ['a', 'b', 'other']);
   assert.equal(jobStore.jobsNow().find((j) => j.id === 'a').status, 'interview');
-});
-
-test('the sync result keeps the job the other tab saved meanwhile', () => {
-  twoTabs();
-  const base = jobStore.jobsNow();
-  // The cloud sync changed job a (a newer copy from the account) over the list it read, [a, b].
-  jobStore.replaceJobs([{ ...base[0], company: 'Acme (from the cloud)', updatedAt: 5 }, base[1]]);
-  assert.deepEqual(storedIds(), ['a', 'b', 'other']);
-  assert.equal(jobStore.jobsNow().find((j) => j.id === 'a').company, 'Acme (from the cloud)', 'the sync result is kept');
 });
