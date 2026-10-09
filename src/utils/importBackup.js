@@ -11,18 +11,34 @@ export const MAX_BACKUP_RESUMES = 100;
 const readsAsResume = (r) => Boolean(r?.personal && Array.isArray(r.sections));
 
 /**
+ * Which of `list` (the readable résumés of saved store `store`) "Import as my original" marks, a Set:
+ * the ones the saved copy itself marks as originals (`keep: true`, a demo account's pool that comes back
+ * when none is left), else the one that was open in it (`activeId`), else the first. Marking every résumé
+ * of a copy would turn a whole list into originals that come back after each deletion; a copy that marks
+ * none still honours the choice, with the one résumé it was about.
+ */
+function originalsOf(store, list) {
+  const marked = list.filter((r) => r.keep === true);
+  if (marked.length) return new Set(marked);
+  return new Set([list.find((r) => r.id === store.activeId) ?? list[0]]);
+}
+
+/**
  * Import the résumés of saved store `store` with `importResume(data, { keep })`: `{ added, unreadable,
  * over }` — how many were imported, how many entries were not a résumé (or were refused), and how many
- * readable ones were left out for the cap. `ids` are the new résumés'.
+ * readable ones were left out for the cap. `ids` are the new résumés'. `keep`: the import was chosen as
+ * the account's original; it marks the résumés originalsOf names, not every one.
  */
 export function importSavedStore(store, importResume, { keep = false } = {}) {
   const entries = store.resumes;
   const readable = entries.filter(readsAsResume);
+  const taken = readable.slice(0, MAX_BACKUP_RESUMES);
+  const originals = keep && taken.length ? originalsOf(store, taken) : new Set();
   const ids = [];
   let refused = 0;
-  for (const r of readable.slice(0, MAX_BACKUP_RESUMES)) {
+  for (const r of taken) {
     try {
-      ids.push(importResume(r, { keep }));
+      ids.push(importResume(r, { keep: originals.has(r) }));
     } catch (e) {
       console.error('Import of one résumé failed:', e);
       refused += 1;
