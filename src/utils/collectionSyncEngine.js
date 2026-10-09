@@ -144,6 +144,20 @@ export function createCollectionSync({
   };
 
   /**
+   * A write that landed after a start replaced the sync that sent it (whose result is dropped, record and list alike): the
+   * record says so for what this browser's list holds, or those items are ones never seen here at the next sync, and an edit of
+   * another device's meanwhile, against one made here since, is settled by the clocks alone with the older dropped. Not for
+   * what the list does not hold (a conflict copy the plan made): noted, it would be taken at the next sync for an item
+   * deleted here, and deleted from the account.
+   */
+  function landed(uid, sets, deletes, order, stamps) {
+    if (!sets.length && !deletes.length) return;
+    const held = new Set(store.items().map((x) => x.id));
+    const mine = sets.filter((x) => held.has(x.id));
+    noteVersions(uid, mine, deletes, order, revsOfStamps(new Map(mine.map((x) => [x.id, stamps.get(x.id)]))));
+  }
+
+  /**
    * `versions` (or `revs`) without the items shown here that storage refused to hold: the record is saved under
    * its own key, apart from the list. Storage full, the list's save was refused (kept in memory
    * only) while the few bytes of the record fitted, and the record said this browser held items it
@@ -522,10 +536,7 @@ export function createCollectionSync({
           }
         }
         if (gen !== s.gen) {
-          // A start replaced this sync while its write was on the way, and the write landed all the same: the record
-          // says so, or those items are ones this browser never saw at the next sync, and an edit of the other device's
-          // meanwhile, against one made here since, is settled by the clocks alone with the older dropped.
-          if (sets.length || plan.deletes.length) noteVersions(uid, sets, plan.deletes, null, revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))));
+          landed(uid, sets, plan.deletes, null, stamps);
           return;
         }
       }
@@ -741,8 +752,7 @@ export function createCollectionSync({
       }
       await io.commit(user.uid, { sets, deletes: many ? [] : deletes, order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect });
       if (!current()) {
-        // A start replaced this flush while its write was on the way, and it landed: the record says so (see firstSync).
-        if (sets.length || deletes.length) noteVersions(user.uid, sets, deletes, order, revsOfStamps(stamps));
+        landed(user.uid, sets, deletes, order, stamps);
         return;
       }
       noteSent(sets);
