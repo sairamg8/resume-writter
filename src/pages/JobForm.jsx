@@ -67,7 +67,23 @@ function LeaveGuard({ shouldBlock, asking, ask, onDiscard }) {
   return null;
 }
 
+/**
+ * The job form for the job in the address. The job is looked up on every render, as the job page does:
+ * on an empty second device right after sign-in the address names a job the first sync has not brought
+ * yet, and the form kept "Job not found" for good after the job arrived (a reload fixed it). The form
+ * below takes its values when it mounts, so it mounts again when the job arrives, as if opened on it;
+ * a job deleted afterwards stays (it is the form's "deleted in another tab" state, J-16).
+ */
 export function JobForm({ store }) {
+  const { id } = useParams();
+  const { jobs } = useJobStore();
+  const found = Boolean(id) && jobs.some((j) => j.id === id);
+  const [seenId, setSeenId] = useState(found ? id : null);
+  if (found && seenId !== id) setSeenId(id);
+  return <JobFormBody key={`${id ?? ''}|${seenId === id}`} store={store} />;
+}
+
+function JobFormBody({ store }) {
   const navigate = useNavigate();
   const { id } = useParams();
   // The app's router is a data router, which can hold a navigation; a test's plain one cannot.
