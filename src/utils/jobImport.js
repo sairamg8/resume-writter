@@ -5,12 +5,21 @@ import { isJobEntry } from './normalizeJob.js';
 
 const READ_FAILED = 'Could not read that file.';
 
+/** The largest job file read, as the résumé imports' (importDocument.js): a list of jobs is well under it. */
+export const MAX_JOB_FILE_BYTES = 20 * 1024 * 1024;
+export const JOB_FILE_TOO_BIG = 'That file is too large to be a job list (over 20 MB). Pick the JSON file the Job Tracker exported.';
+
 /**
  * Read `file` as text: `onText(text)` once it is read, `onError(message)` when the browser cannot
  * read it — a drive that went away, access revoked, an abort. Only `onload` was handled, so those
- * said nothing at all (J-23). `Reader` is FileReader; tests pass a stand-in.
+ * said nothing at all (J-23). A file over MAX_JOB_FILE_BYTES is refused before it is read: a huge
+ * .json picked by mistake froze the page reading it whole. `Reader` is FileReader; tests pass a stand-in.
  */
 export function readImportFile(file, { onText, onError }, Reader = globalThis.FileReader) {
+  if (Number(file?.size) > MAX_JOB_FILE_BYTES) {
+    onError(JOB_FILE_TOO_BIG);
+    return;
+  }
   let settled = false;
   const fail = () => { if (!settled) { settled = true; onError(READ_FAILED); } };
   try {
