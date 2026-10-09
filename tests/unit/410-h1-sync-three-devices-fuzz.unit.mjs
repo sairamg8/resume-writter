@@ -63,8 +63,44 @@ function jittered(fs, rand) {
   };
 }
 
+/**
+ * `fs` as the rules (firestore.rules) have it: a call is answered for the account the browser is signed in as when the call
+ * reaches the server (`account()`: null, nobody), and refused for any other's documents. A sync a start has replaced then
+ * cannot write to the account the browser has left.
+ */
+function asUser(fs, account) {
+  const check = (path) => {
+    const a = account();
+    if (!a || !path.startsWith(`users/${a}/`)) throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+  };
+  return {
+    ...fs,
+    getDocsFromServer: async (col) => { check(col.path); return fs.getDocsFromServer(col); },
+    getDocFromServer: async (ref) => { check(ref.path); return fs.getDocFromServer(ref); },
+    writeBatch: (db) => {
+      const paths = [];
+      const batch = fs.writeBatch(db);
+      return {
+        set: (ref, ...rest) => { paths.push(ref.path); return batch.set(ref, ...rest); },
+        delete: (ref) => { paths.push(ref.path); return batch.delete(ref); },
+        commit: async () => { paths.forEach(check); return batch.commit(); },
+      };
+    },
+    runTransaction: (db, update) => fs.runTransaction(db, async (tx) => {
+      const paths = [];
+      const result = await update({
+        get: async (ref) => { check(ref.path); return tx.get(ref); },
+        set: (ref, ...rest) => { paths.push(ref.path); return tx.set(ref, ...rest); },
+        delete: (ref) => { paths.push(ref.path); return tx.delete(ref); },
+      });
+      paths.forEach(check);
+      return result;
+    }),
+  };
+}
+
 /** One browser: its list, its sync record, its engine (booted again by a reload), and what it is signed in as. */
-function device(cloud, index, fs) {
+function device(cloud, index, link) {
   const d = { turns: 5, index, list: [], online: true, account: null, clock: 0, wipes: 0, lastDeleted: null };
   const listeners = new Set();
   d.set = (next) => { d.list = next; listeners.forEach((l) => l()); };
@@ -75,6 +111,7 @@ function device(cloud, index, fs) {
   };
   const record = () => memoryMeta({ uid: null, versions: {}, revs: {}, device: `dev-${index}-${d.wipes}`, order: null, stashed: {} });
   d.meta = record();
+  const served = link(d);
   d.boot = () => {
     d.sync?.cancel(); // the page that was is gone
     listeners.clear();
@@ -82,7 +119,7 @@ function device(cloud, index, fs) {
     const { seen, report } = recorder();
     d.seen = seen;
     d.sync = createCollectionSync({
-      name: 'jobs', io: collectionIo(fs, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
+      name: 'jobs', io: collectionIo(served, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
       online: () => d.online, now: () => d.clock,
     });
   };
@@ -105,8 +142,8 @@ async function replay(ops, seed, trace = false) {
   const cloud = fakeFirestore();
   // Calm: a step ends when its syncs have. Jittered: a step ends soon, and its syncs go on among the next steps'.
   const jitter = seed % 2 === 0 ? random(seed * 7919 + 13) : null;
-  const fs = jitter ? jittered(cloud.fs, jitter) : cloud.fs;
-  const devices = [0, 1, 2].map((i) => device(cloud, i, fs));
+  const link = (d) => (jitter ? jittered(asUser(cloud.fs, () => d.account), jitter) : asUser(cloud.fs, () => d.account));
+  const devices = [0, 1, 2].map((i) => device(cloud, i, link));
   for (const d of devices) d.turns = jitter ? 3 : 5;
   const script = [];
   let tick = 0;
