@@ -7,7 +7,7 @@ import AuthBar from '@/components/AuthBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { Button, Select } from '@/components/ui';
 import { controlClass } from '@/components/ui/Field.jsx';
-import { ROW, FUNCTION_LABELS, checkData, filterRows, filtersFor, distinct, roleHref } from '@/utils/jobMapData';
+import { ROW, FUNCTION_LABELS, checkData, filterRows, filtersFor, distinct, roleHref, startCountry } from '@/utils/jobMapData';
 
 /**
  * The account menu's Job Map item (AuthBar loads this page's code only when the menu opens, so the page and the item
@@ -26,11 +26,31 @@ export function JobMapMenuItem({ user, onPick, className = 'w-full flex items-ce
 const SHOWN = 100;
 const LOADING = 'min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint';
 
+/**
+ * The page when the access check itself failed (offline, unavailable): nothing is known about the account, so it is
+ * neither sent to the Dashboard nor shown the data. A clean refusal still redirects.
+ */
+export function JobMapAccessFailed({ auth, sync, onRetry }) {
+  return (
+    <div className="min-h-screen bg-cv-ground text-cv-body pb-20 md:pb-0">
+      <AppBar active={null} account={<AuthBar {...auth} {...sync} compact />} />
+      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
+        <h1 className="text-2xl font-bold text-cv-ink mb-4">Job Map</h1>
+        <p className="text-sm text-cv-muted mb-3">Could not check whether this account can use the Job Map. Check your connection and try again.</p>
+        <Button variant="primary" onClick={onRetry}>Retry</Button>
+      </main>
+      <BottomTabBar />
+    </div>
+  );
+}
+
 /** Open roles across companies and countries, for the accounts the owner allowed (firestore.rules). Its data is loaded from the account, never shipped in the app. */
 export default function JobMap({ auth, sync }) {
-  const allowed = useJobMapAccess(auth.user);
+  const [attempt, setAttempt] = useState(0);
+  const allowed = useJobMapAccess(auth.user, attempt);
   const [meta, setMeta] = useState(null);       // null: not asked yet; false: nothing loaded
-  const [country, setCountry] = useState('IN');
+  // The country picked in the select; until one is (or when the data no longer has it) the page starts on the data's own.
+  const [picked, setPicked] = useState(null);
   const [rows, setRows] = useState([]);
   const [status, setStatus] = useState('');
   const [f, setF] = useState({ fn: '', level: '', track: '', q: '' });
@@ -41,6 +61,7 @@ export default function JobMap({ auth, sync }) {
     const io = await import('@/utils/jobMapIo');
     setMeta((await io.loadMeta()) || false);
   }
+  const country = picked && meta?.counts?.[picked] ? picked : startCountry(meta?.counts);
   useEffect(() => { if (allowed === true) refresh().catch((e) => setStatus(e.message)); }, [allowed]);
   useEffect(() => {
     if (!meta || !meta.counts[country]) { setRows([]); return undefined; }
@@ -59,6 +80,7 @@ export default function JobMap({ auth, sync }) {
   if (auth.authLoading) return <div className={LOADING}>Loading…</div>;
   if (!auth.user || allowed === false) return <Navigate to="/" replace />;
   if (allowed === null) return <div className={LOADING}>Loading…</div>;
+  if (allowed === 'failed') return <JobMapAccessFailed auth={auth} sync={sync} onRetry={() => setAttempt((n) => n + 1)} />;
 
   async function onFile(e) {
     const picked = e.target.files?.[0];
@@ -93,7 +115,7 @@ export default function JobMap({ auth, sync }) {
           <>
             <p className="text-xs text-cv-muted mb-3">{companies.length} companies · crawled {meta.crawled}</p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-              <Select size="sm" value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country" className="min-w-0">
+              <Select size="sm" value={country} onChange={(e) => setPicked(e.target.value)} aria-label="Country" className="min-w-0">
                 {countries.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
               </Select>
               <Select size="sm" value={active.fn} onChange={set('fn')} aria-label="Function" className="min-w-0">
