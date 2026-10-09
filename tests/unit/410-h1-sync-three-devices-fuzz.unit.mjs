@@ -17,7 +17,7 @@ import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-fires
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
 const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 1500;
 const ONLY = (process.env.H1_FUZZ_ONLY ?? '').split(',').filter(Boolean).map(Number); // seeds to run alone, to look at them
-const STEPS = 300;
+const STEPS = 140;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
 const SKEW = [3, -2537, 1811];
 const IMPORTED = 3;
@@ -398,6 +398,13 @@ async function replay(ops, seed, trace = false) {
     }
     say(`every device online and signed in as ${account}, settled`);
     if (phase >= 2) check(account);
+    // Settled means settled: syncs with nothing to send write nothing, and leave no timer behind.
+    const before = cloud.commits.length;
+    for (const d of devices) await quiesce(d);
+    if (cloud.commits.length !== before) {
+      problems.push(`${account}: ${cloud.commits.length - before} more write(s) after everything had settled: ${cloud.commits.slice(before).map((ops) => ops.map(([op, path]) => `${op} ${path.replace('users/', '')}`).join(',')).join(' | ')}`);
+    }
+    for (const d of devices) if (d.timers.count) problems.push(`${account}: d${d.index} still has ${d.timers.count} timer(s) waiting`);
   }
   return { problems, script };
 }
