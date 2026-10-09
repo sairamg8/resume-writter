@@ -11,8 +11,21 @@ export const CONFLICT_MARK = '(conflict copy)';
 const canon = (v) => (Array.isArray(v) ? v.map(canon)
   : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
 
-/** Whether two copies of an item hold the same content: all but when they were last changed, whatever the order of their fields. */
-export const sameContent = (a, b) => JSON.stringify(canon({ ...a, updatedAt: 0 })) === JSON.stringify(canon({ ...b, updatedAt: 0 }));
+/**
+ * Whether two items hold the same content: all but their id, when they were last changed and the
+ * fields named in `apart`, whatever the order of their fields.
+ */
+export const sameContent = (a, b, apart = []) => {
+  const plain = (x) => JSON.stringify(canon({ ...x, id: 0, updatedAt: 0, ...Object.fromEntries(apart.map((k) => [k, 0])) }));
+  return plain(a) === plain(b);
+};
+
+/**
+ * Whether `items` hold `copy` already, under another id (and, for a project, another key): a
+ * conflict copy made before — its sync failed after it was kept here — is not made a second time
+ * from the same older copy.
+ */
+export const hasTwin = (copy, items) => items.some((x) => x.id !== copy.id && sameContent(x, copy, ['key']));
 
 /** A job's older copy: the same data under a new id, its company (else its role) marked. */
 export function jobConflictCopy(job) {

@@ -17,7 +17,7 @@
 // When both sides changed the same item since this browser last synced, the newer copy stays the
 // item and the older one is kept beside it as a conflict copy (collectionSyncConflict.js), as the
 // résumés' is: nothing typed is lost.
-import { sameContent } from './collectionSyncConflict.js';
+import { hasTwin, sameContent } from './collectionSyncConflict.js';
 
 /**
  * The version this browser records for an item whose deletion it sent to the cloud
@@ -124,9 +124,11 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict) sets.push(mine); }
       if (conflict) {
         const copy = copyOf(time(theirs) > time(mine) ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
-        keep.set(copy.id, copy);
-        sets.push(copy);
-        conflicts.push({ id, copy });
+        if (!hasTwin(copy, [...local, ...docs])) {
+          keep.set(copy.id, copy);
+          sets.push(copy);
+          conflicts.push({ id, copy });
+        }
       }
     } else if (mine) {
       // Known here and gone from the cloud with no deletion listed (removed by hand): gone, unless
