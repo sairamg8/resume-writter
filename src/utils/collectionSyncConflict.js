@@ -5,6 +5,13 @@
 import { newId } from './ids.js';
 import { deriveKey } from './boardModel.js';
 
+/**
+ * The fields of a project that are only looks (the starred flag, the colour): a difference in them
+ * alone is no conflict — the newer copy wins them — so no whole-project copy is made for a star.
+ * Everything else (title, description, columns, sprints, labels, mode, issues, key) is typed work.
+ */
+export const BOARD_COSMETIC = ['starred', 'color'];
+
 /** What a conflict copy's name ends with. */
 export const CONFLICT_MARK = '(conflict copy)';
 
@@ -25,11 +32,22 @@ export const sameContent = (a, b, apart = []) => {
  * conflict copy made before — its sync failed after it was kept here — is not made a second time
  * from the same older copy.
  */
-export const hasTwin = (copy, items) => items.some((x) => x.id !== copy.id && sameContent(x, copy, ['key']));
+export const hasTwin = (copy, items) => items.some((x) => x.id === copy.id || sameContent(x, copy, ['key']));
 
-/** A job's older copy: the same data under a new id, its company (else its role) marked. */
+/**
+ * The id of the conflict copy of `item` (the older side): from its id and its updatedAt, so two
+ * tabs or devices that find the same conflict make the one copy, not each their own (as the
+ * résumés' conflictId does). Keeps the `prefix_` and the characters ids use; a new id without a time.
+ */
+const copyId = (item, prefix) => {
+  if (!Number.isFinite(item.updatedAt) || typeof item.id !== 'string' || !item.id) return newId(prefix);
+  const base = item.id.replace(/[^\w-]/g, '_');
+  return `${base.startsWith(`${prefix}_`) ? base : `${prefix}_${base}`}-conflict-${item.updatedAt}`;
+};
+
+/** A job's older copy: the same data under an id made from the job's, its company (else its role) marked. */
 export function jobConflictCopy(job) {
-  const copy = { ...job, id: newId('job') };
+  const copy = { ...job, id: copyId(job, 'job') };
   if (String(job.company ?? '').trim()) copy.company = `${job.company} ${CONFLICT_MARK}`;
   else if (String(job.role ?? '').trim()) copy.role = `${job.role} ${CONFLICT_MARK}`;
   else copy.company = CONFLICT_MARK;
@@ -37,11 +55,11 @@ export function jobConflictCopy(job) {
 }
 
 /**
- * A project's older copy: the same board under a new id and a key of its own (`others`: every
+ * A project's older copy: the same board under an id made from the project's and a key of its own (`others`: every
  * project it must not share one with — an issue is opened by its project's key and number), named
  * "<title> (conflict copy)".
  */
 export function boardConflictCopy(board, others = []) {
   const key = deriveKey(board.title, others.map((b) => b.key));
-  return { ...board, id: newId('board'), key, title: `${board.title || 'Untitled project'} ${CONFLICT_MARK}` };
+  return { ...board, id: copyId(board, 'board'), key, title: `${board.title || 'Untitled project'} ${CONFLICT_MARK}` };
 }
