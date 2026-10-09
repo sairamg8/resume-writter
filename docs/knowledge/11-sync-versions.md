@@ -65,6 +65,9 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
 
 - Nothing is batched across requests (a 450-item split was reverted: S7). A transaction holds the same at most 500
   writes a batch does; a larger first sync still goes one item at a time, each in a transaction of its own.
+  The one exception is deletions: more than 400 at once ("Clear all jobs" on a long list) are sent first, 400 to a request,
+  each request recorded as deleted as it lands, so an Undo after part of them went is still a copy changed since; left in
+  one request they were refused for good and so was every sync after, with the next job added blamed as too large (H1).
 - Which side stays the item when both changed still follows `updatedAt`, so a device with a slow clock may find
   its latest edit as the "(conflict copy)". Nothing is lost either way.
 - The deletion list and the order are not preconditions (`meta/<name>`): they are merged by the batch itself
@@ -75,3 +78,30 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
   first sync of 1,000 new jobs stays one batch, or one request each past 500, as before); the ids two browsers can both
   make (the demo's) are checked as absent. A batch that writes only the order is not checked.
 - Two tabs of one browser share one writer id: the store's own merge of the two tabs (05) is what keeps them apart.
+
+## The final hunt (H1): what changed after the review
+
+Each has its own test, `tests/unit/400` to `408-h1-sync-*`.
+
+- A flush belongs to the line it began in (`gen`): after a start (refresh, going online, an account change) it stops, so the
+  copy it was queued with is never written, on a retry, over the newer edit the restart's first sync sent (401).
+- A flush that takes the cloud's copy of an item edited here meanwhile does not record that copy as seen: the typed edit's own
+  write then finds the cloud's copy moved and keeps the older side as a conflict copy (402).
+- A job deleted here and unsent at sign-out keeps its version in what is kept aside, like an item changed here: the next sign-in
+  keeps an edit another device made meanwhile (403).
+- A transaction out of tries (`failed-precondition` from the SDK) is a copy that kept changing (`STALE`), not a refusal that holds
+  the item (404).
+- A flush of up to 100 items also checks that the copies it read as absent still are: an imported file's jobs have the same ids
+  on every browser that imports it (405). A first sync does not (its new items are ids nobody else can make, or are checked
+  by the demo's `seedIds`).
+- A flush sends the list's order only when it changes it (a move, a deletion, an item the account lacks, a copy), not with every
+  edit, which put another device's move back (406).
+- After a merge the sync queues the list the store holds, not the one it handed over: a project given a key of its own on taking
+  the list is sent with it (407).
+- The id of a conflict copy carries a mark of the id when the id had characters replaced, so ids that differ only there do not
+  share a copy (408).
+
+Left as they were, and why: a read of the whole list at every first sync, and a second read by the transaction of the copies it
+replaces (cost, not loss); an item over the size limit by less than the two version fields is held by the server's refusal, not
+by the size check; an item typed before the first sign-in, whose id the account deleted, is dropped by the first sync, since it
+cannot be told from a stale copy of a deleted item.
