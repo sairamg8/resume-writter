@@ -147,7 +147,12 @@ function device(cloud, index, link, kind) {
   const listeners = new Set();
   d.set = (next) => { d.list = next; listeners.forEach((l) => l()); };
   const store = {
-    items: () => d.list, replace: (next) => d.set(kind.addressable(next)),
+    // The store's own pass over a list it takes (a project given a key of its own) rewrites a project: a write like an edit's.
+    items: () => d.list, replace: (next) => {
+      const fixed = kind.addressable(next);
+      fixed.forEach((x, i) => { if (x !== next[i]) d.rekeyed?.(x.id); });
+      d.set(fixed);
+    },
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     fromCloud: (x) => x, label: kind.label, conflictCopy: kind.copy, conflictApart: kind.apart,
     // The first visit's demo job: one id on every browser, untouched until someone writes in it.
@@ -216,6 +221,7 @@ async function replay(ops, seed, trace = false) {
   };
   const devices = [0, 1, 2].map((i) => device(cloud, i, link, kind));
   for (const d of devices) d.turns = jitter ? 3 : 5;
+  for (const d of devices) d.rekeyed = (id) => touch(d, id);
   const script = [];
   let tick = 0;
   let serial = 0;
