@@ -930,8 +930,22 @@ function contactOf(segment) {
 /** The words a document titles itself with over the name: "Curriculum Vitae", "Résumé", "CV" (resumeFromText). */
 const DOCUMENT_TITLE = /^(?:curriculum\s+vit(?:ae|a)|r[eé]sum[eé]|cv|c\.v\.)\s*[:.]?$/iu;
 
+/**
+ * Contacts set one after another on a line with only a space between them — "Tel: 0113 496 0123 Email:
+ * a@b.co" — as pieces, split before each label that follows. Only when every piece is a labelled contact: a
+ * sentence that mentions "email:" stays whole. Left whole, the line read as the job title (or went to
+ * "Additional Information"), and neither contact was kept.
+ */
+const NEXT_LABEL = /(?<=\S) (?=(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|portfolio|url|address|location)\s*:)/i;
+const labelled = (piece) => {
+  const parts = piece.split(NEXT_LABEL);
+  // Each of a different kind: "Email: a@b.co Email: c@d.co" is not a run of contacts.
+  const keys = parts.map((p) => contactOf(p)?.key);
+  return parts.length > 1 && parts.every((p) => LABEL.test(p)) && keys.every(Boolean) && new Set(keys).size === keys.length ? parts : [piece];
+};
+
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
-const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
+const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean).flatMap(labelled);
 
 /**
  * A header piece without a list mark before it: contacts set as a bulleted list ("• jane@x.com", the
