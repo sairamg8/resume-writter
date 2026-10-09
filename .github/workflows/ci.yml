@@ -331,6 +331,55 @@ jobs:
       - name: oxlint
         run: ./node_modules/.bin/oxlint src tests cypress
 
+  # The job tracker and the boards keep dates as local calendar days ('YYYY-MM-DD'), so a day off for a user
+  # east or west of UTC (a deadline, "due today", a calendar row, the week start, a month end across a clock
+  # change) cannot show on the suite's machines: they all run in UTC. This runs the date-sensitive test files
+  # again, each shard with the process clock in another zone: Auckland (UTC+12/13, daylight saving in
+  # September and April), Los Angeles (UTC-7/8, March and November) and Kolkata (UTC+5:30). The files are
+  # pure-JS, so no container or Poppler. tests/pdf/379 keeps the list true (every file exists, the zones stay).
+  # A file that gets a date from the clock must build it from local parts (new Date(y, m, d, …)) to belong here.
+  timezones:
+    name: timezones (${{ matrix.tz }})
+    if: github.event_name == 'push' || (inputs.tests == '' && inputs.failfirst == '' && inputs.perf == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [Pacific/Auckland, America/Los_Angeles, Asia/Kolkata]
+    env:
+      TZ_TESTS: >-
+        tests/unit/dates.unit.mjs
+        tests/unit/ui-format.unit.mjs
+        tests/unit/job-query.unit.mjs
+        tests/unit/job-edits.unit.mjs
+        tests/unit/board-model.unit.mjs
+        tests/unit/board-query.unit.mjs
+        tests/unit/board-ops.unit.mjs
+        tests/unit/tracker-views.unit.mjs
+        tests/unit/career-history.unit.mjs
+        tests/unit/377-cyc8-demo-deadline-dst.unit.mjs
+        tests/unit/378-cyc8-calendar-summary-zones.unit.mjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: node --test in ${{ matrix.tz }}
+        env:
+          TZ: ${{ matrix.tz }}
+        run: |
+          set -o pipefail
+          node -p "'process clock: ' + Intl.DateTimeFormat().resolvedOptions().timeZone + ', ' + new Date(2026, 0, 15, 12).toString()"
+          node --test --test-concurrency=4 $TZ_TESTS 2>&1 | tee timezones.log
+      - name: Summary
+        if: always()
+        run: |
+          grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' timezones.log || true
+          grep -E '^not ok' timezones.log | head -40 || true
+
   # Cypress end to end against the e2e build (docs/knowledge/08-testing.md: its fake sign-in seam).
   # It was never run by the gate before (R2-152), so a spec that goes stale now shows here.
   # Cypress has no sharding of its own: each machine runs every 4th spec file, in name order.
