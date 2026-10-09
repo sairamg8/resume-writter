@@ -701,8 +701,10 @@ export function createCollectionSync({
       // stopped the sync (R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS).
       const gone = [...q.deletes].filter(([id]) => cloudCanName(id));
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
-      const { docs, stamps: cloudStamps } = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
+      const read = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
       if (!current()) return;
+      let docs = read.docs;
+      const cloudStamps = new Map(read.stamps);
       // An item deleted here while its copy was being read — another tab's delete, taken through the
       // storage event: changed() queued its deletion — is not written back. The write would also come
       // off the account's deletion list (collectionSyncIo.commit), undoing that tab's deletion on
@@ -734,7 +736,23 @@ export function createCollectionSync({
       // Changed here AND in the cloud since this browser last saw the cloud's copy (its record, or
       // what it sent itself since): whichever is older would be dropped. Kept as a copy beside the
       // newer, and sent in the same batch.
-      const copies = conflictCopies(queued, cloudCopy, docs, view);
+      let copies = conflictCopies(queued, cloudCopy, docs, view);
+      // A copy's id is one more document to look at: another device may hold it already (the same conflict found there, or
+      // an edit with one time), and a copy written over it lost what it held. What is found there is taken into account —
+      // the same content is the copy already made, another gets the next free id (freeId) — and what is not is expected
+      // to be absent when the write lands (below).
+      const looked = new Set(reading);
+      for (let again = 0; copies.length && again < 3; again += 1) {
+        const fresh = copies.map((c) => c.copy.id).filter((id) => !looked.has(id));
+        if (!fresh.length) break;
+        fresh.forEach((id) => looked.add(id));
+        const there = await withDeadline(io.readItems(user.uid, fresh));
+        if (!current()) return;
+        if (!there.docs.length) break;
+        docs = [...docs, ...there.docs];
+        there.stamps.forEach((stamp, id) => cloudStamps.set(id, stamp));
+        copies = conflictCopies(queued, cloudCopy, docs, view);
+      }
       sets = [...sets, ...copies.map((c) => c.copy)];
       // Deleted here, but changed in the cloud since the copy this browser deleted: kept, and taken back.
       const edited = gone.map(([id, at]) => {
@@ -758,7 +776,7 @@ export function createCollectionSync({
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
       // Written only if the copies it was decided from are still the cloud's.
       const toWrite = [...sets.map((x) => x.id), ...deletes];
-      const expect = expectOf(toWrite, cloudStamps, reading);
+      const expect = expectOf(toWrite, cloudStamps, [...reading, ...copies.map((c) => c.copy.id)]);
       const many = deletes.length > DELETE_CHUNK;
       if (many) {
         // More deletions than one request takes go first, in requests of their own (sendDeletes).
