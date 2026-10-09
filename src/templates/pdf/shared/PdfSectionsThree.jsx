@@ -19,6 +19,7 @@ import {
   getColumnWidth,
   entryTextWidth,
   shadesOf,
+  belowDescription,
 } from './PdfSections';
 
 export function ReferencesSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
@@ -112,6 +113,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
     sub: item.subtitle || undefined,
     loc: item.location || undefined,
     dateStr: showDates ? formatDate(item.date || '', settings) : '',
+    below: belowDescription(settings, item.description, entrySize - 0.5, lineH, cols),
   });
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
   const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) }) : 0;

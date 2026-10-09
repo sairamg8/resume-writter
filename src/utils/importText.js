@@ -927,8 +927,25 @@ function contactOf(segment) {
   return null;
 }
 
+/** The words a document titles itself with over the name: "Curriculum Vitae", "Résumé", "CV" (resumeFromText). */
+const DOCUMENT_TITLE = /^(?:curriculum\s+vit(?:ae|a)|r[eé]sum[eé]|cv|c\.v\.)\s*[:.]?$/iu;
+
+/**
+ * Contacts set one after another on a line with only a space between them — "Tel: 0113 496 0123 Email:
+ * a@b.co" — as pieces, split before each label that follows. Only when every piece is a labelled contact: a
+ * sentence that mentions "email:" stays whole. Left whole, the line read as the job title (or went to
+ * "Additional Information"), and neither contact was kept.
+ */
+const NEXT_LABEL = /(?<=\S) (?=(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|portfolio|url|address|location)\s*:)/i;
+const labelled = (piece) => {
+  const parts = piece.split(NEXT_LABEL);
+  // Each of a different kind: "Email: a@b.co Email: c@d.co" is not a run of contacts.
+  const keys = parts.map((p) => contactOf(p)?.key);
+  return parts.length > 1 && parts.every((p) => LABEL.test(p)) && keys.every(Boolean) && new Set(keys).size === keys.length ? parts : [piece];
+};
+
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
-const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
+const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean).flatMap(labelled);
 
 /**
  * A header piece without a list mark before it: contacts set as a bulleted list ("• jane@x.com", the
@@ -984,6 +1001,19 @@ const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).fi
 const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate(p));
 /** A header piece's fields: "Company — Role", "Company - Role". */
 const fieldsOf = (text) => text.split(/\s+[—–]\s+|\s+-\s+/).map((s) => s.trim()).filter(Boolean);
+
+/**
+ * A certification's level, which a dash sets after its name: "AWS Certified Solutions Architect – Associate",
+ * "AWS Certified Data Analytics – Specialty". It is part of the name, not the issuer the dash otherwise
+ * parts it from ("PMP – Project Management Institute"); it was the issuer, and the name lost its level.
+ */
+const CERT_LEVEL = /^(?:associate|professional|specialty|speciality|foundational|foundation|practitioner|expert|advanced|intermediate|fundamentals?|essentials?|entry[- ]level)$/i;
+/** `fieldsOf`, for a certification's line: a level after the name stays with it. */
+function certFields(text) {
+  const f = fieldsOf(text);
+  if (f.length < 2 || !CERT_LEVEL.test(f[1])) return f;
+  return [text.slice(0, text.indexOf(f[1], f[0].length) + f[1].length), ...f.slice(2)];
+}
 
 /** "GPA: 3.8", "ID: X", "Link: …", "Technologies: …", "Expires: …": a field an export prints by name. */
 const META = /^(gpa|cgpa|grade|id|credential id|credential|license|link|url|website|technologies|tech stack|tech|stack|tools|built with|expires|expiry|expiration|valid until|location)\s*:?\s+(.+)$/i;
@@ -1141,6 +1171,12 @@ function sectionOf(type, title, items) {
  */
 function readHeader(type, header) {
   const out = { parts: [], date: null, location: '', meta: {}, named: [] };
+  // "2019 - present ⇥ Audit Manager, Hargreaves & Co, Leeds": a line that opens with its dates and holds
+  // the title after them, with no title line anywhere over it — how UK CVs set their jobs and schools
+  // (dates in the left column). What follows the date is the entry's title there, not its place; it
+  // went to the Location, and the company and role (or school and degree) came out empty. Only where
+  // this line is all the header has, and the text names a role, a degree or a school.
+  const titleAfterDate = (p, alone) => alone && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))));
   const field = (p) => {
     // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
     // certificate's URL; another type's description keeps it.
@@ -1177,13 +1213,13 @@ function readHeader(type, header) {
       if (!p || field(p)) return;
       // After the date on its line; or at the right tab of the line under the title. Under a date
       // alone ("Mar 2021 – Present" over "Role ⇥ Company", the Timeline's) that tab parts two fields.
-      if (at >= 0 && j > at && place(p)) return;
+      if (at >= 0 && j > at && !titleAfterDate(p, header.length === 1 && k === 0 && at === 0 && titled === 0) && place(p)) return;
       if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && titled && place(p)) return;
       // A place alone on its line: at the right margin, or a job's, right under the line that held its
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
       // field of study and place a line each, and that place is read by the education's own rule (entryOf).
       if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
-      out.parts.push(...(p === whole ? line.fields : fieldsOf(p)));
+      out.parts.push(...(p === whole ? line.fields : type === 'certifications' ? certFields(p) : fieldsOf(p)));
     });
     const gave = out.parts.slice(titled);
     above = (JOB.has(type) ? inlinePair(gave) : gave).length;
@@ -2028,6 +2064,10 @@ export function resumeFromText(input) {
     lines.push({ ...l, gap });
     gap = false;
   }
+
+  // A title over the name — "Curriculum Vitae", "Résumé", "CV", how most UK and European CVs open — names
+  // no one: it was the name, and the real one the job title. It is the document's own, and goes.
+  while (lines.length > 1 && DOCUMENT_TITLE.test(lines[0].text)) lines.shift();
 
   // The name: the file's own, else the first line.
   const nameAt = Math.max(0, lines.findIndex((l) => l.hint === 'name'));

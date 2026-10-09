@@ -1,10 +1,11 @@
-import { createContext, useContext } from 'react';
+import { createContext, Fragment, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
-import { Text } from './PdfText';
+import { Text, fitIn } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
 import { splitHugeBlocks } from './splitHugeBlock';
-import { ColumnRoom, fitsPage } from './keepTogether';
+import { ColumnRoom, columnRoom, fitsPage } from './keepTogether';
+import { wrappedLines } from './pdfMeasure';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -63,18 +64,55 @@ function markerWidth(chars, fontSize) {
 }
 
 /**
+ * What an entry's header must keep under it, pt, so that the first thing its description prints starts
+ * on the header's page: that block's own height when it cannot be split, else 0 (the header's two lines
+ * are enough). A list item kept whole (the rule PdfRichText draws it by), and a paragraph of up to three
+ * lines (textkit never splits one under four: two lines on each page), move to the next page as a whole.
+ * The header kept only two lines, so a 3-line bullet that did not fit the room left under it went to the
+ * next page and the header stayed alone at the foot of the page above it. `width`: the pt the text has in
+ * its column (entryTextWidth); `fontSize`, `lineHeight` and `marginTop` as the description is drawn with.
+ */
+export function firstChunkKeep({ html, settings, fontSize, lineHeight, width, marginTop = 2 }) {
+  const blocks = splitHugeBlocks(parseRichText(html));
+  return chunkKeep(blocks, 0, { settings, fontSize, lineHeight, width, marginTop });
+}
+
+/** The same for block `at` of `blocks`: its height when it cannot be split, else 0. */
+function chunkKeep(blocks, at, { settings, fontSize, lineHeight, width, marginTop = 2 }) {
+  const block = blocks[at];
+  if (!block) return 0;
+  const text = block.runs.map((r) => r.text).join('');
+  const style = { fontFamily: settings?._pdfFontFamily, fontSize };
+  let across = width;
+  let whole;
+  if (block.marker) {
+    const longest = Math.max(...blocks.filter((b) => b.marker && b.indent === block.indent && isBullet(b.marker) === isBullet(block.marker)).map((b) => b.marker.length));
+    across = width - (block.indent - 1) * INDENT - markerWidth(longest, fontSize);
+    whole = text.length <= KEEP_TOGETHER_CHARS && fitsPage({ text, fontSize, lineHeight, width: across, height: columnRoom(settings, width).height, fontFamily: style.fontFamily });
+  } else {
+    across = width - Math.max(0, block.indent) * INDENT;
+  }
+  const lines = wrappedLines(text, style, across);
+  if (block.marker ? !whole : lines >= 4) return 0;
+  return Math.ceil(lines * fontSize * lineHeight + marginTop);
+}
+
+/**
  * Rich text (the editor's HTML) as react-pdf blocks: one <Text> per paragraph and one row per
  * list item, returned as siblings so the page can break between any two of them.
  *
  * `style` is the text style (font size, colour, line height, alignment); its marginTop and
  * marginBottom apply once, above the first block and below the last. `breaks(inset)`: where a word
  * of a block whose text starts `inset` pt in may break (sideBreaks in the Sidebar's dark column).
+ * `tail`: { node, settings, width } — what follows the text and must not stand alone on a page (a
+ * letter's closing and signature). The last block goes with it when that block cannot be split
+ * (chunkKeep), so the page break falls before the block and not between the block and the closing.
  */
-export function PdfRichText({ html, style = {}, breaks }) {
+export function PdfRichText({ html, style = {}, breaks, tail }) {
   const bulletStyle = useContext(BulletStyle);
   const room = useContext(ColumnRoom);
   const blocks = splitHugeBlocks(parseRichText(html)); // a paste of 200 000 characters: typing-freeze 7b
-  if (!blocks.length) return null;
+  if (!blocks.length) return tail ? tail.node : null;
   const { marginTop, marginBottom, ...textStyle } = style;
   const fontSize = textStyle.fontSize || 11;
   const color = textStyle.color;
@@ -89,7 +127,12 @@ export function PdfRichText({ html, style = {}, breaks }) {
   }
   const textStart = [0]; // x where the text of each list depth starts
 
-  return blocks.map((block, i) => {
+  // Where a word of a block whose text starts `inset` pt in may break: as the caller says (the Sidebar's
+  // column), else, in a column or a Grids cell, inside the room that text has (H3-459).
+  const breakAt = (inset) => (breaks ? breaks(inset) : fitIn(room, textStyle, inset));
+  const lastAt = blocks.length - 1;
+  const hold = tail && chunkKeep(blocks, lastAt, { settings: tail.settings, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: tail.width, marginTop: 0 }) > 0;
+  const drawn = blocks.map((block, i) => {
     const prev = blocks[i - 1];
     const edges = {
       marginTop: i === 0 ? marginTop : (block.joined ? 0 : prev.marker && block.marker ? LIST_GAP : PARA_GAP),
@@ -101,7 +144,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
       // Body text, or a further paragraph of a list item aligned with that item's text.
       const left = block.indent > 0 ? (textStart[block.indent] ?? block.indent * INDENT) : 0;
       return (
-        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }} hyphenationCallback={breaks?.(left)}>
+        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }} hyphenationCallback={breakAt(left)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       );
@@ -126,7 +169,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
       // centred list paragraph with its bullet. A marker column would leave it at the left margin.
       return (
         <View key={i} wrap={!keeps(0)} style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}>
-          <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left)}>
+          <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breakAt(left)}>
             {glyph ? `${glyph} ` : null}
             <Runs runs={block.runs} color={color} />
           </Text>
@@ -140,10 +183,16 @@ export function PdfRichText({ html, style = {}, breaks }) {
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
         {glyph ? <Text style={{ ...textStyle, textAlign: 'left', width }}>{glyph}</Text> : null}
-        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breaks?.(left + width)}>
+        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breakAt(left + width)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       </View>
     );
   });
+  if (!tail) return drawn;
+  if (!hold) return [...drawn, <Fragment key="tail">{tail.node}</Fragment>];
+  return [
+    ...drawn.slice(0, lastAt),
+    <View key="tail" wrap={false}>{drawn[lastAt]}{tail.node}</View>,
+  ];
 }

@@ -1,5 +1,7 @@
+import { useContext } from 'react';
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
+import { ColumnRoom } from './roomContext';
 import { tint, textShades } from './pdfColors';
 import { lineBox, textWidth, widestWord, wrappedLines } from './pdfMeasure';
 import { headerTemplateId } from '@/constants/templates';
@@ -90,10 +92,15 @@ export const wordRoom = (...parts) => Math.max(0, ...parts.map(([text, style, ta
  * it, at its right end, when both do not fit; when they do, the row prints as it always has.
  */
 export function EndRow({ left, leftMin = 0, children }) {
-  const wraps = leftMin > 0;
+  // In a column or a Grids cell (ColumnRoom) a word wider than the whole cell is broken to fit it
+  // (PdfText), so the left side never needs more than the cell: its minimum is capped there. A word of
+  // 29 letters in a 3-column cell kept the left side 161 pt wide, out of its cell (H3-459).
+  const room = useContext(ColumnRoom);
+  const min = room?.width > 0 ? Math.min(leftMin, room.width - WORD_SLACK) : leftMin;
+  const wraps = min > 0;
   return (
     <View style={{ flexDirection: 'row', justifyContent: wraps ? 'flex-end' : 'space-between', alignItems: 'flex-end', ...(wraps ? { flexWrap: 'wrap' } : {}) }}>
-      <View style={{ flex: 1, ...(wraps ? { minWidth: leftMin + WORD_SLACK } : {}) }}>{left}</View>
+      <View style={{ flex: 1, ...(wraps ? { minWidth: min + WORD_SLACK } : {}) }}>{left}</View>
       {children}
     </View>
   );
@@ -150,8 +157,13 @@ export function CentredLine({ first, date, dateStyle, sepColor, gap }) {
   );
 }
 
-/** What an entry's unbreakable header keeps under it, pt: two lines of body text (react-pdf moves it otherwise). */
-export const headerKeep = (settings) => Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 2);
+/**
+ * What an entry's unbreakable header keeps under it, pt: two lines of body text (react-pdf moves it
+ * otherwise) — or `below`, when the first thing under it is a block that never splits and is taller than
+ * that (a bullet of three lines or more, firstChunkKeep): two lines of room were enough to keep the header
+ * on the page while the bullet went to the next, and the header was left alone at the foot of this one.
+ */
+export const headerKeep = (settings, below = 0) => Math.max(Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 2), Math.ceil(below || 0));
 
 /** ItemHeader's title run and sub run as lineBox styles. */
 function headerBoxes(settings) {
@@ -188,7 +200,7 @@ export const headPresence = ({ lines, styles, keep = 0, extra = 0 }) => Math.cei
  * title stayed alone at the foot of a page while the header moved on (R4-DOUT-07). Greedy
  * (wrappedLines), so it errs on more lines, never fewer than the one a field it counted before.
  */
-export function itemHeadPresence({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', centered = false, width = mainTextWidthPt(settings) }) {
+export function itemHeadPresence({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', centered = false, width = mainTextWidthPt(settings), below = 0 }) {
   // An empty leading field: the next one leads, as ItemHeader prints it (R2-111).
   const primary = first || second;
   const sub = first ? second : undefined;
@@ -211,13 +223,13 @@ export function itemHeadPresence({ primary: first, sub: second, loc, dateStr, se
   const under = oneLine ? wrap(loc, fieldBox)
     : centered ? wrap(sub, subBox) + wrap(loc, fieldBox)
     : sub ? row(sub, subBox, loc) : loc ? 1 : 0;
-  return headPresence({ lines: Math.max(1, title) + under, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: centered ? 2 : 0 });
+  return headPresence({ lines: Math.max(1, title) + under, styles: [primaryBox, subBox], keep: headerKeep(settings, below), extra: centered ? 2 : 0 });
 }
 
 // Reusable item header: bold primary + optional sub-line + location + date. Supports centering.
 // `loc` renders in a distinctly lighter shade than `sub`, matching the Canvas templates' two-tone
 // convention (subtitle darker, location lighter); it is its own run wherever it prints (see top).
-export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false, below = 0 }) {
   // An empty leading field (a job with no company): the next one leads, bold, on the date's line, as
   // Word prints it — not an empty title line holding only the date (R2-111).
   const primary = first || second;
@@ -248,7 +260,7 @@ export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings
   const dateStyle  = { fontSize: baseSize, color: getDateColor(settings), lineHeight: onTitle };
   const gap        = fieldGap(baseSize);
   // Keep the header with at least two lines of what follows it (react-pdf moves it otherwise).
-  const keep = { wrap: false, minPresenceAhead: headerKeep(settings) };
+  const keep = { wrap: false, minPresenceAhead: headerKeep(settings, below) };
   const primaryText = <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{primary}</Text>;
   // Title "Inline": the primary, then the sub after " — " (", " for an italic sub), in one text.
   const inlineText = primary || sub ? (

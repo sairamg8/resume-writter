@@ -107,7 +107,7 @@ export function TimelineEntries({ items, cols = 1, gap, settings, renderItem, ti
  * for `sub` (a project's technologies and link). Unbreakable and kept with two lines of what follows,
  * as ItemHeader is, so a date and title never sit alone at the foot of a page.
  */
-export function TimelineHead({ primary: first, sub: second, subLine, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+export function TimelineHead({ primary: first, sub: second, subLine, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false, below = 0 }) {
   // An empty leading field: the next one leads, bold, as ItemHeader prints it (R2-111).
   const primary = first || second;
   const sub = first ? second : undefined;
@@ -122,7 +122,7 @@ export function TimelineHead({ primary: first, sub: second, subLine, loc, dateSt
   const dateSize  = timelineDateSize(settings);
   const subStyle  = { fontSize: baseSize, color: shade.sub, fontStyle, textAlign };
   const locStyle  = { fontSize: baseSize, color: shade.muted, fontStyle, textAlign };
-  const keep = { wrap: false, minPresenceAhead: Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) };
+  const keep = { wrap: false, minPresenceAhead: headerKeep(settings, below) };
 
   const dateLine = dateStr ? (
     <Text style={{ fontSize: dateSize, fontWeight: 'bold', color: getDateColor(settings), textAlign, marginBottom: 1 }}>{dateStr}</Text>
@@ -200,7 +200,7 @@ export const railTextWidth = (settings, cols = 1) => contentWidthPt(settings) * 
  * count of one line a field fell short of a field that wraps onto a third line, or of a title and a sub
  * that both wrap, and the section title stayed alone at the foot of a page while the head moved on.
  */
-export function timelineHeadPresence({ primary: first, sub: second, subLine, subText: subWords, loc, dateStr, settings, titleStyle = 'stacked', centered = false, cols = 1 }) {
+export function timelineHeadPresence({ primary: first, sub: second, subLine, subText: subWords, loc, dateStr, settings, titleStyle = 'stacked', centered = false, cols = 1, below = 0 }) {
   const primary = first || second;
   // The sub's words: a subLine (a project's technologies and link) is one line when they are not given.
   const sub = subLine ? (subWords || '') : (first ? second : '');
@@ -227,7 +227,7 @@ export function timelineHeadPresence({ primary: first, sub: second, subLine, sub
     : centered ? wrap(primary, primaryBox) + subLines + wrap(loc, subBox)
     : wrap(primary, primaryBox) + (subLine ? subLines : endRowLines({ text: sub, box: subBox, end: loc, endBox: subBox, gap, width }));
   const dateH = dateStr ? lineBox({ fontFamily: font, fontSize: timelineDateSize(settings), fontWeight: 'bold' }).height + 1 : 0;
-  return headPresence({ lines, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: dateH + 2 + (ownLoc ? 1 : 0) });
+  return headPresence({ lines, styles: [primaryBox, subBox], keep: headerKeep(settings, below), extra: dateH + 2 + (ownLoc ? 1 : 0) });
 }
 
 /** Title "Inline": the primary, then the sub after " — " (", " for an italic sub), in one text of two runs. */

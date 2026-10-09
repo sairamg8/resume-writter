@@ -1,6 +1,6 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { PdfRichText } from './PdfRichText';
+import { PdfRichText, firstChunkKeep } from './PdfRichText';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { printedEntries } from '@/utils/entryPrints';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
@@ -70,8 +70,8 @@ function CardItem({ firstLine, children }) {
  * line's " · ", the location on a line of its own. `firstMin` / `detailsMin`: their widest words
  * (cardWordRooms), which the date and the location wrap under rather than print over (R3-002).
  */
-function CardHeader({ centered, entrySize, lineH, first, firstMin, details, detailsMin, loc, locStyle, dateStr, dateStyle, sepColor }) {
-  const keep = { wrap: false, minPresenceAhead: cardKeep(entrySize, lineH) };
+function CardHeader({ centered, entrySize, lineH, first, firstMin, details, detailsMin, loc, locStyle, dateStr, dateStyle, sepColor, below = 0 }) {
+  const keep = { wrap: false, minPresenceAhead: cardKeep(entrySize, lineH, below) };
   if (centered) {
     return (
       <View {...keep} style={{ alignItems: 'center' }}>
@@ -89,8 +89,11 @@ function CardHeader({ centered, entrySize, lineH, first, firstMin, details, deta
   );
 }
 
-/** What a card's unbreakable header keeps under it, pt: two lines of its text. */
-const cardKeep = (entrySize, lineH) => Math.round(entrySize * lineH * 2);
+/**
+ * What a card's unbreakable header keeps under it, pt: two lines of its text — or `below`, the first
+ * block of the description when that never splits and is taller (firstChunkKeep, headerKeep).
+ */
+const cardKeep = (entrySize, lineH, below = 0) => Math.max(Math.round(entrySize * lineH * 2), Math.ceil(below || 0));
 
 /**
  * What a card section's title keeps under it (SectionTitleOf's `presence`): its first card's header,
@@ -98,11 +101,16 @@ const cardKeep = (entrySize, lineH) => Math.round(entrySize * lineH * 2);
  * stayed at the foot of a page while that header moved to the next, its own three lines met by the
  * dot and border the card draws before its header (R2-047).
  */
-const cardPresence = (settings, entrySize, lineH, lines) => headPresence({
+const cardPresence = (settings, entrySize, lineH, lines, below = 0) => headPresence({
   lines,
   styles: [{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold', lineHeight: entrySize * 1.2 }],
-  keep: cardKeep(entrySize, lineH),
+  keep: cardKeep(entrySize, lineH, below),
 });
+
+/** What a card's header keeps for its description's first block `html` (firstChunkKeep), the card's text width being `cols` Grids columns of the main column. */
+const cardBelow = (settings, html, entrySize, lineH, cols = 1) => (
+  html ? firstChunkKeep({ html, settings, fontSize: entrySize - 0.5, lineHeight: lineH, width: cardTextWidth(settings, cols) }) : 0
+);
 
 /**
  * A card's date: a little smaller than its title, on the baseline of the title's last line (ATS-5).
@@ -144,6 +152,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   // side" the sub on the same line (ItemHeader's).
   const titleBox   = { fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' };
   const firstLine  = titleStyle === 'stacked' ? titleBox : [titleBox, { fontFamily: settings?._pdfFontFamily, fontSize: settings?.fontSizeBase || 11 }];
+  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
   // A card's header fields.
   const head = (item) => {
     const iH = item.hiddenFields || [];
@@ -158,6 +167,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
       secondary: lead ? next : '',
       loc: !iH.includes('location') && showLoc ? (item.location || '') : '',
       dateStr: showDates ? dateRange(sd, ed, settings) : '',
+      below: cardBelow(settings, descOf(item), entrySize, lineH, s.columns || 1),
     };
   };
   // The title keeps the first card's header and the lines it keeps with it (R2-047). Stacked, the
@@ -179,23 +189,22 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
     return title + under;
   };
   const presence   = !firstHead ? 0
-    : titleStyle === 'stacked' ? cardPresence(settings, entrySize, lineH, cardLines(firstHead))
-    : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, dateStr: firstHead.dateStr, settings, titleStyle, centered, width });
+    : titleStyle === 'stacked' ? cardPresence(settings, entrySize, lineH, cardLines(firstHead), firstHead.below)
+    : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, dateStr: firstHead.dateStr, settings, titleStyle, centered, width, below: firstHead.below });
 
   // A card's header: CardHeader Stacked, the shared one-line header in Title "Inline" / "Side by side",
   // as the other templates print it.
-  const cardHead = ({ primary, secondary, loc, dateStr }) => (titleStyle === 'stacked' ? (
+  const cardHead = ({ primary, secondary, loc, dateStr, below }) => (titleStyle === 'stacked' ? (
     <CardHeader
-      centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+      centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted} below={below}
       {...cardWordRooms(settings, entrySize, primary, secondary)}
       first={primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
       details={secondary ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{secondary}</Text> : null}
       loc={loc} locStyle={{ fontSize: entrySize - 1, color: shade.muted, lineHeight: 1.2 }}
     />
   ) : (
-    <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
+    <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} below={below} />
   ));
-  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
   const details = (item) => {
     const desc = descOf(item);
     return (
@@ -225,12 +234,12 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
       <CardItem key={idx} firstLine={titleBox}>
         <EmployerHeader
           company={employerOf(g[0])} loc={places.header || undefined} settings={settings} centered={centered}
-          keep={cardPresence(settings, entrySize, lineH, places.roles[0] ? 2 : 1)}
+          keep={cardPresence(settings, entrySize, lineH, places.roles[0] ? 2 : 1, head(g[0]).below)}
         />
         {g.map((item, k) => (
           <View key={k} style={k ? { marginTop: itemGap / 2 } : null}>
             {SPACER}
-            {cardHead({ primary: roleOf(item), secondary: '', loc: places.roles[k], dateStr: head(item).dateStr })}
+            {cardHead({ primary: roleOf(item), secondary: '', loc: places.roles[k], dateStr: head(item).dateStr, below: head(item).below })}
             {details(item)}
           </View>
         ))}
@@ -290,7 +299,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   // The title keeps the first card's header and the lines it keeps with it (R2-047), each of its lines
   // wrapped at the card's text width (projectCardLines).
   const first      = visibleItems[0];
-  const presence   = first ? cardPresence(settings, entrySize, lineH, projectCardLines(first, { settings, entrySize, centered, showDates, cols: s.columns || 1 })) : 0;
+  const presence   = first ? cardPresence(settings, entrySize, lineH, projectCardLines(first, { settings, entrySize, centered, showDates, cols: s.columns || 1 }), cardBelow(settings, first.description, entrySize, lineH, s.columns || 1)) : 0;
   // A card's technologies and link on the one line under its name, a " · " only between the two, as
   // the other templates and the Word export print them (R4-DOUT-04): the link used to print on a line
   // of its own. Each keeps its size and colour; a link too long for the line breaks inside it.
@@ -320,6 +329,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
             <CardItem key={idx} firstLine={{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' }}>
               <CardHeader
                 centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+                below={cardBelow(settings, item.description, entrySize, lineH, s.columns || 1)}
                 {...cardWordRooms(settings, entrySize, item.name, item.technologies)}
                 first={item.name ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{item.name}</Text> : null}
                 details={techLine(item)}
