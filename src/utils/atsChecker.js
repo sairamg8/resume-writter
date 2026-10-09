@@ -631,9 +631,14 @@ export function extractJobKeywords(jobDescriptionText) {
     }
   }
 
-  // Sort by frequency
+  // Sort by frequency, then by how much a word looks like a skill. Words of one count (most of a posting's)
+  // kept the order they were read in, and only 40 are kept: the title, the company's pitch and its benefits
+  // filled them ("features", "across", "professional", "applications"), and the tools named further down
+  // ("Kafka", "Terraform", "C++", "Scrum") were never reached.
+  const looksLikeSkill = (word) => (/[\d+#./]|\p{Ll}\p{Lu}|\p{Lu}\p{Lu}/u.test(word) ? 2 : /^\p{Lu}/u.test(word) ? 1 : 0);
+  const tier = new Map([...counts.keys()].map((key) => [key, looksLikeSkill(casingMap.get(key) || key)]));
   return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => b[1] - a[1] || tier.get(b[0]) - tier.get(a[0]))
     .slice(0, 40)
     .map(([lowerKey, count]) => ({ keyword: casingMap.get(lowerKey) || lowerKey, count }));
 }
