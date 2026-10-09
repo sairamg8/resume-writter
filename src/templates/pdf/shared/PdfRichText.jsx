@@ -115,7 +115,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
     const length = text.length;
     // Kept whole only while it can fit a page: `across` is the width the text has in this column.
     const keeps = (across) => length <= KEEP_TOGETHER_CHARS && (!room || fitsPage({
-      text, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: room.width - left - across, height: room.height,
+      text, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: room.width - left - across, height: room.height, fontFamily: room.fontFamily,
     }));
     // The glyph Design → Lists picked; the column is as wide whatever it draws, so a style never
     // moves the text. None draws nothing there: the text keeps its place by its own margin.

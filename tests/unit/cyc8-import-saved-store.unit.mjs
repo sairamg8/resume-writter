@@ -7,11 +7,11 @@ import { MAX_BACKUP_RESUMES, importSavedStore, savedStoreMessage } from '../../s
 
 const r = (n) => ({ id: `r${n}`, name: `CV ${n}`, personal: { name: `Person ${n}` }, sections: [] });
 
-test('each readable résumé is imported once, in order, with the keep flag; the rest are counted', () => {
+test('each readable résumé is imported once, in order; the keep flag marks only the first of a copy that names no original; the rest are counted', () => {
   const calls = [];
   const importResume = (data, options) => { calls.push([data.id, options]); return `new_${data.id}`; };
   const result = importSavedStore({ resumes: [r(1), null, { id: 'x' }, r(2), 'text'] }, importResume, { keep: true });
-  assert.deepEqual(calls, [['r1', { keep: true }], ['r2', { keep: true }]]);
+  assert.deepEqual(calls, [['r1', { keep: true }], ['r2', { keep: false }]]); // S13: not every résumé of the copy is an original
   assert.deepEqual(result, { added: 2, unreadable: 3, over: 0, ids: ['new_r1', 'new_r2'] });
 });
 

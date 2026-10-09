@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
 import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { usePhoneStickyTop } from '@/hooks/usePhoneStickyTop';
 import { Button, EmptyState, IconButton, Menu, cx, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
@@ -86,6 +87,7 @@ export function Board() {
   const { id } = useParams();
   const navigate = useNavigate();
   const store = useBoardStore();
+  const stickyRef = usePhoneStickyTop();
   const workspace = useWorkspace();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
@@ -300,7 +302,7 @@ export function Board() {
             snap belongs on the element that scrolls: on the row inside it, it did nothing (B-13). It
             is off while a card is dragged, or dnd-kit's auto-scroll toward a far column would be
             pulled back to a snap point at each step. Swimlanes stay unsnapped, as they always were. */}
-        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 max-md:flex-none md:px-8', !grouped && !active && 'snap-x snap-mandatory md:snap-none')}>
+        <div ref={stickyRef} className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 max-md:flex-none md:px-8', !grouped && !active && 'snap-x snap-mandatory md:snap-none')}>
           {!grouped ? (
             <>
               {noMatch && <NoMatch onClear={clearFilters} className="pb-3" />}
@@ -321,7 +323,7 @@ export function Board() {
           ) : (
             <>
             <div className="flex w-max min-w-full flex-col gap-1">
-              <div className="sticky top-0 z-10 flex gap-2 bg-cv-surface pb-1">
+              <div className="sticky top-0 z-10 flex gap-2 bg-cv-surface pb-1 max-md:top-[var(--stuck,0px)]">
                 {shownLists.map((list) => (
                   <div key={list.id} className="flex h-10 w-[272px] shrink-0 items-center gap-2 rounded-cv-control bg-cv-sunken px-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-cv-muted">
                     {list.title || 'Untitled'} <span className="text-cv-faint">{list.cards.filter((c) => shown.has(c.id)).length}</span>
