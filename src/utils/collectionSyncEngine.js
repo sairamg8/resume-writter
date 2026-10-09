@@ -30,6 +30,13 @@ const noRoom = (what = 'the last account\'s list could not be set aside') => Obj
 /** How many times a sync decides again when the cloud's copies change between its read and its write (collectionSyncIo.STALE). */
 const STALE_TRIES = 3;
 
+/**
+ * The most deletions one request carries. A batch or a transaction takes at most 500 writes (each deletion is
+ * one, and the deletion list another): more deletions at once ("Clear all jobs" on a long list) are sent in
+ * requests of this many, each recorded as deleted as it lands (sendDeletes).
+ */
+const DELETE_CHUNK = 400;
+
 /** A write that kept finding the cloud's copies changed: tried again later, as any temporary failure is. */
 const keptChanging = () => Object.assign(new Error('The cloud kept changing under this sync.'), { code: 'aborted' });
 
@@ -163,6 +170,23 @@ export function createCollectionSync({
   }));
   /** `expect` for `ids` only. */
   const only = (expect, ids) => new Map(ids.filter((id) => expect.has(id)).map((id) => [id, expect.get(id)]));
+
+  /**
+   * `deletes` sent ahead of the rest of a write when there are more than one request takes (DELETE_CHUNK): each
+   * request is checked and recorded as it lands (the record keeps the deletion, as noteVersions does for any), so
+   * a list put back by Undo after some of it went is one changed since, and what is left is sent by the next
+   * sync as any deletion not yet sent. Resolves to whether all went (`live()` ended: not all).
+   */
+  async function sendDeletes(uid, deletes, expect, live) {
+    for (let i = 0; i < deletes.length; i += DELETE_CHUNK) {
+      if (!live()) return false;
+      const chunk = deletes.slice(i, i + DELETE_CHUNK);
+      await io.commit(uid, { deletes: chunk, expect: only(expect, chunk) });
+      if (!live()) return false;
+      noteVersions(uid, [], chunk, null);
+    }
+    return true;
+  }
 
   /** `sets` handed to Firestore: a copy of them in the cloud is this browser's own write, whatever its record says yet. */
   const noteSent = (sets) => sets.forEach((x) => { if (Number.isFinite(x.updatedAt)) s.sent.set(x.id, x.updatedAt); });
@@ -436,16 +460,29 @@ export function createCollectionSync({
       if (sets.length || plan.deletes.length || !sameOrder) {
         // The copies this plan was made from must still be the cloud's when the write lands (another device writing
         // between the read and here is decided again, not overwritten).
-        const batch = { sets, deletes: plan.deletes, order: sameOrder ? null : plan.order, stamps, expect: expectOf([...sets.map((x) => x.id), ...plan.deletes], cloud.stamps) };
-        try {
-          await io.commit(uid, batch);
-          noteSent(sets);
-        } catch (e) {
-          if (sets.length < 2 || gen !== s.gen || isStale(e) || failureKind(e, online()) !== 'stop') throw e;
-          // Nothing of it held should the rest fail: an item refused on its own is held as it goes.
-          sets = [];
-          sets = await commitApart(uid, batch, () => gen === s.gen);
-          noteSent(sets);
+        const expect = expectOf([...sets.map((x) => x.id), ...plan.deletes], cloud.stamps);
+        // More deletions than one request takes are sent first, in requests of their own: left in the batch it was
+        // refused for good (500 writes), and so was every sync after it, whatever else it carried.
+        const many = plan.deletes.length > DELETE_CHUNK;
+        if (many) {
+          const planned = sets;
+          sets = []; // nothing of it is held should a deletion fail
+          const all = await sendDeletes(uid, plan.deletes, expect, () => gen === s.gen);
+          sets = planned;
+          if (!all) return;
+        }
+        const batch = { sets, deletes: many ? [] : plan.deletes, order: sameOrder ? null : plan.order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect };
+        if (batch.sets.length || batch.deletes.length || batch.order) {
+          try {
+            await io.commit(uid, batch);
+            noteSent(sets);
+          } catch (e) {
+            if (sets.length < 2 || gen !== s.gen || isStale(e) || failureKind(e, online()) !== 'stop') throw e;
+            // Nothing of it held should the rest fail: an item refused on its own is held as it goes.
+            sets = [];
+            sets = await commitApart(uid, batch, () => gen === s.gen);
+            noteSent(sets);
+          }
         }
         if (gen !== s.gen) return;
       }
@@ -628,7 +665,17 @@ export function createCollectionSync({
         ? [...prev, ...lacking(prev)].map((x) => x.id) : null;
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
       // Written only if the copies it was decided from are still the cloud's.
-      await io.commit(user.uid, { sets, deletes, order, stamps, expect: expectOf([...sets.map((x) => x.id), ...deletes], cloudStamps) });
+      const expect = expectOf([...sets.map((x) => x.id), ...deletes], cloudStamps);
+      const many = deletes.length > DELETE_CHUNK;
+      if (many) {
+        // More deletions than one request takes go first, in requests of their own (sendDeletes).
+        const decided = sets;
+        sets = []; // nothing of it is held should a deletion fail
+        const all = await sendDeletes(user.uid, deletes, expect, current);
+        sets = decided;
+        if (!all) return;
+      }
+      await io.commit(user.uid, { sets, deletes: many ? [] : deletes, order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect });
       if (!current()) return;
       noteSent(sets);
       if (copies.length) {
