@@ -599,6 +599,7 @@ export function createCollectionSync({
         return view.later(x.id, d, x) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
+      const decidedOn = new Map(queued.map((x) => [x.id, x.updatedAt]));
       sets = queued.filter((x) => !skip.has(x.id));
       // Changed here AND in the cloud since this browser last saw the cloud's copy (its record, or
       // what it sent itself since): whichever is older would be dropped. Kept as a copy beside the
@@ -641,7 +642,9 @@ export function createCollectionSync({
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
         // An item edited here while the batch read the cloud is newer still: that edit stays, and its
         // own write is queued (taken over, it vanished here while the queue still sent it).
-        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && !(x.updatedAt > n.updatedAt) ? n : x; };
+        // Only the copy the decision was made on is replaced (by its updatedAt, equal — not a clock: a copy put back by Undo, or queued
+        // twice, is that copy and is replaced by the cloud's whatever it is stamped).
+        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && x.updatedAt === decidedOn.get(x.id) ? n : x; };
         const list = store.items().map(take);
         s.prev = (s.prev || []).map(take);
         store.replace(list);
