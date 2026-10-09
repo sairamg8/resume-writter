@@ -11,7 +11,7 @@ import { createCollectionSync } from '../../src/utils/collectionSyncEngine.js';
 import { collectionIo } from '../../src/utils/collectionSyncIo.js';
 import { forgetSynced, localMeta, memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { leaveList, stashOf } from '../../src/utils/collectionSyncPlan.js';
-import { jobConflictCopy, boardConflictCopy } from '../../src/utils/collectionSyncConflict.js';
+import { jobConflictCopy, boardConflictCopy, sameContent } from '../../src/utils/collectionSyncConflict.js';
 import { stampOf, splitStamp } from '../../src/utils/collectionSyncRev.js';
 import { createBoard } from '../../src/utils/boardModel.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
@@ -183,4 +183,11 @@ test('stampOf and splitStamp: junk reads as rev 0', () => {
   const { item, stamp } = splitStamp({ id: 'j', syncRev: 2, syncBy: 'd', updatedAt: 5 });
   assert.deepEqual(item, { id: 'j', updatedAt: 5 });
   assert.deepEqual(stamp, { rev: 2, by: 'd', at: 5 });
+});
+
+test('a list the previous site wrote can carry the two fields: they are no difference in content', () => {
+  const plain = job('j1', 'Acme');
+  assert.equal(sameContent({ ...plain, syncRev: 3, syncBy: 'dev_x' }, plain), true);
+  assert.equal(sameContent({ ...plain, syncRev: 3 }, { ...plain, syncRev: 4, updatedAt: 9 }), true);
+  assert.equal(sameContent({ ...plain, syncRev: 3 }, { ...plain, role: 'Lead' }), false, 'a real difference still is one');
 });
