@@ -932,7 +932,7 @@ const DOCUMENT_TITLE = /^(?:curriculum\s+vit(?:ae|a)|r[eé]sum[eé]|cv|c\.v\.)\s
 
 /**
  * Contacts set one after another on a line with only a space between them — "Tel: 0113 496 0123 Email:
- * a@b.co" — as pieces, split before each label that follows. Only when every piece is a contact: a
+ * a@b.co" — as pieces, split before each label that follows. Only when every piece is a labelled contact: a
  * sentence that mentions "email:" stays whole. Left whole, the line read as the job title (or went to
  * "Additional Information"), and neither contact was kept.
  */
@@ -941,7 +941,7 @@ const labelled = (piece) => {
   const parts = piece.split(NEXT_LABEL);
   // Each of a different kind: "Email: a@b.co Email: c@d.co" is not a run of contacts.
   const keys = parts.map((p) => contactOf(p)?.key);
-  return parts.length > 1 && keys.every(Boolean) && new Set(keys).size === keys.length ? parts : [piece];
+  return parts.length > 1 && parts.every((p) => LABEL.test(p)) && keys.every(Boolean) && new Set(keys).size === keys.length ? parts : [piece];
 };
 
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
@@ -1174,22 +1174,10 @@ function readHeader(type, header) {
   // "2019 - present ⇥ Audit Manager, Hargreaves & Co, Leeds": a line that opens with its dates and holds
   // the title after them, with no title line anywhere over it — how UK CVs set their jobs and schools
   // (dates in the left column). What follows the date is the entry's title there, not its place; it
-  // went to the Location, and the company and role (or school and degree) came out empty. Only text
-  // that names a role, a degree or a school is taken so, and only where this line is all the header has.
-  const titleAfterDate = (p, alone) => alone && (JOB.has(type) ? ROLE.test(p) : type === 'education' && (DEGREE.test(p) || SCHOOL.test(p)));
-  const field = (p) => {
-    // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
-    // certificate's URL; another type's description keeps it.
-    const meta = metaOf(p) || (ADDRESS.test(p) ? { key: 'link', value: p } : null);
-    if (meta) out.meta[meta.key] = out.meta[meta.key] ? `${out.meta[meta.key]}, ${meta.value}` : meta.value;
-    if (meta) out.named.push({ key: meta.key, text: p });
-    return Boolean(meta);
-  };
-  const place = (p) => {
-    if (!PLACED.has(type) || out.location) return false;
-    out.location = p;
-    return true;
-  };
+  // went to the Location, and the company and role (or school and degree) came out empty. Only where
+  // this line is all the header has, and the text is no place alone ("Portland, OR", "Remote").
+  const titleAfterDate = (p, alone) => alone && !(PLACE.test(p) && (REGION_END.test(p) || p.split(',').length <= 2) && !ROLE.test(p))
+    && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))) || p.split(/\s+/).length >= 2);
   // The text fields the line above gave: two when it held the role and the company ("Role ⇥ Company",
   // "Role — Company", a job's "Role, Company"); one a line when they are stacked (the Sidebar's school).
   let above = 0;
