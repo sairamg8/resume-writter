@@ -18,7 +18,7 @@ import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
 import { cloudCanName, itemPath } from './collectionSyncIo.js';
-import { nextStamps, revsOf, revsOfStamps } from './collectionSyncRev.js';
+import { NO_STAMP, movedInCloud, nextStamps, revsOf, revsOfStamps } from './collectionSyncRev.js';
 import { newId } from './ids.js';
 
 /**
@@ -161,19 +161,34 @@ export function createCollectionSync({
   }
 
   /**
+   * What a flush knows of an item's cloud copy (`stamps`: id → stamp, as read): `synced(id)` whether this
+   * browser's record has a copy of it the cloud held (not a deletion), and `moved(id, d)` whether copy `d`
+   * moved since — by version, not by clock (collectionSyncRev.movedInCloud); what this browser itself
+   * handed over (`s.sent`) is no move.
+   */
+  function cloudView(stamps) {
+    const m = meta.read();
+    const device = deviceId();
+    return {
+      synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
+      moved: (id, d) => movedInCloud({
+        stamp: stamps.get(id) ?? NO_STAMP, updatedAt: d.updatedAt, baseRev: m.revs?.[id], baseTime: m.versions[id], device, ownTime: s.sent.get(id),
+      }),
+    };
+  }
+
+  /**
    * The older copies to keep for the queued `writes` whose cloud copy (`cloudCopy`: id → document,
    * `docs` all those read) changed since this browser last saw it, to different content:
    * `{ id, copy, name }` each, `name` the item's.
    */
-  function conflictCopies(writes, cloudCopy, docs) {
+  function conflictCopies(writes, cloudCopy, docs, view) {
     if (!store.conflictCopy) return [];
-    const known = meta.read().versions;
     const copies = [];
     for (const x of writes) {
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
-      const base = Math.max(Number.isFinite(known[x.id]) ? known[x.id] : 0, s.sent.get(x.id) ?? 0);
-      if (!theirs || !(base > DELETED && x.updatedAt > base && theirs.updatedAt > base) || sameContent(x, theirs, store.conflictApart)) continue;
+      if (!theirs || !view.synced(x.id) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
       const older = theirs.updatedAt > x.updatedAt ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -385,7 +400,7 @@ export function createCollectionSync({
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
       const moved = mine ? { baseOrder: seenOrder } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy, apart: store.conflictApart });
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy, apart: store.conflictApart, revs: baseRevs, stamps: cloud.stamps, device: deviceId() });
 
       sets = sendable(uid, plan.sets);
       // Each item written is one version above the cloud's copy just read (collectionSyncRev.js).
@@ -537,21 +552,28 @@ export function createCollectionSync({
       const here = new Set(store.items().map((x) => x.id));
       queued = queued.filter((x) => here.has(x.id));
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
+      const view = cloudView(cloudStamps);
+      // The cloud's copy replaces this edit when it is later — unless nobody wrote it since this browser last saw
+      // it: then this edit is the only change, and it goes whatever the clocks say (a device behind the
+      // others stamps its edits earlier than the copy it was made on).
       const newer = queued.map((x) => {
         const d = cloudCopy.get(x.id);
-        return d && Number.isFinite(d.updatedAt) && d.updatedAt > (x.updatedAt ?? 0) ? store.fromCloud(d) : null;
+        if (!d || !Number.isFinite(d.updatedAt)) return null;
+        if (view.synced(x.id) && !view.moved(x.id, d)) return null;
+        return d.updatedAt > (x.updatedAt ?? 0) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
       sets = queued.filter((x) => !skip.has(x.id));
       // Changed here AND in the cloud since this browser last saw the cloud's copy (its record, or
       // what it sent itself since): whichever is older would be dropped. Kept as a copy beside the
       // newer, and sent in the same batch.
-      const copies = conflictCopies(queued, cloudCopy, docs);
+      const copies = conflictCopies(queued, cloudCopy, docs, view);
       sets = [...sets, ...copies.map((c) => c.copy)];
       // Deleted here, but changed in the cloud since the copy this browser deleted: kept, and taken back.
       const edited = gone.map(([id, at]) => {
         const d = cloudCopy.get(id);
-        return d && Number.isFinite(d.updatedAt) && d.updatedAt > (at ?? 0) ? store.fromCloud(d) : null;
+        if (!d || !Number.isFinite(d.updatedAt)) return null;
+        return (view.synced(id) ? view.moved(id, d) : d.updatedAt > (at ?? 0)) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const kept = new Set(edited.map((x) => x.id));
       const deletes = gone.map(([id]) => id).filter((id) => !kept.has(id));

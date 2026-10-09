@@ -55,3 +55,25 @@ export const revsOf = (list, cloud) => Object.fromEntries(list.filter((x) => Num
 
 /** `{ id: rev }` of `stamps` (id → stamp). */
 export const revsOfStamps = (stamps) => Object.fromEntries([...stamps].map(([id, s]) => [id, s.rev]));
+
+/**
+ * Whether the cloud's copy of an item moved since this browser last saw it, by version and not by any
+ * clock: `stamp` the copy's, `updatedAt` its time, `baseRev` / `baseTime` the rev and the `updatedAt` this
+ * browser's record holds for the item (undefined: none), `device` this browser's id, `ownTime` the
+ * `updatedAt` of the copy this browser itself last handed to Firestore (its record only has it once
+ * acknowledged). Another device's write is a rev above the recorded one; a copy this browser wrote itself is not a move
+ * (its record may only lack it); a writer that does not count revs (the previous site rewrites a copy
+ * keeping its fields) shows as a different `updatedAt` at the same rev. With no rev recorded the
+ * `updatedAt` alone is compared, for equality, and for an item this browser never saw nothing is known: it
+ * moved unless this very browser wrote it.
+ */
+export function movedInCloud({ stamp = NO_STAMP, updatedAt, baseRev, baseTime, device = '', ownTime }) {
+  if (ownTime !== undefined && updatedAt === ownTime) return false;
+  const seenTime = Number.isFinite(baseTime) ? baseTime : null;
+  if (Number.isFinite(baseRev)) {
+    if (stamp.rev > baseRev) return stamp.by !== device;
+    return seenTime !== null && updatedAt !== seenTime;
+  }
+  if (seenTime !== null) return updatedAt !== seenTime;
+  return stamp.rev > 0 ? stamp.by !== device : true;
+}

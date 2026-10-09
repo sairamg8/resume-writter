@@ -18,6 +18,7 @@
 // item and the older one is kept beside it as a conflict copy (collectionSyncConflict.js), as the
 // résumés' is: nothing typed is lost.
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
+import { NO_STAMP, movedInCloud } from './collectionSyncRev.js';
 
 /**
  * The version this browser records for an item whose deletion it sent to the cloud
@@ -64,7 +65,9 @@ function weave(lead, other) {
  * in order), sets (items to write), deletes (ids to remove and list as deleted), order (the ids in
  * order: written when it differs from the cloud's), conflicts (the older copies kept beside an
  * item both sides changed: `{ id, copy }`, `copyOf(older, everyItem)` making each; none without it;
- * `apart`: the fields whose difference alone is no conflict, a project's star and colour) }.
+ * `apart`: the fields whose difference alone is no conflict, a project's star and colour; `revs`, `stamps`
+ * (id → stamp) and `device`: the versions this browser last saw, the cloud's now and this browser's id,
+ * collectionSyncRev.js) }.
  * Nothing typed is lost:
  *   - an item on one side only is new there and joins the list — unless the account deleted it
  *     for good, or it is one this browser knew and deleted since;
@@ -85,13 +88,19 @@ function weave(lead, other) {
  * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
  * cloud's wins: the device that sent first.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [] }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [], revs = {}, stamps = new Map(), device = '' }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
   const localById = new Map(local.map((x) => [x.id, x]));
   const known = (id) => Number.isFinite(versions[id]);
-  const changedSince = (x) => known(x.id) && time(x) > versions[x.id];
+  // Changed since this browser last saw it is "differs from the version it recorded", not "is later": a device whose
+  // clock is behind stamps an edit earlier than the copy it was made on.
+  const changedSince = (x) => known(x.id) && time(x) !== versions[x.id];
+  /** Whether the cloud's copy of an item this browser knows moved since it saw it (collectionSyncRev.movedInCloud). */
+  const movedSince = (theirs) => known(theirs.id) && movedInCloud({
+    stamp: stamps.get(theirs.id) ?? NO_STAMP, updatedAt: time(theirs), baseRev: revs[theirs.id], baseTime: versions[theirs.id], device,
+  });
 
   const keep = new Map();
   const sets = [];
@@ -101,7 +110,7 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
     const mine = localById.get(id);
     const theirs = cloudById.get(id);
     if (!mine && dropped.has(id)) {
-      if (theirs && !gone.has(id) && changedSince(theirs)) keep.set(id, theirs);
+      if (theirs && !gone.has(id) && movedSince(theirs)) keep.set(id, theirs);
       else if (theirs || !gone.has(id)) deletes.push(id);
       continue;
     }
@@ -116,15 +125,20 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // Changed on both sides since this browser last saw the cloud's copy, and not to the same
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
-      const conflict = Boolean(copyOf) && known(id) && versions[id] > DELETED && time(mine) > versions[id] && time(theirs) > versions[id]
-        && !sameContent(mine, theirs, apart);
+      const synced = known(id) && versions[id] > DELETED;
+      const here = synced && changedSince(mine);
+      const there = synced && movedSince(theirs);
+      const conflict = Boolean(copyOf) && here && there && !sameContent(mine, theirs, apart);
+      // Only one side changed it since: that side stays, whatever the two clocks say.
+      const oneSide = synced && here !== there;
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
-      if (time(theirs) > time(mine) || (!known(id) && seed(mine))) keep.set(id, theirs);
-      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict) sets.push(mine); }
+      const theirsStay = (oneSide ? there : time(theirs) > time(mine)) || (!known(id) && seed(mine));
+      if (theirsStay) keep.set(id, theirs);
+      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict || (oneSide && !sameContent(mine, theirs, apart))) sets.push(mine); }
       if (conflict) {
-        const copy = copyOf(time(theirs) > time(mine) ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
+        const copy = copyOf(theirsStay ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
         if (!hasTwin(copy, [...local, ...docs])) {
           keep.set(copy.id, copy);
           sets.push(copy);
