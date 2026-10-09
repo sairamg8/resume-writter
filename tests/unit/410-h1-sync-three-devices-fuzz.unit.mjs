@@ -69,7 +69,7 @@ function jittered(fs, rand) {
  * reaches the server (`account()`: null, nobody), and refused for any other's documents. A sync a start has replaced then
  * cannot write to the account the browser has left.
  */
-function asUser(fs, account) {
+function asUser(fs, account, onWrite = () => {}) {
   const check = (path) => {
     const a = account();
     if (!a || !path.startsWith(`users/${a}/`)) throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
@@ -84,7 +84,7 @@ function asUser(fs, account) {
       return {
         set: (ref, ...rest) => { paths.push(ref.path); return batch.set(ref, ...rest); },
         delete: (ref) => { paths.push(ref.path); return batch.delete(ref); },
-        commit: async () => { paths.forEach(check); return batch.commit(); },
+        commit: async () => { paths.forEach(check); onWrite('batch', paths); return batch.commit(); },
       };
     },
     runTransaction: (db, update) => fs.runTransaction(db, async (tx) => {
@@ -95,6 +95,7 @@ function asUser(fs, account) {
         delete: (ref) => { paths.push(ref.path); return tx.delete(ref); },
       });
       paths.forEach(check);
+      onWrite('tx', paths);
       return result;
     }),
   };
@@ -145,7 +146,8 @@ async function replay(ops, seed, trace = false) {
   const cloud = fakeFirestore();
   // Calm: a step ends when its syncs have. Jittered: a step ends soon, and its syncs go on among the next steps'.
   const jitter = seed % 2 === 0 ? random(seed * 7919 + 13) : null;
-  const link = (d) => (jitter ? jittered(asUser(cloud.fs, () => d.account), jitter) : asUser(cloud.fs, () => d.account));
+  const onWrite = (d) => (kind, paths) => writes.push(`d${d.index} ${kind}: ${paths.map((p) => p.replace('users/', '').replace('/jobs/', '/').replace('/meta/jobs', '/meta')).join(' ')}`);
+  const link = (d) => (jitter ? jittered(asUser(cloud.fs, () => d.account, onWrite(d)), jitter) : asUser(cloud.fs, () => d.account, onWrite(d)));
   const devices = [0, 1, 2].map((i) => device(cloud, i, link));
   for (const d of devices) d.turns = jitter ? 3 : 5;
   const script = [];
@@ -180,11 +182,12 @@ async function replay(ops, seed, trace = false) {
     }
   };
   const short = (n) => n.replace(/\s+/g, '');
-  let shownCommits = 0;
+  const writes = [];
+  let shownWrites = 0;
   const dump = () => {
     if (!trace) return;
-    const written = cloud.commits.slice(shownCommits).map((ops) => ops.map(([op, path, value]) => `${op === 'delete' ? 'del' : 'set'} ${path.replace('users/', '').replace('/jobs/', '/').replace('/meta/jobs', '/meta')}${path.includes('/meta/') ? `{${Object.keys(value).join(',')}}` : ''}`).join('; '));
-    shownCommits = cloud.commits.length;
+    const written = writes.slice(shownWrites);
+    shownWrites = writes.length;
     if (written.length) script.push(`      wrote: ${written.join(' | ')}`);
     for (const acct of ['A', 'B']) {
       const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}${v.syncBy?.replace('dev-', 'd')}`);
