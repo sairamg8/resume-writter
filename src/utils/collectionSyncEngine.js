@@ -256,6 +256,10 @@ export function createCollectionSync({
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
   function start(user) {
     s.gen += 1;
+    // A flush's write that never settles (a cache with no server to answer) must not hold up the ones after it for good:
+    // a start (another account, a retry, going online) begins a new line, and what the old one still does is dropped
+    // (`current()`), its copies being checked by the write itself (collectionSyncIo.commit).
+    s.turn = Promise.resolve();
     timers.clear(s.retry);
     s.retryOnShow = false;
     if ((user?.uid ?? null) !== (s.user?.uid ?? null)) {
@@ -657,7 +661,8 @@ export function createCollectionSync({
     }
 
     try {
-      await before;
+      // Behind a flush that has not landed: a wait that ends in the deadline is a failure like any, tried again later.
+      await withDeadline(before);
       for (let tries = 1; ; tries += 1) {
         if (!current()) return;
         try {
