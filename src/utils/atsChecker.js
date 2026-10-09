@@ -11,6 +11,23 @@ import { groupsRoles, roleGroups } from './roleGroups.js';
 export { generateAtsPlainText } from './atsPlainText.js';
 
 /**
+ * Scripts written without spaces between words (Chinese, Japanese kana, Thai, Lao, Khmer, Myanmar): a
+ * name or a sentence in one is a single run of text when split on white space, which the checks below
+ * read as one word, so a full name was "incomplete" and a summary of a whole paragraph "brief".
+ */
+const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+const WORDS = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null;
+
+/** `text` as words: split on white space, a run in a script written without spaces split into its own words. */
+function wordsOf(text) {
+  return String(text ?? '').split(/\s+/).filter(Boolean).flatMap((run) => {
+    if (!UNSPACED.test(run)) return [run];
+    const found = WORDS ? [...WORDS.segment(run)].filter((part) => part.isWordLike).map((part) => part.segment) : [];
+    return found.length ? found : [run];
+  });
+}
+
+/**
  * Whether a value reads as an address (one "@", something before it, a dot inside the domain that is neither its first character nor
  * its last, no white space), by index: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ tried every dot of a long domain as the last one, each time reading
  * to the end (time squared in the dots).
@@ -853,7 +870,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // Pronouns or a nickname in parentheses ("Jane Smith (she/her)", "Robert (Bob) Smith") sit beside
   // the name, so only the words outside them are checked (R5-HUNT5-ATS-NAME-WITH-PARENTHESES).
   const nameCore = nameTrimmed.replace(/\([^()]*\)/g, ' ').trim();
-  const nameWords = nameCore.split(/\s+/).filter(Boolean);
+  // A name in Chinese, Japanese or Thai has no space in it: its family name and given name are one run.
+  const nameRuns = nameCore.split(/\s+/).filter(Boolean);
+  const nameWords = nameRuns.length === 1 && UNSPACED.test(nameRuns[0]) && [...nameRuns[0]].length >= 2 ? [nameRuns[0], nameRuns[0]] : nameRuns;
   if (nameWords.length >= 2 && !/[0-9@#$%^&*()_+=]/.test(nameCore)) {
     contactPts += 4;
     results.categories.contact.items.push({
@@ -981,7 +1000,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Summary / Objective check (3 pts) — its words as they print, not its markup (R2-020)
-  const summaryWords = printedText(shown('summary')).split(/\s+/).filter(Boolean);
+  const summaryWords = wordsOf(printedText(shown('summary')));
   if (summaryWords.length >= 25 && summaryWords.length <= 150) {
     contactPts += 3;
     results.categories.contact.items.push({
