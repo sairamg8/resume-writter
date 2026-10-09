@@ -133,11 +133,12 @@ export function EpicLozenge({ title, className }) {
 }
 
 /** A scrum project's sprint for the issue: the backlog, or a sprint that is not closed. */
-export function SprintPicker({ board, value, onChange, label = 'Sprint' }) {
+export function SprintPicker({ board, value, onChange, label = 'Sprint', allowBacklog = true }) {
   const sprints = board.sprints.filter((s) => s.state !== 'closed' || s.id === value);
   const current = sprints.find((s) => s.id === value) ?? null;
   const items = [
-    { id: 'backlog', label: 'Backlog', checked: !current, radio: true, onSelect: () => current && onChange(null) },
+    // Off for a done issue in a sprint: the backlog lists open issues only, so it would leave its sprint and be on no page of the Backlog.
+    ...(allowBacklog ? [{ id: 'backlog', label: 'Backlog', checked: !current, radio: true, onSelect: () => current && onChange(null) }] : []),
     ...sprints.map((s) => ({
       id: s.id, label: s.state === 'active' ? `${s.name} (active)` : s.name, checked: s.id === current?.id, radio: true,
       onSelect: () => { if (s.id !== current?.id) onChange(s.id); },

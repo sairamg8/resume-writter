@@ -35,23 +35,27 @@ async function sheetAt(path) {
   };
 }
 
-it('on the Job Tracker, c is "Add a job" and there is no Issues group', async () => {
+it('on the Job Tracker, c is "Add a job", there is no Issues group, and Enter and Space still open the focused job', async () => {
   const { view, groups, labels } = await sheetAt('/jobs');
   try {
     assert.ok(labels.includes('Add a job'), `c adds a job: ${labels.join(' | ')}`);
     assert.ok(!labels.includes('Create an issue'), 'no issue is created there');
     assert.ok(!groups.includes('Issues'), 'no Issues group');
+    assert.deepEqual(groups, ['Global', 'Job cards']);
+    assert.equal(labels.filter((l) => l === 'Open the focused job').length, 2, 'Enter and Space open the focused job card');
+    assert.ok(!labels.includes('Close the issue'), 'there is no issue to close');
     for (const kept of ['Search', 'Collapse or expand the sidebar', 'Show keyboard shortcuts']) assert.ok(labels.includes(kept), `${kept} is still listed`);
   } finally {
     await view.unmount();
   }
 });
 
-it('on a job\'s page too', async () => {
-  const { view, labels } = await sheetAt('/jobs/j1');
+it('on a job\'s page too (which has no cards to open)', async () => {
+  const { view, groups, labels } = await sheetAt('/jobs/j1');
   try {
     assert.ok(labels.includes('Add a job'));
     assert.ok(!labels.includes('Create an issue'));
+    assert.deepEqual(groups, ['Global']);
   } finally {
     await view.unmount();
   }

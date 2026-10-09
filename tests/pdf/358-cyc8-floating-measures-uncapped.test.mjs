@@ -1,8 +1,9 @@
 // useFloating measured the panel's offsetHeight under the maxHeight it had set on the last placement, so a panel that was cut short by
 // little room kept measuring short: once the anchor scrolled to a spot with more room (but still too little for the whole panel)
-// and the panel flipped above it, it was placed as if it were small and its taller box ended over the anchor. It now measures with no
-// cap of its own on it. The fake DOM has no layout: the test gives the menu the height a browser would measure (900 px of items,
-// cut to its inline maxHeight) and reads where the real ExportDropdown puts it, as tests/pdf/103 does.
+// and the panel flipped above it, it was placed as if it were small and its taller box ended over the anchor. It now reads the whole
+// height off the content (scrollHeight plus the panel's borders), never by clearing the cap: a panel that scrolls inside its cap
+// jumps back to its top when the cap comes off. The fake DOM has no layout: the test gives the menu what a browser would report
+// (900 px of items, a box cut to its inline maxHeight) and reads where the real ExportDropdown puts it, as tests/pdf/103 does.
 // Window 1280 x 400, offset 4, padding 8. First the Export button sits at 100..128: 260 px below, 88 above, so the menu opens below,
 // capped at 260. Then the anchor scrolls to 300..328: 60 px below, 288 above, so the menu flips above, capped at 288, and its top
 // is anchor.top - 4 - 288 = 8 (it was 300 - 4 - 260 = 36, with its box 28 px over the button).
@@ -36,6 +37,9 @@ Object.defineProperty(proto, 'offsetHeight', {
     return Number.isFinite(cap) ? Math.min(NATURAL, cap) : NATURAL;
   },
 });
+// The panel scrolls inside its cap: its content is always the whole 900 px, its inner box is its (borderless) outer box.
+Object.defineProperty(proto, 'scrollHeight', { configurable: true, get() { return (this.getAttribute('class') ?? '').includes('w-72') ? NATURAL : 0; } });
+Object.defineProperty(proto, 'clientHeight', { configurable: true, get() { return this.offsetHeight; } });
 
 /** Polls until `done()` holds, by what happened, not by a clock (bounded). */
 async function until(done, what) {

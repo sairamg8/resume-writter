@@ -192,8 +192,11 @@ export function TopBar({ projects = [], onCreate, search, auth }) {
   const inJobs = pathname === '/jobs' || pathname.startsWith('/jobs/');
   const create = () => (inJobs ? navigate('/jobs/new') : onCreate?.());
   useHotkeys({ c: create, '?': () => setHelpOpen(true) });
-  // No issues on the Job Tracker: there c adds a job, and the Issues group would name keys that open nothing.
-  const groups = inJobs ? [{ title: 'Global', shortcuts: [{ combo: 'c', label: 'Add a job' }, ...SHORTCUTS[0].shortcuts.slice(1)] }] : SHORTCUTS;
+  // No issues on the Job Tracker: there c adds a job, and the Issues group would name issues. A focused job card does open on Enter and Space.
+  const groups = inJobs
+    ? [{ title: 'Global', shortcuts: [{ combo: 'c', label: 'Add a job' }, ...SHORTCUTS[0].shortcuts.slice(1)] },
+      ...(pathname === '/jobs' ? [{ title: 'Job cards', shortcuts: [{ combo: 'Enter', label: 'Open the focused job' }, { combo: 'Space', label: 'Open the focused job' }] }] : [])]
+    : SHORTCUTS;
 
   const { shown } = orderProjects(projects, 6);
   const projectItems = [

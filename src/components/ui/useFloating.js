@@ -33,13 +33,15 @@ export function useFloating(open, anchorRef, floatingRef, { placement = 'bottom-
       const floating = floatingRef.current;
       if (!anchor?.getBoundingClientRect || !floating) return;
       const rect = anchor.getBoundingClientRect();
-      // Measured with no cap of ours on it: under the last maxHeight a panel that was cut short kept
-      // measuring short, so once the anchor scrolled to a spot with more room it was placed as if
-      // small and (above the anchor) ended up over it.
-      const capped = floating.style.maxHeight;
-      floating.style.maxHeight = '';
-      const height = floating.offsetHeight;
-      floating.style.maxHeight = capped;
+      // Its whole height, whatever cap of ours it sits under: under the last maxHeight a panel that was
+      // cut short kept measuring short, so once the anchor scrolled to a spot with more room it was
+      // placed as if small and (above the anchor) ended up over it. Read off the content (scrollHeight)
+      // plus the panel's borders and scrollbar, not by taking the cap off and putting it back: a panel
+      // that scrolls inside its cap jumps to its top when the cap comes off, on every scroll event.
+      const box = floating.offsetHeight;
+      const content = Number(floating.scrollHeight);
+      const inside = Number(floating.clientHeight);
+      const height = Number.isFinite(content) && Number.isFinite(inside) ? Math.max(box, content + (box - inside)) : box;
       const next = computePlacement({
         anchor: rect,
         floating: { width: Math.max(floating.offsetWidth, matchWidth ? rect.width : 0), height },

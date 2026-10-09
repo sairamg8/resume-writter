@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '@/components/ui';
+import { isIssueDone } from '@/utils/boardModel';
 import { formatDateTime, isoTime, relativeTime } from '@/utils/uiFormat';
 import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, RecurrencePicker, SprintPicker, TypePicker } from './IssueFields';
 
@@ -53,7 +54,7 @@ export function IssueDetails({ board, issue, onChange, onCreateLabel }) {
             {issue.type !== 'epic' && (
               <Row label="Parent epic"><EpicPicker board={board} value={issue.epicId} onChange={(epicId) => onChange({ epicId })} /></Row>
             )}
-            {sprints && <Row label="Sprint"><SprintPicker board={board} value={issue.sprintId} onChange={(sprintId) => onChange({ sprintId })} /></Row>}
+            {sprints && <Row label="Sprint"><SprintPicker board={board} value={issue.sprintId} onChange={(sprintId) => onChange({ sprintId })} allowBacklog={!issue.sprintId || !isIssueDone(board, issue)} /></Row>}
             <Row label="Story points"><PointsInput value={issue.estimate} onChange={(estimate) => onChange({ estimate })} /></Row>
             <Row label="Start date"><DateInput label="Start date" value={issue.startDate} onChange={(startDate) => onChange({ startDate })} /></Row>
             <Row label="Due date"><DateInput label="Due date" value={issue.due} onChange={(due) => onChange({ due })} /></Row>
