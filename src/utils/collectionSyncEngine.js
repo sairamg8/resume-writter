@@ -258,6 +258,8 @@ export function createCollectionSync({
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
       if (!theirs || !(view.synced(x.id) || view.undone(x.id)) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
+      // The first visit's demo, untouched, holds nothing typed: no copy of it (as the first sync makes none).
+      if (store.seed?.(theirs)) continue;
       const older = view.later(x.id, d, x) ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -569,10 +571,20 @@ export function createCollectionSync({
       // cloud's copy moved and this one changed, and keeps the older of the two as a conflict copy — claimed as seen, the
       // edit went over the cloud's copy with no trace.
       for (const id of edited.keys()) {
-        if (!(versions[id] > DELETED) || sets.some((x) => x.id === id) || plan.deletes.includes(id) || !docs.some((d) => d.id === id)) continue;
-        cloudVersions[id] = versions[id];
-        if (Number.isFinite(baseRevs[id])) cloudRevs[id] = baseRevs[id];
-        else delete cloudRevs[id];
+        if (sets.some((x) => x.id === id) || plan.deletes.includes(id) || !docs.some((d) => d.id === id)) continue;
+        if (versions[id] > DELETED) {
+          cloudVersions[id] = versions[id];
+          if (Number.isFinite(baseRevs[id])) cloudRevs[id] = baseRevs[id];
+          else delete cloudRevs[id];
+          continue;
+        }
+        // Never seen here (the first visit's demo, a job from a file): the copy the edit was made on is the base, in no
+        // cloud copy, so any copy the account has is a change after it.
+        const was = own.find((x) => x.id === id);
+        if (Number.isFinite(was?.updatedAt)) {
+          cloudVersions[id] = was.updatedAt;
+          cloudRevs[id] = 0;
+        }
       }
       const { [uid]: _gone, ...stashed } = record.stashed;
       // The record names the account the list now belongs to: refused (storage full), every later
@@ -708,7 +720,10 @@ export function createCollectionSync({
           if (!view.moved(x.id, d)) return null;
           if (!view.changed(x)) return store.fromCloud(d);
         }
-        return view.later(x.id, d, x) ? store.fromCloud(d) : null;
+        const theirs = store.fromCloud(d);
+        // The first visit's demo, untouched, holds nothing typed: it never replaces an edit, whatever the clocks say.
+        if (theirs && store.seed?.(theirs) && !store.seed?.(x)) return null;
+        return view.later(x.id, d, x) ? theirs : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
       const decidedOn = new Map(queued.map((x) => [x.id, x.updatedAt]));
