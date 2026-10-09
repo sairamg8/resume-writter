@@ -327,6 +327,10 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             </div>
             <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-cv-ink mb-2">No resumes yet</h2>
             <p className="text-cv-muted text-sm mb-6">Create your first resume to get started</p>
+            {/* Signed out, the list is empty even for an account with documents: say where they are (CYC-B). */}
+            {!auth.user && !auth.authLoading && (
+              <p className="text-cv-muted text-sm -mt-3 mb-6 max-w-xs">Documents saved to your account? Sign in to see them.</p>
+            )}
             <button onClick={newResume} className={PRIMARY_BUTTON}>
               <Plus size={16} /> Create Resume
             </button>
