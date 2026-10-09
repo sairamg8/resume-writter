@@ -95,7 +95,8 @@ export function SidebarContent({ projects = [], collapsed = false, onToggleColla
         </div>
       )}
 
-      <nav aria-label="Workspace" className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pt-3 pb-3">
+      {/* The 64 px rail has 40 px of room for its 40 px rows; a classic 15 px scrollbar (a long project list) left them 25. The rail scrolls on, its bar hidden. */}
+      <nav aria-label="Workspace" className={cx('flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pt-3 pb-3', collapsed && '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden')}>
         <ul className="flex flex-col gap-0.5">
           {NAV.map((item) => (
             <li key={item.to} className="flex flex-col">

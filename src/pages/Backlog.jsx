@@ -12,7 +12,7 @@ import { InlineCreate } from '@/components/board/InlineCreate';
 import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/useIssueActions';
 import { BacklogRow, CompleteSprintDialog, EpicPanel, PointBubbles, StartSprintDialog, sprintDates } from '@/components/board/BacklogParts';
 import { backlogSections, filterIssues } from '@/utils/boardQuery';
-import { activeSprint, issueKey } from '@/utils/boardModel';
+import { activeSprint, isIssueDone, issueKey } from '@/utils/boardModel';
 import { boardCollision } from '@/utils/boardDnd';
 
 // Constants, not literals in the render: a new options object each time gives DndContext new sensors,
@@ -97,6 +97,10 @@ export function Backlog() {
     // leaves it (null); one in none keeps none, and its place is read off the whole backlog
     // (undefined), not off the issues in no sprint alone — or a drop among the others was a no-op.
     const dragged = board.issues.find((i) => i.id === a.id);
+    // The backlog lists open issues only: a done one dropped there would leave its sprint and be on
+    // no page of the Backlog, so the drop is refused and the row stays where it is (a Kanban
+    // backlog never lists a done row, so only Scrum can get here).
+    if (scrum && dragged && isIssueDone(board, dragged) && (data.sprintId ?? null) === null) return;
     const sprintId = scrum ? data.sprintId ?? null : (dragged?.sprintId ? null : undefined);
     let beforeId = null;
     if (data.type === 'row') {
@@ -123,7 +127,7 @@ export function Backlog() {
   const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col md:min-h-0">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar
@@ -153,7 +157,7 @@ export function Backlog() {
           <Button variant="primary" onClick={() => store.updateBoard(board.id, { mode: 'scrum' })}>Use sprints</Button>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 md:px-8 lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 max-md:flex-none md:px-8 lg:flex-row">
         {epicsOpen && (
           <EpicPanel
             board={board}
@@ -183,7 +187,7 @@ export function Backlog() {
                     {sprint
                       ? (
                         <div className="min-w-0 max-w-full">
-                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-cv-ink" inputClassName="pointer-coarse:text-base" />
+                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-cv-ink [overflow-wrap:anywhere]" inputClassName="pointer-coarse:text-base" />
                         </div>
                       )
                       : <h2 className="text-sm font-semibold text-cv-ink">Backlog</h2>}

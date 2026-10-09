@@ -23,6 +23,17 @@ export function JobMapMenuItem({ user, onPick, className = 'w-full flex items-ce
   );
 }
 
+/** A role's card: a link to its posting with the external-link icon; with no usable address (`href` null) a plain card that does not look clickable. */
+export function RoleRow({ href, children }) {
+  if (!href) return <div className="cv-card flex items-start gap-2 px-3 py-2">{children}</div>;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="cv-card flex items-start gap-2 px-3 py-2 hover:border-cv-brand">
+      {children}
+      <ExternalLink size={13} className="mt-1 text-cv-faint shrink-0" />
+    </a>
+  );
+}
+
 const SHOWN = 100;
 const LOADING = 'min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint';
 
@@ -136,13 +147,12 @@ export default function JobMap({ auth, sync }) {
             <ul className="space-y-1.5">
               {shown.slice(0, more).map((r, i) => (
                 <li key={`${r[ROW.url]}-${i}`}>
-                  <a href={roleHref(r[ROW.url]) || undefined} target="_blank" rel="noopener noreferrer" className="cv-card flex items-start gap-2 px-3 py-2 hover:border-cv-brand">
+                  <RoleRow href={roleHref(r[ROW.url])}>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-medium text-cv-ink">{r[ROW.title]}</span>
                       <span className="block text-xs text-cv-muted">{companies[r[ROW.company]]?.[0]} · {r[ROW.location] || 'Location not stated'} · {r[ROW.level]}{r[ROW.position] ? ` · ${r[ROW.position]}` : ''}</span>
                     </span>
-                    <ExternalLink size={13} className="mt-1 text-cv-faint shrink-0" />
-                  </a>
+                  </RoleRow>
                 </li>
               ))}
             </ul>

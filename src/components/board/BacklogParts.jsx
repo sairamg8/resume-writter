@@ -6,7 +6,7 @@ import { Button, Dialog, IconButton, Menu, ProgressBar, Select, TextArea, TextFi
 import { IssueTypeIcon, Points, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { StatusMenu } from '@/components/tracker/Lozenge';
 import { DEFAULT_SPRINT_DAYS } from '@/constants/boards';
-import { addDays, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
+import { addDays, isIssueDone, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
 import { epicProgress, epicsOf, pointsByCategory } from '@/utils/boardQuery';
 import { countLabel, formatShortDay } from '@/utils/uiFormat';
 import { openOnKey } from '@/utils/cardKeys';
@@ -44,6 +44,8 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
   const epic = issue.epicId ? board.issues.find((i) => i.id === issue.epicId) : null;
   const statuses = board.columns.map((c) => ({ id: c.id, name: c.title || 'Untitled', category: c.category }));
   const stop = { onClick: (e) => e.stopPropagation(), onKeyDown: (e) => e.stopPropagation(), onPointerDown: (e) => e.stopPropagation() };
+  // The backlog lists open issues only, so a done row cannot be moved there: it would leave its sprint and vanish from the page.
+  const places = isIssueDone(board, issue) ? targets.filter((t) => t.id !== null) : targets;
   const moveItem = (t) => {
     const here = (t.id ?? null) === (sprintId ?? null);
     // The section it is in (the ticked one) moves nothing: sent on, it put the row at that
@@ -81,7 +83,7 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
           label={`${key} actions`}
           items={[
             // Only where there is somewhere else to go: a Kanban backlog has one section (R4-SW-B-03).
-            ...(targets.length > 1 ? [{ id: 'move', label: 'Move to', items: targets.map(moveItem) }, { type: 'separator' }] : []),
+            ...(places.length > 1 ? [{ id: 'move', label: 'Move to', items: places.map(moveItem) }, { type: 'separator' }] : []),
             { id: 'del', label: 'Delete', danger: true, onSelect: onDelete },
           ]}
           trigger={<IconButton icon={MoreHorizontal} label={`${key} actions`} size="sm" tooltip={false} className="opacity-0 group-hover/row:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />}

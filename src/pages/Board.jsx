@@ -250,7 +250,7 @@ export function Board() {
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col md:min-h-0">
       <ProjectHeader
         board={board}
         actions={(
@@ -300,7 +300,7 @@ export function Board() {
             snap belongs on the element that scrolls: on the row inside it, it did nothing (B-13). It
             is off while a card is dragged, or dnd-kit's auto-scroll toward a far column would be
             pulled back to a snap point at each step. Swimlanes stay unsnapped, as they always were. */}
-        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8', !grouped && !active && 'snap-x snap-mandatory md:snap-none')}>
+        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 max-md:flex-none md:px-8', !grouped && !active && 'snap-x snap-mandatory md:snap-none')}>
           {!grouped ? (
             <>
               {noMatch && <NoMatch onClear={clearFilters} className="pb-3" />}

@@ -17,6 +17,13 @@ import {
 } from '@/utils/bulletOptimizer';
 import { copyText } from '@/utils/clipboard';
 
+// The "[X]%" / "[feature/system]" slots of the templates. Only these count: a bracket the user wrote
+// themselves ("[Confidential]") is their text.
+const PLACEHOLDERS = new Set(GOOGLE_XYZ_TEMPLATES.flatMap((t) => t.template.match(/\[[^\]]+\]/g) ?? []));
+
+/** The template slots still in `text`, in order, once each. */
+const unfilledSlots = (text) => [...new Set((text.match(/\[[^\]]+\]/g) ?? []).filter((slot) => PLACEHOLDERS.has(slot)))];
+
 export default function BulletOptimizerModal({ isOpen, onClose, initialText = '', onApply }) {
   const [text, setText] = useState(initialText);
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
@@ -38,6 +45,8 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   if (!isOpen) return null;
 
   const analysis = analyzeBullet(text);
+  // A template written into the résumé as it stands would print its slots ("by [X]%"): Apply waits until they are filled.
+  const unfilled = unfilledSlots(text);
   const { score, hasActionVerb, hasMetric, weakPhrases, suggestions } = analysis;
 
   /**
@@ -84,6 +93,7 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   }
 
   function handleApply() {
+    if (unfilled.length > 0) return;
     onApply(text);
     onClose();
   }
@@ -133,7 +143,7 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
             {!copied && <><Copy size={16} /> Copy</>}
           </button>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" rightIcon={ArrowRight} onClick={handleApply} disabled={!text.trim()}>Apply to Resume</Button>
+          <Button variant="primary" rightIcon={ArrowRight} onClick={handleApply} disabled={!text.trim() || unfilled.length > 0} title={unfilled.length > 0 ? 'Fill in the bracketed slots first' : undefined}>Apply to Resume</Button>
         </>
       )}
     >
@@ -156,6 +166,9 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
             placeholder="e.g. Engineered distributed cache system, reducing API latency by 45% for 2M+ active users."
             className="w-full text-xs sm:text-sm pointer-coarse:text-base p-3 border border-cv-hairline rounded-cv-card focus:outline-none focus:ring-2 focus:ring-cv-brand bg-cv-ground resize-none text-cv-ink"
           />
+          {unfilled.length > 0 && (
+            <p className="text-[11px] text-cv-warn">Type over {unfilled.join(' ')} with your own details to apply this.</p>
+          )}
           {beforeTemplate !== null && (
             <div className="flex items-center justify-between gap-3 text-[11px] text-cv-muted">
               <span>Template applied: your statement was replaced.</span>

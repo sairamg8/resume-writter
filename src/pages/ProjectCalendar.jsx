@@ -41,7 +41,7 @@ export function ProjectCalendar() {
   const title = new Date(`${month}T12:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col md:min-h-0">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics />
@@ -57,7 +57,7 @@ export function ProjectCalendar() {
         <h2 className="ml-1 whitespace-nowrap text-lg font-semibold text-cv-ink" aria-live="polite">{title}</h2>
         {undated > 0 && <span className="w-full text-[13px] text-cv-faint sm:ml-auto sm:w-auto">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
+      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
         <div role="grid" aria-label={`${title} calendar`} className="min-w-[48rem] overflow-hidden rounded-cv-control border border-cv-hairline">
           <div role="row" className="grid grid-cols-7 border-b border-cv-hairline bg-cv-sunken">
             {WEEKDAYS.map((d) => <div key={d} role="columnheader" className="px-2 py-1.5 text-[12px] font-semibold uppercase text-cv-muted">{d}</div>)}

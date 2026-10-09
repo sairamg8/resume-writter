@@ -15,9 +15,9 @@ import fs from 'node:fs';
 
 const read = (name) => fs.readFileSync(new URL(`../../src/pages/${name}`, import.meta.url), 'utf8');
 
-/** Every `flex [min-h-0] flex-1 flex-col` page root in the file. */
+/** Every `flex [min-h-0] flex-1 flex-col [md:min-h-0]` page root in the file. The own-scroller pages are window-high from md up only: on a phone their root grows with the page (tests/pdf/356). */
 function roots(text) {
-  return [...text.matchAll(/className="(flex (?:min-h-0 )?flex-1 flex-col)"/g)].map((m) => m[1]);
+  return [...text.matchAll(/className="(flex (?:min-h-0 )?flex-1 flex-col(?: md:min-h-0)?)"/g)].map((m) => m[1]);
 }
 
 // Pages whose body scrolls in <main> itself (the page header is a child of the root and must outlast the whole page).
