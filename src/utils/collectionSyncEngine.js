@@ -535,7 +535,9 @@ export function createCollectionSync({
       // (claimed) — a smaller write, which fits where the one before did.
       const onDisk = claimed(cloudVersions);
       if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk, revs: claimed(cloudRevs) });
-      changed(next);
+      // The list the store holds now, which is `next` but for what it made addressable on taking it (a project given a
+      // key of its own, a copy of one id): `next` queued the project as it was before, over the one that was kept.
+      changed(store.items());
       // Both sides changed these since the last sync: the older copies are kept beside them, and said.
       if (plan.conflicts.length) report.conflict?.(plan.conflicts.map((c) => store.label(plan.merged.find((x) => x.id === c.id))));
       if (!s.timer) settled();
