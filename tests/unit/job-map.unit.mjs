@@ -58,7 +58,7 @@ test('the menu item and the page wait for the server: no access means no button 
   const root = new URL('../../', import.meta.url).pathname;
   const hook = readFileSync(join(root, 'src/hooks/useJobMapAccess.js'), 'utf8');
   assert.match(hook, /useState\(null\)/, 'unknown until the server answers');
-  assert.match(hook, /catch|, \(\) => \{ if \(live\) setOk\(false\)/, 'a refusal is false');
+  assert.match(hook, /, \(\) => \{ if \(live\) setOk\('failed'\)/, 'a check that could not run is "failed", not a refusal (the page offers Retry, it does not redirect)');
   const bar = readFileSync(join(root, 'src/components/AuthBar.jsx'), 'utf8');
   assert.match(bar, /lazy\(\(\) => import\('@\/pages\/JobMap'\)/, 'the item and its check share the page lazy chunk, off the start-up path');
   assert.doesNotMatch(bar, /useJobMapAccess|lucide-react'.*Map/, 'the entry holds neither the hook nor the icon');

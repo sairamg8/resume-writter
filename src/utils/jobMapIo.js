@@ -6,10 +6,22 @@ import { chunkIds } from '@/utils/jobMapData';
 // when they need it). The documents live in `jobmap/*`; firestore.rules lets an account read and write
 // them only when the owner made it an access document (`jobmap_access/<email>`, in the console).
 
-/** True when this account may use the Job Map: the server answers the `jobmap/meta` read instead of refusing it. */
+/**
+ * The answer for a read of `jobmap/meta` that threw: false when the rules refused it (permission-denied: the
+ * account has no access document, a clean "no access"), else 'failed' (offline, unavailable, a timeout:
+ * the read did not say, so an allowed account must not be treated as refused).
+ */
+export function accessFromError(e) {
+  return e?.code === 'permission-denied' ? false : 'failed';
+}
+
+/**
+ * True when this account may use the Job Map: the server answers the `jobmap/meta` read instead of refusing it.
+ * False when it is refused (or there is no cloud); 'failed' when the read itself failed and nothing is known.
+ */
 export async function hasJobMapAccess() {
   if (!db) return false;
-  try { await getDoc(doc(db, 'jobmap', 'meta')); return true; } catch { return false; }
+  try { await getDoc(doc(db, 'jobmap', 'meta')); return true; } catch (e) { return accessFromError(e); }
 }
 
 // Firestore takes no nested arrays, so a chunk is one JSON string in a field (under the 1 MiB document limit).

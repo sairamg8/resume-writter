@@ -26,9 +26,28 @@ export function JobMapMenuItem({ user, onPick, className = 'w-full flex items-ce
 const SHOWN = 100;
 const LOADING = 'min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint';
 
+/**
+ * The page when the access check itself failed (offline, unavailable): nothing is known about the account, so it is
+ * neither sent to the Dashboard nor shown the data. A clean refusal still redirects.
+ */
+export function JobMapAccessFailed({ auth, sync, onRetry }) {
+  return (
+    <div className="min-h-screen bg-cv-ground text-cv-body pb-20 md:pb-0">
+      <AppBar active={null} account={<AuthBar {...auth} {...sync} compact />} />
+      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
+        <h1 className="text-2xl font-bold text-cv-ink mb-4">Job Map</h1>
+        <p className="text-sm text-cv-muted mb-3">Could not check whether this account can use the Job Map. Check your connection and try again.</p>
+        <Button variant="primary" onClick={onRetry}>Retry</Button>
+      </main>
+      <BottomTabBar />
+    </div>
+  );
+}
+
 /** Open roles across companies and countries, for the accounts the owner allowed (firestore.rules). Its data is loaded from the account, never shipped in the app. */
 export default function JobMap({ auth, sync }) {
-  const allowed = useJobMapAccess(auth.user);
+  const [attempt, setAttempt] = useState(0);
+  const allowed = useJobMapAccess(auth.user, attempt);
   const [meta, setMeta] = useState(null);       // null: not asked yet; false: nothing loaded
   const [country, setCountry] = useState('IN');
   const [rows, setRows] = useState([]);
@@ -59,6 +78,7 @@ export default function JobMap({ auth, sync }) {
   if (auth.authLoading) return <div className={LOADING}>Loading…</div>;
   if (!auth.user || allowed === false) return <Navigate to="/" replace />;
   if (allowed === null) return <div className={LOADING}>Loading…</div>;
+  if (allowed === 'failed') return <JobMapAccessFailed auth={auth} sync={sync} onRetry={() => setAttempt((n) => n + 1)} />;
 
   async function onFile(e) {
     const picked = e.target.files?.[0];
