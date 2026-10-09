@@ -793,3 +793,32 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
     } finally { restore(); await page.close(); }
   });
 });
+
+// CYC-B: after sign-out the Documents page is empty (the account's documents left the browser with
+// it) and said nothing about it. The empty state now carries a one-line hint to sign in, shown only
+// to someone who is signed out; a signed-in account with no documents is just new.
+describe('the dashboard: the empty page signed out (CYC-B)', () => {
+  const HINT = 'Documents saved to your account? Sign in to see them.';
+  const hinted = (page) => page.all().some((el) => el.tagName === 'P' && text(el) === HINT);
+
+  it('signed out with no documents: the empty state says to sign in to see the account\'s documents', async () => {
+    const page = await dashboard();
+    try {
+      assert.ok(page.has('H2', 'No resumes yet'));
+      assert.ok(hinted(page), 'no hint on the empty page');
+      assert.ok(page.button('Create Resume'), 'the way to start a new one stays');
+    } finally { await page.close(); }
+  });
+
+  it('signed in with no documents, or signed out with some: no hint', async () => {
+    const empty = await dashboard([], { user: DEMO });
+    try {
+      assert.ok(empty.has('H2', 'No resumes yet'));
+      assert.ok(!hinted(empty));
+    } finally { await empty.close(); }
+    const some = await dashboard(samples().slice(0, 1));
+    try {
+      assert.ok(!hinted(some));
+    } finally { await some.close(); }
+  });
+});

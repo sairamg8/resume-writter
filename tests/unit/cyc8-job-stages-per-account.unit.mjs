@@ -57,15 +57,16 @@ test('removing a stage while signed in changes only that account\'s list', async
   assert.deepEqual(saved(KEY), ['Browser Chat']);
 });
 
-test('an account with no list yet starts from the browser\'s own, and writes nothing until it changes a stage', async () => {
+test('an account with no list yet starts empty: the browser\'s own names are not carried into it (CYC-B)', async () => {
   localStorage.setItem(KEY, JSON.stringify(['Browser Chat']));
   const stages = await openApp();
-  assert.deepEqual(stages.stagesSnapshot('A'), ['Browser Chat']);
+  assert.deepEqual(stages.stagesSnapshot('A'), [], 'before: the first open of a new account showed the previous names once');
   assert.equal(localStorage.getItem(`${KEY}_A`), null, 'reading writes nothing');
   stages.addCustomStage('Culture Round');
-  assert.deepEqual(saved(`${KEY}_A`), ['Browser Chat', 'Culture Round']);
+  assert.deepEqual(saved(`${KEY}_A`), ['Culture Round']);
   assert.deepEqual(saved(KEY), ['Browser Chat'], 'the browser\'s list is left as it was');
-  assert.deepEqual(stages.stagesSnapshot('B'), ['Browser Chat'], 'a second account starts from the browser\'s list, not the first account\'s');
+  assert.deepEqual(stages.stagesSnapshot('B'), [], 'a second account starts empty too');
+  assert.deepEqual(stages.stagesSnapshot(null), ['Browser Chat'], 'signed out, the browser\'s list is still its own');
 });
 
 test('the list is the same array on every read of one account, so React re-renders on a change only', async () => {
