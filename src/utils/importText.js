@@ -927,6 +927,9 @@ function contactOf(segment) {
   return null;
 }
 
+/** The words a document titles itself with over the name: "Curriculum Vitae", "Résumé", "CV" (resumeFromText). */
+const DOCUMENT_TITLE = /^(?:curriculum\s+vit(?:ae|a)|r[eé]sum[eé]|cv|c\.v\.)\s*[:.]?$/iu;
+
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
 const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
 
@@ -2028,6 +2031,10 @@ export function resumeFromText(input) {
     lines.push({ ...l, gap });
     gap = false;
   }
+
+  // A title over the name — "Curriculum Vitae", "Résumé", "CV", how most UK and European CVs open — names
+  // no one: it was the name, and the real one the job title. It is the document's own, and goes.
+  while (lines.length > 1 && DOCUMENT_TITLE.test(lines[0].text)) lines.shift();
 
   // The name: the file's own, else the first line.
   const nameAt = Math.max(0, lines.findIndex((l) => l.hint === 'name'));
