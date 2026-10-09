@@ -1,5 +1,8 @@
+import { useContext } from 'react';
 import { Text as ReactPdfText } from '@react-pdf/renderer';
 import { breakHugeChildren } from './splitHugeBlock';
+import { breakToFit } from './pdfMeasure';
+import { ColumnRoom } from './roomContext';
 
 let cut = breakHugeChildren;
 
@@ -29,6 +32,23 @@ export function _setHugeTextCutForTest(fn) {
  * and any children with an element in them, reach react-pdf as they always did: the same props.
  */
 export function Text(props) {
+  const room = useContext(ColumnRoom);
   const children = cut(props.children);
-  return <ReactPdfText hyphenationPenalty={10000} {...props} {...(children === props.children ? null : { children })} />;
+  // In a column or a Grids cell (ColumnRoom), a word wider than the whole cell breaks inside it
+  // (breakToFit) instead of running out of it over the next cell or the page's margin: a 29-letter
+  // German job title in a 3-column grid, a URL in a 2-column one (H3-459). A callback the caller
+  // gives (the Sidebar's) stays; so does a Text with no size of its own (it takes its parent's).
+  const fit = !room || props.hyphenationCallback ? undefined : fitIn(room, props.style);
+  return <ReactPdfText hyphenationPenalty={10000} {...props} {...(fit ? { hyphenationCallback: fit } : null)} {...(children === props.children ? null : { children })} />;
+}
+
+/**
+ * `breakToFit` for a text in `style` whose first character is `inset` pt in from the edge of `room`
+ * (a list item's text, after its marker), or nothing when the style has no font size or no room.
+ */
+export function fitIn(room, style, inset = 0) {
+  const flat = Array.isArray(style) ? Object.assign({}, ...style.flat(Infinity).filter(Boolean)) : style;
+  if (!room || !(flat?.fontSize > 0) || !(room.width - inset > 0)) return undefined;
+  const { fontSize, fontWeight, letterSpacing } = flat;
+  return breakToFit({ fontFamily: flat.fontFamily || room.fontFamily, fontSize, fontWeight, letterSpacing }, room.width - inset);
 }

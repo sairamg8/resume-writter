@@ -265,8 +265,10 @@ export function buildCoverLetter(resume) {
   // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062), the
   // body's lists behind Design → Lists' glyph (R2-147).
   if (hasRichText(cl.body)) {
-    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links: linkLook(s.linkStyle, s.accentColor) }));
-    paras.push(line([], pt(16)));
+    // The last paragraph and the gap under it keep with the closing, so a page never opens with the
+    // closing alone (as the PDF's, H3-458); an earlier paragraph breaks where Word breaks it.
+    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links: linkLook(s.linkStyle, s.accentColor) }, null, {}, undefined, { keepNext: true }));
+    paras.push(line([], pt(16), { keepNext: true }));
   }
 
   // Closing and signature stay together on one page.
