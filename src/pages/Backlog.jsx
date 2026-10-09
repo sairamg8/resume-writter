@@ -183,7 +183,7 @@ export function Backlog() {
                     {sprint
                       ? (
                         <div className="min-w-0 max-w-full">
-                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-cv-ink" inputClassName="pointer-coarse:text-base" />
+                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-cv-ink [overflow-wrap:anywhere]" inputClassName="pointer-coarse:text-base" />
                         </div>
                       )
                       : <h2 className="text-sm font-semibold text-cv-ink">Backlog</h2>}
