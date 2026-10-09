@@ -579,7 +579,15 @@ async function replay(ops, seed, trace = false) {
 /** The script of a seed as data (who, what, which one): replayable, and shorter when steps are left out. */
 function generate(seed) {
   const rand = random(seed);
-  return Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
+  const ops = Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
+  if (seed % 20 === 7) {
+    // One in twenty scripts adds 405 jobs to a device and, a few steps on, clears all of them (the second request failing in
+    // every other of these): more deletions than a request takes.
+    const at = 20 + Math.floor(rand() * 30);
+    ops[at] = { ...ops[at], roll: 0.966 };
+    ops[at + 6] = { ...ops[at + 6], d: ops[at].d, roll: seed % 40 === 7 ? 0.974 : 0.97 };
+  }
+  return ops;
 }
 
 /** The steps of `ops` that matter: left out one at a time for as long as the script still fails. */
@@ -614,5 +622,10 @@ test(`three devices, two accounts, ${SEEDS} random scripts: they converge and no
     failures.push(`seed ${seed} (${small.length} steps):\n  ${left.join('\n  ')}\n  script:\n    ${text}`);
   }
   t.diagnostic(`covered: ${JSON.stringify(covered)}`);
+  // A wide run reached what it is for.
+  if (!ONLY.length && SEEDS >= 600) {
+    assert.ok(covered.bigClears > 0 && covered.failingBigClears > 0, `no script cleared more than a request takes: ${JSON.stringify(covered)}`);
+    assert.ok(covered.tabs > 0 && covered.preconditions > 0 && covered.resurrectionChecks > 0, `a kind of step was never reached: ${JSON.stringify(covered)}`);
+  }
   assert.equal(failed, 0, `${failed} of ${SEEDS} scripts failed\n${failures.join('\n\n')}`);
 });
