@@ -4,6 +4,7 @@ import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
 import { splitHugeBlocks } from './splitHugeBlock';
+import { ColumnRoom, fitsPage } from './keepTogether';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -18,8 +19,9 @@ const MARKER_GAP = 3;     // pt between a list marker and its text
 const PARA_GAP = 2;       // pt between blocks
 const LIST_GAP = 1.5;     // pt between two list items
 // A list item this short is kept on one page: it never splits, so its marker can never be left
-// behind at the bottom of a page while its text starts the next one. Longer items (far beyond
-// a page's worth in any column) split normally rather than overflow the page.
+// behind at the bottom of a page while its text starts the next one. Longer items split normally
+// rather than overflow the page — and so does a shorter one that is taller than a page in its own
+// column (keepTogether.js: fitsPage), a narrow Grids cell or the Sidebar's dark column at a large type size.
 const KEEP_TOGETHER_CHARS = 1500;
 // Text (./PdfText) never breaks a line inside a word, so a formatting change mid-word
 // ("pre<b>view</b>") cannot draw a hyphen that is not in the text (FIDB-56).
@@ -70,6 +72,7 @@ function markerWidth(chars, fontSize) {
  */
 export function PdfRichText({ html, style = {}, breaks }) {
   const bulletStyle = useContext(BulletStyle);
+  const room = useContext(ColumnRoom);
   const blocks = splitHugeBlocks(parseRichText(html)); // a paste of 200 000 characters: typing-freeze 7b
   if (!blocks.length) return null;
   const { marginTop, marginBottom, ...textStyle } = style;
@@ -108,7 +111,12 @@ export function PdfRichText({ html, style = {}, breaks }) {
     const width = markerWidth(longest[`${block.indent}:${isBullet(block.marker)}`], fontSize);
     textStart[block.indent] = left + width;
     textStart.length = block.indent + 1;
-    const length = block.runs.reduce((n, r) => n + r.text.length, 0);
+    const text = block.runs.map((r) => r.text).join('');
+    const length = text.length;
+    // Kept whole only while it can fit a page: `across` is the width the text has in this column.
+    const keeps = (across) => length <= KEEP_TOGETHER_CHARS && (!room || fitsPage({
+      text, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: room.width - left - across, height: room.height,
+    }));
     // The glyph Design → Lists picked; the column is as wide whatever it draws, so a style never
     // moves the text. None draws nothing there: the text keeps its place by its own margin.
     const glyph = listMarker(block.marker, bulletStyle);
@@ -117,7 +125,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
       // marker leads its text on one line, placed together — '• Cut costs 20%' — as Word places a
       // centred list paragraph with its bullet. A marker column would leave it at the left margin.
       return (
-        <View key={i} wrap={length > KEEP_TOGETHER_CHARS} style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}>
+        <View key={i} wrap={!keeps(0)} style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}>
           <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left)}>
             {glyph ? `${glyph} ` : null}
             <Runs runs={block.runs} color={color} />
@@ -128,7 +136,7 @@ export function PdfRichText({ html, style = {}, breaks }) {
     return (
       <View
         key={i}
-        wrap={length > KEEP_TOGETHER_CHARS}
+        wrap={!keeps(width)}
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
         {glyph ? <Text style={{ ...textStyle, textAlign: 'left', width }}>{glyph}</Text> : null}

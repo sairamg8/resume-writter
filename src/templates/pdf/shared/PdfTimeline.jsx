@@ -6,6 +6,7 @@ import { capMiddle, lineBox, textWidth, wrappedLines } from './pdfMeasure';
 import { EndRow, endField, endRowLines, fieldGap, getDateColor, headPresence, headerKeep, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { SPACER, getColumnWidth, gridRows } from './PdfSections';
 import { contentWidthPt } from './PdfPage';
+import { ColumnRoom, columnRoom } from './keepTogether';
 
 /**
  * The Timeline template's rail (TimelineTemplatePDF.jsx): a vertical accent line down the left of a
@@ -65,8 +66,9 @@ function Dot({ settings, firstLine }) {
  * through it). A rendered <View> is unwrapped into it after SPACER, as RenderColGrid's entries are:
  * the entry's header then has a previous sibling, which its minPresenceAhead needs to keep it with
  * the lines under it — as the first child of its own View it was left at the foot of a page alone.
+ * `room` (columnRoom): the rail's text column, for PdfRichText to keep a list item whole only while a page can hold it.
  */
-function railEntry(el, { padTop = 0, width, settings, key }) {
+function railEntry(el, { padTop = 0, width, settings, key, room }) {
   const rail = {
     ...(width ? { width } : {}), paddingTop: padTop || undefined,
     marginLeft: RAIL_X - RAIL_W / 2, borderLeftWidth: RAIL_W, borderLeftColor: railColor(settings?.accentColor),
@@ -76,7 +78,7 @@ function railEntry(el, { padTop = 0, width, settings, key }) {
   return (
     <View key={key} style={[rail, ...own]}>
       {SPACER}
-      {el?.type === View ? el.props.children : el}
+      <ColumnRoom.Provider value={room}>{el?.type === View ? el.props.children : el}</ColumnRoom.Provider>
     </View>
   );
 }
@@ -89,11 +91,12 @@ function railEntry(el, { padTop = 0, width, settings, key }) {
  * the right entry printed before the left one (R2-048).
  */
 export function TimelineEntries({ items, cols = 1, gap, settings, renderItem, title = null }) {
-  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => railEntry(renderItem(item, i), { width, settings, key: c }) });
+  const room = columnRoom(settings, railTextWidth(settings, cols));
+  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => railEntry(renderItem(item, i), { width, settings, key: c, room }) });
   return (
     <>
       {title}
-      {items.map((item, i) => railEntry(renderItem(item, i), { padTop: i ? gap : 0, settings, key: i }))}
+      {items.map((item, i) => railEntry(renderItem(item, i), { padTop: i ? gap : 0, settings, key: i, room }))}
     </>
   );
 }
