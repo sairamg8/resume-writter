@@ -8,13 +8,14 @@ import { createPath, parsePath } from 'react-router-dom';
 
 /**
  * `router` (a data router) whose `navigate` replaces the current entry when it is given the address it
- * stands at. Only an address as text and without its own state: a different search or hash, or a state
- * the page reads (a marker for Back), is a different place and still pushes. Returns `router`.
+ * stands at (with the state it is given, if any). Only an address as text: a different search or hash is a
+ * different place and still pushes, and so does an address as an object (a page that builds one decides
+ * for itself). Returns `router`.
  */
 export function replaceSameAddress(router) {
   const navigate = router.navigate.bind(router);
   router.navigate = (to, options) => {
-    if (typeof to !== 'string' || options?.replace === true || options?.state !== undefined) return navigate(to, options);
+    if (typeof to !== 'string' || options?.replace === true) return navigate(to, options);
     const at = router.state.navigation?.location ?? router.state.location;
     return navigate(to, createPath(parsePath(to)) === createPath(at) ? { ...options, replace: true } : options);
   };

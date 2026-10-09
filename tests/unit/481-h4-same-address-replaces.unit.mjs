@@ -46,13 +46,14 @@ test('a link to another page, or the same page with another search or hash, stil
   assert.equal(at(router), '/');
 });
 
-test('a navigation that carries a state, an explicit replace, a number or an address that is not text is left as it was asked', async () => {
+test('a second press that carries a state replaces too, with the state; an explicit replace, a number or an address that is not text are left as asked', async () => {
   const router = open('/');
-  await router.navigate('/boards', { replace: false });
-  await router.navigate('/boards', { replace: false, state: { createFromList: true } });
-  assert.deepEqual(router.state.location.state, { createFromList: true });
+  await router.navigate('/jobs/a', { replace: false, state: { fromTracker: true } });
+  await router.navigate('/jobs/a', { replace: false, state: { fromTracker: true } });
+  assert.deepEqual(router.state.location.state, { fromTracker: true });
   await back(router);
-  assert.equal(at(router), '/boards', 'a state is a different place: it was pushed');
+  assert.equal(at(router), '/', 'before: the second press of a double click on a card pushed the job twice');
+  await router.navigate('/boards', { replace: false });
   await router.navigate('/boards', { replace: true });
   await router.navigate({ pathname: '/boards', search: '?issue=A-1' });
   await back(router);

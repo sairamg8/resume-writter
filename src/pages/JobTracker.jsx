@@ -138,7 +138,8 @@ export function JobTracker({ store }) {
     { label: 'Offers', value: counts.offers },
   ];
   const filtering = Boolean(search.trim() || filterStatus);
-  const open = id => navigate(`/jobs/${encodeURIComponent(id)}`);
+  // The entry is marked: deleting the job from its page steps back to this one (JobDetail), not to a job that is gone.
+  const open = id => navigate(`/jobs/${encodeURIComponent(id)}`, { state: { fromTracker: true } });
 
   return (
     <div className="flex flex-1 flex-col">
