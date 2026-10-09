@@ -31,6 +31,6 @@ describe('probe 7', () => {
     out.push(`SCORE ${a.totalScore} ${a.grade}`);
     for (const [k, c] of Object.entries(a.categories)) out.push(`CAT ${k} ${c.score}/${c.max}: ${c.items.map((i) => `${i.id}:${i.status}`).join(' ')}`);
     out.push(`REC ${a.recommendations.map((x) => (typeof x === 'string' ? x : x.text || x.title || JSON.stringify(x)).slice(0, 90)).join(' | ')}`);
-    assert.fail(out.join('\n'));
+    assert.fail(out.join(' ¦ '));
   });
 });
