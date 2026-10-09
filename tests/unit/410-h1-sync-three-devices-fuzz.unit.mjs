@@ -240,7 +240,8 @@ async function replay(ops, seed, trace = false) {
     }
   };
   const forget = (d, id) => {
-    for (const k of keysOf(d, id)) if (!undoneKeys.has(k) && [...(editors.get(k) ?? [])].every((i) => i === d.index)) gone.add(k);
+    const uid = d.meta.read().uid; // a job deleted before any account had this browser's list is no account's deletion
+    for (const k of keysOf(d, id)) if (uid && !undoneKeys.has(k) && [...(editors.get(k) ?? [])].every((i) => i === d.index)) gone.add(k);
     else gone.delete(k);
   };
   const stamp = (d) => { tick += 1; return 1_000_000 + tick * 100 + SKEW[d.index]; };
