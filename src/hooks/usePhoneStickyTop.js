@@ -14,18 +14,30 @@ export function followPhoneStickyTop(box) {
   const main = box.closest?.('main');
   if (!main || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
   const phone = window.matchMedia(PHONE);
+  let shown = null;
   const place = () => {
     const past = phone.matches ? main.getBoundingClientRect().top - box.getBoundingClientRect().top : 0;
-    box.style?.setProperty('--stuck', `${Math.max(0, Math.round(past))}px`);
+    // Rounded down: a header a fraction of a pixel under the top of <main> shows a sliver of the rows scrolling by above it.
+    // Written only when it changes: the property is inherited, so each write restyles every row below the box.
+    const value = `${Math.max(0, Math.floor(past))}px`;
+    if (value === shown) return;
+    shown = value;
+    box.style?.setProperty('--stuck', value);
   };
   place();
   main.addEventListener('scroll', place, { passive: true });
   window.addEventListener('resize', place);
   phone.addEventListener('change', place);
+  // The page above the box can change height with no scroll: a notice appearing, the toolbar's filters opening, a title
+  // wrapping to a second line. The box moves and nothing scrolls, so the value read at the last scroll would hold the header off the top.
+  const page = box.parentElement;
+  const watch = page && typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+  watch?.observe(page);
   return () => {
     main.removeEventListener('scroll', place);
     window.removeEventListener('resize', place);
     phone.removeEventListener('change', place);
+    watch?.disconnect();
   };
 }
 
