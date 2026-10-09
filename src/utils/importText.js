@@ -1002,6 +1002,19 @@ const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate
 /** A header piece's fields: "Company — Role", "Company - Role". */
 const fieldsOf = (text) => text.split(/\s+[—–]\s+|\s+-\s+/).map((s) => s.trim()).filter(Boolean);
 
+/**
+ * A certification's level, which a dash sets after its name: "AWS Certified Solutions Architect – Associate",
+ * "AWS Certified Data Analytics – Specialty". It is part of the name, not the issuer the dash otherwise
+ * parts it from ("PMP – Project Management Institute"); it was the issuer, and the name lost its level.
+ */
+const CERT_LEVEL = /^(?:associate|professional|specialty|speciality|foundational|foundation|practitioner|expert|advanced|intermediate|fundamentals?|essentials?|entry[- ]level)$/i;
+/** `fieldsOf`, for a certification's line: a level after the name stays with it. */
+function certFields(text) {
+  const f = fieldsOf(text);
+  if (f.length < 2 || !CERT_LEVEL.test(f[1])) return f;
+  return [text.slice(0, text.indexOf(f[1], f[0].length) + f[1].length), ...f.slice(2)];
+}
+
 /** "GPA: 3.8", "ID: X", "Link: …", "Technologies: …", "Expires: …": a field an export prints by name. */
 const META = /^(gpa|cgpa|grade|id|credential id|credential|license|link|url|website|technologies|tech stack|tech|stack|tools|built with|expires|expiry|expiration|valid until|location)\s*:?\s+(.+)$/i;
 const META_KEYS = { cgpa: 'gpa', grade: 'gpa', 'credential id': 'id', credential: 'id', license: 'id', url: 'link', website: 'link', 'tech stack': 'technologies', tech: 'technologies', stack: 'technologies', tools: 'technologies', 'built with': 'technologies', expiry: 'expires', expiration: 'expires', 'valid until': 'expires' };
@@ -1206,7 +1219,7 @@ function readHeader(type, header) {
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
       // field of study and place a line each, and that place is read by the education's own rule (entryOf).
       if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
-      out.parts.push(...(p === whole ? line.fields : fieldsOf(p)));
+      out.parts.push(...(p === whole ? line.fields : type === 'certifications' ? certFields(p) : fieldsOf(p)));
     });
     const gave = out.parts.slice(titled);
     above = (JOB.has(type) ? inlinePair(gave) : gave).length;
