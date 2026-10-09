@@ -84,15 +84,18 @@ async function replay(ops, trace = false) {
   let serial = 0;
   const owners = new Map(); // token → the accounts it was typed for
   const pending = [[], [], []]; // typed while signed out: for whichever account the device signs in as next
-  const deleted = new Set(); // marks of the edits that were in a job deleted in the script
+  const deleted = new Set(); // marks of the edits that were in a job deleted in the script, and of those typed on one
+  const deletedIds = new Set(); // ids of jobs deleted in the script
+  const jobOf = new Map(); // mark → the id of the job it was typed on
   const stamp = (d) => { tick += 1; return 1_000_000 + tick * 100 + SKEW[d.index]; };
   const say = (text) => script.push(text);
   const own = (token, account) => owners.set(token, new Set([...(owners.get(token) ?? []), account]));
   // A job belongs to the account its browser's list belongs to (the sync record names it once an account has synced);
   // until then it is the browser's own, and goes to whichever account syncs it first.
-  const mark = (d, fixed) => {
+  const mark = (d, id, fixed) => {
     serial += 1;
     const token = fixed ?? serial;
+    jobOf.set(token, id);
     const account = d.meta.read().uid;
     if (account) own(token, account);
     else pending[d.index].push(token);
@@ -122,7 +125,7 @@ async function replay(ops, trace = false) {
   }
   // Device 0 starts with two jobs; the others join the account.
   devices[0].account = 'A';
-  devices[0].set([job('j1', mark(devices[0]), stamp(devices[0])), job('j2', mark(devices[0]), stamp(devices[0]))]);
+  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0]))]);
   say('d0 starts with j1, j2');
   for (const d of devices) await signIn(d, 'A');
 
@@ -141,25 +144,26 @@ async function replay(ops, trace = false) {
     if (roll < 0.20) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
-      const text = mark(d);
+      const text = mark(d, target.id);
       say(`d${d.index} edits ${target.id} ${text}`);
       d.set(d.list.map((x) => (x.id === target.id ? { ...x, notes: `${x.notes} ${text}`, updatedAt: stamp(d) } : x)));
     } else if (roll < 0.28) {
       const id = `n${serial + 1}`;
-      const text = mark(d);
+      const text = mark(d, id);
       say(`d${d.index} adds ${id} ${text}`);
       d.set([...d.list, job(id, text, stamp(d))]);
     } else if (roll < 0.31) {
       const k = pick(IMPORTED);
       const id = `imp${k}`;
       if (d.list.some((x) => x.id === id)) continue;
-      const text = mark(d, 1000 + k);
+      const text = mark(d, id, 1000 + k);
       say(`d${d.index} imports ${id}`);
       d.set([...d.list, job(id, text, 50)]);
     } else if (roll < 0.36) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
       say(`d${d.index} deletes ${target.id}`);
+      deletedIds.add(target.id);
       for (const [, t] of target.notes.matchAll(/\[(\d+)\]/g)) deleted.add(Number(t));
       d.lastDeleted = { job: target, index: d.list.indexOf(target), account: d.account };
       d.set(d.list.filter((x) => x.id !== target.id));
@@ -253,7 +257,7 @@ async function replay(ops, trace = false) {
     const every = Object.values(account).join(' ');
     for (const [t, accounts] of owners) {
       const here = every.includes(`[${t}]`);
-      if (accounts.has(acct) && !here && !deleted.has(t)) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
+      if (accounts.has(acct) && !here && !deleted.has(t) && !deletedIds.has(jobOf.get(t))) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
       if (!accounts.has(acct) && here) problems.push(`${acct}: the edit [${t}], typed for the other account, is in this one`);
     }
   };
