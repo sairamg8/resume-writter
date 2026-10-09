@@ -53,9 +53,12 @@ async function editor(r) {
       updatePersonal: (key, value) => writes.push(['personal', key, value]),
       toggleFieldVisibility: (key) => writes.push(['hide', key]),
       clearSettings: (keys) => writes.push(['clear', keys]),
+      // As useResumeStore's updateSetting: a function is applied to the key's value as it is when the write
+      // happens (the editor writes the icons that way, so a pick never replaces an icon changed since).
       updateSetting: (key, value) => {
-        writes.push([key, value]);
-        setHeld((prev) => ({ ...prev, settings: { ...prev.settings, [key]: value } }));
+        const resolve = (settings) => (typeof value === 'function' ? value(settings?.[key]) : value);
+        writes.push([key, resolve(current.settings)]);
+        setHeld((prev) => ({ ...prev, settings: { ...prev.settings, [key]: resolve(prev.settings) } }));
       },
     });
   }
