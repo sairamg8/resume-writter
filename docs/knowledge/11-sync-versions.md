@@ -81,7 +81,7 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
 
 ## The final hunt (H1): what changed after the review
 
-Each fix has its own test, `tests/unit/400` to `418-h1-sync-*`; `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
+Each fix has its own test, `tests/unit/400` to `428-h1-sync-*`; `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
 three devices on two accounts (edits, additions, imports, deletions with Undo, moves, offline spells, sign-outs, account
 switches, reloads, a browser's data cleared, failing reads and writes, slow and fast clocks, slow server calls that let the
 syncs of different devices overlap) and checks that they converge and that nothing typed is lost or leaks to the other
@@ -117,6 +117,35 @@ account; a failing script is cut down to the steps that matter and printed with 
 - A first sync reads the deleted list again when an item it read is on it: a write between the two reads (an edit that brings a
   deleted item back) made it look deleted for good, and the edit was deleted from the account (418).
 
+- (After the review of the fixes above; tests `419` to `428`.) A deletion request that landed after a start replaced the sync
+  that sent it is recorded as deleted all the same, so an Undo made then keeps the jobs (419); a write that landed so is
+  recorded for an item deleted here meanwhile too, or it came back as a job never seen here (420).
+- A flush reads the ids of its conflict copies as well: another device holding one, or writing it between the read and the
+  write, was overwritten with the copy. Another content takes the next free id, a copy the account holds already is not made
+  again, and the rest are expected absent when the write lands (421). The check of absent copies covers a write of up to 400
+  items (a transaction holds 500 writes and the lists take three), not 100 (423).
+- A stale error keeps the SDK's own code (`failed-precondition`, `already-exists`) as its `cause`, in its message and in the
+  line logged when the sync gives up for the moment (422).
+- A deletion this browser sent stays in its record (as version `DELETED`) at the next first sync too, while the account lists the id
+  as deleted, up to 2,000 of them: an Undo made after a restart was a job "typed before signing in" whose id the account
+  deleted, and was dropped (424). One kept aside at a sign-out is not (a deletion already sent is not kept aside, as before).
+- A job deleted while the first sync's batch is on its way keeps the copy it was deleted from as its base in the record, like an
+  edit typed then: claimed as the account's newer copy, the deletion the sync queued deleted another device's edit the user
+  had never seen (425).
+- A first sync waits (a few seconds at most, `cloudTimeout`) for what an older line left on its way, so its read of the cloud
+  comes after the request has landed: read before, a deletion landing after an Undo left the record claiming jobs the cloud no
+  longer had, and the next sync dropped them (426).
+- A flush judges the copies it read by the record as it was before the read: two tabs share the record, and the other tab's
+  flush landing during the read left the record ahead of the copy, which counted as a move and replaced the newer edit (427).
+- An untouched demo put back by Undo yields to the account's edit of it, as one never synced here does (428).
+
+The three-device script (`410`) now also checks that a job deleted in the script, not put back by Undo and not touched on
+another device, is gone from every device and the account; that the conflict copies are no more than the edits made and no two
+jobs hold one content; and that every device shows the jobs in the account's order. It covers "Clear all" of 405 jobs (with the
+second request failing), `failed-precondition` from the SDK, and a second tab of one browser. Its knobs are `H1_FUZZ_SEEDS`,
+`H1_FUZZ_STEPS` and `H1_FUZZ_ONLY` (seeds to run alone); the CI `tests` input passes them as
+`--import=data:text/javascript,process.env.H1_FUZZ_SEEDS=3000 tests/unit/410-h1-sync-three-devices-fuzz.unit.mjs`.
+
 Left as they were, and why:
 
 - The whole list is read at every first sync (each time a tab is shown after ten seconds, going online), and the transaction
@@ -129,5 +158,9 @@ Left as they were, and why:
   version the record holds (the record cannot tell it changed): both need a base the record does not keep.
 - The first account to sync a list nobody owned (typed signed out) takes it; a sync a start replaced may already have sent it to
   the account just left. Nothing of that account's own data goes to the other.
+- A project's key given on taking a list (two projects that met with one key) is a write like an edit's: sent after another device
+  deleted the project, it brings it back. The store makes the key, not the user; the sync cannot tell the two.
+- A conflict copy a user deleted may be made again by a device that settles the same conflict later (its id follows the
+  conflict).
 - Stage names: a stage removed on one device and added again on another before either sees the other is settled by which
   request reaches the cloud last; a tombstone list over 100 names is replaced whole by the device that removes the 101st.
