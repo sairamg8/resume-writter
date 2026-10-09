@@ -132,5 +132,10 @@ test('two tabs flushing the same conflict together make one copy, not two', asyn
   assert.equal(cloudJobs(cloud).length, 2, 'the job and ONE copy in the account');
   assert.equal(cloud.doc('users/A/jobs/j1').role, 'Staff Engineer');
   assert.equal(one.ids().length, 2);
+  // The tab that wrote second found the first's write in the account (its own write was refused as stale, cyc-D) and had
+  // nothing left to make: it holds the copy once it reads the account again, as a tab shown again does.
+  two.sync.start(A);
+  await settle(10);
   assert.deepEqual(one.ids(), two.ids());
+  assert.equal(cloudJobs(cloud).length, 2, 'still one copy');
 });
