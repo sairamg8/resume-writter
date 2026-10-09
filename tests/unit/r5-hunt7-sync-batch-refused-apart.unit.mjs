@@ -43,6 +43,15 @@ function strictFs(cloud) {
       };
       return batch;
     },
+    // A write that checks the copies it replaces (or the ones that are not there) is a transaction: its set refuses the same.
+    runTransaction: (db, update) => cloud.fs.runTransaction(db, (tx) => update({
+      get: (ref) => tx.get(ref),
+      set(ref, value, options) {
+        if (nestedList(value)) throw invalid('Function Transaction.set() called with invalid data. Nested arrays are not supported.');
+        return tx.set(ref, value, options);
+      },
+      delete: (ref) => tx.delete(ref),
+    })),
   };
 }
 

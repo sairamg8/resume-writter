@@ -37,6 +37,9 @@ const STALE_TRIES = 3;
  */
 const DELETE_CHUNK = 400;
 
+/** How many items a write can be for its absent copies to be checked too (expectOf). */
+const ABSENT_GUARD = 100;
+
 /** A write that kept finding the cloud's copies changed: tried again later, as any temporary failure is. */
 const keptChanging = () => Object.assign(new Error('The cloud kept changing under this sync.'), { code: 'aborted' });
 
@@ -161,12 +164,15 @@ export function createCollectionSync({
 
   /**
    * What a write of `ids` must still find in the cloud (collectionSyncIo.commit's `expect`): each copy as the sync
-   * read it (`stamps`: id → stamp). One that was not there is expected not to be only for the ids two browsers can both
-   * make (the demo's): the other items are new under an id nobody else has.
+   * read it (`stamps`: id → stamp). One that was not there is expected not to be for the ids two browsers can both
+   * make (the demo's), and for those of `absent` (a flush's reads that found nothing) when the write is a few: an
+   * imported file's jobs have the same ids on every browser that imports it, and another device writing one between
+   * the read and here was overwritten. A large write (an import of hundreds) is left unchecked for those — each would
+   * be a read more in a transaction that holds 500 writes at most — as it is for any id nobody else can make.
    */
-  const expectOf = (ids, stamps) => new Map(ids.flatMap((id) => {
+  const expectOf = (ids, stamps, absent = []) => new Map(ids.flatMap((id) => {
     if (stamps.has(id)) return [[id, stamps.get(id)]];
-    return (store.seedIds ?? []).includes(id) ? [[id, null]] : [];
+    return (store.seedIds ?? []).includes(id) || (ids.length <= ABSENT_GUARD && absent.includes(id)) ? [[id, null]] : [];
   }));
   /** `expect` for `ids` only. */
   const only = (expect, ids) => new Map(ids.filter((id) => expect.has(id)).map((id) => [id, expect.get(id)]));
@@ -669,7 +675,8 @@ export function createCollectionSync({
         ? [...prev, ...lacking(prev)].map((x) => x.id) : null;
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
       // Written only if the copies it was decided from are still the cloud's.
-      const expect = expectOf([...sets.map((x) => x.id), ...deletes], cloudStamps);
+      const toWrite = [...sets.map((x) => x.id), ...deletes];
+      const expect = expectOf(toWrite, cloudStamps, reading);
       const many = deletes.length > DELETE_CHUNK;
       if (many) {
         // More deletions than one request takes go first, in requests of their own (sendDeletes).
