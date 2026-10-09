@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { chunkIds } from '@/utils/jobMapData';
+import { MAX_COMPANY_CHUNKS, chunkCount, chunkIds } from '@/utils/jobMapData';
 
 // Loaded on demand, never with the start-up code (the account menu and the Job Map page import it
 // when they need it). The documents live in `jobmap/*`; firestore.rules lets an account read and write
@@ -32,7 +32,7 @@ export async function loadMeta() {
   const s = await getDoc(doc(db, 'jobmap', 'meta'));
   if (!s.exists()) return null;
   const { crawled, counts, companyChunks } = s.data();
-  const parts = await Promise.all(Array.from({ length: companyChunks }, (_, i) => getDoc(doc(db, 'jobmap', `companies-${i}`))));
+  const parts = await Promise.all(Array.from({ length: chunkCount(companyChunks, MAX_COMPANY_CHUNKS) }, (_, i) => getDoc(doc(db, 'jobmap', `companies-${i}`))));
   return { crawled, counts, companies: parts.flatMap((p) => (p.exists() ? JSON.parse(p.data().json) : [])) };
 }
 

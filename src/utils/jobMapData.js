@@ -34,9 +34,21 @@ export function startCountry(counts) {
   return best ? best[0] : 'IN';
 }
 
+/**
+ * The most roles one country holds (500 chunks of 1200) and the most chunks of companies (200). The counts are
+ * written by whoever loads a data file, and every allowed account reads them: one past these (a typo, a file
+ * that is not the build tool's) had every page ask for the 800 000 documents it names and stall.
+ */
+export const MAX_COUNTRY_ROWS = 600000;
+export const MAX_COMPANY_CHUNKS = 200;
+
+/** `n` as a count of chunks: a whole number from 0 to `max`; anything else (text, NaN, past `max`) is 0 or `max`. */
+export const chunkCount = (n, max) => (Number.isFinite(n) ? Math.min(Math.max(0, Math.ceil(n)), max) : 0);
+
 /** The document ids of one country's chunks: `US-0` … `US-<n-1>` for `count` rows of CHUNK each. */
 export function chunkIds(country, count, chunk = 1200) {
-  return Array.from({ length: Math.ceil(count / chunk) }, (_, i) => `${country}-${i}`);
+  const rows = Number.isFinite(count) ? Math.min(Math.max(0, count), MAX_COUNTRY_ROWS) : 0;
+  return Array.from({ length: Math.ceil(rows / chunk) }, (_, i) => `${country}-${i}`);
 }
 
 /** What a file must hold to be loaded: meta with counts and companies, and chunks of rows. Returns an error text, or '' when fine. */
@@ -44,6 +56,7 @@ export function checkData(data) {
   if (!data || typeof data !== 'object') return 'This is not a Job Map data file.';
   const { meta, chunks } = data;
   if (!meta || typeof meta !== 'object' || !meta.counts || !Array.isArray(meta.companies)) return 'The file has no meta (counts and companies).';
+  if (Object.values(meta.counts).some((n) => !Number.isInteger(n) || n < 0 || n > MAX_COUNTRY_ROWS)) return `The counts in the file are not numbers of roles (0 to ${MAX_COUNTRY_ROWS}).`;
   if (!chunks || typeof chunks !== 'object') return 'The file has no chunks of roles.';
   for (const [id, rows] of Object.entries(chunks)) {
     if (!/^[A-Z]+-\d+$/.test(id)) return `"${id}" is not a chunk id like US-0.`;
