@@ -26,6 +26,12 @@ export const itemPath = (name, uid, id) => ['users', uid, name, id];
 export const cloudCanName = (id) => typeof id === 'string' && id !== '' && !id.includes('/')
   && id !== '.' && id !== '..' && !/^__.*__$/.test(id);
 
+/**
+ * How many items one batch takes: Firestore refuses a batch of more than 500 writes, and each
+ * batch also writes the deletion list (twice) and the order, so some are kept back.
+ */
+const BATCH_ITEMS = 450;
+
 export function collectionIo(fs, db, name) {
   const itemsCol = (uid) => fs.collection(db, 'users', uid, name);
   const itemDoc = (uid, id) => fs.doc(db, ...itemPath(name, uid, id));
@@ -47,18 +53,33 @@ export function collectionIo(fs, db, name) {
     },
 
     /**
-     * One batch: whole items written (`sets`) — each id comes off the deletion list, as an edit
-     * made where the deletion was never seen wins (collectionSyncPlan.js) — ids removed and added to
-     * it (`deletes`), and the list's `order` when given. Resolves when the server has it.
+     * Whole items written (`sets`) — each id comes off the deletion list, as an edit made where the
+     * deletion was never seen wins (collectionSyncPlan.js) — ids removed and added to it
+     * (`deletes`), and the list's `order` when given. Resolves when the server has it. A batch
+     * holds 500 writes at most: a bigger change (a first sync of some hundreds of jobs) goes in
+     * several, one after the other, sets then deletes then the order, each with its own deletion
+     * list writes; the first is handed over before this returns.
      */
     commit(uid, { sets = [], deletes = [], order = null }) {
-      const batch = fs.writeBatch(db);
-      sets.forEach((x) => batch.set(itemDoc(uid, x.id), asStored(x)));
-      deletes.forEach((id) => batch.delete(itemDoc(uid, id)));
-      if (deletes.length) batch.set(metaDoc(uid), { deleted: fs.arrayUnion(...deletes) }, { merge: true });
-      if (sets.length) batch.set(metaDoc(uid), { deleted: fs.arrayRemove(...sets.map((x) => x.id)) }, { merge: true });
-      if (order) batch.set(metaDoc(uid), { order }, { merge: true });
-      return batch.commit();
+      const send = (part) => {
+        const batch = fs.writeBatch(db);
+        part.sets.forEach((x) => batch.set(itemDoc(uid, x.id), asStored(x)));
+        part.deletes.forEach((id) => batch.delete(itemDoc(uid, id)));
+        if (part.deletes.length) batch.set(metaDoc(uid), { deleted: fs.arrayUnion(...part.deletes) }, { merge: true });
+        if (part.sets.length) batch.set(metaDoc(uid), { deleted: fs.arrayRemove(...part.sets.map((x) => x.id)) }, { merge: true });
+        if (part.order) batch.set(metaDoc(uid), { order: part.order }, { merge: true });
+        return batch.commit();
+      };
+      const parts = [{ sets: [], deletes: [], order: null }];
+      const put = (kind, x) => {
+        let part = parts.at(-1);
+        if (part.sets.length + part.deletes.length >= BATCH_ITEMS) { part = { sets: [], deletes: [], order: null }; parts.push(part); }
+        part[kind].push(x);
+      };
+      sets.forEach((x) => put('sets', x));
+      deletes.forEach((id) => put('deletes', id));
+      parts.at(-1).order = order;
+      return parts.slice(1).reduce((done, part) => done.then(() => send(part)), send(parts[0]));
     },
   };
 }
