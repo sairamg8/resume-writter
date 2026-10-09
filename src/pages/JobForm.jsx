@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, useId } from 'react';
-import { UNSAFE_DataRouterContext, useBlocker, useNavigate, useParams } from 'react-router-dom';
+import { UNSAFE_DataRouterContext, useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { JOB_DRAFT_PREFIX, listOwner, useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
@@ -152,9 +152,13 @@ function JobFormBody({ store, auth }) {
       askingRef.current = false;
     }
   };
+  // The job page's Edit button marks the form's entry (JobDetail): Save and Cancel then step back to that page
+  // instead of pushing it a second time, which left the edit form one Back behind the job page.
+  const fromJob = useLocation().state?.fromJob === true;
   function leaveTo(path, options) {
     leavingRef.current = true;
-    navigate(path, options);
+    if (fromJob && isEdit && existing && path === backPath) navigate(-1);
+    else navigate(path, options);
   }
   async function leave() {
     if (askingRef.current) return; // the question already up answers for this way out too

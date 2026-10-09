@@ -104,7 +104,7 @@ export function JobDetail({ store }) {
         icon={<Avatar name={job.company || '?'} size="lg" shape="square" decorative />}
         actions={(
           <>
-            <Button leftIcon={Pencil} onClick={() => navigate(`/jobs/${encodeURIComponent(job.id)}/edit`)} title="Edit job">Edit</Button>
+            <Button leftIcon={Pencil} onClick={() => navigate(`/jobs/${encodeURIComponent(job.id)}/edit`, { state: { fromJob: true } })} title="Edit job">Edit</Button>
             {/* A link drawn as the kit's button (buttonClass, and its icon and label as Button lays
                 them out), so it matches Edit beside it, pressed state included. */}
             {safeHref(job.url) && (
