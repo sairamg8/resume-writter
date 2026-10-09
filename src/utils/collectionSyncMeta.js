@@ -100,6 +100,30 @@ export const syncHeld = {
 };
 
 /**
+ * The items of each list a conflict copy was kept for (two devices changed them since they last
+ * synced): `{ jobs: [name], boards: [...] }`, as a store the pages subscribe to
+ * (SyncHeldNotice) until the user dismisses it.
+ */
+let conflicts = { jobs: [], boards: [] };
+const conflictListeners = new Set();
+
+export const syncConflicts = {
+  get: () => conflicts,
+  add(name, list) {
+    conflicts = { ...conflicts, [name]: [...conflicts[name], ...list] };
+    conflictListeners.forEach((l) => l());
+  },
+  dismiss(name) {
+    conflicts = { ...conflicts, [name]: [] };
+    conflictListeners.forEach((l) => l());
+  },
+  subscribe(listener) {
+    conflictListeners.add(listener);
+    return () => conflictListeners.delete(listener);
+  },
+};
+
+/**
  * What each list's sync is doing, as the engine reports it (collectionSyncEngine's report.status):
  * `{ jobs: { status, at }, boards: { … } }`, `at` the Date the list last came to 'synced' (null
  * before). A store the workspace's sync icon subscribes to (shell/CollectionSyncDot.jsx). Until
@@ -124,10 +148,11 @@ export const collectionSyncStatus = {
   },
 };
 
-/** The report a list's engine is given: its status and its held-back items go to the two stores above. */
+/** The report a list's engine is given: its status, its held-back items and its conflict copies go to the stores above. */
 export const collectionReport = (name) => ({
   status: (status) => collectionSyncStatus.set(name, status),
   held: (list) => syncHeld.set(name, list),
+  conflict: (list) => (list ? syncConflicts.add(name, list) : syncConflicts.dismiss(name)),
 });
 
 // The worst first: the one icon several lists share says what most needs saying. A sync that

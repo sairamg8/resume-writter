@@ -30,12 +30,15 @@ const noRoom = (what = 'the last account\'s list could not be set aside') => Obj
  *   io        collectionIo(...) — null when this build has no cloud
  *   store     { items() → the list now, replace(list), subscribe(fn) → unsubscribe, fromCloud(doc)
  *             → the item as the store holds one (null: not one), label(item) → its name, seed(item)
- *             → whether it is the first visit's demo, untouched (optional), leaveRecovery() → the list's
+ *             → whether it is the first visit's demo, untouched (optional), conflictCopy(older, every
+ *             item) → the older copy of an item both devices changed, kept beside the newer one under
+ *             a new id (collectionSyncConflict.js; optional: none, the older copy is dropped), leaveRecovery() → the list's
  *             recovery notice and backups forgotten as it leaves this browser (optional), saved() → the
  *             list storage holds, which differs from items() when storage refused a save (optional:
  *             items()) }
  *   meta      { read(), write(m) } — collectionSyncMeta.js
- *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]) }
+ *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]),
+ *             conflict([name]) — the items a conflict copy was kept for (null: forget them, as the list leaves) }
  *   online, hidden, timers, flushDelay, retryDelay, maxRetryDelay, refreshAfter, now, log — as
  *             createCloudSync's (cloudTimeout: how long a flush waits for its read); maxBytes the document limit (Firestore's 1 MiB)
  * Returns { start(user), cancel(), shown() }: the same calls cloudSyncBrowser.js and the hook make.
@@ -160,6 +163,7 @@ export function createCollectionSync({
     }
     // Its recovery notice and backups copy it: they leave with it (storageBackup.forgetRecovery).
     store.leaveRecovery?.();
+    report.conflict?.(null); // and the names of its items the notice of a conflict copy holds
     return true;
   }
 
@@ -327,7 +331,7 @@ export function createCollectionSync({
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
       const moved = mine ? { baseOrder: seenOrder } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [] });
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy });
 
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
@@ -383,6 +387,8 @@ export function createCollectionSync({
       const onDisk = claimed(cloudVersions);
       if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk });
       changed(next);
+      // Both sides changed these since the last sync: the older copies are kept beside them, and said.
+      if (plan.conflicts.length) report.conflict?.(plan.conflicts.map((c) => store.label(plan.merged.find((x) => x.id === c.id))));
       if (!s.timer) settled();
     } catch (e) {
       if (gen !== s.gen) return;
