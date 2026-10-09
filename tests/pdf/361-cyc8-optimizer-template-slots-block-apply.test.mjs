@@ -11,17 +11,18 @@ import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
 let BulletOptimizerModal;
 let TEMPLATES;
+let FEATURE;
 before(async () => {
   patchFakeDom();
   await setup();
   ({ default: BulletOptimizerModal } = await loadModule('/src/components/BulletOptimizerModal.jsx'));
   ({ GOOGLE_XYZ_TEMPLATES: TEMPLATES } = await loadModule('/src/utils/bulletOptimizer.js'));
+  FEATURE = TEMPLATES.find((t) => t.label === 'Feature / Performance');
 });
 after(teardown);
 
 const OWN = 'Rebuilt the Quillmark invoicing service for 40 regional shops';
 // "Engineered [feature/system], reducing [latency/downtime] by [X]% and supporting [Y]+ daily active users."
-const FEATURE = TEMPLATES.find((t) => t.label === 'Feature / Performance');
 
 function optimizer(initialText = OWN) {
   const applied = [];
