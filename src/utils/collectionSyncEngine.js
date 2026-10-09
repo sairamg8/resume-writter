@@ -521,7 +521,13 @@ export function createCollectionSync({
             noteSent(sets);
           }
         }
-        if (gen !== s.gen) return;
+        if (gen !== s.gen) {
+          // A start replaced this sync while its write was on the way, and the write landed all the same: the record
+          // says so, or those items are ones this browser never saw at the next sync, and an edit of the other device's
+          // meanwhile, against one made here since, is settled by the clocks alone with the older dropped.
+          if (sets.length || plan.deletes.length) noteVersions(uid, sets, plan.deletes, null, revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))));
+          return;
+        }
       }
 
       // Applied to the list as it is now: what was changed while the batch was on its way stays,
@@ -734,7 +740,11 @@ export function createCollectionSync({
         if (!all) return;
       }
       await io.commit(user.uid, { sets, deletes: many ? [] : deletes, order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect });
-      if (!current()) return;
+      if (!current()) {
+        // A start replaced this flush while its write was on the way, and it landed: the record says so (see firstSync).
+        if (sets.length || deletes.length) noteVersions(user.uid, sets, deletes, order, revsOfStamps(stamps));
+        return;
+      }
       noteSent(sets);
       if (copies.length) {
         // In the list before anything else changes it: the list the queue compares with has them too.
