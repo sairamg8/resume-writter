@@ -197,8 +197,11 @@ async function replay(ops, seed, trace = false) {
 
   /** The device's sync run until it has nothing more to send. */
   async function quiesce(d) {
+    const turns = d.turns;
+    d.turns = 80; // however long the server takes to answer
     await d.start();
     for (let i = 0; i < 6 && d.timers.count; i += 1) await d.fire();
+    d.turns = turns;
   }
 
   for (const op of ops) {
