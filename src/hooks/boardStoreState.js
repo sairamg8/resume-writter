@@ -51,6 +51,23 @@ function snapshot() {
 
 function onStorage(e) {
   if (e.key === BOARDS_KEY && e.newValue) takeOtherTabsList();
+  // Another tab took the account's list out of this browser (collectionSyncEngine.leave): its
+  // notice and backups went with it there (forgetRecovery); this tab, which ran no leave, still
+  // showed the notice, offering a copy that no longer exists. As useJobStore does.
+  else if (e.key === BOARDS_SYNC_KEY) {
+    const was = ownerIn(e.oldValue);
+    if (was && was !== ownerIn(e.newValue)) update({ recovery: null });
+  }
+}
+
+/** The account a stored sync record names (collectionSyncMeta), or null: none, or unreadable. */
+function ownerIn(raw) {
+  try {
+    const m = JSON.parse(raw ?? 'null');
+    return m && typeof m.uid === 'string' && m.uid ? m.uid : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
