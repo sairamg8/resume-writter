@@ -1,5 +1,7 @@
+import { useContext } from 'react';
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
+import { ColumnRoom } from './roomContext';
 import { tint, textShades } from './pdfColors';
 import { lineBox, textWidth, widestWord, wrappedLines } from './pdfMeasure';
 import { headerTemplateId } from '@/constants/templates';
@@ -90,10 +92,15 @@ export const wordRoom = (...parts) => Math.max(0, ...parts.map(([text, style, ta
  * it, at its right end, when both do not fit; when they do, the row prints as it always has.
  */
 export function EndRow({ left, leftMin = 0, children }) {
-  const wraps = leftMin > 0;
+  // In a column or a Grids cell (ColumnRoom) a word wider than the whole cell is broken to fit it
+  // (PdfText), so the left side never needs more than the cell: its minimum is capped there. A word of
+  // 29 letters in a 3-column cell kept the left side 161 pt wide, out of its cell (H3-459).
+  const room = useContext(ColumnRoom);
+  const min = room?.width > 0 ? Math.min(leftMin, room.width - WORD_SLACK) : leftMin;
+  const wraps = min > 0;
   return (
     <View style={{ flexDirection: 'row', justifyContent: wraps ? 'flex-end' : 'space-between', alignItems: 'flex-end', ...(wraps ? { flexWrap: 'wrap' } : {}) }}>
-      <View style={{ flex: 1, ...(wraps ? { minWidth: leftMin + WORD_SLACK } : {}) }}>{left}</View>
+      <View style={{ flex: 1, ...(wraps ? { minWidth: min + WORD_SLACK } : {}) }}>{left}</View>
       {children}
     </View>
   );
