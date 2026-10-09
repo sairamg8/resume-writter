@@ -63,7 +63,8 @@ test('a flush the sync was restarted under does not write its older copy over th
   d.hold();
   await d.timers.fire(); // the flush has read the cloud and decided; its write waits
   d.edit('a1', { role: 'Staff Engineer' }, 6); // typed meanwhile
-  await d.start(A); // the tab is shown again, going online ...: a first sync sends the newer edit
+  await d.start(A); // the tab is shown again, going online ...: a first sync, which waits for the request on its way (H1-SYNC-26)
+  await d.timers.fire(); // ... until its deadline (the request never lands in time), and sends the newer edit
   assert.equal(cloud.doc('users/A/jobs/a1').role, 'Staff Engineer', 'the restart\'s first sync sent it');
 
   await d.release(); // the first flush's write is refused as stale and would read again
