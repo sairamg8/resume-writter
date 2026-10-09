@@ -2,13 +2,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
-import { formatDateTime, relativeTime } from '@/utils/uiFormat';
+import { formatDateTime, isoTime, relativeTime } from '@/utils/uiFormat';
 
 const WHO = 'You';
 
 /** A moment as "3h ago", its full date and time on hover. */
 function When({ at }) {
-  return <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)} className="text-[12px] text-cv-faint">{relativeTime(at)}</time>;
+  return <time dateTime={isoTime(at)} title={formatDateTime(at)} className="text-[12px] text-cv-faint">{relativeTime(at)}</time>;
 }
 
 /**

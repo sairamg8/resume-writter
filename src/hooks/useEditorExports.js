@@ -31,7 +31,7 @@ export function useEditorExports({ resume, letterTab: letterOpen, activeTab, aut
   const keeps = isDemoAccount(authUser, DEMO_ACCOUNTS);
   // A document being read (R4-IMP-12): the Export menu says "Reading…" and a second pick meanwhile is
   // ignored — the ref catches two in the same tick. One that ends after the editor is gone, or has
-  // moved to another résumé, still imports, but no longer navigates.
+  // moved to another résumé, still imports, but no longer navigates — the editor still open says so.
   const [importing, setImporting] = useState(false);
   const importBusy = useRef(false);
   const mounted = useRef(true);
@@ -156,7 +156,13 @@ export function useEditorExports({ resume, letterTab: letterOpen, activeTab, aut
       });
       return await importDocument(file, {
         importResume: importFor, onError: setExportError, keep: keeps && asOriginal, notice: `${NEW_RESUME_NOTICE} ${IMPORT_NOTICE}`,
-        navigate: (...args) => { if (mounted.current && shownId.current === from) navigate(...args); },
+        navigate: (...args) => {
+          if (!mounted.current) return;
+          if (shownId.current === from) { navigate(...args); return; }
+          // The editor moved to another résumé (Back or Forward) while the file was read: it is not
+          // taken away from that one, but the import is said, not silent.
+          setExportError(`${file?.name || 'The file'} was imported as a new résumé while you moved to another one. It is on the dashboard.`);
+        },
       });
     } finally {
       importBusy.current = false;

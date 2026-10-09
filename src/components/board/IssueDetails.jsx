@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '@/components/ui';
-import { formatDateTime, relativeTime } from '@/utils/uiFormat';
+import { formatDateTime, isoTime, relativeTime } from '@/utils/uiFormat';
 import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, RecurrencePicker, SprintPicker, TypePicker } from './IssueFields';
 
 /** One field of the Details box: its name on the left, its picker on the right. */
@@ -16,7 +16,7 @@ function Row({ label, children }) {
 
 const Stamp = ({ label, at }) => (at ? (
   <p className="text-[12px] text-cv-faint">
-    {label} <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)}>{relativeTime(at)}</time>
+    {label} <time dateTime={isoTime(at)} title={formatDateTime(at)}>{relativeTime(at)}</time>
   </p>
 ) : null);
 

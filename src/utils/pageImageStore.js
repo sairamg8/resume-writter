@@ -113,6 +113,8 @@ function readSaved() {
   try {
     saved = JSON.parse(localStorage.getItem(PAGE_IMAGES_KEY) || '{}');
     if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
+    // An entry that is not an object (a hand edit, another build) is no picture: left out, so no sort reads into it.
+    else saved = Object.fromEntries(Object.entries(saved).filter(([, e]) => e && typeof e === 'object'));
   } catch { saved = {}; }
   return saved;
 }

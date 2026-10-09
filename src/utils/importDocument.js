@@ -14,6 +14,10 @@ export const isDocumentFile = (file) => /\.(pdf|docx?|txt|text|md|markdown)$/i.t
 /** Under the Import menu items: what a document import is. */
 export const DOCUMENT_HINT = 'PDF, Word (.docx), Markdown and text files are read best-effort: review the result.';
 
+/** The largest file the import reads, a document or JSON: a résumé is well under it; one over it would stall the page. */
+export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+export const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
+
 /** What the editor says over a résumé read from a document (useImportNotice). */
 export const IMPORT_NOTICE = 'Imported from your file as best we could read it. Check the name, the contacts, every section and its dates, and move what landed in the wrong place.';
 

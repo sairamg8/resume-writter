@@ -74,16 +74,16 @@ function LeaveGuard({ shouldBlock, asking, ask, onDiscard }) {
  * below takes its values when it mounts, so it mounts again when the job arrives, as if opened on it;
  * a job deleted afterwards stays (it is the form's "deleted in another tab" state, J-16).
  */
-export function JobForm({ store }) {
+export function JobForm({ store, auth }) {
   const { id } = useParams();
   const { jobs } = useJobStore();
   const found = Boolean(id) && jobs.some((j) => j.id === id);
   const [seenId, setSeenId] = useState(found ? id : null);
   if (found && seenId !== id) setSeenId(id);
-  return <JobFormBody key={`${id ?? ''}|${seenId === id}`} store={store} />;
+  return <JobFormBody key={`${id ?? ''}|${seenId === id}`} store={store} auth={auth} />;
 }
 
-function JobFormBody({ store }) {
+function JobFormBody({ store, auth }) {
   const navigate = useNavigate();
   const { id } = useParams();
   // The app's router is a data router, which can hold a navigation; a test's plain one cannot.
@@ -93,7 +93,7 @@ function JobFormBody({ store }) {
   const { jobs, persistError, addJob, updateJob, left } = useJobStore();
   const { appState } = store;
   const resumes = appState.resumes;
-  const { customStages, addCustomStage, removeCustomStage } = useJobStages();
+  const { customStages, addCustomStage, removeCustomStage } = useJobStages(auth?.user?.uid);
   const uid = useId();
   const formId = uid + 'form';
 

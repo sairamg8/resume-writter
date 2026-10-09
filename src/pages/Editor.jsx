@@ -13,6 +13,7 @@ import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { EditorSaveStatus } from '@/components/EditorSaveStatus';
 import { useEditorExports } from '@/hooks/useEditorExports';
+import { useShareDialog } from '@/hooks/useShareDialog';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile, useMediaQuery } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
@@ -56,7 +57,8 @@ export function Editor({ store, auth, sync }) {
   const [allExpanded, setAllExpanded] = useState(true);
   const [forceOpenKey, setForceOpenKey] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
-  const [shareOpen, setShareOpen] = useState(false);
+  // Open for one account and résumé; closed when sharing goes away or either changes (useShareDialog).
+  const [shareOpen, setShareOpen] = useShareDialog(auth?.user?.uid ?? null, resume?.id, Boolean(firebasePublicIo && auth?.user?.uid && resume && resume.kind !== 'letter'));
   // Design → Template open or collapsed, kept here so closing the dock keeps it (A12), and the
   // template gallery (A2).
   const [templateOpen, setTemplateOpen] = useState(true);
@@ -83,7 +85,7 @@ export function Editor({ store, auth, sync }) {
   const headerAuth = useStableObject(auth);
   const headerSync = useStableObject(sync);
   const goBack = useCallback(() => navigate('/'), [navigate]);
-  const openShare = useCallback(() => setShareOpen(true), []);
+  const openShare = useCallback(() => setShareOpen(true), [setShareOpen]);
   const openGallery = useCallback(() => setGalleryOpen(true), []);
 
   // What the dock is given must keep its identity while its values do, or its memoised panels render at every key

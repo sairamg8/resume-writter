@@ -108,15 +108,15 @@ function PersonalInfoEditor({ resume: shown, getResume, personal, updatePersonal
 
   function set(key, val) { updateSetting?.(key, val); }
 
+  // Written to the icons as they are when the write happens, by the résumé's id, as an upload is (below):
+  // a map built from this render replaced another icon changed since, or another résumé's icons.
   function setCustomIcon(field, dataUrl) {
-    const prev = s.customContactIcons || {};
-    if (!dataUrl) {
-      const next = { ...prev };
-      delete next[field];
-      set('customContactIcons', next);
-      return;
-    }
-    set('customContactIcons', { ...prev, [field]: dataUrl });
+    updateSetting?.('customContactIcons', (icons) => {
+      const next = { ...(icons || {}) };
+      if (dataUrl) next[field] = dataUrl;
+      else delete next[field];
+      return next;
+    }, shown?.id);
   }
 
   function onPickIconFile(field, file) {

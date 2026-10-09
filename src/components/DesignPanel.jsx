@@ -67,7 +67,11 @@ export default function DesignPanel({
   const current = templateId(resume.template); // the template the PDF prints
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
-  const [confirmReset, setConfirmReset] = useState(false);
+  // The résumé whose Reset is asked to be confirmed: a switch to another résumé under this mounted panel
+  // leaves the question unasked, so Yes, Reset never resets one the question was not about.
+  const [resetFor, setResetFor] = useState(null);
+  const confirmReset = resetFor !== null && resetFor === resume.id;
+  const setConfirmReset = (on) => setResetFor(on ? resume.id : null);
   const { toast, dismiss } = useToast();
   const pageSizeLabelId = useId();
   const [fitting, setFitting] = useState(false);
@@ -84,7 +88,8 @@ export default function DesignPanel({
   // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   // A section reset's Undo leaves with the panel or the résumé: it would write into whichever is open.
-  useEffect(() => () => dismiss('design-section-reset'), [resume.id, dismiss]);
+  // The same goes for a Reset question asked of the résumé left: coming back to it does not find the question up.
+  useEffect(() => () => { dismiss('design-section-reset'); setResetFor(null); }, [resume.id, dismiss]);
 
   /**
    * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past

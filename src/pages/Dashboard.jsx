@@ -13,7 +13,7 @@ import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
-import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, MAX_IMPORT_BYTES, TOO_BIG, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
 
 // The letter picker, Career History and a card's more menu load apart from the start-up path (lazyPiece.jsx).
 export const _lazyForTest = { loaders, warmed };
@@ -61,6 +61,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // An import error stays until the user dismisses it or starts another import (R4-DUX-11): it used
   // to go after 4 or 8 s, before the longer ones (a scanned PDF's steps) could be read.
   const [importError, setImportError] = useState(null);
+  // What an import that brought in several résumés at once says (a saved store, importBackup.js).
+  const [importNote, setImportNote] = useState(null);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // The picker's code is asked for when it is first opened (or ahead of that: warm); it then stays mounted for its exit.
   const [letterUsed, setLetterUsed] = useState(false);
@@ -178,6 +180,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     if (importBusy.current) { e.target.value = ''; return; }
     // A new import starts clean: the last one's error no longer applies.
     setImportError(null);
+    setImportNote(null);
     // A PDF, Word, Markdown or text résumé: read best-effort into a new one (R2-148).
     if (isDocumentFile(file)) {
       e.target.value = '';
@@ -200,6 +203,13 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       });
       return;
     }
+    // A JSON file is read whole as text: one picked by mistake (a video, a disk image) is refused unread,
+    // as a document over the same size is.
+    if (file.size > MAX_IMPORT_BYTES) {
+      setImportError(TOO_BIG);
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
@@ -209,6 +219,17 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           setImportError(null);
           // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
           goTo(editorPath(id, normalizeResume(parsed)));
+        } else if (Array.isArray(parsed?.resumes)) {
+          // A saved store, as "Download the copy" of a recovery notice saves it: every résumé in it comes in
+          // as a new one and stays on this page, with a count of what came in. Loaded when such a file is picked.
+          const backup = await import('@/utils/importBackup').catch(() => null);
+          if (!backup) {
+            setImportError('This file needs a part of the app that could not load. Check your connection and try again.');
+            return;
+          }
+          const result = backup.importSavedStore(parsed, store.importResume, { keep: keeps && importAsOriginal.current });
+          setImportError(result.added ? null : backup.savedStoreMessage(result));
+          setImportNote(result.added ? backup.savedStoreMessage(result) : null);
         } else {
           // The JSON Resume reader loads when such a file is picked, not at start-up (R2-142; not jsonResume.js: its export is the editor's).
           const jr = await import('@/utils/jsonResumeImport').catch(() => null);
@@ -275,7 +296,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           </div>
         </div>
 
-        {(store.persistError || store.recovery || importError || originalsWaiting) && (
+        {(store.persistError || store.recovery || importError || importNote || originalsWaiting) && (
           <div className="mt-5 space-y-2.5">
             {store.persistError && (
               <p role="alert" className={`cv-notice-bad ${NOTICE}`}>{notSavedMessage('dashboard', store.persistError)}</p>
@@ -285,6 +306,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
               <div className={`cv-notice-bad ${NOTICE} flex items-start gap-2`}>
                 <span className="flex-1 min-w-0 break-words">{importError}</span>
                 <button type="button" onClick={() => setImportError(null)} className="font-semibold shrink-0">Dismiss</button>
+              </div>
+            )}
+            {importNote && (
+              <div role="status" className={`cv-notice-warn ${NOTICE} flex items-start gap-2`}>
+                <span className="flex-1 min-w-0 break-words">{importNote}</span>
+                <button type="button" onClick={() => setImportNote(null)} className="font-semibold shrink-0">Dismiss</button>
               </div>
             )}
             {originalsWaiting && (
