@@ -600,7 +600,11 @@ export function createCollectionSync({
     const q = s.queue;
     s.queue = null;
     s.timer = null;
-    const current = () => s.user?.uid === user.uid && s.ready;
+    // Of the line it began in: a start (a refresh, going online, an account change) begins a new one, and what this
+    // flush still has to do is dropped. The first sync that start runs decides from the cloud as it is then — and a
+    // retry of this flush's older copy of an item, written after a newer one, put the older over it.
+    const gen = s.gen;
+    const current = () => s.user?.uid === user.uid && s.ready && s.gen === gen;
     if (!q || !current() || meta.read().uid !== user.uid) return;
     const before = s.turn;
     let handedOver;
