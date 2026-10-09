@@ -8,6 +8,9 @@ how a per-item version closes it.
 
 ## The version
 
+The helpers are in `src/utils/collectionSyncRev.js`; the plan (`src/utils/collectionSyncPlan.js`) and the engine
+(`src/utils/collectionSyncEngine.js`) decide by them; the transaction is `commit` in `src/utils/collectionSyncIo.js`.
+
 Every item document the engine writes carries two added fields, and nothing else changes in it:
 
 - `syncRev`: a whole number that goes up by one with every write of the item
@@ -44,6 +47,12 @@ unknown fields when it rewrites an item, so a copy it edited has the same `syncR
 engine reads that as moved too (`updatedAt` differs from the recorded one), as it reads a copy that has no rev. A
 record the old site rewrote has no `revs` or `device`: `versions` alone decide then, by equality of `updatedAt`.
 
+## Tests
+
+`tests/unit/390-cycD-sync-version-stamps.unit.mjs` (the fields, the record, rollback shape),
+`391-cycD-sync-slow-clock`, `392-cycD-sync-never-synced-item`, `393-cycD-sync-tie`,
+`394-cycD-sync-write-precondition` (one per conflict above), all in `tests/unit/`.
+
 ## Not done, on purpose
 
 - Nothing is batched across requests (a 450-item split was reverted: S7). A transaction holds the same at most 500
@@ -54,3 +63,7 @@ record the old site rewrote has no `revs` or `device`: `versions` alone decide t
   (`arrayUnion`, `arrayRemove`) and a stale order is repaired by the next write.
 - A browser whose site data was cleared is a new device: its earlier writes look like another device's.
   Then a list that differs from the account's is kept as a copy rather than guessed at.
+- The check covers the copies a write replaces or deletes. A new item under an id nobody else can make needs none (a
+  first sync of 1,000 new jobs stays one batch, or one request each past 500, as before); the ids two browsers can both
+  make (the demo's) are checked as absent. A batch that writes only the order is not checked.
+- Two tabs of one browser share one writer id: the store's own merge of the two tabs (05) is what keeps them apart.
