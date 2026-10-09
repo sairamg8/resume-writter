@@ -146,7 +146,9 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
-      const theirsStay = (oneSide ? there : theirsLater(time(theirs), time(mine), stamps.get(id)?.by ?? '', device)) || (!known(id) && seed(mine));
+      // Put back by Undo (a deletion of its own is all the record knows of it), it is as untouched: an edit of the account's wins.
+      const theirsStay = (oneSide ? there : theirsLater(time(theirs), time(mine), stamps.get(id)?.by ?? '', device))
+        || ((!known(id) || versions[id] === DELETED) && seed(mine));
       // A tie in time with different content left both sides keeping their own (the cloud's copy was never replaced).
       const tied = time(mine) === time(theirs) && !sameContent(mine, theirs, apart);
       if (theirsStay) keep.set(id, theirs);

@@ -276,7 +276,7 @@ export function createCollectionSync({
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
       if (!theirs || !(view.synced(x.id) || view.undone(x.id)) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
       // The first visit's demo, untouched, holds nothing typed: no copy of it (as the first sync makes none).
-      if (store.seed?.(theirs)) continue;
+      if (store.seed?.(theirs) || (view.undone(x.id) && store.seed?.(x))) continue;
       const older = view.later(x.id, d, x) ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -781,6 +781,8 @@ export function createCollectionSync({
         const theirs = store.fromCloud(d);
         // The first visit's demo, untouched, holds nothing typed: it never replaces an edit, whatever the clocks say.
         if (theirs && store.seed?.(theirs) && !store.seed?.(x)) return null;
+        // Put back by Undo untouched, it is the same: the account's edit of it stays.
+        if (theirs && view.undone(x.id) && store.seed?.(x) && !store.seed?.(theirs)) return theirs;
         return view.later(x.id, d, x) ? theirs : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
