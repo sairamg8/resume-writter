@@ -15,7 +15,7 @@ import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 2500;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 12000;
 const STEPS = 110;
 // Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
 const SKEW = [3, -2537, 1811];
