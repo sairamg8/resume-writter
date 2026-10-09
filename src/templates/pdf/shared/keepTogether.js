@@ -38,17 +38,25 @@ const SURE_SHARE = 0.5;
  * (a 3- or 4-column Grids cell, or the Sidebar's dark column, with wide margins and a large type size).
  * The lines are counted from the widths of the words in `fontFamily` (the page's font, pdfMeasure's
  * wrappedLines: greedy, so never fewer than react-pdf sets), plus one for a line that textkit sets in
- * two; an item that is plainly short is accepted without measuring it.
+ * two; an item that is plainly short is accepted without measuring it. A hard line break ("\n") ends a line
+ * at any width, so the lines are counted piece by piece.
  */
 export function fitsPage({ text, fontSize, lineHeight, width, height, fontFamily }) {
   if (!(width > fontSize) || !(height > 0)) return false;
-  let wide = 0;
+  // A <br> is a "\n" in the item's text and ends a line whatever the width: each piece between two is laid
+  // out on lines of its own, and a blank one is a line. Counted as one run of words, sixty short lines
+  // of an item looked like six, and the item was kept whole although it is taller than a page.
+  const pieces = text.split('\n');
+  const wide = pieces.map(() => 0);
   let em = 0;
+  let at = 0;
   for (const ch of text) {
-    if (ch.codePointAt(0) >= WIDE_FROM) { wide += 1; em += WIDE_EM; } else em += SURE_EM;
+    const cp = ch.codePointAt(0);
+    if (cp === 0x0a) at += 1;
+    else if (cp >= WIDE_FROM) { wide[at] += 1; em += WIDE_EM; } else em += SURE_EM;
   }
   const lineAt = fontSize * lineHeight;
-  if ((Math.ceil((em * fontSize) / width) + 1) * lineAt <= height * SURE_SHARE) return true;
-  const lines = Math.max(wrappedLines(text, { fontFamily, fontSize }, width), Math.ceil((wide * fontSize) / width));
+  if ((Math.ceil((em * fontSize) / width) + 1 + pieces.length - 1) * lineAt <= height * SURE_SHARE) return true;
+  const lines = pieces.reduce((sum, piece, i) => sum + Math.max(1, wrappedLines(piece, { fontFamily, fontSize }, width), Math.ceil((wide[i] * fontSize) / width)), 0);
   return (lines + 1) * lineAt <= height * FITS_SHARE;
 }
