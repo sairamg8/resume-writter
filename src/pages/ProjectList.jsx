@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { usePhoneStickyTop } from '@/hooks/usePhoneStickyTop';
 import { Button, DatePill, EmptyState, cx, useToast } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
@@ -60,6 +61,7 @@ function Th({ col, sort, onSort }) {
 export function ProjectList() {
   const { id } = useParams();
   const store = useBoardStore();
+  const stickyRef = usePhoneStickyTop();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -87,10 +89,10 @@ export function ProjectList() {
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics right={<span className="text-[13px] text-cv-faint">{rows.length} of {countLabel(board.issues.length, 'issue')}</span>} />
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
+      <div ref={stickyRef} className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
         <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[64rem]">
           <caption className="sr-only">Issues of {board.title}</caption>
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-10 max-md:top-[var(--stuck,0px)]">
             <tr>{COLUMNS.map((col) => <Th key={col.id} col={col} sort={sort} onSort={onSort} />)}</tr>
           </thead>
           <tbody>

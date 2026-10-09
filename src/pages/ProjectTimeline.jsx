@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { usePhoneStickyTop } from '@/hooks/usePhoneStickyTop';
 import { Button, EmptyState, IconButton, cx } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
@@ -83,6 +84,7 @@ function Row({ board, issue, span, from, depth = 0, open, onToggle, onOpen }) {
 export function ProjectTimeline() {
   const { id } = useParams();
   const store = useBoardStore();
+  const stickyRef = usePhoneStickyTop();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);
   const today = todayISO();
@@ -107,11 +109,11 @@ export function ProjectTimeline() {
         <IconButton icon={ChevronRight} label="Later" onClick={() => setFrom((f) => addDays(f, 7))} />
         <span className="ml-1 text-sm text-cv-muted">{formatShortDay(days[0])} – {formatShortDay(days.at(-1))}</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
+      <div ref={stickyRef} className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
         {/* The name column is 20rem from sm up; on a phone 10rem, with a child's indent halved, so
             the days still show beside it. The rows, the header and the today line all read it. */}
         <div className="relative w-max min-w-full rounded-cv-control border border-cv-hairline [--depth-w:12px] [--name-w:10rem] sm:[--depth-w:24px] sm:[--name-w:20rem]">
-          <div className="sticky top-0 z-20 flex border-b border-cv-hairline bg-cv-surface">
+          <div className="sticky top-0 z-20 flex border-b border-cv-hairline bg-cv-surface max-md:top-[var(--stuck,0px)]">
             <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center border-r border-cv-hairline bg-cv-surface px-3 text-[12px] font-semibold text-cv-muted">Issue</div>
             <div className="flex">
               {days.map((d) => (
