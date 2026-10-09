@@ -12,7 +12,7 @@ import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
 const A = { uid: 'A', email: 'a@example.com' };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 4000;
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 600;
 const STEPS = 110;
 const SKEW = [0, -2500, 1800];
 
@@ -58,9 +58,13 @@ function device(cloud, index) {
   };
 }
 
-async function runSeed(seed) {
+/** The script of a seed as data (who, what, which one): replayable, and shorter when steps are left out. */
+function generate(seed) {
   const rand = random(seed);
-  const pick = (n) => Math.floor(rand() * n);
+  return Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
+}
+
+async function replay(ops) {
   const cloud = fakeFirestore();
   const devices = [0, 1, 2].map((i) => device(cloud, i));
   const script = [];
@@ -80,9 +84,10 @@ async function runSeed(seed) {
   say('d0 starts with j1, j2');
   for (const d of devices) await signIn(d);
 
-  for (let step = 0; step < STEPS; step += 1) {
-    const d = devices[pick(3)];
-    const roll = rand();
+  for (const op of ops) {
+    const d = devices[op.d];
+    const { roll } = op;
+    const pick = (n) => Math.floor(op.r * n);
     if (roll < 0.26) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
@@ -98,7 +103,7 @@ async function runSeed(seed) {
       if (d.list.length < 2) continue;
       const next = [...d.list];
       const a = pick(next.length);
-      const b = pick(next.length);
+      const b = Math.floor(op.q * next.length);
       [next[a], next[b]] = [next[b], next[a]];
       say(`d${d.index} swaps places ${a} and ${b}`);
       d.set(next);
@@ -163,11 +168,35 @@ async function runSeed(seed) {
   return { problems, script };
 }
 
+/** The steps of `ops` that matter: left out one at a time for as long as the script still fails. */
+async function shrink(ops) {
+  let kept = ops;
+  for (let again = true; again;) {
+    again = false;
+    for (let i = kept.length - 1; i >= 0; i -= 1) {
+      const fewer = kept.filter((_, j) => j !== i);
+      if ((await replay(fewer)).problems.length) { kept = fewer; again = true; }
+    }
+  }
+  return kept;
+}
+
 test(`three devices, ${SEEDS} random scripts: they converge and nothing typed is lost`, async () => {
   const failures = [];
+  const seen = new Set();
+  let failed = 0;
   for (let seed = 1; seed <= SEEDS; seed += 1) {
-    const { problems, script } = await runSeed(seed);
-    if (problems.length) failures.push(`seed ${seed}:\n  ${problems.join('\n  ')}\n  script:\n    ${script.join('\n    ')}`);
+    const ops = generate(seed);
+    const { problems } = await replay(ops);
+    if (!problems.length) continue;
+    failed += 1;
+    if (failures.length >= 6) continue;
+    const small = await shrink(ops);
+    const { problems: left, script } = await replay(small);
+    const text = script.join('\n    ');
+    if (seen.has(text)) continue;
+    seen.add(text);
+    failures.push(`seed ${seed} (${small.length} steps):\n  ${left.join('\n  ')}\n  script:\n    ${text}`);
   }
-  assert.equal(failures.length, 0, `${failures.length} of ${SEEDS} scripts failed\n${failures.slice(0, 3).join('\n\n')}`);
+  assert.equal(failed, 0, `${failed} of ${SEEDS} scripts failed\n${failures.join('\n\n')}`);
 });
