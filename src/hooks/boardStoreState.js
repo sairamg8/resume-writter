@@ -60,13 +60,16 @@ function onStorage(e) {
  */
 function takeOtherTabsList() {
   lastRaw = readRaw();
-  const incoming = readStoredBoards({ backup: true }).boards;
+  // Backs up what it cannot read in full: the recovery notice and the sync record say so, as at the
+  // first load (init) — boards left out here are not deleted ones.
+  const { boards: incoming, recovery: found } = readStoredBoards({ backup: true });
+  if (found) forgetSynced(BOARDS_SYNC_KEY);
   const kept = keepUnsaved(incoming, snapshot().boards, stored);
   const boards = kept === incoming ? incoming : addressableBoards(kept);
   stored = incoming;
   const persistError = boards === incoming ? null : persist(boards);
   if (!persistError) stored = boards;
-  update({ boards, persistError });
+  update({ boards, persistError, ...(found ? { recovery: rememberRecovery(BOARDS_KEY, found) } : {}) });
 }
 
 function subscribe(listener) {

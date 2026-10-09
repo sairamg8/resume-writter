@@ -174,7 +174,11 @@ export function listOwner() {
  * was dropped a job this tab could not save, while the notice still said it was unsaved (R6-2).
  */
 function takeOtherTabsList() {
-  const incoming = load().jobs; // backs up what it cannot read in full (loadSavedList)
+  // Backs up what it cannot read in full (loadSavedList), and says so as the first load does: the
+  // recovery notice, and the sync record forgetting what the cloud holds (jobs left out here are not
+  // deleted ones: the next first sync must not delete them from the account).
+  const { jobs: incoming, recovery: found } = load();
+  if (found) forgetSynced(JOBS_SYNC_KEY);
   unreadRaw = null;
   const jobs = keepUnsaved(incoming, snapshot().jobs, stored);
   stored = incoming;
@@ -184,7 +188,7 @@ function takeOtherTabsList() {
   const persistError = jobs === incoming && !repairedOnRead(incoming) ? null : persist(jobs);
   if (!persistError) stored = jobs;
   seenRaw = rawNow();
-  update({ jobs, persistError });
+  update({ jobs, persistError, ...(found ? { recovery: rememberRecovery(KEY, found) } : {}) });
 }
 
 /** Whether `jobs`, just read from storage, differ from what storage holds (the read repaired them). */
