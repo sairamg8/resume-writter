@@ -47,11 +47,19 @@ unknown fields when it rewrites an item, so a copy it edited has the same `syncR
 engine reads that as moved too (`updatedAt` differs from the recorded one), as it reads a copy that has no rev. A
 record the old site rewrote has no `revs` or `device`: `versions` alone decide then, by equality of `updatedAt`.
 
+This was checked against the code of both previous sites, `master-backup` (00c7283) and d8385e4: `firestore.rules` is
+identical in both and in this branch; their `collectionSyncIo` reads a document with `{ ...d.data(), id }` and writes
+an item back whole, so the two fields travel with it and are never refused; their `normalizeJob` copies a job with
+its unknown fields. Their record read keeps only `uid`, `versions`, `order` and `stashed`, so a record they rewrite
+loses `device` and `revs` — harmless: the next sync here makes a new device id (its earlier writes then look like
+another device's) and decides by the `updatedAt` fallback above, and a rev bump at the `updatedAt` it saw is no move.
+
 ## Tests
 
 `tests/unit/390-cycD-sync-version-stamps.unit.mjs` (the fields, the record, rollback shape),
 `391-cycD-sync-slow-clock`, `392-cycD-sync-never-synced-item`, `393-cycD-sync-tie`,
-`394-cycD-sync-write-precondition` (one per conflict above), all in `tests/unit/`.
+`394-cycD-sync-write-precondition` (one per conflict above), and the review's `395-cycD-sync-undo-stale-copy`,
+`396-cycD-sync-apart-stale`, `397-cycD-sync-hung-write`, `398-cycD-sync-redundant-rewrite`, all in `tests/unit/`.
 
 ## Not done, on purpose
 
