@@ -203,8 +203,10 @@ export function createCollectionSync({
       if (!live()) return false;
       const chunk = deletes.slice(i, i + DELETE_CHUNK);
       await io.commit(uid, { deletes: chunk, expect: only(expect, chunk) });
-      if (!live()) return false;
+      // Recorded even when a start has replaced this sync meanwhile (the request landed whatever became of its result):
+      // noteVersions does nothing when the record names another account.
       noteVersions(uid, [], chunk, null);
+      if (!live()) return false;
     }
     return true;
   }
