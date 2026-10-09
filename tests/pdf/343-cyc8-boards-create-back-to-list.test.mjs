@@ -65,6 +65,7 @@ async function openBoards(entries) {
   return {
     view,
     router,
+    button,
     at: () => `${router.state.location.pathname}${router.state.location.search}`,
     async click(label) {
       const el = button(label);
