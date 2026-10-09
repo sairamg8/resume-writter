@@ -81,7 +81,7 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
 
 ## The final hunt (H1): what changed after the review
 
-Each fix has its own test, `tests/unit/400` to `428-h1-sync-*`; `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
+Each fix has its own test, `tests/unit/4*-h1-sync-*` (400 to 429); `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
 three devices on two accounts (edits, additions, imports, deletions with Undo, moves, offline spells, sign-outs, account
 switches, reloads, a browser's data cleared, failing reads and writes, slow and fast clocks, slow server calls that let the
 syncs of different devices overlap) and checks that they converge and that nothing typed is lost or leaks to the other
@@ -117,7 +117,7 @@ account; a failing script is cut down to the steps that matter and printed with 
 - A first sync reads the deleted list again when an item it read is on it: a write between the two reads (an edit that brings a
   deleted item back) made it look deleted for good, and the edit was deleted from the account (418).
 
-- (After the review of the fixes above; tests `419` to `428`.) A deletion request that landed after a start replaced the sync
+- (After the review of the fixes above; tests 419 to 429.) A deletion request that landed after a start replaced the sync
   that sent it is recorded as deleted all the same, so an Undo made then keeps the jobs (419); a write that landed so is
   recorded for an item deleted here meanwhile too, or it came back as a job never seen here (420).
 - A flush reads the ids of its conflict copies as well: another device holding one, or writing it between the read and the
