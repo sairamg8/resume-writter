@@ -284,12 +284,13 @@ function runsToDocx(runs, base) {
  * in the PDF. `lastAfter`: the space after the last paragraph, twips (the others keep 1 pt) — less on
  * Modern's banner, whose padding under it is Banner top & bottom exactly (R4-SW-W-01).
  */
-export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}, lastAfter = 20) {
+export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}, lastAfter = 20, lastFrame = {}) {
   const blocks = parseRichText(html);
   return blocks.map((block, i) => {
     const children = runsToDocx(block.runs, base);
     const spacing = { before: 20, after: i === blocks.length - 1 ? lastAfter : 20, ...lineSpacing(base.lineHeight, base.size) };
-    const options = { spacing, alignment: ALIGN[block.align || align], ...frame };
+    // `lastFrame`: further formatting of the last paragraph only (the letter's body keeps it with its closing).
+    const options = { spacing, alignment: ALIGN[block.align || align], ...frame, ...(i === blocks.length - 1 ? lastFrame : null) };
     if (block.marker) {
       const level = Math.max(0, block.indent - 1);
       if (block.marker.length === 1) {
