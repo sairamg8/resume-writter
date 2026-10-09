@@ -40,7 +40,7 @@ describe('probe 12', () => {
         out.push(`${r.template} JSON-RESUME-REPRINT line ${at}: ${JSON.stringify(l1[at])?.slice(0, 80)} -> ${JSON.stringify(l2[at])?.slice(0, 80)}`);
       }
       // markdown out, text import back: name, contacts, sections, entries count
-      const fromMd = imp.resumeFromText(m1);
+      const fromMd = imp.resumeFromText(imp.markdownLines(m1));
       const want = n.sections.filter((s) => s.visible !== false).map((s) => `${s.type}:${s.items.length}`);
       const got = fromMd.sections.map((s) => `${s.type}:${s.items.length}`);
       if (JSON.stringify(want) !== JSON.stringify(got)) out.push(`${r.template} MD-IMPORT sections want=${want.join(',')} got=${got.join(',')}`);
