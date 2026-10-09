@@ -174,7 +174,11 @@ export function listOwner() {
  * was dropped a job this tab could not save, while the notice still said it was unsaved (R6-2).
  */
 function takeOtherTabsList() {
-  const incoming = load().jobs; // backs up what it cannot read in full (loadSavedList)
+  // Backs up what it cannot read in full (loadSavedList), and says so as the first load does: the
+  // recovery notice, and the sync record forgetting what the cloud holds (jobs left out here are not
+  // deleted ones: the next first sync must not delete them from the account).
+  const { jobs: incoming, recovery: found } = load();
+  if (found) forgetSynced(JOBS_SYNC_KEY);
   unreadRaw = null;
   const jobs = keepUnsaved(incoming, snapshot().jobs, stored);
   stored = incoming;
@@ -184,7 +188,7 @@ function takeOtherTabsList() {
   const persistError = jobs === incoming && !repairedOnRead(incoming) ? null : persist(jobs);
   if (!persistError) stored = jobs;
   seenRaw = rawNow();
-  update({ jobs, persistError });
+  update({ jobs, persistError, ...(found ? { recovery: rememberRecovery(KEY, found) } : {}) });
 }
 
 /** Whether `jobs`, just read from storage, differ from what storage holds (the read repaired them). */
@@ -229,15 +233,21 @@ function update(patch) {
   listeners.forEach(l => l());
 }
 
-function setJobs(change) {
+/**
+ * A job page here listens for other tabs' saves, but one whose event is still on its way is not yet
+ * heard: take it in first, or a write replaces it, and that tab, hearing the write, reads this list as
+ * the other's (typing-freeze 5). With no page listening, snapshot() does as much (catchUp).
+ */
+function takeInFlight() {
   if (!initialized) init();
-  // A job page here listens for other tabs' saves, but one whose event is still on its way is not yet
-  // heard: take it in first, or this write replaces it, and that tab, hearing the write, reads this list as
-  // the other's (typing-freeze 5). With no page listening, snapshot() below does as much (catchUp).
   if (listeners.size) {
     const raw = rawNow();
     if (raw !== null && raw !== seenRaw) takeOtherTabsList();
   }
+}
+
+function setJobs(change) {
+  takeInFlight();
   const jobs = change(snapshot().jobs);
   // What catchUp could not read in full is about to be replaced: keep its copy, as load does.
   if (unreadRaw !== null) {
@@ -309,6 +319,9 @@ function placeOf(id) {
  * as it was and where, for restoreJob to undo it; null when no job has that id.
  */
 function moveJob(id, { status, beforeId = null } = {}) {
+  // The list as it is now, another tab's save in flight taken in: the moved list is built over it,
+  // not over a stale one written over that tab's change (CYC8-S4).
+  takeInFlight();
   const was = placeOf(id);
   if (!was) return null;
   const jobs = moveInList(snapshot().jobs, id, { status, beforeId }, Date.now());
@@ -373,7 +386,9 @@ function restoreJob(job, index) {
  * turns it into what the tracker says.
  */
 function importJobs(incoming) {
-  if (!initialized) init();
+  // Merged into the list as it is now, another tab's save in flight taken in first: the merged
+  // list is written whole, so a stale one replaced that tab's change (CYC8-S4).
+  takeInFlight();
   const { jobs, added, updated, skipped, lossy } = mergeImport(snapshot().jobs, incoming, Date.now());
   if (added || updated) setJobs(() => addressableJobs(jobs));
   return { added, updated, skipped, lossy };
@@ -396,7 +411,10 @@ function savedJobs() {
 
 /** Replace the list with the cloud sync's result (or [] as the account's list leaves); the same list writes nothing. */
 function replaceJobs(jobs) {
-  if (jobs !== jobsNow()) setJobs(() => jobs);
+  const was = jobsNow();
+  // Another tab's save in flight is taken in by setJobs: the sync's list was built over `was`, so
+  // what that tab changed is kept over it, as keepUnsaved keeps what storage refused (CYC8-S4).
+  if (jobs !== was) setJobs((now) => (now === was ? jobs : keepUnsaved(now, jobs, was)));
 }
 
 /** Remove every job ("Clear all jobs"); returns the list as it was, for restoreJobs (Undo). */

@@ -9,6 +9,7 @@ import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/u
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
+import { boardConflictCopy, jobConflictCopy } from '@/utils/collectionSyncConflict';
 import { DEMO_JOB_ID, isUntouchedDemoJob } from '@/utils/jobEdits';
 import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, savedJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
@@ -34,6 +35,7 @@ export const jobSync = {
     fromCloud: fromCloud(readJob, completeJob),
     label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
     seed: isUntouchedDemoJob, seedIds: [DEMO_JOB_ID],
+    conflictCopy: jobConflictCopy,
     leaveRecovery: leaveJobsRecovery,
   },
   meta: () => localMeta(JOBS_SYNC_KEY),
@@ -46,6 +48,7 @@ export const boardSync = {
     fromCloud: fromCloud(readBoard, completeBoard),
     label: (b) => b.title || 'Untitled project',
     seed: isUntouchedDemoBoard, seedIds: [DEMO_BOARD_ID],
+    conflictCopy: boardConflictCopy,
     leaveRecovery: leaveBoardsRecovery,
   },
   meta: () => localMeta(BOARDS_SYNC_KEY),
