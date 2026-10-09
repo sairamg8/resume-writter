@@ -18,6 +18,8 @@ import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
 import { cloudCanName, itemPath } from './collectionSyncIo.js';
+import { nextStamps, revsOf, revsOfStamps } from './collectionSyncRev.js';
+import { newId } from './ids.js';
 
 /**
  * A first sync that waits: storage would not take a sync record — the last account's list set
@@ -67,8 +69,14 @@ export function createCollectionSync({
     unsubscribe: null,
     turn: Promise.resolve(), // the last flush's batch handed to Firestore
     sent: new Map(), // id → the updatedAt of the copy this browser last handed to Firestore (its record only has it once acknowledged)
+    device: null, // this browser's id as a writer, until its record holds one
   };
   const status = (v) => report.status?.(v);
+  /**
+   * This browser's id as the writer of a version (collectionSyncRev.js): the one its record holds,
+   * else a new one, kept in the record by the next write of it. Every tab of a browser shares it.
+   */
+  const deviceId = () => meta.read().device || (s.device ??= newId('dev'));
 
   // Held back: id → the copy the cloud will not take, tried again once it changes or goes.
   const held = new Map();
@@ -107,18 +115,20 @@ export function createCollectionSync({
    * sync: an item put back here after it (Undo) is then one changed since this browser saw it, and
    * a first sync keeps it and takes it off the account's deleted list, even when its own write
    * never got there (a reload or a failure within the pause). Its version simply dropped, the
-   * first sync took it for a stale copy of a deleted item, and deleted it here too.
+   * first sync took it for a stale copy of a deleted item, and deleted it here too. `revs`: the revs
+   * (collectionSyncRev.js) of the copies in `sets`, as just written or as the cloud holds them.
    */
-  const noteVersions = (uid, sets, deletes, order) => {
+  const noteVersions = (uid, sets, deletes, order, revs = {}) => {
     const m = meta.read();
     if (m.uid !== uid) return;
     const versions = { ...m.versions, ...versionsOf(sets) };
-    deletes.forEach((id) => { versions[id] = DELETED; });
-    meta.write({ ...m, versions: claimed(versions), ...(order ? { order } : {}) });
+    const seen = { ...m.revs, ...revs };
+    deletes.forEach((id) => { versions[id] = DELETED; delete seen[id]; });
+    meta.write({ ...m, device: deviceId(), versions: claimed(versions), revs: claimed(seen), ...(order ? { order } : {}) });
   };
 
   /**
-   * `versions` without the items shown here that storage refused to hold: the record is saved under
+   * `versions` (or `revs`) without the items shown here that storage refused to hold: the record is saved under
    * its own key, apart from the list. Storage full, the list's save was refused (kept in memory
    * only) while the few bytes of the record fitted, and the record said this browser held items it
    * never stored: at the next reload they were "known here, gone from the list" — deleted here — and
@@ -193,9 +203,10 @@ export function createCollectionSync({
     // and the record left behind still listed the account's items — the next first sync took them
     // for deleted here and deleted them from the account. Storage full: the list goes first, to
     // make room; still refused, it comes back.
-    const written = meta.write(left.meta);
+    const record = { ...left.meta, device: deviceId() };
+    const written = meta.write(record);
     store.replace(left.list);
-    if (!written && !meta.write(left.meta)) {
+    if (!written && !meta.write(record)) {
       store.replace(list);
       return false;
     }
@@ -294,13 +305,13 @@ export function createCollectionSync({
    * items sent; rejects on any other failure, or when the deletions and order are refused without
    * the items — none to hold, and the sync stops until the list changes, as before.
    */
-  async function commitApart(uid, { sets, deletes, order }, live) {
+  async function commitApart(uid, { sets, deletes, order, stamps }, live) {
     const sent = [];
     if (deletes.length || order) await io.commit(uid, { sets: [], deletes, order });
     for (const x of sets) {
       if (!live()) break;
       try {
-        await io.commit(uid, { sets: [x] });
+        await io.commit(uid, { sets: [x], stamps });
         sent.push(x);
       } catch (e) {
         if (failureKind(e, online()) !== 'stop') throw e;
@@ -334,6 +345,7 @@ export function createCollectionSync({
       // move was undone here and then on every device (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD).
       const early = meta.read();
       const seen = early.uid === uid ? early.versions : {};
+      const seenRevs = early.uid === uid ? early.revs ?? {} : {};
       const seenOrder = early.uid === uid ? early.order : null;
       const cloud = await io.read(uid);
       if (gen !== s.gen) return;
@@ -365,6 +377,7 @@ export function createCollectionSync({
       // build wrote) would have the job dropped here as removed from the cloud.
       const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? seen : {}) })
         .filter(([id]) => cloudCanName(id)));
+      const baseRevs = { ...stash.revs, ...(mine ? seenRevs : {}) };
       const ownIds = new Set(own.map((x) => x.id));
       const localDeletes = [...stash.deletes, ...(mine ? Object.keys(seen).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
@@ -375,9 +388,11 @@ export function createCollectionSync({
       const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [], copyOf: store.conflictCopy, apart: store.conflictApart });
 
       sets = sendable(uid, plan.sets);
+      // Each item written is one version above the cloud's copy just read (collectionSyncRev.js).
+      const stamps = nextStamps(sets, cloud.stamps, baseRevs, deviceId());
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
       if (sets.length || plan.deletes.length || !sameOrder) {
-        const batch = { sets, deletes: plan.deletes, order: sameOrder ? null : plan.order };
+        const batch = { sets, deletes: plan.deletes, order: sameOrder ? null : plan.order, stamps };
         try {
           const sending = io.commit(uid, batch);
           noteSent(sets);
@@ -410,13 +425,17 @@ export function createCollectionSync({
         ...Object.fromEntries(plan.deletes.map((id) => [id, DELETED])),
         ...versionsOf(sets),
       };
+      const cloudRevs = {
+        ...revsOf(docs.filter((d) => !plan.deletes.includes(d.id)), cloud.stamps),
+        ...revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))),
+      };
       const { [uid]: _gone, ...stashed } = record.stashed;
       // The record names the account the list now belongs to: refused (storage full), every later
       // guard took the list for no account's — changes were never sent though the icon said
       // "synced", and at sign-out the account's list stayed for the next account to take in. Not
       // done then: the list is left as it was, and the first sync is tried again
       // (R5-HUNT9-SYNC-FIRST-SYNC-RECORD-WRITE-DROPPED).
-      const written = { uid, versions: cloudVersions, order: plan.order, stashed };
+      const written = { uid, versions: cloudVersions, revs: cloudRevs, device: deviceId(), order: plan.order, stashed };
       if (!meta.write(written) && meta.read().uid !== uid) {
         throw noRoom('this account\'s list could not be recorded');
       }
@@ -428,7 +447,7 @@ export function createCollectionSync({
       // The merged list refused by storage (full): the record claims only what storage holds
       // (claimed) — a smaller write, which fits where the one before did.
       const onDisk = claimed(cloudVersions);
-      if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk });
+      if (Object.keys(onDisk).length < Object.keys(cloudVersions).length) meta.write({ ...written, versions: onDisk, revs: claimed(cloudRevs) });
       changed(next);
       // Both sides changed these since the last sync: the older copies are kept beside them, and said.
       if (plan.conflicts.length) report.conflict?.(plan.conflicts.map((c) => store.label(plan.merged.find((x) => x.id === c.id))));
@@ -508,7 +527,7 @@ export function createCollectionSync({
       // stopped the sync (R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS).
       const gone = [...q.deletes].filter(([id]) => cloudCanName(id));
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
-      const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
+      const { docs, stamps: cloudStamps } = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
       if (!current()) return;
       // An item deleted here while its copy was being read — another tab's delete, taken through the
       // storage event: changed() queued its deletion — is not written back. The write would also come
@@ -542,7 +561,8 @@ export function createCollectionSync({
       const lacking = (list) => edited.filter((x) => !list.some((y) => y.id === x.id));
       const order = q.reordered || q.deletes.size || q.writes.size || edited.length
         ? [...(s.prev || []), ...lacking(s.prev || [])].map((x) => x.id) : null;
-      const sending = io.commit(user.uid, { sets, deletes, order });
+      const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
+      const sending = io.commit(user.uid, { sets, deletes, order, stamps });
       noteSent(sets);
       handedOver();
       if (copies.length) {
@@ -567,7 +587,7 @@ export function createCollectionSync({
       }
       await sending;
       if (!current()) return;
-      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes, order);
+      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes, order, { ...revsOf([...newer, ...edited], cloudStamps), ...revsOfStamps(stamps) });
       if (!s.timer) settled();
     } catch (e) {
       if (s.user?.uid !== user.uid) return;

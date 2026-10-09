@@ -1,7 +1,9 @@
 // What this browser keeps about a synced list (collectionSyncPlan.js) — the account it last synced
 // with, the versions and the order that account's cloud holds as last seen here, and what was kept
 // aside for an account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
-// `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
+// `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. Beside the
+// `versions` it holds the `revs` of the same copies (collectionSyncRev.js) and this browser's own
+// id as a writer, `device`; both only added, a record without them reads as none. The
 // held-back notice (items the cloud will not take) and each list's sync status live here too, as
 // tiny stores the board and job pages read (SyncHeldNotice, the workspace's sync icon).
 import { isQuotaError, setItemWithRoom } from './storageBackup.js';
@@ -10,11 +12,11 @@ import { isQuotaError, setItemWithRoom } from './storageBackup.js';
 export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
 export const BOARDS_SYNC_KEY = 'cpwtcv_boards_sync_v1';
 
-const empty = () => ({ uid: null, versions: {}, order: null, stashed: {} });
+const empty = () => ({ uid: null, versions: {}, revs: {}, device: null, order: null, stashed: {} });
 const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
 /**
- * The record under `key` as { read() → { uid, versions, order, stashed }, write(meta) → whether
+ * The record under `key` as { read() → { uid, versions, revs, device, order, stashed }, write(meta) → whether
  * storage took it }: what cannot be read is an empty record (the list then joins the next
  * account's, and nothing is lost); a write storage refuses is dropped — the next sync finds more
  * to send, never less — and says so: a list leaving this browser does not go unless its record,
@@ -31,6 +33,8 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
         return {
           uid: typeof saved.uid === 'string' && saved.uid ? saved.uid : null,
           versions: isMap(saved.versions) ? saved.versions : {},
+          revs: isMap(saved.revs) ? saved.revs : {},
+          device: typeof saved.device === 'string' && saved.device ? saved.device : null,
           order: Array.isArray(saved.order) ? saved.order.filter((id) => typeof id === 'string') : null,
           stashed: isMap(saved.stashed) ? saved.stashed : {},
         };
@@ -71,7 +75,7 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
 export function forgetSynced(key, storage) {
   const record = localMeta(key, storage);
   const m = record.read();
-  if (Object.keys(m.versions).length || m.order) record.write({ ...m, versions: {}, order: null });
+  if (Object.keys(m.versions).length || Object.keys(m.revs ?? {}).length || m.order) record.write({ ...m, versions: {}, revs: {}, order: null });
 }
 
 /** A record in memory, for a test or a page with no storage. */

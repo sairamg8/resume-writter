@@ -195,6 +195,7 @@ const idsOf = (v) => (Array.isArray(v) ? v.filter((id) => typeof id === 'string'
 export function leaveList(meta, list, uid) {
   if (!uid || meta.uid !== uid) return null;
   const versions = isMap(meta.versions) ? meta.versions : {};
+  const revs = isMap(meta.revs) ? meta.revs : {};
   const unsent = list.filter((x) => versions[x.id] !== x.updatedAt);
   const ids = new Set(list.map((x) => x.id));
   // A deletion already sent (DELETED) is not kept aside: sent again at the next sign-in, it
@@ -209,15 +210,17 @@ export function leaveList(meta, list, uid) {
     stashed[uid] = {
       items: [...was.items.filter((x) => !mine.has(x.id)), ...unsent],
       versions: { ...was.versions, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(versions[x.id])).map((x) => [x.id, versions[x.id]])) },
+      revs: { ...was.revs, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(revs[x.id])).map((x) => [x.id, revs[x.id]])) },
       deletes: [...new Set([...was.deletes.filter((id) => !mine.has(id)), ...deletes])],
       ...(moved ? { order: list.map((x) => x.id), base } : was.base ? { order: was.order, base: was.base } : {}),
     };
   }
-  return { meta: { uid: null, versions: {}, order: null, stashed }, list: [] };
+  // This browser's id as a writer stays: it is the browser's, not the account's.
+  return { meta: { uid: null, versions: {}, revs: {}, device: meta.device ?? null, order: null, stashed }, list: [] };
 }
 
 /**
- * Account `uid`'s items kept aside when its list left: { items, versions, deletes, order, base }
+ * Account `uid`'s items kept aside when its list left: { items, versions, revs, deletes, order, base }
  * (empty when none; `order` and `base` null when no move was kept).
  */
 export function stashOf(meta, uid) {
@@ -227,6 +230,7 @@ export function stashOf(meta, uid) {
   return {
     items: Array.isArray(entry.items) ? entry.items.filter((x) => x && typeof x.id === 'string' && x.id) : [],
     versions: isMap(entry.versions) ? entry.versions : {},
+    revs: isMap(entry.revs) ? entry.revs : {},
     deletes: Array.isArray(entry.deletes) ? entry.deletes.filter((id) => typeof id === 'string') : [],
     order: base && order ? order : null,
     base: base && order ? base : null,

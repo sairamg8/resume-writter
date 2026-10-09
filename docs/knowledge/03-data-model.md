@@ -179,7 +179,8 @@ Migration v2: strips old `demo_*` jobs from prior seeds and re-injects current `
 users/{uid}/resumes/{resumeId}   → full Resume document
 users/{uid}/meta/deletions       → { ids: string[] }
 users/{uid}/jobs/{jobId}, users/{uid}/boards/{id}, users/{uid}/meta/{jobs|boards}
-                                 → the Job Tracker's and Boards' lists (collectionSyncIo.js)
+                                 → the Job Tracker's and Boards' lists (collectionSyncIo.js); each item
+                                   also holds syncRev / syncBy, added by the sync (11-sync-versions.md)
 users/{uid}/shares/{resumeId}    → { shareId, publishedAt }: the link a résumé's public copy has
 users/{uid}/meta/publicCopies    → { copies: { [shareId]: resumeId } }: every public copy the account has
 public/{shareId}                 → { owner, resume, publishedAt }: a published copy, readable by its id
