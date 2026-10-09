@@ -162,15 +162,17 @@ export function createCollectionSync({
 
   /**
    * What a flush knows of an item's cloud copy (`stamps`: id → stamp, as read): `synced(id)` whether this
-   * browser's record has a copy of it the cloud held (not a deletion), and `moved(id, d)` whether copy `d`
+   * browser's record has a copy of it the cloud held (not a deletion), `moved(id, d)` whether copy `d`
    * moved since — by version, not by clock (collectionSyncRev.movedInCloud); what this browser itself
-   * handed over (`s.sent`) is no move.
+   * handed over (`s.sent`) is no move — and `changed(x)` whether the queued `x` differs from the copy the record
+   * holds (its updatedAt is not the recorded one: an item put back by Undo is the copy it was).
    */
   function cloudView(stamps) {
     const m = meta.read();
     const device = deviceId();
     return {
       synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
+      changed: (x) => x.updatedAt !== m.versions[x.id],
       moved: (id, d) => movedInCloud({
         stamp: stamps.get(id) ?? NO_STAMP, updatedAt: d.updatedAt, baseRev: m.revs?.[id], baseTime: m.versions[id], device, ownTime: s.sent.get(id),
       }),
@@ -188,7 +190,7 @@ export function createCollectionSync({
     for (const x of writes) {
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
-      if (!theirs || !view.synced(x.id) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
+      if (!theirs || !view.synced(x.id) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
       const older = theirs.updatedAt > x.updatedAt ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -555,11 +557,15 @@ export function createCollectionSync({
       const view = cloudView(cloudStamps);
       // The cloud's copy replaces this edit when it is later — unless nobody wrote it since this browser last saw
       // it: then this edit is the only change, and it goes whatever the clocks say (a device behind the
-      // others stamps its edits earlier than the copy it was made on).
+      // others stamps its edits earlier than the copy it was made on). Written by another device since and
+      // this copy no different from the one the record holds (an Undo put it back): the cloud's copy, whatever the clocks say.
       const newer = queued.map((x) => {
         const d = cloudCopy.get(x.id);
         if (!d || !Number.isFinite(d.updatedAt)) return null;
-        if (view.synced(x.id) && !view.moved(x.id, d)) return null;
+        if (view.synced(x.id)) {
+          if (!view.moved(x.id, d)) return null;
+          if (!view.changed(x)) return store.fromCloud(d);
+        }
         return d.updatedAt > (x.updatedAt ?? 0) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
@@ -581,6 +587,7 @@ export function createCollectionSync({
       // its own write is queued: it is not added a second time.
       if (copies.length) s.prev = placeCopies(s.prev || [], copies);
       const lacking = (list) => edited.filter((x) => !list.some((y) => y.id === x.id));
+      const stillHeld = new Set(edited.filter((x) => !lacking(s.prev || []).some((y) => y.id === x.id)).map((x) => x.id));
       const order = q.reordered || q.deletes.size || q.writes.size || edited.length
         ? [...(s.prev || []), ...lacking(s.prev || [])].map((x) => x.id) : null;
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
@@ -609,7 +616,9 @@ export function createCollectionSync({
       }
       await sending;
       if (!current()) return;
-      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes, order, { ...revsOf([...newer, ...edited], cloudStamps), ...revsOfStamps(stamps) });
+      // The record claims the cloud's copy only for what the list holds: an item put back meanwhile (Undo) is still the older copy.
+      const brought = edited.filter((x) => !stillHeld.has(x.id));
+      noteVersions(user.uid, [...sets, ...newer, ...brought], deletes, order, { ...revsOf([...newer, ...brought], cloudStamps), ...revsOfStamps(stamps) });
       if (!s.timer) settled();
     } catch (e) {
       if (s.user?.uid !== user.uid) return;
