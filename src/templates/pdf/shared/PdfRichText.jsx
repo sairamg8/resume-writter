@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, Fragment, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
@@ -74,7 +74,12 @@ function markerWidth(chars, fontSize) {
  */
 export function firstChunkKeep({ html, settings, fontSize, lineHeight, width, marginTop = 2 }) {
   const blocks = splitHugeBlocks(parseRichText(html));
-  const block = blocks[0];
+  return chunkKeep(blocks, 0, { settings, fontSize, lineHeight, width, marginTop });
+}
+
+/** The same for block `at` of `blocks`: its height when it cannot be split, else 0. */
+function chunkKeep(blocks, at, { settings, fontSize, lineHeight, width, marginTop = 2 }) {
+  const block = blocks[at];
   if (!block) return 0;
   const text = block.runs.map((r) => r.text).join('');
   const style = { fontFamily: settings?._pdfFontFamily, fontSize };
@@ -99,12 +104,15 @@ export function firstChunkKeep({ html, settings, fontSize, lineHeight, width, ma
  * `style` is the text style (font size, colour, line height, alignment); its marginTop and
  * marginBottom apply once, above the first block and below the last. `breaks(inset)`: where a word
  * of a block whose text starts `inset` pt in may break (sideBreaks in the Sidebar's dark column).
+ * `tail`: { node, settings, width } — what follows the text and must not stand alone on a page (a
+ * letter's closing and signature). The last block goes with it when that block cannot be split
+ * (chunkKeep), so the page break falls before the block and not between the block and the closing.
  */
-export function PdfRichText({ html, style = {}, breaks }) {
+export function PdfRichText({ html, style = {}, breaks, tail }) {
   const bulletStyle = useContext(BulletStyle);
   const room = useContext(ColumnRoom);
   const blocks = splitHugeBlocks(parseRichText(html)); // a paste of 200 000 characters: typing-freeze 7b
-  if (!blocks.length) return null;
+  if (!blocks.length) return tail ? tail.node : null;
   const { marginTop, marginBottom, ...textStyle } = style;
   const fontSize = textStyle.fontSize || 11;
   const color = textStyle.color;
@@ -119,7 +127,9 @@ export function PdfRichText({ html, style = {}, breaks }) {
   }
   const textStart = [0]; // x where the text of each list depth starts
 
-  return blocks.map((block, i) => {
+  const lastAt = blocks.length - 1;
+  const hold = tail && chunkKeep(blocks, lastAt, { settings: tail.settings, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: tail.width, marginTop: 0 }) > 0;
+  const drawn = blocks.map((block, i) => {
     const prev = blocks[i - 1];
     const edges = {
       marginTop: i === 0 ? marginTop : (block.joined ? 0 : prev.marker && block.marker ? LIST_GAP : PARA_GAP),
@@ -176,4 +186,10 @@ export function PdfRichText({ html, style = {}, breaks }) {
       </View>
     );
   });
+  if (!tail) return drawn;
+  if (!hold) return [...drawn, <Fragment key="tail">{tail.node}</Fragment>];
+  return [
+    ...drawn.slice(0, lastAt),
+    <View key="tail" wrap={false}>{drawn[lastAt]}{tail.node}</View>,
+  ];
 }
