@@ -154,7 +154,7 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
             onImportFile(file, asOriginal.current);
             return;
           }
-          // Read whole as text: a file over the document import's size is refused unread.
+          // Read whole as text: a file over the size the document import allows is refused unread.
           if (file.size > MAX_IMPORT_BYTES) {
             onImportError?.(TOO_BIG);
             e.target.value = '';
