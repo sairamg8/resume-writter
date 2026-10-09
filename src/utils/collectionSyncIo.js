@@ -100,6 +100,14 @@ export function collectionIo(fs, db, name) {
         const changed = ids.filter((id, i) => !sameStamp(now[i].exists() ? splitStamp(now[i].data()).stamp : null, expect.get(id)));
         if (changed.length) throw Object.assign(new Error(`The cloud's copy of ${changed.length} item(s) changed since it was read.`), { code: STALE, ids: changed });
         writeAll(tx, uid, what);
+      }).catch((e) => {
+        // The SDK retries a transaction whose documents change under it and, out of tries, rejects with the code of the
+        // last one: a precondition that failed. That is the same thing as a copy found changed — decide again, and
+        // later if it keeps happening — not a refusal for good, which held the item as one the cloud will not take.
+        if (e?.code === 'failed-precondition' || e?.code === 'already-exists') {
+          throw Object.assign(new Error(`The cloud's copy of ${ids.length} item(s) kept changing while it was written.`), { code: STALE, ids });
+        }
+        throw e;
       });
     },
   };
