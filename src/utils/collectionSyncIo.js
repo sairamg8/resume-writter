@@ -11,7 +11,7 @@
 //
 // An item document carries two fields of the sync's own, its version and its writer (collectionSyncRev.js):
 // read off a copy as it is read (`stamps`, id → stamp, beside the items) and added to it as it is written.
-import { BY_FIELD, REV_FIELD, splitStamp } from './collectionSyncRev.js';
+import { BY_FIELD, REV_FIELD, sameStamp, splitStamp } from './collectionSyncRev.js';
 
 /** The item a document holds, with the document's own id and without the sync's two fields; its stamp. */
 const splitDoc = (d) => {
@@ -31,6 +31,13 @@ export const asStored = (x) => JSON.parse(JSON.stringify(x));
 /** `x` as the server takes it, with its stamp (`{ rev, by }`) when it has one. */
 const stored = (x, stamp) => asStored(stamp ? { ...x, [REV_FIELD]: stamp.rev, [BY_FIELD]: stamp.by } : x);
 
+/**
+ * The code of the error a write fails with when a copy it was decided from is no longer the cloud's (another
+ * device wrote it since it was read): nothing is written, and the sync decides again from the new copy.
+ */
+export const STALE = 'sync-stale';
+export const isStale = (e) => e?.code === STALE;
+
 /** The path segments of item `id` of list `name` in account `uid`: what the size guard counts. */
 export const itemPath = (name, uid, id) => ['users', uid, name, id];
 
@@ -46,6 +53,14 @@ export function collectionIo(fs, db, name) {
   const itemsCol = (uid) => fs.collection(db, 'users', uid, name);
   const itemDoc = (uid, id) => fs.doc(db, ...itemPath(name, uid, id));
   const metaDoc = (uid) => fs.doc(db, 'users', uid, 'meta', name);
+  /** Everything a commit writes, to a batch or to a transaction (both have set and delete). */
+  const writeAll = (w, uid, { sets, deletes, order, stamps }) => {
+    sets.forEach((x) => w.set(itemDoc(uid, x.id), stored(x, stamps?.get(x.id))));
+    deletes.forEach((id) => w.delete(itemDoc(uid, id)));
+    if (deletes.length) w.set(metaDoc(uid), { deleted: fs.arrayUnion(...deletes) }, { merge: true });
+    if (sets.length) w.set(metaDoc(uid), { deleted: fs.arrayRemove(...sets.map((x) => x.id)) }, { merge: true });
+    if (order) w.set(metaDoc(uid), { order }, { merge: true });
+  };
 
   return {
     /** The account's list as a first sync needs it: `{ docs, stamps, deleted, order }`. */
@@ -67,15 +82,25 @@ export function collectionIo(fs, db, name) {
      * made where the deletion was never seen wins (collectionSyncPlan.js) — ids removed and added to
      * it (`deletes`), and the list's `order` when given. Each item goes with its stamp from `stamps`
      * (id → { rev, by }) when it has one. Resolves when the server has it.
+     *
+     * With `expect` (id → the stamp of the copy the write was decided from, null: none), the write is a
+     * transaction that reads those copies again and writes nothing unless each is still that copy: another
+     * device's write between the sync's read and this one fails it with `STALE`, and the sync decides again.
      */
-    commit(uid, { sets = [], deletes = [], order = null, stamps = null }) {
-      const batch = fs.writeBatch(db);
-      sets.forEach((x) => batch.set(itemDoc(uid, x.id), stored(x, stamps?.get(x.id))));
-      deletes.forEach((id) => batch.delete(itemDoc(uid, id)));
-      if (deletes.length) batch.set(metaDoc(uid), { deleted: fs.arrayUnion(...deletes) }, { merge: true });
-      if (sets.length) batch.set(metaDoc(uid), { deleted: fs.arrayRemove(...sets.map((x) => x.id)) }, { merge: true });
-      if (order) batch.set(metaDoc(uid), { order }, { merge: true });
-      return batch.commit();
+    commit(uid, { sets = [], deletes = [], order = null, stamps = null, expect = null }) {
+      const what = { sets, deletes, order, stamps };
+      if (!expect?.size || !fs.runTransaction) {
+        const batch = fs.writeBatch(db);
+        writeAll(batch, uid, what);
+        return batch.commit();
+      }
+      const ids = [...expect.keys()];
+      return fs.runTransaction(db, async (tx) => {
+        const now = await Promise.all(ids.map((id) => tx.get(itemDoc(uid, id))));
+        const changed = ids.filter((id, i) => !sameStamp(now[i].exists() ? splitStamp(now[i].data()).stamp : null, expect.get(id)));
+        if (changed.length) throw Object.assign(new Error(`The cloud's copy of ${changed.length} item(s) changed since it was read.`), { code: STALE, ids: changed });
+        writeAll(tx, uid, what);
+      });
     },
   };
 }
