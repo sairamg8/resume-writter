@@ -599,8 +599,10 @@ export function createCollectionSync({
       // An item edited here while the sync read the cloud, whose merged copy is the cloud's: the edit was made on the copy
       // before it, which this browser has not seen. The record keeps what it had for it, so the edit's own write finds the
       // cloud's copy moved and this one changed, and keeps the older of the two as a conflict copy — claimed as seen, the
-      // edit went over the cloud's copy with no trace.
-      for (const id of edited.keys()) {
+      // edit went over the cloud's copy with no trace. So is an item deleted here meanwhile: the deletion was made on the copy
+      // before the cloud's, and claimed as seen it deleted from the account an edit of another device's this browser never
+      // saw (or, put back by Undo, replaced it with the older copy).
+      for (const id of [...edited.keys(), ...removed]) {
         if (sets.some((x) => x.id === id) || plan.deletes.includes(id) || !docs.some((d) => d.id === id)) continue;
         if (versions[id] > DELETED) {
           cloudVersions[id] = versions[id];
