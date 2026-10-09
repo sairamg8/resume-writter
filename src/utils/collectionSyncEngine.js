@@ -37,11 +37,24 @@ const STALE_TRIES = 3;
  */
 const DELETE_CHUNK = 400;
 
-/** How many items a write can be for its absent copies to be checked too (expectOf). */
-const ABSENT_GUARD = 100;
+/** How many of this browser's own sent deletions a first sync keeps in the record (while the account lists them as deleted). */
+const MAX_TOMBSTONES = 2000;
+
+/**
+ * How many items a write can be for its absent copies to be checked too (expectOf). Each is a read of a transaction
+ * that holds 500 writes at most: this many items and the three writes of the deletion list and the order (400 + 3) fit,
+ * and a write beyond it (an import of hundreds) goes as a plain batch, as before. It was 100, and an import of 101 to 400
+ * jobs was the one left open to another device writing the same ids meanwhile.
+ */
+const ABSENT_GUARD = 400;
 
 /** A write that kept finding the cloud's copies changed: tried again later, as any temporary failure is. */
-const keptChanging = () => Object.assign(new Error('The cloud kept changing under this sync.'), { code: 'aborted' });
+// `stale`: the last STALE it ended on; the SDK's own code behind it (collectionSyncIo.commit), when it gave one, is kept as `cause`.
+const keptChanging = (stale) => {
+  const cause = stale?.cause ?? stale;
+  const last = cause?.code ? ` (last: ${cause.code})` : '';
+  return Object.assign(new Error(`The cloud kept changing under this sync${last}.`), { code: 'aborted', ...(cause ? { cause } : {}) });
+};
 
 /**
  * createCollectionSync({ name, io, store, meta, report, ... }):
@@ -84,6 +97,8 @@ export function createCollectionSync({
     readAt: -Infinity,
     unsubscribe: null,
     turn: Promise.resolve(), // the last flush's batch handed to Firestore
+    flights: new Set(), // the flushes of this line not yet landed or failed (a promise each)
+    behind: null, // the flushes an earlier line left on their way, which the first sync of this one waits for (a few seconds at most)
     sent: new Map(), // id → the updatedAt of the copy this browser last handed to Firestore (its record only has it once acknowledged)
     device: null, // this browser's id as a writer, until its record holds one
   };
@@ -146,13 +161,14 @@ export function createCollectionSync({
   /**
    * A write that landed after a start replaced the sync that sent it (whose result is dropped, record and list alike): the
    * record says so for what this browser's list holds, or those items are ones never seen here at the next sync, and an edit of
-   * another device's meanwhile, against one made here since, is settled by the clocks alone with the older dropped. Not for
-   * what the list does not hold (a conflict copy the plan made): noted, it would be taken at the next sync for an item
-   * deleted here, and deleted from the account.
+   * another device's meanwhile, against one made here since, is settled by the clocks alone with the older dropped. So is an
+   * item deleted here meanwhile (`known`: what this browser held when the write was decided): in the account with no version,
+   * it came back at the next sync, as one never seen here. Not a conflict copy the plan made (in neither): noted, it would be
+   * taken at the next sync for an item deleted here, and deleted from the account.
    */
-  function landed(uid, sets, deletes, order, stamps) {
+  function landed(uid, sets, deletes, order, stamps, known = []) {
     if (!sets.length && !deletes.length) return;
-    const held = new Set(store.items().map((x) => x.id));
+    const held = new Set([...store.items().map((x) => x.id), ...known]);
     const mine = sets.filter((x) => held.has(x.id));
     noteVersions(uid, mine, deletes, order, revsOfStamps(new Map(mine.map((x) => [x.id, stamps.get(x.id)]))));
   }
@@ -203,8 +219,10 @@ export function createCollectionSync({
       if (!live()) return false;
       const chunk = deletes.slice(i, i + DELETE_CHUNK);
       await io.commit(uid, { deletes: chunk, expect: only(expect, chunk) });
-      if (!live()) return false;
+      // Recorded even when a start has replaced this sync meanwhile (the request landed whatever became of its result):
+      // noteVersions does nothing when the record names another account.
       noteVersions(uid, [], chunk, null);
+      if (!live()) return false;
     }
     return true;
   }
@@ -230,8 +248,7 @@ export function createCollectionSync({
    * handed over (`s.sent`) is no move — and `changed(x)` whether the queued `x` differs from the copy the record
    * holds (its updatedAt is not the recorded one: an item put back by Undo is the copy it was).
    */
-  function cloudView(stamps) {
-    const m = meta.read();
+  function cloudView(stamps, m = meta.read()) {
     const device = deviceId();
     return {
       synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
@@ -259,7 +276,7 @@ export function createCollectionSync({
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
       if (!theirs || !(view.synced(x.id) || view.undone(x.id)) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
       // The first visit's demo, untouched, holds nothing typed: no copy of it (as the first sync makes none).
-      if (store.seed?.(theirs)) continue;
+      if (store.seed?.(theirs) || (view.undone(x.id) && store.seed?.(x))) continue;
       const older = view.later(x.id, d, x) ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
@@ -336,6 +353,11 @@ export function createCollectionSync({
     // a start (another account, a retry, going online) begins a new line, and what the old one still does is dropped
     // (`current()`), its copies being checked by the write itself (collectionSyncIo.commit).
     s.turn = Promise.resolve();
+    // What the old line still has on its way lands whatever becomes of its result, and the first sync of this one reads the
+    // cloud after it has: read before, its copies were gone from the cloud by the time its record claimed them (a deletion
+    // landing after an Undo, the job then dropped as one deleted elsewhere).
+    if (s.flights.size) s.behind = [...(s.behind ?? []), ...s.flights];
+    s.flights = new Set();
     timers.clear(s.retry);
     s.retryOnShow = false;
     if ((user?.uid ?? null) !== (s.user?.uid ?? null)) {
@@ -399,7 +421,8 @@ export function createCollectionSync({
    */
   function failed(e, user, what, sets = [], apart = false) {
     const { kind, status: said, log: line } = failureReport(e, online(), `${name} ${what}`);
-    if (line) log(...line);
+    // What the SDK said behind a copy that kept changing, if it said (keptChanging): the code in the line is 'aborted'.
+    if (line) log(...line, ...(e?.cause?.code ? [`(cause: ${e.cause.code})`] : []));
     s.ready = false;
     status(said);
     if (kind === 'config') s.disabled = true;
@@ -461,6 +484,12 @@ export function createCollectionSync({
       // So is the order it last saw the cloud hold: another tab's move sent meanwhile wrote its new
       // order to the record, the cloud's old order just read no longer matched it and led, and the
       // move was undone here and then on every device (R5-HUNT11-SYNC-REVIEW-FIRST-SYNC-ORDER-READ-AFTER-CLOUD).
+      if (s.behind) {
+        const behind = s.behind;
+        s.behind = null;
+        await landing(behind);
+        if (gen !== s.gen) return;
+      }
       const early = meta.read();
       const seen = early.uid === uid ? early.versions : {};
       const seenRevs = early.uid === uid ? early.revs ?? {} : {};
@@ -538,7 +567,7 @@ export function createCollectionSync({
           }
         }
         if (gen !== s.gen) {
-          landed(uid, sets, plan.deletes, null, stamps);
+          landed(uid, sets, plan.deletes, null, stamps, ownIds);
           return;
         }
       }
@@ -562,6 +591,20 @@ export function createCollectionSync({
         ...Object.fromEntries(plan.deletes.map((id) => [id, DELETED])),
         ...versionsOf(sets),
       };
+      // A deletion this browser sent stays in the record for as long as the account lists the id as deleted. It was dropped at
+      // the first sync after the one that sent it, and an Undo made after that (a restart: going online, a refresh, then the
+      // click) put back a job the next first sync took for one typed before signing in whose id the account deleted: dropped,
+      // here and from the list, with the user's Undo. Kept, it is a change after the deletion, as an Undo right after it is.
+      const listedDeleted = new Set(cloud.deleted);
+      // The ones put back by Undo while this sync was on its way are in the list and in no copy this sync wrote or read: the
+      // record keeps the deletion as their base, as it does for an edit typed then.
+      let tombstones = 0;
+      for (const id of Object.keys(seen)) {
+        if (seen[id] !== DELETED || id in cloudVersions || !listedDeleted.has(id)) continue;
+        if (tombstones >= MAX_TOMBSTONES) break;
+        cloudVersions[id] = DELETED;
+        tombstones += 1;
+      }
       const cloudRevs = {
         ...revsOf(docs.filter((d) => !plan.deletes.includes(d.id)), cloud.stamps),
         ...revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))),
@@ -569,8 +612,10 @@ export function createCollectionSync({
       // An item edited here while the sync read the cloud, whose merged copy is the cloud's: the edit was made on the copy
       // before it, which this browser has not seen. The record keeps what it had for it, so the edit's own write finds the
       // cloud's copy moved and this one changed, and keeps the older of the two as a conflict copy — claimed as seen, the
-      // edit went over the cloud's copy with no trace.
-      for (const id of edited.keys()) {
+      // edit went over the cloud's copy with no trace. So is an item deleted here meanwhile: the deletion was made on the copy
+      // before the cloud's, and claimed as seen it deleted from the account an edit of another device's this browser never
+      // saw (or, put back by Undo, replaced it with the older copy).
+      for (const id of [...edited.keys(), ...removed]) {
         if (sets.some((x) => x.id === id) || plan.deletes.includes(id) || !docs.some((d) => d.id === id)) continue;
         if (versions[id] > DELETED) {
           cloudVersions[id] = versions[id];
@@ -616,7 +661,7 @@ export function createCollectionSync({
       // The cloud's copies changed between the read and the write: decide again from what is there now.
       if (isStale(e)) {
         if (stale + 1 < STALE_TRIES) return firstSync(user, gen, again, stale + 1);
-        failed(keptChanging(), user, 'sync', []);
+        failed(keptChanging(e), user, 'sync', []);
         return;
       }
       failed(e, user, 'sync', sets);
@@ -651,6 +696,14 @@ export function createCollectionSync({
     status('syncing');
     const { user } = s;
     s.timer = timers.set(() => flush(user), flushDelay);
+  }
+
+  /** Waits for `promises` to settle, for the cloud timeout at most: what they did is done, and nothing of their result is wanted. */
+  async function landing(promises) {
+    let id;
+    const late = new Promise((resolve) => { id = timers.set(resolve, cloudTimeout); });
+    await Promise.race([Promise.allSettled(promises), late]);
+    timers.clear(id);
   }
 
   /** `promise`, or a deadline-exceeded failure (retried) once cloudTimeout passes without its answer. */
@@ -698,8 +751,14 @@ export function createCollectionSync({
       // stopped the sync (R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS).
       const gone = [...q.deletes].filter(([id]) => cloudCanName(id));
       const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
-      const { docs, stamps: cloudStamps } = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
+      // The record as it was BEFORE the read: every tab shares it, and another tab's flush landing during this read writes it
+      // ahead of the copies read here. The copy read was then older than the record's, and counted as a move since — an
+      // older copy of the cloud's replaced this tab's newer edit, here and in the account (as the first sync reads it, below).
+      const known = meta.read();
+      const read = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : { docs: [], stamps: new Map() };
       if (!current()) return;
+      let docs = read.docs;
+      const cloudStamps = new Map(read.stamps);
       // An item deleted here while its copy was being read — another tab's delete, taken through the
       // storage event: changed() queued its deletion — is not written back. The write would also come
       // off the account's deletion list (collectionSyncIo.commit), undoing that tab's deletion on
@@ -708,7 +767,7 @@ export function createCollectionSync({
       const here = new Set(store.items().map((x) => x.id));
       queued = queued.filter((x) => here.has(x.id));
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
-      const view = cloudView(cloudStamps);
+      const view = cloudView(cloudStamps, known);
       // The cloud's copy replaces this edit when it is later — unless nobody wrote it since this browser last saw
       // it: then this edit is the only change, and it goes whatever the clocks say (a device behind the
       // others stamps its edits earlier than the copy it was made on). Written by another device since and
@@ -723,6 +782,8 @@ export function createCollectionSync({
         const theirs = store.fromCloud(d);
         // The first visit's demo, untouched, holds nothing typed: it never replaces an edit, whatever the clocks say.
         if (theirs && store.seed?.(theirs) && !store.seed?.(x)) return null;
+        // Put back by Undo untouched, it is the same: the account's edit of it stays.
+        if (theirs && view.undone(x.id) && store.seed?.(x) && !store.seed?.(theirs)) return theirs;
         return view.later(x.id, d, x) ? theirs : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
@@ -731,7 +792,23 @@ export function createCollectionSync({
       // Changed here AND in the cloud since this browser last saw the cloud's copy (its record, or
       // what it sent itself since): whichever is older would be dropped. Kept as a copy beside the
       // newer, and sent in the same batch.
-      const copies = conflictCopies(queued, cloudCopy, docs, view);
+      let copies = conflictCopies(queued, cloudCopy, docs, view);
+      // A copy's id is one more document to look at: another device may hold it already (the same conflict found there, or
+      // an edit with one time), and a copy written over it lost what it held. What is found there is taken into account —
+      // the same content is the copy already made, another gets the next free id (freeId) — and what is not is expected
+      // to be absent when the write lands (below).
+      const looked = new Set(reading);
+      for (let again = 0; copies.length && again < 3; again += 1) {
+        const fresh = copies.map((c) => c.copy.id).filter((id) => !looked.has(id));
+        if (!fresh.length) break;
+        fresh.forEach((id) => looked.add(id));
+        const there = await withDeadline(io.readItems(user.uid, fresh));
+        if (!current()) return;
+        if (!there.docs.length) break;
+        docs = [...docs, ...there.docs];
+        there.stamps.forEach((stamp, id) => cloudStamps.set(id, stamp));
+        copies = conflictCopies(queued, cloudCopy, docs, view);
+      }
       sets = [...sets, ...copies.map((c) => c.copy)];
       // Deleted here, but changed in the cloud since the copy this browser deleted: kept, and taken back.
       const edited = gone.map(([id, at]) => {
@@ -755,7 +832,7 @@ export function createCollectionSync({
       const stamps = nextStamps(sets, cloudStamps, meta.read().revs, deviceId());
       // Written only if the copies it was decided from are still the cloud's.
       const toWrite = [...sets.map((x) => x.id), ...deletes];
-      const expect = expectOf(toWrite, cloudStamps, reading);
+      const expect = expectOf(toWrite, cloudStamps, [...reading, ...copies.map((c) => c.copy.id)]);
       const many = deletes.length > DELETE_CHUNK;
       if (many) {
         // More deletions than one request takes go first, in requests of their own (sendDeletes).
@@ -767,7 +844,7 @@ export function createCollectionSync({
       }
       await io.commit(user.uid, { sets, deletes: many ? [] : deletes, order, stamps, expect: many ? only(expect, sets.map((x) => x.id)) : expect });
       if (!current()) {
-        landed(user.uid, sets, deletes, order, stamps);
+        landed(user.uid, sets, deletes, order, stamps, queued.map((x) => x.id));
         return;
       }
       noteSent(sets);
@@ -807,6 +884,10 @@ export function createCollectionSync({
       if (!s.timer) settled();
     }
 
+    const flights = s.flights;
+    let landedFlight;
+    const flight = new Promise((resolve) => { landedFlight = resolve; });
+    flights.add(flight);
     try {
       // Behind a flush that has not landed: a wait that ends in the deadline is a failure like any, tried again later.
       await withDeadline(before);
@@ -817,7 +898,7 @@ export function createCollectionSync({
           return;
         } catch (e) {
           if (!isStale(e)) throw e;
-          if (tries >= STALE_TRIES) throw keptChanging();
+          if (tries >= STALE_TRIES) throw keptChanging(e);
         }
       }
     } catch (e) {
@@ -827,6 +908,8 @@ export function createCollectionSync({
       failed(e, user, 'flush', sets, sets.length > 1 || (!sets.length && queued.length > 0));
     } finally {
       handedOver();
+      flights.delete(flight);
+      landedFlight();
     }
   }
 

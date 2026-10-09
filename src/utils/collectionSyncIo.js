@@ -115,7 +115,7 @@ export function collectionIo(fs, db, name) {
         // last one: a precondition that failed. That is the same thing as a copy found changed — decide again, and
         // later if it keeps happening — not a refusal for good, which held the item as one the cloud will not take.
         if (e?.code === 'failed-precondition' || e?.code === 'already-exists') {
-          throw Object.assign(new Error(`The cloud's copy of ${ids.length} item(s) kept changing while it was written.`), { code: STALE, ids });
+          throw Object.assign(new Error(`The cloud's copy of ${ids.length} item(s) kept changing while it was written (${e.code}).`), { code: STALE, ids, cause: e });
         }
         throw e;
       });

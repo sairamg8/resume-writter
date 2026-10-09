@@ -71,7 +71,9 @@ test('a flush behind one that never lands gives up at the deadline and is tried 
   await d.timers.fire(); // its deadline passes
   assert.equal(d.seen.status, 'error', 'it says it will retry');
 
-  await d.timers.fire(); // the retry: a first sync, a new line
+  await d.timers.fire(); // the retry: a first sync, a new line, which reads the cloud after what the old line left on its way
+  assert.equal(d.seen.status, 'syncing', 'it waits for the write that never lands (H1-SYNC-26) ...');
+  await d.timers.fire(); // ... until the deadline, and then goes on
   assert.equal(d.seen.status, 'synced');
   assert.equal(cloud.doc('users/A/jobs/a1').role, 'Principal Engineer');
 });
