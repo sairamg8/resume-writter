@@ -11,10 +11,22 @@ import { Component, Suspense, createElement } from 'react';
 import { mount } from '../pdf/fake-dom.mjs';
 import { lazyPage } from '../../src/utils/lazyPage.js';
 
-const settle = async (view) => {
-  for (let i = 0; i < 12; i += 1) {
-    await new Promise((r) => { setImmediate(r); });
+// React holds back the reveal of a page for a moment after it showed the loading line (its Suspense
+// throttle): wait on what the page shows, not on a count of ticks.
+const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
+async function until(view, text) {
+  for (let i = 0; i < 500; i += 1) {
     view.act(() => {});
+    if (view.container.textContent === text) return;
+    await wait(10);
+  }
+  assert.fail(`never showed "${text}", it shows "${view.container.textContent}"`);
+}
+/** Time enough for a loop in the background to show itself. */
+const still = async (view) => {
+  for (let i = 0; i < 40; i += 1) {
+    view.act(() => {});
+    await wait(10);
   }
 };
 
@@ -52,46 +64,42 @@ function network() {
 const offline = () => ({ online: false, reload() { throw new Error('the tab must not reload'); } });
 
 test('Try Again after a failed load asks for the page again, and shows it once the network is back', async () => {
-  const quiet = console.error;
+  const log = console.error;
   console.error = () => {};
   const net = network();
   const Page = lazyPage(() => net.load(), 'Editor', offline());
   const view = open(Page);
   try {
-    await settle(view);
-    assert.equal(view.container.textContent, 'crashed');
+    await until(view, 'crashed');
     assert.equal(net.attempts, 1);
     net.up = true;
     view.act(() => boundary.again());
-    await settle(view);
-    assert.equal(view.container.textContent, 'the editor', 'before: the failed load was kept, and the crash came back');
+    await until(view, 'the editor'); // before: the failed load was kept, and the crash came back
     assert.equal(net.attempts, 2);
   } finally {
     await view.unmount();
-    console.error = quiet;
+    console.error = log;
   }
 });
 
 test('a page that keeps failing shows its error and asks once per Try Again: no loop in the background', async () => {
-  const quiet = console.error;
+  const log = console.error;
   console.error = () => {};
   const net = network();
   const Page = lazyPage(() => net.load(), 'Editor', offline());
   const view = open(Page);
   try {
-    await settle(view);
-    await settle(view);
+    await until(view, 'crashed');
+    await still(view);
     assert.equal(view.container.textContent, 'crashed');
     assert.equal(net.attempts, 1, 'a failure must not make the page ask again by itself');
     view.act(() => boundary.again());
-    await settle(view);
+    await still(view);
     assert.equal(view.container.textContent, 'crashed');
     assert.equal(net.attempts, 2, 'one more ask for the one Try Again');
-    await settle(view);
-    assert.equal(net.attempts, 2);
   } finally {
     await view.unmount();
-    console.error = quiet;
+    console.error = log;
   }
 });
 
@@ -100,13 +108,11 @@ test('a page that loaded stays loaded: a later mount does not fetch it again', a
   net.up = true;
   const Page = lazyPage(() => net.load(), 'Editor', offline());
   const first = open(Page);
-  await settle(first);
-  assert.equal(first.container.textContent, 'the editor');
+  await until(first, 'the editor');
   await first.unmount();
   const second = open(Page);
   try {
-    await settle(second);
-    assert.equal(second.container.textContent, 'the editor');
+    await until(second, 'the editor');
     assert.equal(net.attempts, 1);
   } finally {
     await second.unmount();
@@ -116,20 +122,19 @@ test('a page that loaded stays loaded: a later mount does not fetch it again', a
 test('a page whose load failed while nobody was looking is asked for again by the next mount', async () => {
   const net = network();
   const Page = lazyPage(() => net.load(), 'Editor', offline());
-  const quiet = console.error;
+  const log = console.error;
   console.error = () => {};
   const first = open(Page);
   await first.unmount(); // left before the answer came: the load fails with nobody to show it to
-  await new Promise((r) => { setImmediate(r); });
+  await wait(30);
   assert.equal(net.attempts, 1);
   net.up = true;
   const second = open(Page);
   try {
-    await settle(second);
-    assert.equal(second.container.textContent, 'the editor');
+    await until(second, 'the editor');
     assert.equal(net.attempts, 2);
   } finally {
     await second.unmount();
-    console.error = quiet;
+    console.error = log;
   }
 });
