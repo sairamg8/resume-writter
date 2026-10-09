@@ -1,6 +1,6 @@
 import { createContext, Fragment, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
-import { Text } from './PdfText';
+import { Text, fitIn } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
 import { useLinkLook } from './PdfLinkStyle';
 import { splitHugeBlocks } from './splitHugeBlock';
@@ -127,6 +127,9 @@ export function PdfRichText({ html, style = {}, breaks, tail }) {
   }
   const textStart = [0]; // x where the text of each list depth starts
 
+  // Where a word of a block whose text starts `inset` pt in may break: as the caller says (the Sidebar's
+  // column), else, in a column or a Grids cell, inside the room that text has (H3-459).
+  const breakAt = (inset) => (breaks ? breaks(inset) : fitIn(room, textStyle, inset));
   const lastAt = blocks.length - 1;
   const hold = tail && chunkKeep(blocks, lastAt, { settings: tail.settings, fontSize, lineHeight: textStyle.lineHeight ?? 1.4, width: tail.width, marginTop: 0 }) > 0;
   const drawn = blocks.map((block, i) => {
@@ -141,7 +144,7 @@ export function PdfRichText({ html, style = {}, breaks, tail }) {
       // Body text, or a further paragraph of a list item aligned with that item's text.
       const left = block.indent > 0 ? (textStart[block.indent] ?? block.indent * INDENT) : 0;
       return (
-        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }} hyphenationCallback={breaks?.(left)}>
+        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }} hyphenationCallback={breakAt(left)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       );
@@ -166,7 +169,7 @@ export function PdfRichText({ html, style = {}, breaks, tail }) {
       // centred list paragraph with its bullet. A marker column would leave it at the left margin.
       return (
         <View key={i} wrap={!keeps(0)} style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}>
-          <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left)}>
+          <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breakAt(left)}>
             {glyph ? `${glyph} ` : null}
             <Runs runs={block.runs} color={color} />
           </Text>
@@ -180,7 +183,7 @@ export function PdfRichText({ html, style = {}, breaks, tail }) {
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
         {glyph ? <Text style={{ ...textStyle, textAlign: 'left', width }}>{glyph}</Text> : null}
-        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breaks?.(left + width)}>
+        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breakAt(left + width)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       </View>
