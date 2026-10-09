@@ -75,7 +75,9 @@ test('a fraction of a pixel rounds down, so no row shows above the header', () =
 
 test('an unchanged value is not written again', () => {
   const { main, box } = setup();
+  box.top = 56 - 100; // 100 px past the box top
   followPhoneStickyTop(box);
+  assert.equal(box.vars['--stuck'], '100px');
   const first = box.writes;
   for (let i = 0; i < 5; i += 1) main.fire('scroll');
   assert.equal(box.writes, first, 'five scrolls that moved nothing wrote nothing');
