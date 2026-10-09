@@ -155,8 +155,10 @@ test('a flush that failed after the copy was kept is retried without a second co
   d1.edit('j1', { role: 'Lead Engineer' }, 20);
   await d1.timers.fire();
   cloud.fail.commit = Object.assign(new Error('The service is currently unavailable.'), { code: 'unavailable' });
-  await d2.timers.fire(); // the copy is kept here, its batch fails
-  assert.equal(d2.ids().length, 2);
+  await d2.timers.fire(); // the batch fails
+  // The copy is placed in the list once the cloud has taken the batch (a write can be refused as stale and decided again,
+  // cyc-D, 11-sync-versions.md), so a failed flush leaves the list as it was; the retry below makes the one copy.
+  assert.equal(d2.ids().length, 1);
   cloud.fail.commit = null;
   await d2.timers.fire(); // the retry: a first sync
   await settle();

@@ -337,6 +337,11 @@ them from the account; now they come back from the cloud (R5-HUNT10). An item de
 the list and from storage) keeps its version until its deletion is sent, so a reload or a failed
 flush before then still deletes it from the account rather than bringing it back.
 
+Each item document also carries a version (`syncRev`) and its writer (`syncBy`), added by the sync
+(`src/utils/collectionSyncRev.js`), and this browser's record keeps the `revs` it last saw and its own `device`
+id: what they are for, the four conflicts they close and why the previous site still reads everything is
+[11-sync-versions.md](11-sync-versions.md).
+
 ### Public links (R2-148)
 
 Export → **Share a public link** (only for a signed-in account on a site with Firebase configured;

@@ -4,6 +4,7 @@
 // typed on either device is lost — as the résumés' conflict copies are (cloudSyncLineage.js).
 import { newId } from './ids.js';
 import { deriveKey } from './boardModel.js';
+import { BY_FIELD, REV_FIELD } from './collectionSyncRev.js';
 
 /**
  * The fields of a project that are only looks (the starred flag, the colour): a difference in them
@@ -19,11 +20,12 @@ const canon = (v) => (Array.isArray(v) ? v.map(canon)
   : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
 
 /**
- * Whether two items hold the same content: all but their id, when they were last changed and the
- * fields named in `apart`, whatever the order of their fields.
+ * Whether two items hold the same content: all but their id, when they were last changed, the sync's own version and
+ * writer (collectionSyncRev.js: a list the previous site wrote can carry them) and the fields named in `apart`,
+ * whatever the order of their fields.
  */
 export const sameContent = (a, b, apart = []) => {
-  const plain = (x) => JSON.stringify(canon({ ...x, id: 0, updatedAt: 0, ...Object.fromEntries(apart.map((k) => [k, 0])) }));
+  const plain = (x) => JSON.stringify(canon({ ...x, id: 0, updatedAt: 0, [REV_FIELD]: 0, [BY_FIELD]: 0, ...Object.fromEntries(apart.map((k) => [k, 0])) }));
   return plain(a) === plain(b);
 };
 

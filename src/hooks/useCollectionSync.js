@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, writeBatch,
+  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, runTransaction, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { collectionIo } from '@/utils/collectionSyncIo';
@@ -15,7 +15,7 @@ import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, savedJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
 import { boardsNow, leaveRecovery as leaveBoardsRecovery, replaceBoards, savedBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
 
-const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove };
+const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, runTransaction, arrayUnion, arrayRemove };
 
 /** A cloud copy as the store would load it from storage (readJob / readBoard); null when it is not one. */
 const fromCloud = (read, complete) => (d) => {

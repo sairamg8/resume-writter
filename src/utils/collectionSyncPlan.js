@@ -18,6 +18,7 @@
 // item and the older one is kept beside it as a conflict copy (collectionSyncConflict.js), as the
 // résumés' is: nothing typed is lost.
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
+import { NO_STAMP, movedInCloud, theirsLater } from './collectionSyncRev.js';
 
 /**
  * The version this browser records for an item whose deletion it sent to the cloud
@@ -64,7 +65,10 @@ function weave(lead, other) {
  * in order), sets (items to write), deletes (ids to remove and list as deleted), order (the ids in
  * order: written when it differs from the cloud's), conflicts (the older copies kept beside an
  * item both sides changed: `{ id, copy }`, `copyOf(older, everyItem)` making each; none without it;
- * `apart`: the fields whose difference alone is no conflict, a project's star and colour) }.
+ * `apart`: the fields whose difference alone is no conflict, a project's star and colour; `revs`, `stamps`
+ * (id → stamp) and `device`: the versions this browser last saw, the cloud's now and this browser's id,
+ * collectionSyncRev.js; `fresh`: this browser's list was never this account's, so an item both hold that it
+ * never synced was edited on both from the same start) }.
  * Nothing typed is lost:
  *   - an item on one side only is new there and joins the list — unless the account deleted it
  *     for good, or it is one this browser knew and deleted since;
@@ -85,13 +89,19 @@ function weave(lead, other) {
  * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
  * cloud's wins: the device that sent first.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [] }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [], copyOf = null, apart = [], revs = {}, stamps = new Map(), device = '', fresh = false }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
   const localById = new Map(local.map((x) => [x.id, x]));
   const known = (id) => Number.isFinite(versions[id]);
-  const changedSince = (x) => known(x.id) && time(x) > versions[x.id];
+  // Changed since this browser last saw it is "differs from the version it recorded", not "is later": a device whose
+  // clock is behind stamps an edit earlier than the copy it was made on.
+  const changedSince = (x) => known(x.id) && time(x) !== versions[x.id];
+  /** Whether the cloud's copy of an item this browser knows moved since it saw it (collectionSyncRev.movedInCloud). */
+  const movedSince = (theirs) => known(theirs.id) && movedInCloud({
+    stamp: stamps.get(theirs.id) ?? NO_STAMP, updatedAt: time(theirs), baseRev: revs[theirs.id], baseTime: versions[theirs.id], device,
+  });
 
   const keep = new Map();
   const sets = [];
@@ -101,7 +111,7 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
     const mine = localById.get(id);
     const theirs = cloudById.get(id);
     if (!mine && dropped.has(id)) {
-      if (theirs && !gone.has(id) && changedSince(theirs)) keep.set(id, theirs);
+      if (theirs && !gone.has(id) && movedSince(theirs)) keep.set(id, theirs);
       else if (theirs || !gone.has(id)) deletes.push(id);
       continue;
     }
@@ -116,15 +126,29 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // Changed on both sides since this browser last saw the cloud's copy, and not to the same
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
-      const conflict = Boolean(copyOf) && known(id) && versions[id] > DELETED && time(mine) > versions[id] && time(theirs) > versions[id]
-        && !sameContent(mine, theirs, apart);
+      const synced = known(id) && versions[id] > DELETED;
+      // An item this browser never synced, in a list new to the account (the demo job has one id on every browser,
+      // an imported file's jobs the same): there is no copy to have changed since, both sides are edits of one start —
+      // the cloud's copy written by another device, this browser's not the untouched demo. A pristine demo in the
+      // cloud is no edit, and an untouched one here never wins (below).
+      const fromStart = fresh && !known(id) && !seed(mine);
+      const based = synced || fromStart;
+      const here = based && (synced ? changedSince(mine) : true);
+      const there = based && (synced ? movedSince(theirs)
+        : !seed(theirs) && movedInCloud({ stamp: stamps.get(id) ?? NO_STAMP, updatedAt: time(theirs), device }));
+      const conflict = Boolean(copyOf) && here && there && !sameContent(mine, theirs, apart);
+      // Only one side changed it since: that side stays, whatever the two clocks say.
+      const oneSide = based && here !== there;
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
-      if (time(theirs) > time(mine) || (!known(id) && seed(mine))) keep.set(id, theirs);
-      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict) sets.push(mine); }
+      const theirsStay = (oneSide ? there : theirsLater(time(theirs), time(mine), stamps.get(id)?.by ?? '', device)) || (!known(id) && seed(mine));
+      // A tie in time with different content left both sides keeping their own (the cloud's copy was never replaced).
+      const tied = time(mine) === time(theirs) && !sameContent(mine, theirs, apart);
+      if (theirsStay) keep.set(id, theirs);
+      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict || tied || (oneSide && !sameContent(mine, theirs, apart))) sets.push(mine); }
       if (conflict) {
-        const copy = copyOf(time(theirs) > time(mine) ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
+        const copy = copyOf(theirsStay ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
         if (!hasTwin(copy, [...local, ...docs])) {
           keep.set(copy.id, copy);
           sets.push(copy);
@@ -195,6 +219,7 @@ const idsOf = (v) => (Array.isArray(v) ? v.filter((id) => typeof id === 'string'
 export function leaveList(meta, list, uid) {
   if (!uid || meta.uid !== uid) return null;
   const versions = isMap(meta.versions) ? meta.versions : {};
+  const revs = isMap(meta.revs) ? meta.revs : {};
   const unsent = list.filter((x) => versions[x.id] !== x.updatedAt);
   const ids = new Set(list.map((x) => x.id));
   // A deletion already sent (DELETED) is not kept aside: sent again at the next sign-in, it
@@ -209,15 +234,17 @@ export function leaveList(meta, list, uid) {
     stashed[uid] = {
       items: [...was.items.filter((x) => !mine.has(x.id)), ...unsent],
       versions: { ...was.versions, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(versions[x.id])).map((x) => [x.id, versions[x.id]])) },
+      revs: { ...was.revs, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(revs[x.id])).map((x) => [x.id, revs[x.id]])) },
       deletes: [...new Set([...was.deletes.filter((id) => !mine.has(id)), ...deletes])],
       ...(moved ? { order: list.map((x) => x.id), base } : was.base ? { order: was.order, base: was.base } : {}),
     };
   }
-  return { meta: { uid: null, versions: {}, order: null, stashed }, list: [] };
+  // This browser's id as a writer stays: it is the browser's, not the account's.
+  return { meta: { uid: null, versions: {}, revs: {}, device: meta.device ?? null, order: null, stashed }, list: [] };
 }
 
 /**
- * Account `uid`'s items kept aside when its list left: { items, versions, deletes, order, base }
+ * Account `uid`'s items kept aside when its list left: { items, versions, revs, deletes, order, base }
  * (empty when none; `order` and `base` null when no move was kept).
  */
 export function stashOf(meta, uid) {
@@ -227,6 +254,7 @@ export function stashOf(meta, uid) {
   return {
     items: Array.isArray(entry.items) ? entry.items.filter((x) => x && typeof x.id === 'string' && x.id) : [],
     versions: isMap(entry.versions) ? entry.versions : {},
+    revs: isMap(entry.revs) ? entry.revs : {},
     deletes: Array.isArray(entry.deletes) ? entry.deletes.filter((id) => typeof id === 'string') : [],
     order: base && order ? order : null,
     base: base && order ? base : null,
