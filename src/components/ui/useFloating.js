@@ -33,9 +33,16 @@ export function useFloating(open, anchorRef, floatingRef, { placement = 'bottom-
       const floating = floatingRef.current;
       if (!anchor?.getBoundingClientRect || !floating) return;
       const rect = anchor.getBoundingClientRect();
+      // Measured with no cap of ours on it: under the last maxHeight a panel that was cut short kept
+      // measuring short, so once the anchor scrolled to a spot with more room it was placed as if
+      // small and (above the anchor) ended up over it.
+      const capped = floating.style.maxHeight;
+      floating.style.maxHeight = '';
+      const height = floating.offsetHeight;
+      floating.style.maxHeight = capped;
       const next = computePlacement({
         anchor: rect,
-        floating: { width: Math.max(floating.offsetWidth, matchWidth ? rect.width : 0), height: floating.offsetHeight },
+        floating: { width: Math.max(floating.offsetWidth, matchWidth ? rect.width : 0), height },
         viewport: { width: window.innerWidth, height: window.innerHeight },
         placement,
         offset,
