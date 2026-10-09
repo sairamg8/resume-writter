@@ -110,7 +110,8 @@ const conflictListeners = new Set();
 export const syncConflicts = {
   get: () => conflicts,
   add(name, list) {
-    conflicts = { ...conflicts, [name]: [...conflicts[name], ...list] };
+    // Each name once: the same item reported again (a retried sync) is not counted twice.
+    conflicts = { ...conflicts, [name]: [...new Set([...conflicts[name], ...list])] };
     conflictListeners.forEach((l) => l());
   },
   dismiss(name) {

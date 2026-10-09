@@ -40,7 +40,7 @@ const noRoom = (what = 'the last account\'s list could not be set aside') => Obj
  *             items()) }
  *   meta      { read(), write(m) } — collectionSyncMeta.js
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]),
- *             conflict([name]) — the items a conflict copy was kept for (null: forget them, as the list leaves) }
+ *             conflict([name]) — the items a conflict copy was kept for (null: forget them, as the list leaves or the account changes) }
  *   online, hidden, timers, flushDelay, retryDelay, maxRetryDelay, refreshAfter, now, log — as
  *             createCloudSync's (cloudTimeout: how long a flush waits for its read); maxBytes the document limit (Firestore's 1 MiB)
  * Returns { start(user), cancel(), shown() }: the same calls cloudSyncBrowser.js and the hook make.
@@ -215,6 +215,9 @@ export function createCollectionSync({
       // refused); its next first sync sends what it held.
       dropQueue(); s.attempts = 0; s.ready = false; s.prev = null; s.sent.clear();
       if (held.size) { held.clear(); heldChanged(); }
+      // The names of the last account's conflict copies, in this tab too: another tab's sign-out
+      // took the list (leave() then finds none) and left them for the next account to be shown.
+      report.conflict?.(null);
     }
     const owner = meta.read().uid;
     if (io && s.user && !user) leave(s.user.uid);
