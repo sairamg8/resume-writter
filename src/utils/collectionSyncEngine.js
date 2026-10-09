@@ -694,6 +694,8 @@ export function createCollectionSync({
         s.prev = [...(s.prev || []), ...lacking(s.prev || [])];
         store.replace([...store.items(), ...lacking(store.items())]);
       }
+      // The cloud's copies the list does not hold after all: an edit typed while the batch read the cloud stays (below).
+      let unseen = new Set();
       if (newer.length) {
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
         // An item edited here while the batch read the cloud is newer still: that edit stays, and its
@@ -701,13 +703,18 @@ export function createCollectionSync({
         // Only the copy the decision was made on is replaced (by its updatedAt, equal — not a clock: a copy put back by Undo, or queued
         // twice, is that copy and is replaced by the cloud's whatever it is stamped).
         const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && x.updatedAt === decidedOn.get(x.id) ? n : x; };
+        // That edit was made on the copy before the cloud's, which this browser has not seen: the record must not say
+        // it has, or the queued write is the only change and goes over the other device's edit with no trace.
+        unseen = new Set(store.items().filter((x) => decidedOn.has(x.id) && x.updatedAt !== decidedOn.get(x.id)
+          && newer.some((y) => y.id === x.id)).map((x) => x.id));
         const list = store.items().map(take);
         s.prev = (s.prev || []).map(take);
         store.replace(list);
       }
       // The record claims the cloud's copy only for what the list holds: an item put back meanwhile (Undo) is still the older copy.
       const brought = edited.filter((x) => !stillHeld.has(x.id));
-      noteVersions(user.uid, [...sets, ...newer, ...brought], deletes, order, { ...revsOf([...newer, ...brought], cloudStamps), ...revsOfStamps(stamps) });
+      const seenNow = newer.filter((x) => !unseen.has(x.id));
+      noteVersions(user.uid, [...sets, ...seenNow, ...brought], deletes, order, { ...revsOf([...seenNow, ...brought], cloudStamps), ...revsOfStamps(stamps) });
       if (!s.timer) settled();
     }
 
