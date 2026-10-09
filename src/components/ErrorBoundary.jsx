@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { crashShown } from '@/utils/lazyPage';
 
 /**
  * Catches unhandled JavaScript errors anywhere in the child component tree,
@@ -24,6 +25,7 @@ export class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Unhandled application error:', error, errorInfo);
+    crashShown(); // a page whose file failed is asked for again from here on (lazyPage)
   }
 
   render() {

@@ -71,27 +71,34 @@ export function loadPage(load, name, env = browser()) {
   });
 }
 
+/** How many crash screens an error boundary has put up: a page that failed is asked for again once one was shown. */
+let crashes = 0;
+/** For ErrorBoundary: it has just put its crash screen up. */
+export const crashShown = () => { crashes += 1; };
+
 /**
  * A route's page as a component: React.lazy over loadPage, that tries its file again after a failure. A lazy
  * keeps a failed load for good, so a page whose file could not be fetched (offline, a flaky connection) stayed
  * on the crash screen, with Try Again and every link back to it failing too, until the tab was reloaded. Now
- * the next time the page mounts after a failure — Try Again, or the route left and opened again — it asks for
- * its file anew. Never within one mount: a failure that replaced the lazy at once would have the page asking
- * again, and failing again, in a loop no one sees, instead of showing the error. `env` is loadPage's.
+ * the next time the page mounts after its failure was shown (Try Again, or the route left and opened again)
+ * it asks for its file anew; so does a mount `staleMs` after a failure nobody saw. Never straight after the
+ * failure: React renders the page again at once to see whether the error was a fluke, and a page that asked
+ * again for each of those would load, fail and load again in a loop no one sees, before the error showed.
+ * `env` is loadPage's.
  */
-export function lazyPage(load, name, env) {
+export function lazyPage(load, name, env, { staleMs = 3000, now = Date.now } = {}) {
   let Inner;
-  let failed = false;
+  let failure = null; // when the last load failed, and how many crash screens had been shown by then
   const fresh = () => lazy(() => loadPage(load, name, env).catch((error) => {
-    failed = true;
+    failure = { crashes, at: now() };
     throw error;
   }));
   Inner = fresh();
   // One lazy per mount (a state initializer, so StrictMode's second call gets the same one back).
   const take = () => {
-    if (failed) {
+    if (failure && (crashes > failure.crashes || now() - failure.at >= staleMs)) {
       Inner = fresh();
-      failed = false;
+      failure = null;
     }
     return Inner;
   };

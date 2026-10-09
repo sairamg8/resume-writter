@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Component, Suspense, createElement } from 'react';
 import { mount } from '../pdf/fake-dom.mjs';
-import { lazyPage } from '../../src/utils/lazyPage.js';
+import { crashShown, lazyPage } from '../../src/utils/lazyPage.js';
 
 // React holds back the reveal of a page for a moment after it showed the loading line (its Suspense
 // throttle): wait on what the page shows, not on a count of ticks.
@@ -35,6 +35,7 @@ let boundary = null;
 class Boundary extends Component {
   state = { crashed: false };
   static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch() { crashShown(); } // as the app's ErrorBoundary does
   again() { this.setState({ crashed: false }); }
   render() { return this.state.crashed ? createElement('p', null, 'crashed') : this.props.children; }
 }
@@ -119,14 +120,14 @@ test('a page that loaded stays loaded: a later mount does not fetch it again', a
   }
 });
 
-test('a page whose load failed while nobody was looking is asked for again by the next mount', async () => {
+test('a page whose load failed with no crash screen shown is asked for again by a mount a while later', async () => {
   const net = network();
-  const Page = lazyPage(() => net.load(), 'Editor', offline());
+  const Page = lazyPage(() => net.load(), 'Editor', offline(), { staleMs: 40 });
   const log = console.error;
   console.error = () => {};
   const first = open(Page);
   await first.unmount(); // left before the answer came: the load fails with nobody to show it to
-  await wait(30);
+  await wait(80);
   assert.equal(net.attempts, 1);
   net.up = true;
   const second = open(Page);
