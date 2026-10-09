@@ -1,0 +1,19 @@
+# Response headers for the Cloudflare Workers static assets (wrangler.jsonc serves ./dist; Vite copies
+# public/ into it). tests/unit/483-h4-security-headers.unit.mjs pins what is here and why.
+#
+# Every page: the browser may not guess a type for a file (a user-made file named .js is not run as a
+# script), the site may be framed by itself only (a page that frames it to trick a click is refused),
+# a link out sends the site's address and no more, and the camera, the microphone and the location
+# are off (the app uses none). Not set: a Content-Security-Policy, and a Cross-Origin-Opener-Policy,
+# which breaks the Google sign-in popup; a CSP has to be written against a real browser session of the
+# whole app (the PDF worker, pdf.js, Firebase and the jsDelivr fonts), not blind.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# The build names every file under assets/ by its content, so one never changes under its name: a
+# returning visitor keeps them without asking again. index.html (not here) is asked about every time.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
