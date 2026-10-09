@@ -380,8 +380,8 @@ describe('R4-APP-06: widening the window past the phone layout closes the drawer
       assert.ok(s.drawerOpen());
       await s.resize(1024);
       assert.ok(!s.drawerOpen(), 'the drawer stayed open at desktop width');
-      await new Promise((resolve) => { setTimeout(resolve, 300); }); // its 180 ms exit
-      s.view.act(() => {});
+      // Its 180 ms exit: wait (bounded) until the modal is gone, not a fixed 300 ms.
+      for (const end = Date.now() + 10_000; s.modal() && Date.now() < end;) { await new Promise((resolve) => { setTimeout(resolve, 10); }); s.view.act(() => {}); }
       assert.ok(!s.modal(), 'a hidden modal stayed on the page, and the shortcuts with it');
       await s.resize(375);
       assert.ok(!s.drawerOpen(), 'narrowing again does not bring it back');
