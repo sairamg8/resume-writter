@@ -57,7 +57,7 @@ function samples() {
  * - `fileInput()`, `pick(file)` (a file chosen in it; `file.text` its contents);
  * - `close()`, then `saved()`: the store as written to storage.
  */
-async function dashboard(resumes = [], { user = null } = {}) {
+async function dashboard(resumes = [], { user = null, cloud = false } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
   const { NewResume } = await loadModule('/src/pages/NewResume.jsx');
@@ -69,7 +69,7 @@ async function dashboard(resumes = [], { user = null } = {}) {
   await loadModule('/src/components/ImportDialog.jsx');
   const storage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   globalThis.localStorage = storage;
-  const auth = { user, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
+  const auth = { user, authLoading: false, cloudAvailable: cloud, signInWithGoogle: () => {}, signOut: () => {} };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
   const box = { store: null, where: null };
   function Where() {
@@ -802,7 +802,7 @@ describe('the dashboard: the empty page signed out (CYC-B)', () => {
   const hinted = (page) => page.all().some((el) => el.tagName === 'P' && text(el) === HINT);
 
   it('signed out with no documents: the empty state says to sign in to see the account\'s documents', async () => {
-    const page = await dashboard();
+    const page = await dashboard([], { cloud: true });
     try {
       assert.ok(page.has('H2', 'No resumes yet'));
       assert.ok(hinted(page), 'no hint on the empty page');
