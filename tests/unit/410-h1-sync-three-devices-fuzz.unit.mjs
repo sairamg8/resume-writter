@@ -64,7 +64,7 @@ function generate(seed) {
   return Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
 }
 
-async function replay(ops) {
+async function replay(ops, trace = false) {
   const cloud = fakeFirestore();
   const devices = [0, 1, 2].map((i) => device(cloud, i));
   const script = [];
@@ -74,6 +74,13 @@ async function replay(ops) {
   const stamp = (d) => { tick += 1; return 1_000_000 + tick * 100 + SKEW[d.index]; };
   const mark = () => { serial += 1; tokens.push(serial); return `[${serial}]`; };
   const say = (text) => script.push(text);
+  const short = (n) => n.replace(/\s+/g, '');
+  const dump = () => {
+    if (!trace) return;
+    const inCloud = [...cloud.data].filter(([p]) => p.startsWith('users/A/jobs/')).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}`);
+    script.push(`      cloud: ${inCloud.join(' ')}`);
+    for (const x of devices) script.push(`      d${x.index}${x.net.signedIn ? '' : ' (out)'}${x.net.online ? '' : ' (off)'}: ${x.list.map((j) => `${j.id.replace('job_', '')}=${short(j.notes)}@${j.updatedAt - 1_000_000}`).join(' ')}`);
+  };
 
   async function signIn(d) {
     d.net.signedIn = true;
@@ -85,6 +92,7 @@ async function replay(ops) {
   for (const d of devices) await signIn(d);
 
   for (const op of ops) {
+    dump();
     const d = devices[op.d];
     const { roll } = op;
     const pick = (n) => Math.floor(op.r * n);
@@ -144,6 +152,7 @@ async function replay(ops) {
     }
   }
 
+  dump();
   // Everyone online, signed in, and the syncs run until they have nothing more to send.
   for (let round = 0; round < 8; round += 1) {
     for (const d of devices) {
@@ -152,6 +161,7 @@ async function replay(ops) {
       d.net.clock += 10_000;
       await d.start(A);
       for (let i = 0; i < 6 && d.timers.count; i += 1) await d.fire();
+      if (trace && round < 3) { say(`final round ${round}, d${d.index} synced`); dump(); }
     }
   }
   say('every device online and signed in, settled');
@@ -190,9 +200,9 @@ test(`three devices, ${SEEDS} random scripts: they converge and nothing typed is
     const { problems } = await replay(ops);
     if (!problems.length) continue;
     failed += 1;
-    if (failures.length >= 6) continue;
+    if (failures.length >= 2) continue;
     const small = await shrink(ops);
-    const { problems: left, script } = await replay(small);
+    const { problems: left, script } = await replay(small, true);
     const text = script.join('\n    ');
     if (seen.has(text)) continue;
     seen.add(text);
