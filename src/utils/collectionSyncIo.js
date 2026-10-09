@@ -66,9 +66,19 @@ export function collectionIo(fs, db, name) {
     /** The account's list as a first sync needs it: `{ docs, stamps, deleted, order }`. */
     async read(uid) {
       const [snap, meta] = await Promise.all([fs.getDocsFromServer(itemsCol(uid)), fs.getDocFromServer(metaDoc(uid))]);
-      const m = meta.exists() ? meta.data() : {};
+      let m = meta.exists() ? meta.data() : {};
       const ids = (v) => (Array.isArray(v) ? v.filter((id) => typeof id === 'string') : []);
-      return { ...itemsOf(snap.docs), deleted: ids(m.deleted), order: ids(m.order) };
+      const read = itemsOf(snap.docs);
+      // Two reads are two moments. An item present and listed as deleted at once may be both only because a write came
+      // between them: an edit that brings a deleted item back writes it and takes it off the list in one transaction, and
+      // the list was read before it, the item after. The first sync took that for an item deleted for good and deleted
+      // the edit from the account. The list is read again, after the items, which is the order that cannot mislead.
+      const listed = new Set(ids(m.deleted));
+      if (read.docs.some((d) => listed.has(d.id))) {
+        const again = await fs.getDocFromServer(metaDoc(uid));
+        m = again.exists() ? again.data() : {};
+      }
+      return { ...read, deleted: ids(m.deleted), order: ids(m.order) };
     },
 
     /** The server's copies of these items now, those that exist, `{ docs, stamps }`: a flush keeps a newer one another device wrote. */
@@ -100,6 +110,14 @@ export function collectionIo(fs, db, name) {
         const changed = ids.filter((id, i) => !sameStamp(now[i].exists() ? splitStamp(now[i].data()).stamp : null, expect.get(id)));
         if (changed.length) throw Object.assign(new Error(`The cloud's copy of ${changed.length} item(s) changed since it was read.`), { code: STALE, ids: changed });
         writeAll(tx, uid, what);
+      }).catch((e) => {
+        // The SDK retries a transaction whose documents change under it and, out of tries, rejects with the code of the
+        // last one: a precondition that failed. That is the same thing as a copy found changed — decide again, and
+        // later if it keeps happening — not a refusal for good, which held the item as one the cloud will not take.
+        if (e?.code === 'failed-precondition' || e?.code === 'already-exists') {
+          throw Object.assign(new Error(`The cloud's copy of ${ids.length} item(s) kept changing while it was written.`), { code: STALE, ids });
+        }
+        throw e;
       });
     },
   };

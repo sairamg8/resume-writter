@@ -127,11 +127,15 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // content: the older side's edits would be dropped. A deletion sent from here (DELETED) is no
       // base to tell an edit from.
       const synced = known(id) && versions[id] > DELETED;
+      // Deleted from here, put back since (Undo, and maybe edited), and a copy in the cloud again: another device wrote
+      // it after the deletion, so both are changes of one start, as with an item never synced (below). The older of the
+      // two used to be dropped with no copy.
+      const undone = known(id) && versions[id] === DELETED && !seed(mine);
       // An item this browser never synced, in a list new to the account (the demo job has one id on every browser,
       // an imported file's jobs the same): there is no copy to have changed since, both sides are edits of one start —
       // the cloud's copy written by another device, this browser's not the untouched demo. A pristine demo in the
       // cloud is no edit, and an untouched one here never wins (below).
-      const fromStart = fresh && !known(id) && !seed(mine);
+      const fromStart = (fresh && !known(id) && !seed(mine)) || undone;
       const based = synced || fromStart;
       const here = based && (synced ? changedSince(mine) : true);
       const there = based && (synced ? movedSince(theirs)
@@ -231,10 +235,14 @@ export function leaveList(meta, list, uid) {
   if (unsent.length || deletes.length || moved) {
     const was = stashOf(meta, uid);
     const mine = new Set(unsent.map((x) => x.id));
+    // What was deleted here keeps the version it was deleted from, as an item changed here does: the next sign-in
+    // then tells a copy another device edited meanwhile (it stays) from one nobody touched (it goes). With no
+    // version it could not, and the deletion removed the other device's edit from the account.
+    const based = [...unsent.map((x) => x.id), ...deletes];
     stashed[uid] = {
       items: [...was.items.filter((x) => !mine.has(x.id)), ...unsent],
-      versions: { ...was.versions, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(versions[x.id])).map((x) => [x.id, versions[x.id]])) },
-      revs: { ...was.revs, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(revs[x.id])).map((x) => [x.id, revs[x.id]])) },
+      versions: { ...was.versions, ...Object.fromEntries(based.filter((id) => Number.isFinite(versions[id])).map((id) => [id, versions[id]])) },
+      revs: { ...was.revs, ...Object.fromEntries(based.filter((id) => Number.isFinite(revs[id])).map((id) => [id, revs[id]])) },
       deletes: [...new Set([...was.deletes.filter((id) => !mine.has(id)), ...deletes])],
       ...(moved ? { order: list.map((x) => x.id), base } : was.base ? { order: was.order, base: was.base } : {}),
     };

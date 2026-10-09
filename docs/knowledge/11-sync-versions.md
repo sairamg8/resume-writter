@@ -65,6 +65,9 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
 
 - Nothing is batched across requests (a 450-item split was reverted: S7). A transaction holds the same at most 500
   writes a batch does; a larger first sync still goes one item at a time, each in a transaction of its own.
+  The one exception is deletions: more than 400 at once ("Clear all jobs" on a long list) are sent first, 400 to a request,
+  each request recorded as deleted as it lands, so an Undo after part of them went is still a copy changed since; left in
+  one request they were refused for good and so was every sync after, with the next job added blamed as too large (H1).
 - Which side stays the item when both changed still follows `updatedAt`, so a device with a slow clock may find
   its latest edit as the "(conflict copy)". Nothing is lost either way.
 - The deletion list and the order are not preconditions (`meta/<name>`): they are merged by the batch itself
@@ -75,3 +78,56 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
   first sync of 1,000 new jobs stays one batch, or one request each past 500, as before); the ids two browsers can both
   make (the demo's) are checked as absent. A batch that writes only the order is not checked.
 - Two tabs of one browser share one writer id: the store's own merge of the two tabs (05) is what keeps them apart.
+
+## The final hunt (H1): what changed after the review
+
+Each fix has its own test, `tests/unit/400` to `418-h1-sync-*`; `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
+three devices on two accounts (edits, additions, imports, deletions with Undo, moves, offline spells, sign-outs, account
+switches, reloads, a browser's data cleared, failing reads and writes, slow and fast clocks, slow server calls that let the
+syncs of different devices overlap) and checks that they converge and that nothing typed is lost or leaks to the other
+account; a failing script is cut down to the steps that matter and printed with every device's list and record after each.
+
+- More than 400 deletions at once ("Clear all jobs" on a long list) are sent first, 400 to a request, each recorded as it lands:
+  in one request they were refused for good and so was every sync after, the next job added blamed as too large (400).
+- A flush belongs to the line it began in (`gen`): after a start (refresh, going online, an account change) it stops, so the
+  copy it was queued with is never written, on a retry, over the newer edit the restart's first sync sent (401).
+- A flush or a first sync that takes the cloud's copy of an item edited here meanwhile does not record that copy as seen (the
+  record keeps the copy the edit was made on; for an item never seen here, the copy the edit was made on is the base): the
+  edit's own write then finds the cloud's copy moved and keeps the older side as a conflict copy (402, 414). An untouched demo
+  in the account is no copy, and never replaces an edit (417).
+- A job deleted here and unsent at sign-out keeps its version in what is kept aside, like an item changed here: the next sign-in
+  keeps an edit another device made meanwhile (403). An item kept aside and one the signed-out list has under the same id (a file
+  imported again) are both kept, the earlier as a copy (412).
+- A transaction out of tries (`failed-precondition` from the SDK) is a copy that kept changing (`STALE`), not a refusal that holds
+  the item (404).
+- A flush of up to 100 items also checks that the copies it read as absent still are: an imported file's jobs have the same ids
+  on every browser that imports it (405). A first sync's few new items are checked too, so a first sync a start replaced cannot
+  land late with its older copy over a newer edit (413). Larger writes are not (each check is a read in a transaction of 500).
+- A flush sends the list's order only when it changes it (a move, a deletion, an item the account lacks, a copy), not with every
+  edit, which put another device's move back (406).
+- After a merge the sync queues the list the store holds, not the one it handed over: a project given a key of its own on taking
+  the list is sent with it (407).
+- The id of a conflict copy carries a mark of the id when the id had characters replaced (408), and another content with the same
+  id and time takes the next free id: the second copy was taken for the first and never made (409).
+- A job deleted here, sent, edited on another device (the edit won over the deletion), then put back here with Undo and edited,
+  keeps both edits, the older as a copy (411).
+- A write that landed after a start replaced the sync that sent it is recorded (for what the list holds), or its items are ones
+  "never seen here" at the next sync and the older of two edits is dropped (415); a conflict copy it wrote is not recorded, or it
+  is taken for an item deleted here (416).
+- A first sync reads the deleted list again when an item it read is on it: a write between the two reads (an edit that brings a
+  deleted item back) made it look deleted for good, and the edit was deleted from the account (418).
+
+Left as they were, and why:
+
+- The whole list is read at every first sync (each time a tab is shown after ten seconds, going online), and the transaction
+  reads again the copies it replaces: cost, not loss.
+- An item over the size limit by less than the two version fields is held by the server's refusal, not by the size check.
+- An item typed before the first sign-in, or imported, whose id the account deleted, is dropped by the first sync: it cannot be
+  told from a stale copy of a deleted item.
+- Two devices that each import the same file and edit the same job before either has synced it: the item is unknown to both, so
+  the clocks settle it and the older edit is dropped with no copy. The same for an edit made at the very millisecond of the
+  version the record holds (the record cannot tell it changed): both need a base the record does not keep.
+- The first account to sync a list nobody owned (typed signed out) takes it; a sync a start replaced may already have sent it to
+  the account just left. Nothing of that account's own data goes to the other.
+- Stage names: a stage removed on one device and added again on another before either sees the other is settled by which
+  request reaches the cloud last; a tombstone list over 100 names is replaced whole by the device that removes the 101st.

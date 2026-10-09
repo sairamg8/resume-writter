@@ -43,17 +43,46 @@ export const hasTwin = (copy, items) => items.some((x) => x.id === copy.id || sa
  */
 const copyId = (item, prefix) => {
   if (!Number.isFinite(item.updatedAt) || typeof item.id !== 'string' || !item.id) return newId(prefix);
-  const base = item.id.replace(/[^\w-]/g, '_');
+  const clean = item.id.replace(/[^\w-]/g, '_');
+  // Ids that differ only in the characters this replaced (an imported file's "ジョブ" and "仕事", "job.1" and "job_1") would
+  // share a copy's id when their times are equal, and the second copy was taken for the first and never made: a mark of
+  // the id as it was keeps them apart. An id with nothing replaced is unchanged, as every device has always made it.
+  const base = clean === item.id ? clean : `${clean}-${shortHash(item.id)}`;
   return `${base.startsWith(`${prefix}_`) ? base : `${prefix}_${base}`}-conflict-${item.updatedAt}`;
 };
 
-/** A job's older copy: the same data under an id made from the job's, its company (else its role) marked. */
-export function jobConflictCopy(job) {
+/** A short text that follows `text` (FNV-1a, 32 bits, base 36): the same on every device. */
+function shortHash(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/**
+ * `copy` under an id no other item of `others` has with other content. The id follows the copied item and its time,
+ * so a copy found twice is one; but two devices' different edits of one item can carry one time (two clocks, an
+ * import), and the second copy then met the first's id, was taken for it (hasTwin) and never made: its edit was
+ * dropped. Another content takes the next free id; the same content keeps its own, and hasTwin skips it.
+ */
+function freeId(copy, others) {
+  let id = copy.id;
+  for (let n = 2; others.some((x) => x.id === id && !sameContent(x, copy, ['key'])); n += 1) id = `${copy.id}-${n}`;
+  return id === copy.id ? copy : { ...copy, id };
+}
+
+/**
+ * A job's older copy: the same data under an id made from the job's, its company (else its role) marked. `others`:
+ * every item it must not be taken for (freeId).
+ */
+export function jobConflictCopy(job, others = []) {
   const copy = { ...job, id: copyId(job, 'job') };
   if (String(job.company ?? '').trim()) copy.company = `${job.company} ${CONFLICT_MARK}`;
   else if (String(job.role ?? '').trim()) copy.role = `${job.role} ${CONFLICT_MARK}`;
   else copy.company = CONFLICT_MARK;
-  return copy;
+  return freeId(copy, others);
 }
 
 /**
@@ -63,5 +92,5 @@ export function jobConflictCopy(job) {
  */
 export function boardConflictCopy(board, others = []) {
   const key = deriveKey(board.title, others.map((b) => b.key));
-  return { ...board, id: copyId(board, 'board'), key, title: `${board.title || 'Untitled project'} ${CONFLICT_MARK}` };
+  return freeId({ ...board, id: copyId(board, 'board'), key, title: `${board.title || 'Untitled project'} ${CONFLICT_MARK}` }, others);
 }
