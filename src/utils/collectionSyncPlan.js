@@ -231,10 +231,14 @@ export function leaveList(meta, list, uid) {
   if (unsent.length || deletes.length || moved) {
     const was = stashOf(meta, uid);
     const mine = new Set(unsent.map((x) => x.id));
+    // What was deleted here keeps the version it was deleted from, as an item changed here does: the next sign-in
+    // then tells a copy another device edited meanwhile (it stays) from one nobody touched (it goes). With no
+    // version it could not, and the deletion removed the other device's edit from the account.
+    const based = [...unsent.map((x) => x.id), ...deletes];
     stashed[uid] = {
       items: [...was.items.filter((x) => !mine.has(x.id)), ...unsent],
-      versions: { ...was.versions, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(versions[x.id])).map((x) => [x.id, versions[x.id]])) },
-      revs: { ...was.revs, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(revs[x.id])).map((x) => [x.id, revs[x.id]])) },
+      versions: { ...was.versions, ...Object.fromEntries(based.filter((id) => Number.isFinite(versions[id])).map((id) => [id, versions[id]])) },
+      revs: { ...was.revs, ...Object.fromEntries(based.filter((id) => Number.isFinite(revs[id])).map((id) => [id, revs[id]])) },
       deletes: [...new Set([...was.deletes.filter((id) => !mine.has(id)), ...deletes])],
       ...(moved ? { order: list.map((x) => x.id), base } : was.base ? { order: was.order, base: was.base } : {}),
     };
