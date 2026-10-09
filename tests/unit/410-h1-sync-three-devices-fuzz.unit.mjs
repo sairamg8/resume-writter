@@ -1,8 +1,11 @@
-// H1-SYNC-FUZZ: three devices on one account run a seeded random script of edits, additions, moves, going offline and
-// online, signing out and in, refreshes and failing writes, with clocks that are slow and fast. When every device is back
-// online and the syncs have settled: (1) the devices and the account hold the same jobs, (2) nothing typed is lost — every
-// edit's mark is in some job, an edit kept as a "(conflict copy)" counting — since nothing is deleted in the script.
-// The real engine, plan and io over a fake Firestore. A failing seed prints its script. Run: yarn test:unit
+// H1-SYNC-FUZZ: three devices on two accounts run a seeded random script of edits, additions, imports, deletions with Undo,
+// moves, going offline and online, signing out and in, switching accounts, refreshes, page reloads, a browser's site
+// data cleared and failing writes and reads, with clocks that are slow and fast. When every device is back online and the
+// syncs have settled, for each account: (1) the devices and the account hold the same jobs, (2) nothing typed is lost —
+// every edit's mark is in some job of its account (an edit kept as a "(conflict copy)" counting), unless its job was
+// deleted in the script, (3) nothing typed for one account is in the other's. The real engine, plan and io over a fake
+// Firestore; a failing script is cut down to the steps that matter and printed with each device's list after each step.
+// Run: yarn test:unit (H1_FUZZ_SEEDS sets how many scripts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCollectionSync } from '../../src/utils/collectionSyncEngine.js';
@@ -11,10 +14,12 @@ import { jobConflictCopy } from '../../src/utils/collectionSyncConflict.js';
 import { memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 
-const A = { uid: 'A', email: 'a@example.com' };
-const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 600;
+const USERS = { A: { uid: 'A', email: 'a@example.com' }, B: { uid: 'B', email: 'b@example.com' } };
+const SEEDS = Number(process.env.H1_FUZZ_SEEDS) || 400;
 const STEPS = 110;
+// Not multiples of 100 apart: two edits never carry one time (that is a case of its own, 409).
 const SKEW = [3, -2537, 1811];
+const IMPORTED = 3;
 
 /** mulberry32: the same numbers for a seed on every machine. */
 function random(seed) {
@@ -33,80 +38,130 @@ const job = (id, notes, updatedAt) => ({
   statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt,
 });
 
+/** One browser: its list, its sync record, its engine (booted again by a reload), and what it is signed in as. */
 function device(cloud, index) {
-  let list = [];
+  const d = { index, list: [], online: true, account: null, clock: 0, wipes: 0, lastDeleted: null };
   const listeners = new Set();
-  const set = (next) => { list = next; listeners.forEach((l) => l()); };
+  d.set = (next) => { d.list = next; listeners.forEach((l) => l()); };
   const store = {
-    items: () => list, replace: set,
+    items: () => d.list, replace: (next) => d.set(next),
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
-    fromCloud: (d) => d, label: (j) => j.company, conflictCopy: jobConflictCopy,
+    fromCloud: (x) => x, label: (j) => j.company, conflictCopy: jobConflictCopy,
   };
-  const timers = manualTimers();
-  const { seen, report } = recorder();
-  const net = { online: true, signedIn: false, clock: 0 };
-  const sync = createCollectionSync({
-    name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: memoryMeta({ uid: null, versions: {}, revs: {}, device: `dev-${index}`, order: null, stashed: {} }), report, timers,
-    online: () => net.online, now: () => net.clock,
-  });
-  return {
-    index, timers, seen, net, sync,
-    get list() { return list; },
-    set,
-    start: async (user) => { sync.start(user); await settle(); },
-    fire: async () => { await timers.fire(); },
+  const record = () => memoryMeta({ uid: null, versions: {}, revs: {}, device: `dev-${index}-${d.wipes}`, order: null, stashed: {} });
+  d.meta = record();
+  d.boot = () => {
+    d.sync?.cancel(); // the page that was is gone
+    listeners.clear();
+    d.timers = manualTimers();
+    const { seen, report } = recorder();
+    d.seen = seen;
+    d.sync = createCollectionSync({
+      name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: d.meta, report, timers: d.timers,
+      online: () => d.online, now: () => d.clock,
+    });
   };
-}
-
-/** The script of a seed as data (who, what, which one): replayable, and shorter when steps are left out. */
-function generate(seed) {
-  const rand = random(seed);
-  return Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
+  d.boot();
+  d.user = () => (d.account ? USERS[d.account] : null);
+  d.start = async (user = d.user()) => { d.sync.start(user); await settle(); };
+  d.fire = async () => { await d.timers.fire(); };
+  d.wipe = () => {
+    d.wipes += 1;
+    d.list = [];
+    d.meta = record();
+    d.account = null;
+    d.lastDeleted = null;
+    d.boot();
+  };
+  return d;
 }
 
 async function replay(ops, trace = false) {
   const cloud = fakeFirestore();
   const devices = [0, 1, 2].map((i) => device(cloud, i));
   const script = [];
-  const tokens = [];
   let tick = 0;
   let serial = 0;
+  const owners = new Map(); // token → the accounts it was typed for
+  const pending = [[], [], []]; // typed while signed out: for whichever account the device signs in as next
+  const deleted = new Set(); // marks of the edits that were in a job deleted in the script
   const stamp = (d) => { tick += 1; return 1_000_000 + tick * 100 + SKEW[d.index]; };
-  const mark = () => { serial += 1; tokens.push(serial); return `[${serial}]`; };
   const say = (text) => script.push(text);
+  const mark = (d, id, fixed) => {
+    serial += 1;
+    const token = fixed ?? serial;
+    if (d.account) owners.set(token, new Set([...(owners.get(token) ?? []), d.account]));
+    else pending[d.index].push(token);
+    return `[${token}]`;
+  };
+  const claim = (d) => { // signed in: what was typed signed out is this account's
+    for (const t of pending[d.index]) owners.set(t, new Set([...(owners.get(t) ?? []), d.account]));
+    pending[d.index] = [];
+  };
   const short = (n) => n.replace(/\s+/g, '');
   const dump = () => {
     if (!trace) return;
-    const inCloud = [...cloud.data].filter(([p]) => p.startsWith('users/A/jobs/')).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}`);
-    script.push(`      cloud: ${inCloud.join(' ')}`);
-    for (const x of devices) script.push(`      d${x.index}${x.net.signedIn ? '' : ' (out)'}${x.net.online ? '' : ' (off)'}: ${x.list.map((j) => `${j.id.replace('job_', '')}=${short(j.notes)}@${j.updatedAt - 1_000_000}`).join(' ')}`);
+    for (const acct of ['A', 'B']) {
+      const docs = [...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => `${p.split('/').at(-1).replace('job_', '')}=${short(v.notes)}@${v.updatedAt - 1_000_000}r${v.syncRev}`);
+      if (docs.length) script.push(`      cloud ${acct}: ${docs.join(' ')}`);
+    }
+    for (const x of devices) script.push(`      d${x.index}${x.account ? ` (${x.account})` : ' (out)'}${x.online ? '' : ' (off)'}: ${x.list.map((j) => `${j.id.replace('job_', '')}=${short(j.notes)}@${j.updatedAt - 1_000_000}`).join(' ')}`);
   };
 
-  async function signIn(d) {
-    d.net.signedIn = true;
-    await d.start(A);
+  async function signIn(d, account) {
+    d.account = account;
+    claim(d);
+    await d.start();
   }
   // Device 0 starts with two jobs; the others join the account.
-  devices[0].set([job('j1', mark(), stamp(devices[0])), job('j2', mark(), stamp(devices[0]))]);
+  devices[0].account = 'A';
+  devices[0].set([job('j1', mark(devices[0], 'j1'), stamp(devices[0])), job('j2', mark(devices[0], 'j2'), stamp(devices[0]))]);
   say('d0 starts with j1, j2');
-  for (const d of devices) await signIn(d);
+  for (const d of devices) await signIn(d, 'A');
+
+  /** The device's sync run until it has nothing more to send. */
+  async function quiesce(d) {
+    await d.start();
+    for (let i = 0; i < 6 && d.timers.count; i += 1) await d.fire();
+  }
 
   for (const op of ops) {
     dump();
     const d = devices[op.d];
     const { roll } = op;
     const pick = (n) => Math.floor(op.r * n);
-    if (roll < 0.26) {
+    if (roll < 0.20) {
       if (!d.list.length) continue;
       const target = d.list[pick(d.list.length)];
-      const text = mark();
+      const text = mark(d, target.id);
       say(`d${d.index} edits ${target.id} ${text}`);
       d.set(d.list.map((x) => (x.id === target.id ? { ...x, notes: `${x.notes} ${text}`, updatedAt: stamp(d) } : x)));
-    } else if (roll < 0.36) {
+    } else if (roll < 0.28) {
       const id = `n${serial + 1}`;
-      const text = mark();
+      const text = mark(d, id);
       say(`d${d.index} adds ${id} ${text}`);
       d.set([...d.list, job(id, text, stamp(d))]);
+    } else if (roll < 0.31) {
+      const k = pick(IMPORTED);
+      const id = `imp${k}`;
+      if (d.list.some((x) => x.id === id)) continue;
+      const text = mark(d, id, 1000 + k);
+      say(`d${d.index} imports ${id}`);
+      d.set([...d.list, job(id, text, 50)]);
+    } else if (roll < 0.36) {
+      if (!d.list.length) continue;
+      const target = d.list[pick(d.list.length)];
+      say(`d${d.index} deletes ${target.id}`);
+      for (const [, t] of target.notes.matchAll(/\[(\d+)\]/g)) deleted.add(Number(t));
+      d.lastDeleted = { job: target, index: d.list.indexOf(target), account: d.account };
+      d.set(d.list.filter((x) => x.id !== target.id));
+    } else if (roll < 0.38) {
+      const was = d.lastDeleted;
+      if (!was || was.account !== d.account || d.list.some((x) => x.id === was.job.id)) continue;
+      say(`d${d.index} undoes the deletion of ${was.job.id}`);
+      const rest = [...d.list];
+      rest.splice(Math.min(was.index, rest.length), 0, was.job);
+      d.set(rest);
     } else if (roll < 0.41) {
       if (d.list.length < 2) continue;
       const next = [...d.list];
@@ -115,67 +170,109 @@ async function replay(ops, trace = false) {
       [next[a], next[b]] = [next[b], next[a]];
       say(`d${d.index} swaps places ${a} and ${b}`);
       d.set(next);
-    } else if (roll < 0.55) {
+    } else if (roll < 0.52) {
       say(`d${d.index} flushes`);
       await d.fire();
-    } else if (roll < 0.60) {
+    } else if (roll < 0.55) {
       say(`d${d.index} flushes while the cloud fails`);
       cloud.fail.commit = Object.assign(new Error('unavailable'), { code: 'unavailable' });
       await d.fire();
       cloud.fail.commit = null;
-    } else if (roll < 0.70) {
-      if (!d.net.signedIn) continue;
-      d.net.online = !d.net.online;
-      say(`d${d.index} goes ${d.net.online ? 'online' : 'offline'}`);
-      await d.start(A);
-    } else if (roll < 0.75) {
-      if (!d.net.signedIn) continue;
-      d.net.signedIn = false;
+    } else if (roll < 0.57) {
+      if (!d.account || !d.online) continue;
+      say(`d${d.index} restarts its sync while the cloud cannot be read`);
+      cloud.fail.read = Object.assign(new Error('unavailable'), { code: 'unavailable' });
+      await d.start();
+      cloud.fail.read = null;
+    } else if (roll < 0.65) {
+      if (!d.account) continue;
+      d.online = !d.online;
+      say(`d${d.index} goes ${d.online ? 'online' : 'offline'}`);
+      await d.start();
+    } else if (roll < 0.69) {
+      if (!d.account) continue;
+      d.account = null;
       say(`d${d.index} signs out`);
       await d.start(null);
-    } else if (roll < 0.80) {
-      if (d.net.signedIn) continue;
-      say(`d${d.index} signs in`);
-      await signIn(d);
-    } else if (roll < 0.87) {
-      if (!d.net.signedIn || !d.net.online) continue;
-      d.net.clock += 10_000;
+    } else if (roll < 0.73) {
+      if (d.account) continue;
+      const account = op.q < 0.8 ? 'A' : 'B';
+      say(`d${d.index} signs in as ${account}`);
+      await signIn(d, account);
+    } else if (roll < 0.77) {
+      if (!d.account) continue;
+      const account = d.account === 'A' ? 'B' : 'A';
+      say(`d${d.index} switches to ${account}`);
+      await signIn(d, account);
+    } else if (roll < 0.82) {
+      if (!d.account || !d.online) continue;
+      d.clock += 10_000;
       say(`d${d.index} is shown again`);
       d.sync.shown();
       await settle();
-    } else if (roll < 0.93) {
-      if (!d.net.signedIn || !d.net.online) continue;
+    } else if (roll < 0.87) {
+      if (!d.account || !d.online) continue;
       say(`d${d.index} restarts its sync`);
-      await d.start(A);
+      await d.start();
+    } else if (roll < 0.91) {
+      say(`d${d.index} reloads the page`);
+      d.boot();
+      await d.start();
+    } else if (roll < 0.94) {
+      // The site data cleared: after everything typed here has reached its account.
+      if (!d.account || !d.online || pending[d.index].length || Object.keys(d.meta.read().stashed).length) continue;
+      await quiesce(d);
+      say(`d${d.index} clears the site data`);
+      d.wipe();
+      await d.start(null);
     } else {
       await settle(2);
     }
   }
-
   dump();
-  // Everyone online, signed in, and the syncs run until they have nothing more to send.
-  for (let round = 0; round < 8; round += 1) {
-    for (const d of devices) {
-      d.net.online = true;
-      d.net.signedIn = true;
-      d.net.clock += 10_000;
-      await d.start(A);
-      for (let i = 0; i < 6 && d.timers.count; i += 1) await d.fire();
-      if (trace && round < 3) { say(`final round ${round}, d${d.index} synced`); dump(); }
-    }
-  }
-  say('every device online and signed in, settled');
 
   const problems = [];
-  const notesOf = (list) => Object.fromEntries(list.map((x) => [x.id, x.notes]));
-  const shapes = devices.map((d) => JSON.stringify(Object.entries(notesOf(d.list)).toSorted()));
-  const inCloud = Object.fromEntries([...cloud.data].filter(([p]) => p.startsWith('users/A/jobs/')).map(([p, v]) => [p.split('/').at(-1), v.notes]));
-  const cloudShape = JSON.stringify(Object.entries(inCloud).toSorted());
-  if (new Set([...shapes, cloudShape]).size !== 1) problems.push(`the devices and the account differ:\n${[...shapes, cloudShape].join('\n')}`);
-  const every = Object.values(inCloud).join(' ');
-  for (const t of tokens) if (!every.includes(`[${t}]`)) problems.push(`the edit [${t}] is in no job of the account`);
-  for (const d of devices) if (d.seen.status !== 'synced') problems.push(`d${d.index} ends ${d.seen.status}`);
+  const shapeOf = (list) => JSON.stringify(list.map((x) => [x.id, x.notes]).toSorted());
+  const inCloud = (acct) => Object.fromEntries([...cloud.data].filter(([p]) => p.startsWith(`users/${acct}/jobs/`)).map(([p, v]) => [p.split('/').at(-1), v.notes]));
+  const check = (acct) => {
+    const account = inCloud(acct);
+    const cloudShape = JSON.stringify(Object.entries(account).toSorted());
+    for (const d of devices) {
+      if (shapeOf(d.list) !== cloudShape) problems.push(`${acct}: d${d.index} and the account differ:\n${shapeOf(d.list)}\n${cloudShape}`);
+      if (d.seen.status !== 'synced') problems.push(`${acct}: d${d.index} ends ${d.seen.status}`);
+    }
+    const every = Object.values(account).join(' ');
+    for (const [t, accounts] of owners) {
+      const here = every.includes(`[${t}]`);
+      if (accounts.has(acct) && !here && !deleted.has(t)) problems.push(`${acct}: the edit [${t}] is in no job of the account`);
+      if (!accounts.has(acct) && here) problems.push(`${acct}: the edit [${t}], typed for the other account, is in this one`);
+    }
+  };
+
+  // Everyone online and signed in as each account in turn, the syncs run until they have nothing more to send.
+  let phase = 0;
+  for (const account of ['A', 'B', 'A']) {
+    phase += 1;
+    for (let round = 0; round < 5; round += 1) {
+      for (const d of devices) {
+        d.online = true;
+        d.account = account;
+        claim(d);
+        d.clock += 10_000;
+        await quiesce(d);
+        if (trace && round < 2) { say(`final ${account}, round ${round}, d${d.index} synced`); dump(); }
+      }
+    }
+    say(`every device online and signed in as ${account}, settled`);
+    if (phase >= 2) check(account);
+  }
   return { problems, script };
+}
+
+/** The script of a seed as data (who, what, which one): replayable, and shorter when steps are left out. */
+function generate(seed) {
+  const rand = random(seed);
+  return Array.from({ length: STEPS }, () => ({ d: Math.floor(rand() * 3), roll: rand(), r: rand(), q: rand() }));
 }
 
 /** The steps of `ops` that matter: left out one at a time for as long as the script still fails. */
@@ -191,7 +288,7 @@ async function shrink(ops) {
   return kept;
 }
 
-test(`three devices, ${SEEDS} random scripts: they converge and nothing typed is lost`, async () => {
+test(`three devices, two accounts, ${SEEDS} random scripts: they converge and nothing typed is lost or leaks`, async () => {
   const failures = [];
   const seen = new Set();
   let failed = 0;
