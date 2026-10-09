@@ -37,6 +37,9 @@ const STALE_TRIES = 3;
  */
 const DELETE_CHUNK = 400;
 
+/** How many of this browser's own sent deletions a first sync keeps in the record (while the account lists them as deleted). */
+const MAX_TOMBSTONES = 2000;
+
 /**
  * How many items a write can be for its absent copies to be checked too (expectOf). Each is a read of a transaction
  * that holds 500 writes at most: this many items and the three writes of the deletion list and the order (400 + 3) fit,
@@ -576,6 +579,19 @@ export function createCollectionSync({
         ...Object.fromEntries(plan.deletes.map((id) => [id, DELETED])),
         ...versionsOf(sets),
       };
+      // A deletion this browser sent stays in the record for as long as the account lists the id as deleted. It was dropped at
+      // the first sync after the one that sent it, and an Undo made after that (a restart: going online, a refresh, then the
+      // click) put back a job the next first sync took for one typed before signing in whose id the account deleted: dropped,
+      // here and from the list, with the user's Undo. Kept, it is a change after the deletion, as an Undo right after it is.
+      const listedDeleted = new Set(cloud.deleted);
+      const listed = new Set(next.map((x) => x.id));
+      let tombstones = 0;
+      for (const id of Object.keys(seen)) {
+        if (seen[id] !== DELETED || id in cloudVersions || !listedDeleted.has(id) || listed.has(id)) continue;
+        if (tombstones >= MAX_TOMBSTONES) break;
+        cloudVersions[id] = DELETED;
+        tombstones += 1;
+      }
       const cloudRevs = {
         ...revsOf(docs.filter((d) => !plan.deletes.includes(d.id)), cloud.stamps),
         ...revsOfStamps(new Map(sets.map((x) => [x.id, stamps.get(x.id)]))),
