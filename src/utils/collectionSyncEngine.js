@@ -18,7 +18,7 @@ import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
 import { cloudCanName, itemPath } from './collectionSyncIo.js';
-import { NO_STAMP, movedInCloud, nextStamps, revsOf, revsOfStamps } from './collectionSyncRev.js';
+import { NO_STAMP, movedInCloud, nextStamps, revsOf, revsOfStamps, theirsLater } from './collectionSyncRev.js';
 import { newId } from './ids.js';
 
 /**
@@ -173,6 +173,8 @@ export function createCollectionSync({
     return {
       synced: (id) => Number.isFinite(m.versions[id]) && m.versions[id] > DELETED,
       changed: (x) => x.updatedAt !== m.versions[x.id],
+      // The cloud's copy `d` of `id` is the later of the two, `x` this browser's (a tie goes to the greater writer id).
+      later: (id, d, x) => theirsLater(d.updatedAt, x.updatedAt, (stamps.get(id) ?? NO_STAMP).by, device),
       moved: (id, d) => movedInCloud({
         stamp: stamps.get(id) ?? NO_STAMP, updatedAt: d.updatedAt, baseRev: m.revs?.[id], baseTime: m.versions[id], device, ownTime: s.sent.get(id),
       }),
@@ -191,7 +193,7 @@ export function createCollectionSync({
       const d = cloudCopy.get(x.id);
       const theirs = d && Number.isFinite(d.updatedAt) ? store.fromCloud(d) : null;
       if (!theirs || !view.synced(x.id) || !view.changed(x) || !view.moved(x.id, d) || sameContent(x, theirs, store.conflictApart)) continue;
-      const older = theirs.updatedAt > x.updatedAt ? x : theirs;
+      const older = view.later(x.id, d, x) ? x : theirs;
       const copy = store.conflictCopy(older, [...store.items(), ...docs, ...copies.map((c) => c.copy)]);
       if (!hasTwin(copy, [...store.items(), ...docs])) copies.push({ id: x.id, copy, name: store.label(older === x ? theirs : x) });
     }
@@ -566,7 +568,7 @@ export function createCollectionSync({
           if (!view.moved(x.id, d)) return null;
           if (!view.changed(x)) return store.fromCloud(d);
         }
-        return d.updatedAt > (x.updatedAt ?? 0) ? store.fromCloud(d) : null;
+        return view.later(x.id, d, x) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
       sets = queued.filter((x) => !skip.has(x.id));

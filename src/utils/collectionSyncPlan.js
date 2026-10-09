@@ -18,7 +18,7 @@
 // item and the older one is kept beside it as a conflict copy (collectionSyncConflict.js), as the
 // résumés' is: nothing typed is lost.
 import { hasTwin, sameContent } from './collectionSyncConflict.js';
-import { NO_STAMP, movedInCloud } from './collectionSyncRev.js';
+import { NO_STAMP, movedInCloud, theirsLater } from './collectionSyncRev.js';
 
 /**
  * The version this browser records for an item whose deletion it sent to the cloud
@@ -142,9 +142,11 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // A first visit's demo (the store's `seed`), never synced here and never edited, carries
       // nothing typed: the account's copy wins, however old — the demo is dated from the day it
       // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
-      const theirsStay = (oneSide ? there : time(theirs) > time(mine)) || (!known(id) && seed(mine));
+      const theirsStay = (oneSide ? there : theirsLater(time(theirs), time(mine), stamps.get(id)?.by ?? '', device)) || (!known(id) && seed(mine));
+      // A tie in time with different content left both sides keeping their own (the cloud's copy was never replaced).
+      const tied = time(mine) === time(theirs) && !sameContent(mine, theirs, apart);
       if (theirsStay) keep.set(id, theirs);
-      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict || (oneSide && !sameContent(mine, theirs, apart))) sets.push(mine); }
+      else { keep.set(id, mine); if (time(mine) > time(theirs) || conflict || tied || (oneSide && !sameContent(mine, theirs, apart))) sets.push(mine); }
       if (conflict) {
         const copy = copyOf(theirsStay ? mine : theirs, [...local, ...docs, ...conflicts.map((c) => c.copy)]);
         if (!hasTwin(copy, [...local, ...docs])) {

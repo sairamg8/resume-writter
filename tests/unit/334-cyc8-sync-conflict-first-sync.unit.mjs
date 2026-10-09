@@ -19,6 +19,7 @@ import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-fires
 
 const A = { uid: 'A', email: 'a@example.com' };
 const REFRESH = 10_000;
+let deviceCount = 0;
 
 const job = (id, company, updatedAt = 1, extra = {}) => ({
   id, company, role: 'Engineer', status: 'applied', todos: [],
@@ -46,8 +47,11 @@ function device(cloud, kind, items = [], { online = () => true } = {}) {
   const notices = [];
   report.conflict = (names) => { if (names) notices.push(...names); };
   let clock = 0;
+  // Each device has an id as a writer (cyc-D); made in order, so that on a tie in time the device made later stays (the greater id).
+  deviceCount += 1;
+  const record = { uid: null, versions: {}, revs: {}, device: `dev-${String(deviceCount).padStart(3, '0')}`, order: null, stashed: {} };
   const sync = createCollectionSync({
-    name: kind, io: collectionIo(cloud.fs, cloud.db, kind), store, meta: memoryMeta(), report,
+    name: kind, io: collectionIo(cloud.fs, cloud.db, kind), store, meta: memoryMeta(record), report,
     online, timers, refreshAfter: REFRESH, now: () => clock,
   });
   return {
@@ -120,7 +124,7 @@ test('the older side can be this browser\'s: its edit is the copy, the cloud\'s 
   assert.equal(cloud.doc('users/A/jobs/j1').role, 'Lead Engineer');
 });
 
-test('a tie on the time with different content keeps both too: this browser\'s stays', async () => {
+test('a tie on the time with different content keeps both too: the device with the greater id stays (here this browser, made later)', async () => {
   const cloud = fakeFirestore();
   const { d1, d2, back } = await twoDevicesWithJob(cloud);
   d2.edit('j1', { role: 'Staff Engineer' }, 20);

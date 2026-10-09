@@ -77,3 +77,15 @@ export function movedInCloud({ stamp = NO_STAMP, updatedAt, baseRev, baseTime, d
   if (seenTime !== null) return updatedAt !== seenTime;
   return stamp.rev > 0 ? stamp.by !== device : true;
 }
+
+/**
+ * Whether the cloud's copy (`theirsAt`, written by `by`) is the one that stays the item over this browser's
+ * (`mineAt`, `device`) when both changed it: the later `updatedAt`, and on a tie the greater writer id — the same
+ * two copies, the same winner, whichever device finds the conflict, and never "whoever read the other". A copy
+ * nobody stamped has no writer (''), so a tie with it stays this browser's, as it always did.
+ */
+export function theirsLater(theirsAt, mineAt, by, device) {
+  const t = Number.isFinite(theirsAt) ? theirsAt : 0;
+  const m = Number.isFinite(mineAt) ? mineAt : 0;
+  return t !== m ? t > m : by > device;
+}
