@@ -112,12 +112,13 @@ export function isoTime(value) {
 
 /**
  * A moment relative to `now`: "just now" (under a minute either way), "5m ago", "3h ago",
- * "3d ago", "2w ago", "4mo ago", "1y ago", or "in 3d" for the future; '' when not a time.
+ * "3d ago", "2w ago", "4mo ago", "1y ago", or "in 3d" for the future; '' when not a time (or one no Date
+ * holds: a file from another tool may carry nanoseconds, which read "3.1e+285y ago").
  * For a stored day ('YYYY-MM-DD') use relativeDay, which counts calendar days.
  */
 export function relativeTime(value, now = new Date()) {
   const ms = toMs(value);
-  if (ms === null) return '';
+  if (ms === null || Math.abs(ms) > MAX_TIME) return '';
   const diff = now.getTime() - ms;
   const unit = ago(diff);
   if (!unit) return 'just now';
