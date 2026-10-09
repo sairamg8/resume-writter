@@ -60,6 +60,19 @@ export default defineConfig({
       // The folder the browser saves into, as configured: two runs side by side can each be given
       // their own (--config downloadsFolder=…) and never clear or read the other's files.
       const downloads = config.downloadsFolder || DOWNLOADS;
+      // retries { runMode: 1 } turns a first-attempt failure green. Each test that needed a second attempt
+      // is named in the log, where tools/ci/cypress-retries.mjs finds it and the gate warns (never fails).
+      on('after:spec', (spec, results) => {
+        try {
+          for (const t of results?.tests || []) {
+            if ((t.attempts?.length || 0) > 1) {
+              console.log(`RETRIED-TEST ${spec.relative} :: ${[].concat(t.title).join(' > ')} (${t.attempts.length} attempts, ${t.state})`);
+            }
+          }
+        } catch {
+          // A result that cannot be read must never fail the run.
+        }
+      });
       on('task', {
         clearDownloads() {
           fs.rmSync(downloads, { recursive: true, force: true });
