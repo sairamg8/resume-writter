@@ -14,6 +14,7 @@ import { sidebarShades } from './pdfColors';
 import { titleTracking } from './sectionHeadingLook';
 import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
+import { ColumnRoom, columnRoom } from './keepTogether';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
 import { PdfLevel } from './PdfLevel';
@@ -243,8 +244,11 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
               ) : null}
             </View>
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
-            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} breaks={listBreaks} /> : null}
-            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} breaks={listBreaks} />
+            {/* The dark column width: a list item taller than a page in it must be free to split (keepTogether.js). */}
+            <ColumnRoom.Provider value={columnRoom(settings, sideColumnRoom(settings))}>
+              {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} breaks={listBreaks} /> : null}
+              <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} breaks={listBreaks} />
+            </ColumnRoom.Provider>
           </View>
         ))}
       </View>

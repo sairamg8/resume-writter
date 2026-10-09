@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
+import { ColumnRoom, columnRoom } from './keepTogether';
 import { sectionPrints } from '@/utils/entryPrints';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
 import { pageMargins } from '@/constants/pageMargins';
@@ -67,18 +68,22 @@ export function RenderBullets({ bullets, style, breaks }) {
   return <PdfRichText html={`<ul>${list.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`} style={{ ...style, marginTop: 2 }} breaks={breaks} />;
 }
 
-/** An entry's content in a breakable View led by SPACER; a rendered <View> is unwrapped into it. */
-function entry(el, style, key) {
+/**
+ * An entry's content in a breakable View led by SPACER; a rendered <View> is unwrapped into it. `room`
+ * (columnRoom): the column its lists are laid out in, for PdfRichText to keep a list item whole only
+ * while a page can hold it.
+ */
+function entry(el, style, key, room) {
   if (el && el.type === View) {
     const own = el.props.style;
     return (
       <View key={key} {...el.props} style={[...(Array.isArray(own) ? own : [own]), style].filter(Boolean)}>
         {SPACER}
-        {el.props.children}
+        <ColumnRoom.Provider value={room}>{el.props.children}</ColumnRoom.Provider>
       </View>
     );
   }
-  return <View key={key} style={style}>{SPACER}{el}</View>;
+  return <View key={key} style={style}>{SPACER}<ColumnRoom.Provider value={room}>{el}</ColumnRoom.Provider></View>;
 }
 
 /**
@@ -127,11 +132,12 @@ export function gridRows({ items, cols, gap, title = null, settings, cell }) {
  * wrapper View), so every entry, and every row of a grid, can move or split on its own at a page break.
  */
 export function RenderColGrid({ items, cols, gap, renderItem, title = null, settings }) {
-  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => entry(renderItem(item, i), { width }, c) });
+  const room = columnRoom(settings, entryTextWidth(settings, cols));
+  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => entry(renderItem(item, i), { width }, c, room) });
   return (
     <>
       {title}
-      {items.map((item, i) => entry(renderItem(item, i), i ? { marginTop: gap } : null, i))}
+      {items.map((item, i) => entry(renderItem(item, i), i ? { marginTop: gap } : null, i, room))}
     </>
   );
 }
