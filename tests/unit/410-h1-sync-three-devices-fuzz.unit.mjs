@@ -585,7 +585,7 @@ test(`three devices, two accounts, ${SEEDS} random scripts: they converge and no
     const { problems } = await replay(ops, seed);
     if (!problems.length) continue;
     failed += 1;
-    if (failures.length >= 2) continue;
+    if (failures.length >= 4) continue;
     const small = await shrink(ops, seed);
     const { problems: left, script } = await replay(small, seed, true);
     const text = script.join('\n    ');
