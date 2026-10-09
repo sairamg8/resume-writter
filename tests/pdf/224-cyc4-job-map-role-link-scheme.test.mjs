@@ -37,7 +37,8 @@ it('an address that is not for the web (mailto:, tel:) is no posting link', () =
 
 it('the page links each row through roleHref and opens it with noopener noreferrer', () => {
   const s = fs.readFileSync(new URL('../../src/pages/JobMap.jsx', import.meta.url), 'utf8');
-  assert.match(s, /href=\{roleHref\(r\[ROW\.url\]\) \|\| undefined\}/);
+  // The row's card (RoleRow) links only with an address (cyc8: a row without one is a plain card, not an <a> with no href).
+  assert.match(s, /<RoleRow href=\{roleHref\(r\[ROW\.url\]\)\}>/);
   assert.match(s, /rel="noopener noreferrer"/);
   assert.ok(!/href=\{r\[ROW\.url\]\}/.test(s), 'no row address goes into href as it is');
 });
