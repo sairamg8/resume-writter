@@ -98,7 +98,7 @@ export function ProjectTimeline() {
   const toggle = (eid) => setFolded((f) => { const n = new Set(f); if (n.has(eid)) n.delete(eid); else n.add(eid); return n; });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col md:min-h-0">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex items-center gap-2 px-4 py-3 md:px-8">
@@ -107,7 +107,7 @@ export function ProjectTimeline() {
         <IconButton icon={ChevronRight} label="Later" onClick={() => setFrom((f) => addDays(f, 7))} />
         <span className="ml-1 text-sm text-cv-muted">{formatShortDay(days[0])} – {formatShortDay(days.at(-1))}</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
+      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 max-md:flex-none md:px-8">
         {/* The name column is 20rem from sm up; on a phone 10rem, with a child's indent halved, so
             the days still show beside it. The rows, the header and the today line all read it. */}
         <div className="relative w-max min-w-full rounded-cv-control border border-cv-hairline [--depth-w:12px] [--name-w:10rem] sm:[--depth-w:24px] sm:[--name-w:20rem]">

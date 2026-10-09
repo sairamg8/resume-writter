@@ -123,7 +123,7 @@ export function Backlog() {
   const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-1 flex-col md:min-h-0">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar
@@ -153,7 +153,7 @@ export function Backlog() {
           <Button variant="primary" onClick={() => store.updateBoard(board.id, { mode: 'scrum' })}>Use sprints</Button>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 md:px-8 lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 max-md:flex-none md:px-8 lg:flex-row">
         {epicsOpen && (
           <EpicPanel
             board={board}
