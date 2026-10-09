@@ -81,7 +81,7 @@ another device's) and decides by the `updatedAt` fallback above, and a rev bump 
 
 ## The final hunt (H1): what changed after the review
 
-Each fix has its own test, `tests/unit/400` to `418-h1-sync-*`; `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
+Each fix has its own test, `tests/unit/4*-h1-sync-*` (400 to 418); `410-h1-sync-three-devices-fuzz` runs seeded random scripts of
 three devices on two accounts (edits, additions, imports, deletions with Undo, moves, offline spells, sign-outs, account
 switches, reloads, a browser's data cleared, failing reads and writes, slow and fast clocks, slow server calls that let the
 syncs of different devices overlap) and checks that they converge and that nothing typed is lost or leaks to the other
