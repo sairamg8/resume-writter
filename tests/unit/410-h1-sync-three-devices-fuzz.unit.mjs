@@ -202,6 +202,9 @@ function device(cloud, index, link, kind) {
   return d;
 }
 
+/** What the scripts did, summed: so a run can show it reached what it is for (the diagnostics line of the test). */
+const covered = { scripts: 0, clears: 0, bigClears: 0, failingBigClears: 0, undoneClears: 0, tabs: 0, preconditions: 0, resurrectionChecks: 0 };
+
 async function replay(ops, seed, trace = false) {
   const kind = KINDS[seed % 3 === 0 ? 'boards' : 'jobs'];
   const cloud = fakeFirestore();
@@ -462,12 +465,14 @@ async function replay(ops, seed, trace = false) {
     } else if (roll < 0.96) {
       // The SDK gives up on the next transactions with `failed-precondition` (documents that keep changing under them).
       d.preconditions = 1 + pick(5);
+      covered.preconditions += 1;
       say(`d${d.index} flushes while ${d.preconditions} transaction(s) fail with failed-precondition`);
       await d.fire();
       d.preconditions = 0;
     } else if (roll < 0.965) {
       // A second tab of the same browser: the same list and record, an engine of its own.
       say(`d${d.index} opens a second tab`);
+      if (!d.tab2) covered.tabs += 1;
       await d.openTab();
     } else if (roll < 0.968) {
       // A file or a long list: more jobs than one request takes to delete, for the "Clear all" below.
@@ -480,6 +485,8 @@ async function replay(ops, seed, trace = false) {
       if (!d.list.length) continue;
       // "Clear all": every job at once; the second request of the deletions fails when asked (the network drops between).
       const failing = roll >= 0.972;
+      covered.clears += 1;
+      if (d.list.length > 400) { covered.bigClears += 1; if (failing) covered.failingBigClears += 1; }
       say(`d${d.index} clears all ${d.list.length} jobs${failing ? ' while the second request fails' : ''}`);
       remove(d, [...d.list]);
       drop.armed = failing;
@@ -516,6 +523,7 @@ async function replay(ops, seed, trace = false) {
     }
     for (const id of present) if (!order.includes(id)) problems.push(`${acct}: ${id} is in the account but not in its order`);
     // (a) Resurrection: gone is gone.
+    covered.resurrectionChecks += gone.size;
     for (const k of gone) {
       const [a, id] = [k.slice(0, k.indexOf(':')), k.slice(k.indexOf(':') + 1)];
       if (a !== acct) continue;
@@ -587,12 +595,13 @@ async function shrink(ops, seed) {
   return kept;
 }
 
-test(`three devices, two accounts, ${SEEDS} random scripts: they converge and nothing typed is lost or leaks`, async () => {
+test(`three devices, two accounts, ${SEEDS} random scripts: they converge and nothing typed is lost or leaks`, async (t) => {
   const failures = [];
   const seen = new Set();
   let failed = 0;
   for (const seed of ONLY.length ? ONLY : Array.from({ length: SEEDS }, (_, i) => i + 1)) {
     const ops = generate(seed);
+    covered.scripts += 1;
     const { problems } = await replay(ops, seed);
     if (!problems.length) continue;
     failed += 1;
@@ -604,5 +613,6 @@ test(`three devices, two accounts, ${SEEDS} random scripts: they converge and no
     seen.add(text);
     failures.push(`seed ${seed} (${small.length} steps):\n  ${left.join('\n  ')}\n  script:\n    ${text}`);
   }
+  t.diagnostic(`covered: ${JSON.stringify(covered)}`);
   assert.equal(failed, 0, `${failed} of ${SEEDS} scripts failed\n${failures.join('\n\n')}`);
 });
