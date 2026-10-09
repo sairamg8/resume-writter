@@ -224,6 +224,7 @@ async function replay(ops, seed, trace = false) {
   const pending = [[], [], []]; // typed while signed out: for whichever account the device signs in as next
   const deleted = new Set(); // marks of the edits that were in a job deleted in the script (and not put back since)
   const deletedIds = new Set(); // ids of jobs deleted in the script (and not put back since)
+  const deletions = new Map(); // mark or id → the deletions of it not put back: two devices may delete one job, and one Undo is not both
   const jobOf = new Map(); // mark → the id of the job it was typed on
   // Per account, "account:id". A job deleted here, not put back by Undo and never made, edited or imported on another device,
   // is gone from every device and the account at the end; one of those is anything else a script may settle either way.
@@ -291,10 +292,11 @@ async function replay(ops, seed, trace = false) {
     const marks = [];
     for (const target of targets) {
       deletedIds.add(target.id);
+      deletions.set(target.id, (deletions.get(target.id) ?? 0) + 1);
       marks.push(...[...target.notes.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
       forget(d, target.id);
     }
-    for (const t of marks) deleted.add(t);
+    for (const t of marks) { deleted.add(t); deletions.set(t, (deletions.get(t) ?? 0) + 1); }
     const gonetokens = new Set(marks);
     pending[d.index] = pending[d.index].filter((t) => !gonetokens.has(t)); // belongs to no account while it is gone
     d.lastDeleted = { items: targets.map((job) => ({ job, index: d.list.indexOf(job) })), account: d.account, marks };
@@ -366,11 +368,13 @@ async function replay(ops, seed, trace = false) {
       const rest = [...d.list];
       for (const { job: j, index } of was.items) {
         rest.splice(Math.min(index, rest.length), 0, j);
-        deletedIds.delete(j.id);
+        deletions.set(j.id, (deletions.get(j.id) ?? 1) - 1);
+        if (deletions.get(j.id) <= 0) deletedIds.delete(j.id);
         for (const k of keysOf(d, j.id)) { undoneKeys.add(k); gone.delete(k); }
       }
       for (const t of was.marks) {
-        deleted.delete(t);
+        deletions.set(t, (deletions.get(t) ?? 1) - 1);
+        if (deletions.get(t) <= 0) deleted.delete(t);
         const uid = d.meta.read().uid;
         if (uid) own(t, uid);
         else { owners.delete(t); pending[d.index].push(t); unowned.add(t); } // put back where no account has the list: whichever syncs it first
