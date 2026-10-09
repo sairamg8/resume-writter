@@ -47,7 +47,7 @@ export function Editor({ store, auth, sync }) {
   // After useEditorTab, whose effect rewrites an old address (?tab=design) in place: effects run in call order and the
   // later navigation wins. Before it, an old link to a résumé this browser does not hold was sent home and then
   // rewritten back to its own address, which left a blank page with no way out.
-  useOpenResume(store, id);
+  const opening = useOpenResume(store, id, auth, sync);
   // What is open on the Résumé document lives here, so it survives a trip to the letter or a dock.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
@@ -162,6 +162,8 @@ export function Editor({ store, auth, sync }) {
     return () => { cancelled = true; };
   }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont, resume?.settings?.nameFont, resume?.settings?.headingFont]);
 
+  // Waiting for the account's first sync to bring the résumé the address names: not the first résumé under its address.
+  if (opening) return <div className="min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint">Loading…</div>;
   if (!resume) return null;
   // Share a public link (R2-148): a résumé, not a letter, of a signed-in account, on a site with a cloud.
   const canShare = Boolean(firebasePublicIo && auth?.user?.uid && resume.kind !== 'letter');
