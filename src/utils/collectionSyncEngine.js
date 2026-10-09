@@ -165,9 +165,10 @@ export function createCollectionSync({
   /**
    * What a write of `ids` must still find in the cloud (collectionSyncIo.commit's `expect`): each copy as the sync
    * read it (`stamps`: id → stamp). One that was not there is expected not to be for the ids two browsers can both
-   * make (the demo's), and for those of `absent` (a flush's reads that found nothing) when the write is a few: an
+   * make (the demo's), and for those of `absent` (what the sync read and did not find) when the write is a few: an
    * imported file's jobs have the same ids on every browser that imports it, and another device writing one between
-   * the read and here was overwritten. A large write (an import of hundreds) is left unchecked for those — each would
+   * the read and here was overwritten — so was this browser's own newer write, by a first sync an earlier start had
+   * left on its way, landing late with the copy it had read. A large write (an import of hundreds) is left unchecked for those — each would
    * be a read more in a transaction that holds 500 writes at most — as it is for any id nobody else can make.
    */
   const expectOf = (ids, stamps, absent = []) => new Map(ids.flatMap((id) => {
@@ -495,7 +496,8 @@ export function createCollectionSync({
       if (sets.length || plan.deletes.length || !sameOrder) {
         // The copies this plan was made from must still be the cloud's when the write lands (another device writing
         // between the read and here is decided again, not overwritten).
-        const expect = expectOf([...sets.map((x) => x.id), ...plan.deletes], cloud.stamps);
+        const toWrite = [...sets.map((x) => x.id), ...plan.deletes];
+        const expect = expectOf(toWrite, cloud.stamps, toWrite);
         // More deletions than one request takes are sent first, in requests of their own: left in the batch it was
         // refused for good (500 writes), and so was every sync after it, whatever else it carried.
         const many = plan.deletes.length > DELETE_CHUNK;
