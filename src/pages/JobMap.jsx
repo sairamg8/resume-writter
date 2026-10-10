@@ -34,6 +34,24 @@ export function RoleRow({ href, children }) {
   );
 }
 
+/**
+ * The admin panel (components/JobMapAccessPanel.jsx) in a chunk of its own, loaded here once the page is open for
+ * an account that may use the Job Map, never with the page's code. The panel decides by one read whether this
+ * account is an admin; the page does not need it, so a chunk that fails to load draws nothing. `load` is the
+ * import (a test hands in another).
+ */
+export function AccessPanelSlot({ email, load = () => import('@/components/JobMapAccessPanel') }) {
+  const [Panel, setPanel] = useState(null);
+  useEffect(() => {
+    let live = true;
+    load().then((m) => { if (live) setPanel(() => m.default); }, () => {});
+    return () => { live = false; };
+    // `load` is a constant of the page; only a test passes another.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return Panel ? <Panel email={email} /> : null;
+}
+
 const SHOWN = 100;
 const LOADING = 'min-h-screen bg-cv-ground flex items-center justify-center text-sm text-cv-faint';
 
@@ -120,6 +138,7 @@ export default function JobMap({ auth, sync }) {
           <Button size="sm" leftIcon={Upload} onClick={() => file.current?.click()}>Load data file</Button>
           <input ref={file} type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
         </div>
+        <AccessPanelSlot email={auth.user.email} />
         {status && <p className="text-xs text-cv-muted mb-3">{status}</p>}
         {meta === false && <p className="text-sm text-cv-muted">No data yet. Build it with the job-map tool (<code>node build-data.mjs</code>) and choose jobmap-data.json above.</p>}
         {meta && (
