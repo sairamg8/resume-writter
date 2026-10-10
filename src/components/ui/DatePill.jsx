@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { datePillInfo } from '../../utils/uiFormat.js';
+import { useToday } from '../../hooks/useToday.js';
 import { TONE_CLASSES } from './Badge.jsx';
 import { FOCUS_RING } from './Button.jsx';
 import { cx } from './compose.js';
@@ -29,6 +30,7 @@ export function DatePill({
   showIcon = true, className,
 }) {
   const inputRef = useRef(null);
+  useToday(); // drawn again when the day changes: "Due today" is not kept past midnight
   const info = datePillInfo(value, now ?? new Date(), { kind, done });
   const editable = typeof onChange === 'function';
   if (!info && !editable) return null;

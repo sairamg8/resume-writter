@@ -38,10 +38,21 @@ const HEADING_TYPES = (() => {
   add('contact', ['Contact', 'Contacts', 'Contact Information', 'Contact Info', 'Contact Details', 'Personal Details', 'Personal Information']);
   add('experience', ['Employment', 'Professional Background', 'Internships', 'Internship Experience', 'Work', 'Experiences', 'Professional History']);
   add('education', ['Education and Training', 'Academic Qualifications', 'Educational Qualifications']);
-  add('skills', ['Skill Set', 'Skillset', 'Core Skills', 'Tech Stack', 'Technologies', 'Tools', 'Tools and Technologies', 'Expertise', 'Technical Expertise']);
+  // More English headings people use, the singular too ("Academic Qualification"): a heading the import did not know began a
+  // custom section, and the school's or the job's entries under it were no education or experience. Not "Notable Projects":
+  // a label inside an entry (tests/unit/r5-hunt11-titlecase-unknown-heading) is no section.
+  add('education', ['Academic Qualification', 'Educational Qualification', 'Qualifications', 'Qualification', 'Education Qualification', 'Education Qualifications',
+    'Education Details', 'Educational Details', 'Academic Details', 'Academic Credentials', 'Education and Qualifications', 'Education History', 'Academics']);
+  add('experience', ['Employment Experience', 'Job Experience', 'Career Experience', 'Related Experience', 'Relevant Work Experience', 'Practical Experience',
+    'Industry Experience', 'Professional Employment', 'Employment Record', 'Work Background', 'Work Experience and Internships', 'Professional Work Experience']);
+  add('skills', ['Skill Set', 'Skillset', 'Core Skills', 'Tech Stack', 'Technologies', 'Tools', 'Tools and Technologies', 'Expertise', 'Technical Expertise',
+    'Professional Skills', 'Key Competencies', 'Core Competency', 'Technical Competencies', 'Technical Summary', 'Skills Summary', 'Skills and Abilities', 'Skills and Expertise',
+    'Computer Skills', 'IT Skills', 'Software Skills', 'Soft Skills', 'Hard Skills', 'Relevant Skills', 'Additional Skills', 'Other Skills']);
+  add('projects', ['Project Experience', 'Side Projects', 'Open Source Projects', 'Open Source Contributions']);
+  add('awards', ['Honours', 'Honours and Awards', 'Awards and Honours', 'Awards and Achievements', 'Achievements and Awards', 'Awards and Recognition', 'Accomplishments', 'Scholarships and Awards']);
   add('languages', ['Language']);
-  add('certifications', ['Certification', 'Licenses', 'Licenses and Certificates', 'Certificates and Licenses']);
-  add('volunteering', ['Volunteer', 'Volunteer Work', 'Volunteering and Leadership']);
+  add('certifications', ['Certification', 'Licenses', 'Licenses and Certificates', 'Certificates and Licenses', 'Training and Certifications', 'Courses and Certifications', 'Certifications and Training']);
+  add('volunteering', ['Volunteer', 'Volunteer Work', 'Volunteering and Leadership', 'Volunteering Experience', 'Volunteer Activities', 'Community Work']);
   add('interests', ['Hobbies', 'Hobbies and Interests', 'Personal Interests', 'Interests and Hobbies']);
   add('custom', ['References', 'Referees', 'Publications']);
   return map;
@@ -632,7 +643,7 @@ export function readDateRange(text) {
 }
 
 /** A date at the end of a piece of text, after a dash, a comma or in brackets: "Name - Issuer - Jun 2022". */
-function trailingDate(text) {
+function trailingDate(text, education = false) {
   if (text.length > 120) return null;
   // The earliest split whose rest is a date: "Role - Mar 2021 - Present" keeps the whole range.
   const seps = [...text.matchAll(/\s[-–—|]\s|,\s|\(/g)];
@@ -652,6 +663,16 @@ function trailingDate(text) {
     const rest = after.replace(/\)\s*$/, '');
     const date = readDateRange(rest);
     if (date) return { date, rest: before.trim() };
+  }
+  // An education line that ends in a year after a plain space, no dash or comma before it — "University of Leeds 2015",
+  // "BSc Physics, University of Leeds 2015": that year is when it began (a lone date reads as a start, as "2015" alone
+  // does). Only where it is unambiguous: the text before it names a school or a degree, does not end in a word that
+  // takes a year after it ("Class of 2015") or in another number, and the year is one of the 1900s or 2000s.
+  if (education) {
+    const m = /^(.*\S)\s+((?:19|20)\d{2})$/.exec(text);
+    if (m && (SCHOOL.test(m[1]) || DEGREE.test(m[1])) && !/(?:\b(?:of|in|since|from|until|to|and|the|class)|[-–—,;:(\d])$/i.test(m[1])) {
+      return { date: { start: m[2], end: '', current: false, text: m[2] }, rest: m[1].trim() };
+    }
   }
   return null;
 }
@@ -1201,10 +1222,10 @@ function readHeader(type, header) {
     const titled = out.parts.length;
     let at = -1;
     if (!out.date) {
-      at = ps.findIndex((p) => readDateRange(p) || trailingDate(p));
+      at = ps.findIndex((p) => readDateRange(p) || trailingDate(p, type === 'education'));
       if (at >= 0) {
         const whole = readDateRange(ps[at]);
-        const trail = whole ? null : trailingDate(ps[at]);
+        const trail = whole ? null : trailingDate(ps[at], type === 'education');
         out.date = whole || trail.date;
         ps[at] = whole ? '' : trail.rest;
       }
@@ -1548,7 +1569,7 @@ function entriesOf(type, lines, aside) {
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketed(p, index));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p, type === 'education') || bracketed(p, index));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));

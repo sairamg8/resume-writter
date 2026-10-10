@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { useToday } from '@/hooks/useToday';
 import { Button, EmptyState, IconButton, cx } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
@@ -10,7 +11,7 @@ import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
 import { IssueTypeIcon } from '@/components/tracker/TrackerIcons';
 import { filterIssues } from '@/utils/boardQuery';
-import { isIssueDone, issueKey, todayISO } from '@/utils/boardModel';
+import { isIssueDone, issueKey } from '@/utils/boardModel';
 import { monthWeeks, shiftMonth } from '@/utils/calendarGrid';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -27,7 +28,7 @@ export function ProjectCalendar() {
   const workspace = useWorkspace();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);
-  const today = todayISO();
+  const today = useToday();
   const [month, setMonth] = useState(() => `${today.slice(0, 7)}-01`);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [expanded, setExpanded] = useState(null);

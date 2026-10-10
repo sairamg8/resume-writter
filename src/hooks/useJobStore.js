@@ -394,7 +394,7 @@ function importJobs(incoming) {
   return { added, updated, skipped, lossy };
 }
 
-/** The list now, loaded first: what the cloud sync reads (jobSync in useCollectionSync.js). */
+/** The list now, loaded first: what the cloud sync reads (listStores in collectionSyncLoaded.js). */
 function jobsNow() {
   if (!initialized) init();
   return snapshot().jobs;

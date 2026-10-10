@@ -64,3 +64,30 @@ export const sectionPrints = (s) => s.visible !== false && (s.items || []).some(
  * cell, an item gap, and split a company's roles in two groups (R5-HUNT7-BLANK-ENTRY).
  */
 export const printedEntries = (s) => (s.items || []).filter((i) => entryPrints(s.type, i));
+
+/** The section types whose renderers read `hiddenFields` themselves (a job's fields, a skill group's): left as they are. */
+const READ_HIDDEN_THEMSELVES = new Set(['experience', 'skills']);
+
+/**
+ * Section `s` with each entry's hidden fields (the eyes of `hiddenFields`, as a Backup JSON, an import or an older
+ * build carries them) emptied: a hidden text prints nowhere, as Markdown, the ATS text and the JSON Resume file already
+ * leave it out. The PDF's and Word's renderers for an education, a project, a certification, an award, a volunteering role,
+ * a reference, an interest or a custom entry read their fields straight, so a hidden institution, link or description
+ * still printed there (only the dates read the flag, R1-LEFT-b). `hiddenFields` itself stays on the entry, so what reads
+ * it still sees it. Jobs and skill groups come back as they were; so does a section with nothing hidden (the same object).
+ */
+export function withHiddenFieldsEmptied(s) {
+  if (!s || READ_HIDDEN_THEMSELVES.has(s.type) || !Array.isArray(s.items)) return s;
+  const emptied = (item) => {
+    if (!item || !Array.isArray(item.hiddenFields)) return item;
+    const blank = {};
+    for (const key of item.hiddenFields) {
+      if (typeof key !== 'string' || NOT_PRINTED.has(key)) continue;
+      if (typeof item[key] === 'string' && item[key] !== '') blank[key] = '';
+      else if (Array.isArray(item[key]) && item[key].length) blank[key] = [];
+    }
+    return Object.keys(blank).length ? { ...item, ...blank } : item;
+  };
+  const items = s.items.map(emptied);
+  return items.some((item, i) => item !== s.items[i]) ? { ...s, items } : s;
+}

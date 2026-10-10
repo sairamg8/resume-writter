@@ -270,7 +270,8 @@ doc.
 
 The Job Tracker's jobs and the boards sync with the signed-in account too, through one shared
 engine for plain lists (`src/utils/collectionSyncEngine.js`, wired per list in
-`src/hooks/useCollectionSync.js`, mounted twice in `App.jsx`). Each job or board is one document,
+`src/hooks/useCollectionSync.js`, mounted twice in `App.jsx`; the engine and its stores load by `import()` at the first
+sign-in, `src/utils/collectionSyncLazy.js` + `collectionSyncLoaded.js`, so none of it is on the start-up path). Each job or board is one document,
 `users/{uid}/jobs/{id}` / `users/{uid}/boards/{id}`; `users/{uid}/meta/jobs` and `meta/boards` hold
 the ids deleted for good (`deleted`) and the list's order (`order`). The existing
 `users/{uid}/{document=**}` rule covers them (no rules change). The first sync merges item by item

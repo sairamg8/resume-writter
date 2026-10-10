@@ -1,59 +1,22 @@
 import { useEffect, useState } from 'react';
-import {
-  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, runTransaction, writeBatch,
-} from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { collectionIo } from '@/utils/collectionSyncIo';
-import { createCollectionSync } from '@/utils/collectionSyncEngine';
 import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/utils/collectionSyncMeta';
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
-import { completeJob, readJob } from '@/utils/normalizeJob';
-import { completeBoard, readBoard } from '@/utils/normalizeBoard';
-import { BOARD_COSMETIC, boardConflictCopy, jobConflictCopy } from '@/utils/collectionSyncConflict';
-import { DEMO_JOB_ID, isUntouchedDemoJob } from '@/utils/jobEdits';
-import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
-import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, savedJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
-import { boardsNow, leaveRecovery as leaveBoardsRecovery, replaceBoards, savedBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
-
-const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, runTransaction, arrayUnion, arrayRemove };
-
-/** A cloud copy as the store would load it from storage (readJob / readBoard); null when it is not one. */
-const fromCloud = (read, complete) => (d) => {
-  const { kept } = read(d);
-  return kept ? complete(kept) : null;
-};
+import { lazyCollectionSync } from '@/utils/collectionSyncLazy';
 
 /**
- * The Job Tracker's jobs and the boards as the cloud sync (collectionSyncEngine.js) reaches them:
- * the store's list, this browser's record of it, and the real Firestore calls (null in a build
- * without a cloud). Exported so the tests build the same stores.
+ * The sync engine and everything it needs (the stores' wiring, the real Firestore calls, the plan, the
+ * conflict copies) is one lazy module: it is fetched when a user first signs in, not with the page.
  */
-export const jobSync = {
-  name: 'jobs',
-  store: {
-    items: jobsNow, saved: savedJobs, replace: replaceJobs, subscribe: subscribeJobs,
-    fromCloud: fromCloud(readJob, completeJob),
-    label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
-    seed: isUntouchedDemoJob, seedIds: [DEMO_JOB_ID],
-    conflictCopy: jobConflictCopy,
-    leaveRecovery: leaveJobsRecovery,
-  },
-  meta: () => localMeta(JOBS_SYNC_KEY),
-};
+const createSync = lazyCollectionSync(() => import('@/utils/collectionSyncLoaded').then((m) => m.createListSync));
 
-export const boardSync = {
-  name: 'boards',
-  store: {
-    items: boardsNow, saved: savedBoards, replace: replaceBoards, subscribe: subscribeBoards,
-    fromCloud: fromCloud(readBoard, completeBoard),
-    label: (b) => b.title || 'Untitled project',
-    seed: isUntouchedDemoBoard, seedIds: [DEMO_BOARD_ID],
-    conflictCopy: boardConflictCopy,
-    conflictApart: BOARD_COSMETIC,
-    leaveRecovery: leaveBoardsRecovery,
-  },
-  meta: () => localMeta(BOARDS_SYNC_KEY),
-};
+/**
+ * The Job Tracker's jobs and the boards as the cloud sync (collectionSyncEngine.js) reaches them: the
+ * list's name and this browser's record of it. Its store is wired in collectionSyncLoaded.js.
+ */
+export const jobSync = { name: 'jobs', meta: () => localMeta(JOBS_SYNC_KEY) };
+
+export const boardSync = { name: 'boards', meta: () => localMeta(BOARDS_SYNC_KEY) };
 
 /**
  * One list's cloud sync wired to the page (cloudSyncBrowser.js): the signed-in user and the
@@ -62,13 +25,13 @@ export const boardSync = {
  * workspace's top bar shows as the résumés' cloud icon (CollectionSyncDot). Signed out, it does
  * nothing: the list stays this browser's.
  */
-export function useCollectionSync(user, { name, store, meta }) {
+export function useCollectionSync(user, { name, meta }) {
   const [page] = useState(() => browserCloudSync(window, {
-    name, store, meta: meta(),
-    io: db ? collectionIo(fs, db, name) : null,
+    name, meta: meta(),
+    cloud: Boolean(db),
     report: collectionReport(name),
     log: (...args) => console.info(...args),
-  }, createCollectionSync));
+  }, createSync));
   const [isOnline, setIsOnline] = useState(() => page.online());
 
   useEffect(() => page.watch(setIsOnline), [page]);

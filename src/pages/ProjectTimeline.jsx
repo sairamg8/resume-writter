@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { useToday } from '@/hooks/useToday';
 import { usePhoneStickyTop } from '@/hooks/usePhoneStickyTop';
 import { Button, EmptyState, IconButton, cx } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
@@ -10,7 +11,7 @@ import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
 import { IssueTypeIcon } from '@/components/tracker/TrackerIcons';
 import { Lozenge } from '@/components/tracker/Lozenge';
 import { childrenOf, epicsOf } from '@/utils/boardQuery';
-import { addDays, issueKey, statusColumn, todayISO, toLocalISO } from '@/utils/boardModel';
+import { addDays, issueKey, statusColumn, toLocalISO } from '@/utils/boardModel';
 import { dayRange, daysBetween, weekStart } from '@/utils/calendarGrid';
 import { formatShortDay } from '@/utils/uiFormat';
 
@@ -87,7 +88,7 @@ export function ProjectTimeline() {
   const stickyRef = usePhoneStickyTop();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);
-  const today = todayISO();
+  const today = useToday();
   const [from, setFrom] = useState(() => addDays(weekStart(today), -7));
   const [folded, setFolded] = useState(() => new Set());
   if (!board) {

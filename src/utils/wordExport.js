@@ -5,6 +5,7 @@ import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
 import { withWordPhoto } from '@/utils/wordExportPhoto';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+import { withHiddenFieldsEmptied } from '@/utils/entryPrints';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { inMixedColumns, templateId } from '@/constants/templates';
@@ -190,7 +191,7 @@ export async function renderResumeDocx(resume) {
   // Layout), but still leads a job with the role (R2-012) and prints its dates in grey and its second
   // field in the accent, as its PDF does (R2-121).
   const own = templateId(template);
-  const resolved = sections.map((s) => resolveSection(s, own));
+  const resolved = sections.map((s) => resolveSection(withHiddenFieldsEmptied(s), own));
   // The Sidebar's Mixed layout (Design → Template → Layout, R2-147-col): its short sections print after
   // the others, two to a row (mixedRows). Every other layout prints its sections in their order: Word
   // has no side column, so Details Left, Right and Top and the column's width print the same page.
