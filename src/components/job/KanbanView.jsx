@@ -10,7 +10,7 @@ import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
 import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
 import { formatShortDay } from '@/utils/uiFormat';
 import { isOpen } from '@/utils/jobQuery';
-import { todayLocalISO } from '@/utils/dates';
+import { useToday } from '@/hooks/useToday';
 
 // Constants, not literals in the render: a new options object each time gave DndContext new sensors,
 // and every one of the board's draggable cards rendered again.
@@ -181,7 +181,7 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
   latest.current = { updateJob, onNavigate, onDelete };
   // Today's date, handed to every card: a card's deadline pill reads the clock, and a memoised card
   // would keep yesterday's 'due today' past midnight. A new day is a new prop, so the cards draw again.
-  const today = todayLocalISO();
+  const today = useToday(); // a new day at midnight (and when the tab is shown again) draws the cards again
   const move = useCallback((id, status) => latest.current.updateJob(id, { status }), []);
   const openJob = useCallback((id) => latest.current.onNavigate(id), []);
   const deleteJob = useCallback((id) => latest.current.onDelete(id), []);

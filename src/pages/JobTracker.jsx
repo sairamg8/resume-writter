@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Download, FileSpreadsheet, LayoutDashboard, List, MoreHorizontal, Plus, SquareKanban, Upload } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
+import { useToday } from '@/hooks/useToday';
 import { useSessionState } from '@/hooks/useSessionState';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { Button, IconButton, Menu, SearchInput, cx, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
@@ -65,6 +66,7 @@ export function JobTracker({ store }) {
   const { jobs, persistError, recovery, dismissRecovery, changeStatus, undoStatus, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs } = useJobStore();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
+  const today = useToday(); // follow-ups due and the counts are read again when the day changes
   const { appState } = store;
   const { resumes } = appState;
   // The view last open in this tab is the one a bare /jobs opens: the breadcrumb, the sidebar and the page a
@@ -128,7 +130,7 @@ export function JobTracker({ store }) {
   // Kept while nothing it reads changes (a page render for another reason does not filter again).
   const filteredJobs = useMemo(
     () => filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] }),
-    [jobs, search, filterStatus],
+    [jobs, search, filterStatus, today],
   );
   const counts = jobStats(jobs); // the definitions, tested: src/utils/jobQuery.js
   const stats = [

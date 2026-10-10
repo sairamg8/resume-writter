@@ -2,6 +2,7 @@ import { BellRing, Briefcase, CalendarClock, MessageSquareReply, Trophy } from '
 import { JOB_STATUSES } from '@/constants/jobs';
 import { Avatar, DatePill } from '@/components/ui';
 import { Donut } from '@/components/tracker/Charts';
+import { useToday } from '@/hooks/useToday';
 import { funnelCounts, isDeadlineUpcoming, isFollowUpDue, jobStats } from '@/utils/jobQuery';
 import { StatusBadge } from './StatusBadge';
 
@@ -56,6 +57,7 @@ function JobRow({ job, date, onOpen }) {
  * and the follow-ups that are due. `onOpen(id)` opens a job.
  */
 export function JobSummary({ jobs, onOpen }) {
+  useToday(); // the deadlines ahead and the follow-ups due are read again when the day changes
   const s = jobStats(jobs);
   const funnel = funnelCounts(jobs);
   const top = Math.max(1, funnel[0]?.count ?? 0);

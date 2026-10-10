@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { boardsNow, useBoardStore } from '@/hooks/useBoardStore';
+import { useToday } from '@/hooks/useToday';
 import { Button, DatePill, EmptyState, IconButton, TabPanel, Tabs, useToast } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
@@ -55,6 +56,7 @@ function WorkRow({ row, onOpen, onDone, showUpdated }) {
  */
 export function YourWork() {
   const store = useBoardStore();
+  useToday(); // Overdue and Due today are counted again when the day changes
   const route = useIssueRoute(store.boards);
   const { toast } = useToast();
   const [tab, setTab] = useState('todo');

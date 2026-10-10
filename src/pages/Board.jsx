@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
 import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { useToday } from '@/hooks/useToday';
 import { usePhoneStickyTop } from '@/hooks/usePhoneStickyTop';
 import { Button, EmptyState, IconButton, Menu, cx, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
@@ -88,6 +89,7 @@ export function Board() {
   const navigate = useNavigate();
   const store = useBoardStore();
   const stickyRef = usePhoneStickyTop();
+  useToday(); // the Overdue filter and the due pills are drawn again when the day changes
   const workspace = useWorkspace();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
