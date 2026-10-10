@@ -34,15 +34,18 @@ export function headersFile(dist = DIST) {
  *  - reportUri: append `report-uri /__csp-report` to the Content-Security-Policy (the browser then also reports
  *    what a worker's policy blocked, which no page event shows); reports are collected in `reports`;
  *  - rewrite(pathname, body): change a file's bytes before they are sent (a "new deploy" of sw.js);
- *  - extra: files that exist only here, { '/sw-kill': 'text' } (`state.extra` may change while it runs).
+ *  - extra: files that exist only here, { '/sw-kill': 'text' } (`state.extra` may change while it runs);
+ *  - `state.down = true` makes every request fail as if the site were unreachable (offline, whichever way the browser's own
+ *    offline switch reaches a service worker).
  * `hits` lists every request path served; `close()` stops it.
  */
 export async function serveDist({ dist = DIST, reportUri = false, rewrite = null, extra = {} } = {}) {
   const headers = headersFile(dist).map(([k, v]) => [k, reportUri && /^content-security-policy$/i.test(k) ? `${v}; report-uri /__csp-report` : v]);
   const hits = [];
   const reports = [];
-  const state = { extra: { ...extra }, rewrite };
+  const state = { extra: { ...extra }, rewrite, down: false };
   const server = http.createServer((req, res) => {
+    if (state.down) { req.socket.destroy(); return; } // the site is unreachable
     const url = new URL(req.url, 'http://x');
     if (req.method === 'POST' && url.pathname === '/__csp-report') {
       let body = '';
