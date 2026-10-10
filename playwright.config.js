@@ -20,6 +20,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     headless: true,
     acceptDownloads: true,
+    // The built app registers a service worker (public/sw.js). It would sit between the specs' page.route stubs
+    // and the network, so the suite blocks it; the spec of the worker itself allows it (563-n2-offline-shell).
+    serviceWorkers: 'block',
   },
   projects: [
     {
