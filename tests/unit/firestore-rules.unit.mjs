@@ -11,6 +11,10 @@
 // `{ owner, resume, publishedAt }`, the copy publicSnapshot's fields — each of its type
 // (isPublishedCopy). Before, the rule checked the owner alone: an account could put any field in
 // the one document anyone can read. The owner must publish the new rules (README).
+// N3 (Job Map access): the addresses the Job Map lets in are the documents `jobmap_access/<email>`.
+// A Job Map admin, named by one field set to true in the single document `jobmap_admin/<id>` (made in the
+// console; no rule gives a client that collection), reads and writes them from the Job Map page
+// (isJobMapAdmin). Anyone else, signed out or not, and an admin whose e-mail is unverified, gets nothing.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -21,11 +25,12 @@ const code = rules.replace(/\/\/.*$/gm, '');
 const matches = [...code.matchAll(/match\s+(\S+)\s*\{/g)].map((m) => m[1]);
 const allows = [...code.matchAll(/allow\s+([^:]+):\s*if\s+([^;]+);/g)].map((m) => ({ ops: m[1].split(',').map((s) => s.trim()), cond: m[2].replace(/\s+/g, ' ').trim() }));
 
-test('three rules (the Job Map is the owner-allowed one): an account reaches only its own documents under users/{uid}; a published résumé is got by anyone, written by its owner', () => {
-  assert.deepEqual(matches, ['/databases/{database}/documents', '/users/{uid}/{document=**}', '/jobmap/{document}', '/public/{shareId}']);
+test('four rules (the Job Map\'s two are the owner-allowed ones): an account reaches only its own documents under users/{uid}; a published résumé is got by anyone, written by its owner', () => {
+  assert.deepEqual(matches, ['/databases/{database}/documents', '/users/{uid}/{document=**}', '/jobmap/{document}', '/jobmap_access/{email}', '/public/{shareId}']);
   assert.deepEqual(allows, [
     { ops: ['read', 'write'], cond: 'request.auth != null && request.auth.uid == uid' },
     { ops: ['read', 'write'], cond: 'mayUseJobMap()' },
+    { ops: ['read', 'write'], cond: 'isJobMapAdmin()' },
     { ops: ['get'], cond: 'true' },
     { ops: ['create'], cond: 'request.auth != null && isPublishedCopy(request.resource.data)' },
     { ops: ['update'], cond: 'request.auth != null && resource.data.owner == request.auth.uid && isPublishedCopy(request.resource.data)' },
@@ -85,4 +90,64 @@ test('the keys the rule allows are the ones publicLink.js writes', () => {
   const copyKeys = [...copy.matchAll(/^\s*(\w+)\s*[:,]/gm)].map((m) => m[1]);
   assert.match(src, /copy\.dataVersion = resume\.dataVersion;/, 'and the data version, when the résumé has one');
   assert.deepEqual([...copyKeys, 'dataVersion'], keysIn('d.resume', 'hasOnly'), "publicSnapshot's copy");
+});
+
+/** A function's body, one condition a line, comments dropped. */
+const conditionsOf = (name) => code.match(new RegExp(`function\\s+${name}\\(\\)\\s*\\{\\s*return\\s+([^;]+);\\s*\\}`))?.[1]
+  .split('&&').map((c) => c.replace(/\s+/g, ' ').trim());
+const ADMIN_DOC = 'CyNg0r3JBnvYNkQi2W7H';
+const ADMIN_CONDITIONS = [
+  'request.auth != null',
+  'request.auth.token.email_verified == true',
+  `get(/databases/$(database)/documents/jobmap_admin/${ADMIN_DOC}).data.get(request.auth.token.email, false) == true`,
+];
+
+test('isJobMapAdmin: a verified sign-in whose e-mail is a field set to true in the one jobmap_admin document', () => {
+  assert.deepEqual(conditionsOf('isJobMapAdmin'), ADMIN_CONDITIONS);
+  assert.match(rules, /\/\/ Job Map admins: a single document in `jobmap_admin`/, 'the comment that says where the admins are');
+  assert.deepEqual(conditionsOf('mayUseJobMap'), [
+    'request.auth != null',
+    'request.auth.token.email_verified == true',
+    'exists(/databases/$(database)/documents/jobmap_access/$(request.auth.token.email))',
+  ], 'mayUseJobMap is unchanged');
+});
+
+test('jobmap_access is the admins\' alone; jobmap_admin has no match block, so no client reads or writes it', () => {
+  const block = code.match(/match\s+\/jobmap_access\/\{email\}\s*\{([^}]*)\}/)?.[1];
+  assert.ok(block, 'a jobmap_access/{email} block');
+  assert.deepEqual([...block.matchAll(/allow\s+([^:]+):\s*if\s+([^;]+);/g)].map((m) => [m[1].trim(), m[2].trim()]), [['read, write', 'isJobMapAdmin()']]);
+  assert.deepEqual(matches.filter((m) => /jobmap_admin/.test(m)), [], 'no match for jobmap_admin');
+  assert.equal((code.match(/jobmap_admin/g) ?? []).length, 1, 'the name occurs once in code: in isJobMapAdmin\'s get()');
+  assert.ok(!matches.some((m) => /\{[a-z]+=\*\*\}/.test(m) && !m.startsWith('/users/')), 'no recursive wildcard that would reach it');
+  assert.ok(!/match\s+\/\{/.test(code), 'no catch-all match at the top');
+});
+
+/**
+ * The rule as the server applies it, built from the conditions above (asserted equal to the file's):
+ * `adminDoc` is the data of jobmap_admin/<id> (undefined: the document is missing).
+ */
+function adminMayUse(auth, adminDoc) {
+  if (auth == null) return false;
+  if (auth.email_verified !== true) return false;
+  return adminDoc?.[auth.email] === true;
+}
+/** What a client may do to a path: only the jobmap_access documents, only for an admin; jobmap_admin never. */
+function mayTouch(path, auth, adminDoc) {
+  const [root, , ...rest] = path.split('/');
+  if (root === 'jobmap_access' && rest.length === 0) return adminMayUse(auth, adminDoc);
+  return false;
+}
+
+test('a non-admin cannot read or write jobmap_access; an admin can; nobody touches jobmap_admin', () => {
+  assert.deepEqual(conditionsOf('isJobMapAdmin'), ADMIN_CONDITIONS, 'the model below is this rule');
+  const admin = { email: 'owner@example.org', email_verified: true };
+  const adminDoc = { 'owner@example.org': true, 'former@example.org': false };
+  assert.equal(mayTouch('jobmap_access/new@example.org', admin, adminDoc), true);
+  assert.equal(mayTouch('jobmap_access/new@example.org', null, adminDoc), false, 'signed out');
+  assert.equal(mayTouch('jobmap_access/new@example.org', { email: 'allowed@example.org', email_verified: true }, adminDoc), false, 'an allowed address is not an admin');
+  assert.equal(mayTouch('jobmap_access/new@example.org', { email: 'former@example.org', email_verified: true }, adminDoc), false, 'a field set to false');
+  assert.equal(mayTouch('jobmap_access/new@example.org', { email: 'owner@example.org', email_verified: false }, adminDoc), false, 'unverified e-mail');
+  assert.equal(mayTouch('jobmap_access/new@example.org', admin, undefined), false, 'no admin document');
+  assert.equal(mayTouch(`jobmap_admin/${ADMIN_DOC}`, admin, adminDoc), false, 'not even an admin touches jobmap_admin');
+  assert.equal(mayTouch('jobmap_access', admin, adminDoc), false);
 });
