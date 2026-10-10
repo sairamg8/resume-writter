@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { ExternalLink, Map as MapIcon, Upload } from 'lucide-react';
 import { useJobMapAccess } from '@/hooks/useJobMapAccess';
+import { isComponent } from '@/utils/lazyPage';
 import AppBar from '@/components/AppBar';
 import AuthBar from '@/components/AuthBar';
 import BottomTabBar from '@/components/BottomTabBar';
@@ -44,7 +45,7 @@ export function AccessPanelSlot({ email, load = () => import('@/components/JobMa
   const [Panel, setPanel] = useState(null);
   useEffect(() => {
     let live = true;
-    load().then((m) => { if (live) setPanel(() => m.default); }, () => {});
+    load().then((m) => { if (live && isComponent(m?.default)) setPanel(() => m.default); }, () => {});
     return () => { live = false; };
     // `load` is a constant of the page; only a test passes another.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +75,7 @@ export function JobMapAccessFailed({ auth, sync, onRetry }) {
 }
 
 /** Open roles across companies and countries, for the accounts the owner allowed (firestore.rules). Its data is loaded from the account, never shipped in the app. */
-export default function JobMap({ auth, sync }) {
+export function JobMap({ auth, sync }) {
   const [attempt, setAttempt] = useState(0);
   const allowed = useJobMapAccess(auth.user, attempt);
   const [meta, setMeta] = useState(null);       // null: not asked yet; false: nothing loaded
@@ -183,3 +184,6 @@ export default function JobMap({ auth, sync }) {
     </div>
   );
 }
+
+// The route loads the page by this name (AppRoutes.jsx, lazyPage.js `loadPage`), as every page does; the default export stays for importers of it.
+export default JobMap;

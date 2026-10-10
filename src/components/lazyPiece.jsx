@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { componentOf } from '@/utils/lazyPage';
 
 // The Documents page's pieces that load apart from the start-up path: the letter picker (with the kit's
 // Dialog), Career History, and a card's more menu (with the kit's Menu). Not lazyPage: its reload on a
@@ -20,7 +21,10 @@ const viewFor = (key) => {
   const load = loaders[key];
   if (views.get(key)?.load === load) return views.get(key).View;
   // A rejection stays in a lazy() for good: drop it, so the next ask (Try again, a remount) imports again.
-  const View = lazy(() => load().catch((e) => { if (views.get(key)?.View === View) views.delete(key); throw e; }));
+  // A module that loaded without its component (a tab mixing two builds' files) is a rejection too: the
+  // fallback with Try again shows, never an `undefined` element type reaching React.
+  const View = lazy(() => load().then((m) => { componentOf(m, 'default', `${key} piece`); return m; })
+    .catch((e) => { if (views.get(key)?.View === View) views.delete(key); throw e; }));
   views.set(key, { load, View });
   return View;
 };

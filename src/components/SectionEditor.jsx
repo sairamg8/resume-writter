@@ -13,13 +13,15 @@ import { templateId } from '@/constants/templates';
 import { useToast } from '@/components/ui/Toast';
 import { Menu } from '@/components/ui/Menu';
 import { useSameList } from '@/hooks/useSameList';
+import { componentOf } from '@/utils/lazyPage';
 
 // The Section style popover loads apart from the start-up path. A failed import is forgotten so the next
 // open tries again; meanwhile the card shows the customizer inline, as before the popover existed.
 export const _lazyForTest = { load: () => import('@/components/SectionStylePopover') };
 let stylePopover = null;
 const loadStylePopover = () => {
-  stylePopover ||= _lazyForTest.load().catch((e) => { stylePopover = null; throw e; });
+  stylePopover ||= _lazyForTest.load().then((m) => { componentOf(m, 'default', 'section style popover'); return m; })
+    .catch((e) => { stylePopover = null; throw e; });
   return stylePopover;
 };
 

@@ -44,6 +44,8 @@ async function loadTemplate(key) {
   if (templateCache.has(k)) return templateCache.get(k);
   const load = LOADERS[k] || LOADERS.classic;
   const Comp = await load();
+  // A chunk without the template (a tab mixing two builds' files) fails the export, and is not kept.
+  if (typeof Comp !== 'function') throw new Error(`The ${k} template did not load: reload the page.`);
   templateCache.set(k, Comp);
   return Comp;
 }

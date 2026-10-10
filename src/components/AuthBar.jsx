@@ -13,9 +13,11 @@ function GoogleIcon() {
   );
 }
 import { Suspense, lazy, useCallback, useRef, useState } from 'react';
+import { isComponent } from '@/utils/lazyPage';
 
-// A failed load shows no item: the menu works without it.
-const JobMapMenuItem = lazy(() => import('@/pages/JobMap').then((m) => ({ default: m.JobMapMenuItem }), () => ({ default: () => null })));
+// A failed load, or a module without the item, shows no item: the menu works without it.
+const NO_ITEM = () => null;
+const JobMapMenuItem = lazy(() => import('@/pages/JobMap').then((m) => ({ default: isComponent(m?.JobMapMenuItem) ? m.JobMapMenuItem : NO_ITEM }), () => ({ default: NO_ITEM })));
 
 /** `name` cut to 32 characters, by whole characters: an emoji at the cut is not split into a broken half. */
 export const clip = (name) => { const c = Array.from(name); return c.length > 32 ? `${c.slice(0, 31).join('')}…` : name; };

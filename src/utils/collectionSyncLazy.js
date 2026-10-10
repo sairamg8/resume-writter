@@ -37,19 +37,22 @@ export function lazyCollectionSync(load, { retryDelay = 30000, maxRetryDelay = 6
       if (loading || engine) return;
       loading = true;
       timers.clear(retry);
+      const failed = (e) => {
+        loading = false;
+        log('The sync engine could not be loaded:', e?.message ?? e);
+        status('error');
+        retry = timers.set(fetchEngine, backoff(attempts++, retryDelay, maxRetryDelay));
+      };
       Promise.resolve().then(load).then((create) => {
+        // A module without the engine (a tab mixing two builds' files) is a failed load, not a crash later.
+        if (typeof create !== 'function') { failed(new Error('the sync engine module has no createListSync')); return; }
         engine = create(options);
         loading = false;
         attempts = 0;
         const calls = waiting;
         waiting = [];
         for (const [name, args] of calls) engine[name](...args);
-      }, (e) => {
-        loading = false;
-        log('The sync engine could not be loaded:', e?.message ?? e);
-        status('error');
-        retry = timers.set(fetchEngine, backoff(attempts++, retryDelay, maxRetryDelay));
-      });
+      }, failed);
     }
 
     return {

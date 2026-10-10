@@ -11,6 +11,24 @@ import { createElement, lazy, useState } from 'react';
 /** The session key that marks "reloaded once for a page's code": the names of the pages that did. */
 export const RELOADED_KEY = 'cpwtcv_chunk_reload';
 
+/**
+ * Is `x` something React can draw as an element type: a function or class component, or a memo/forwardRef
+ * object? A lazy that resolves to `{ default: undefined }` reaches React as "Element type is invalid"
+ * (error #306 in a production build), so every lazy here checks what its module gave before it hands it on.
+ */
+export const isComponent = (x) => typeof x === 'function' || (typeof x === 'object' && x !== null && '$$typeof' in x);
+
+/**
+ * `m`'s `name` export as a component, or a thrown Error that names the file's export: a module that loaded
+ * but lacks it (a tab mixing the files of two builds, or a page whose export was renamed) is a failed load.
+ * `name` 'default' is the module's default export.
+ */
+export function componentOf(m, name, what = name) {
+  const x = m?.[name];
+  if (!isComponent(x)) throw new Error(`The ${what} loaded without its "${name}" export (the page's files may be from two versions of the app): reload the page.`);
+  return x;
+}
+
 const browser = () => ({
   // Read where it is used, inside the callers' try blocks: a browser that blocks site data throws
   // SecurityError from the property read itself, and read here it made every page's load throw.
@@ -41,7 +59,9 @@ function reloadedPages(storage) {
  * cleared it after every reload and a page whose file failed on every load reloaded the tab for good.
  */
 export function loadPage(load, name, env = browser()) {
-  return load().then((m) => {
+  // A module that loaded without the page's export is a failed load like a file that did not arrive: it
+  // takes the reload-once path below, then the ErrorBoundary, and never reaches React as `undefined`.
+  return load().then((m) => { componentOf(m, name, `${name} page`); return m; }).then((m) => {
     try {
       const pages = reloadedPages(env.storage);
       if (pages.includes(name)) {
