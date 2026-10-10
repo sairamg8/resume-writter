@@ -1,6 +1,6 @@
 // The board list's state and storage (the store half of useBoardStore.js, which re-exports all of
 // it): the list, its subscribe and snapshot, and the primitives the actions are built over. Its own
-// module so the cloud sync (useCollectionSync, on the start-up path) reaches the list without the
+// module so the cloud sync (collectionSyncLoaded.js, loaded at the first sign-in) reaches the list without the
 // board actions and the pure mutations under them (boardActions.js, boardOps.js …), which only the
 // board pages need and which load with them (71-startup-chunks). One list: every importer shares
 // this module's singleton.
