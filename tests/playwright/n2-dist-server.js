@@ -63,7 +63,7 @@ export async function serveDist({ dist = DIST, reportUri = false, rewrite = null
     } else {
       let file = path.join(dist, pathname);
       if (!file.startsWith(dist)) { res.writeHead(403).end(); return; }
-      if (pathname.endsWith('/')) file = path.join(file, 'index.html');
+      if (pathname.endsWith('/')) { file = path.join(file, 'index.html'); pathname += 'index.html'; }
       if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { file = path.join(dist, 'index.html'); pathname = '/index.html'; }
       body = fs.readFileSync(file);
       type = TYPES[path.extname(file)] || 'application/octet-stream';
