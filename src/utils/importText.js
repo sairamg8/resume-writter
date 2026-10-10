@@ -39,7 +39,8 @@ const HEADING_TYPES = (() => {
   add('experience', ['Employment', 'Professional Background', 'Internships', 'Internship Experience', 'Work', 'Experiences', 'Professional History']);
   add('education', ['Education and Training', 'Academic Qualifications', 'Educational Qualifications']);
   // More English headings people use, the singular too ("Academic Qualification"): a heading the import did not know began a
-  // custom section, and the school's or the job's entries under it were no education or experience.
+  // custom section, and the school's or the job's entries under it were no education or experience. Not "Notable Projects":
+  // a label inside an entry (tests/unit/r5-hunt11-titlecase-unknown-heading) is no section.
   add('education', ['Academic Qualification', 'Educational Qualification', 'Qualifications', 'Qualification', 'Education Qualification', 'Education Qualifications',
     'Education Details', 'Educational Details', 'Academic Details', 'Academic Credentials', 'Education and Qualifications', 'Education History', 'Academics']);
   add('experience', ['Employment Experience', 'Job Experience', 'Career Experience', 'Related Experience', 'Relevant Work Experience', 'Practical Experience',
@@ -47,7 +48,7 @@ const HEADING_TYPES = (() => {
   add('skills', ['Skill Set', 'Skillset', 'Core Skills', 'Tech Stack', 'Technologies', 'Tools', 'Tools and Technologies', 'Expertise', 'Technical Expertise',
     'Professional Skills', 'Key Competencies', 'Core Competency', 'Technical Competencies', 'Technical Summary', 'Skills Summary', 'Skills and Abilities', 'Skills and Expertise',
     'Computer Skills', 'IT Skills', 'Software Skills', 'Soft Skills', 'Hard Skills', 'Relevant Skills', 'Additional Skills', 'Other Skills']);
-  add('projects', ['Project Experience', 'Side Projects', 'Notable Projects', 'Open Source Projects', 'Open Source Contributions']);
+  add('projects', ['Project Experience', 'Side Projects', 'Open Source Projects', 'Open Source Contributions']);
   add('awards', ['Honours', 'Honours and Awards', 'Awards and Honours', 'Awards and Achievements', 'Achievements and Awards', 'Awards and Recognition', 'Accomplishments', 'Scholarships and Awards']);
   add('languages', ['Language']);
   add('certifications', ['Certification', 'Licenses', 'Licenses and Certificates', 'Certificates and Licenses', 'Training and Certifications', 'Courses and Certifications', 'Certifications and Training']);
