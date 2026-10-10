@@ -216,7 +216,7 @@ test('a page: the network answers, so the network\'s page is served (never the k
 });
 
 test('a page: with no network the kept shell opens; with none kept the browser\'s own error stands', async () => {
-  const w = await load(online({ '/': new TypeError('Failed to fetch') }));
+  const w = await load(online({ '/': new TypeError('Failed to fetch'), '/jobs': new TypeError('Failed to fetch') }));
   w.stores.set(w.api.CACHE, new Map([['/index.html', res('<p>kept shell</p>')]]));
   const { out } = await w.run('fetch', { request: w.request('/jobs', { mode: 'navigate' }) });
   assert.equal(out.body, '<p>kept shell</p>');
