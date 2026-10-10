@@ -25,6 +25,16 @@ before(async () => {
 after(teardown);
 
 const settle = async () => { for (let i = 0; i < 25; i += 1) await new Promise((r) => { setTimeout(r, 5); }); };
+// React holds back the reveal of a lazy piece for a moment after the pending line showed (its Suspense
+// throttle): wait on what the view shows, not on a count of ticks.
+async function until(view, text) {
+  for (let i = 0; i < 500; i += 1) {
+    view.act(() => {});
+    if (view.container.textContent === text) return;
+    await new Promise((r) => { setTimeout(r, 10); });
+  }
+  assert.equal(view.container.textContent, text);
+}
 const fallback = (retry, tries) => createElement('button', { onClick: retry }, `fallback ${tries}`);
 
 it('a piece whose module has no default shows its fallback, and Try again loads it once it is there', async () => {
@@ -36,14 +46,12 @@ it('a piece whose module has no default shows its fallback, and Try again loads 
   console.error = () => {};
   const view = mount(Lazy, { load: 'letter', fallback, pending: createElement('i', null, 'pending') });
   try {
-    await settle();
-    assert.equal(view.container.textContent, 'fallback 0', 'the fallback, not a crash of the page');
+    await until(view, 'fallback 0');
     assert.equal(state.asked, 1);
     state.good = true;
     const retry = [...elements(view.container)].find((el) => el.tagName === 'BUTTON');
     view.act(() => reactProps(retry).onClick({}));
-    await settle();
-    assert.equal(view.container.textContent, 'the piece');
+    await until(view, 'the piece');
     assert.equal(state.asked, 2, 'asked again, not kept as a failure');
   } finally {
     await view.unmount();
