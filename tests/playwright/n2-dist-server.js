@@ -56,7 +56,7 @@ export async function serveDist({ dist = DIST, reportUri = false, rewrite = null
     let type;
     if (pathname in state.extra) {
       body = Buffer.from(state.extra[pathname]);
-      type = TYPES['.txt'];
+      type = TYPES[path.extname(pathname)] || TYPES['.txt'];
     } else {
       let file = path.join(dist, pathname);
       if (!file.startsWith(dist)) { res.writeHead(403).end(); return; }

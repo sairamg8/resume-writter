@@ -78,6 +78,7 @@ test('the page is served with the policy of dist/_headers, and it has no inline 
 
 test('home: the dashboard and the legal pages open under the policy', async ({ page }) => {
   const violations = await watch(page);
+  await seed(page, buildTestState('classic'));
   await page.goto(`${site.url}/#/`);
   await page.waitForSelector('[data-testid="resume-card"]', { timeout: 20_000 });
   await page.goto(`${site.url}/#/terms`);
@@ -139,10 +140,8 @@ test('a public résumé link opens under the policy (this build has no cloud, so
 });
 
 test('the watcher sees a violation: eval, an inline script and a fetch to a site the policy does not name are refused', async ({ page }) => {
-  const violations = await watch(page);
-  await page.goto(`${site.url}/#/terms`);
-  await page.getByRole('heading', { name: 'Terms and Conditions' }).waitFor({ timeout: 20_000 });
-  const outcome = await page.evaluate(async () => {
+  // eval is probed from a script of the site: code run by the test tool itself (page.evaluate) is exempt from the policy.
+  site.state.extra['/__probe.js'] = `
     const r = {};
     try { globalThis['ev' + 'al']('1 + 1'); r.eval = 'ran'; } catch { r.eval = 'refused'; }
     try { new Function('return 1')(); r.fn = 'ran'; } catch { r.fn = 'refused'; }
@@ -150,13 +149,17 @@ test('the watcher sees a violation: eval, an inline script and a fetch to a site
     s.textContent = 'window.__inline = true';
     document.body.append(s);
     r.inline = window.__inline ? 'ran' : 'refused';
-    try { await fetch('http://example.invalid/x'); r.fetch = 'sent'; } catch { r.fetch = 'refused'; }
     const o = document.createElement('object');
     o.data = '/favicon.svg';
     document.body.append(o);
-    return r;
-  });
-  expect(outcome).toEqual({ eval: 'refused', fn: 'refused', inline: 'refused', fetch: 'refused' });
+    fetch('http://example.invalid/x').then(() => { r.fetch = 'sent'; }, () => { r.fetch = 'refused'; }).then(() => { window.__probe = r; });
+  `;
+  const violations = await watch(page);
+  await page.goto(`${site.url}/#/terms`);
+  await page.getByRole('heading', { name: 'Terms and Conditions' }).waitFor({ timeout: 20_000 });
+  await page.evaluate(() => { const s = document.createElement('script'); s.src = '/__probe.js'; document.body.append(s); });
+  await page.waitForFunction(() => window.__probe, null, { timeout: 10_000 });
+  expect(await page.evaluate(() => window.__probe)).toEqual({ eval: 'refused', fn: 'refused', inline: 'refused', fetch: 'refused' });
   const seen = (await violations()).join('\n');
   expect(seen).toMatch(/script-src/);
   expect(seen).toMatch(/connect-src/);
