@@ -6,14 +6,13 @@
 // a response is kept only if it is a plain 200 of the right kind (the site answers a path that is no file with
 // index.html), old caches are deleted on activation, and /sw-kill switches the worker off. The file is a
 // classic script; here it runs in Node against a fake service-worker scope (each import is a fresh copy).
-import { test, beforeEach, afterEach } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 const ORIGIN = 'https://cv.example';
 const realFetch = globalThis.fetch;
 const realNow = Date.now;
-let n = 0;
-let env;
+const copies = { n: 0 };
 
 const res = (body, { status = 200, type = 'basic', ct = 'text/html; charset=utf-8', redirected = false } = {}) => ({
   status, ok: status >= 200 && status < 300, type, redirected, body,
@@ -61,7 +60,7 @@ async function load(site) {
     if (answer instanceof Error) throw answer;
     return answer;
   };
-  await import(`../../public/sw.js?copy=${++n}`);
+  await import(`../../public/sw.js?copy=${++copies.n}`);
   const api = globalThis.__cpwtShell;
   const run = async (type, event = {}) => {
     const e = { waits: [], waitUntil(p) { this.waits.push(p); }, respondWith(p) { this.answer = p; this.responded = true; }, ...event };
@@ -77,7 +76,6 @@ async function load(site) {
   return { api, run, request, stores, calls, listeners };
 }
 
-beforeEach(() => { env = null; });
 afterEach(() => {
   globalThis.fetch = realFetch;
   Date.now = realNow;
