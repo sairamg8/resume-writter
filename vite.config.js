@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { ownerResume } from './vite-plugin-owner-resume.js'
 import { refusedBuild } from './vite-deploy-guard.js'
+import { swStamp } from './vite-plugin-sw-stamp.js'
 
 // A branch's build on Cloudflare deploys the live site: only master's may (vite-deploy-guard.js).
 const refused = refusedBuild()
@@ -23,7 +24,8 @@ const PDF_WORKER_JSX = new RegExp('^' + escapeRegExp(fileURLToPath(new URL('./sr
 
 export default defineConfig({
   // ownerResume: the owner's git-ignored résumé on the dev server only; null in every build.
-  plugins: [react({ exclude: [/[\\/]node_modules[\\/]/, PDF_WORKER_JSX] }), tailwindcss(), ownerResume()],
+  // swStamp: the build's id into public/sw.js, so each deploy is a new service worker with a new cache.
+  plugins: [react({ exclude: [/[\\/]node_modules[\\/]/, PDF_WORKER_JSX] }), tailwindcss(), ownerResume(), swStamp()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

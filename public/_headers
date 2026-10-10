@@ -1,14 +1,42 @@
 # Response headers for the Cloudflare Workers static assets (wrangler.jsonc serves ./dist; Vite copies
-# public/ into it). tests/unit/483-h4-security-headers.unit.mjs pins what is here and why.
+# public/ into it). tests/unit/483-h4-security-headers.unit.mjs and tests/unit/560-n2-csp-header.unit.mjs
+# pin what is here and why; tests/playwright/561-n2-csp-flows.spec.mjs runs the built app under it.
 #
 # Every page: the browser may not guess a type for a file (a user-made file named .js is not run as a
 # script), the site may be framed by itself only (a page that frames it to trick a click is refused),
 # a link out sends the site's address and no more, and the camera, the microphone and the location
 # are off (the app uses none).
 #
+# Content-Security-Policy (enforced), one line below. What each part allows, and why:
+#  - default-src 'self': anything not named is this site's own files.
+#  - script-src 'self' 'wasm-unsafe-eval' https://apis.google.com: no inline script and no eval. index.html has
+#    no inline script (the build's entry is a file). 'wasm-unsafe-eval' is for WebAssembly only (not eval): the
+#    PDF layout engine (yoga-layout, inside react-pdf) compiles a WebAssembly module in the PDF worker, and
+#    the worker takes this policy from its own script's response. https://apis.google.com is Firebase
+#    Auth's sign-in loader (gapi, /js/api.js): the Google popup sign-in needs it.
+#  - style-src 'self' 'unsafe-inline': the stylesheet is a file, but the rich-text editor and the UI put
+#    style attributes in markup (and the sign-in loader's frame is styled inline); a strict style-src would
+#    drop them. Styles cannot run script, so this is the one loosening of the page's own code.
+#  - img-src 'self' data: blob: https: : uploaded photos (data), page pictures (blob), the Google account
+#    picture and a photo that is a plain URL (a JSON Resume's basics.image), whose host cannot be listed.
+#  - font-src 'self' data: https://cdn.jsdelivr.net: the bundled Noto Sans files, small inlined ones, and the
+#    Fontsource fonts the preview loads (src/utils/fontsource.js).
+#  - connect-src 'self' data: blob: https: : Firestore (firestore.googleapis.com), Firebase Auth
+#    (identitytoolkit.googleapis.com, securetoken.googleapis.com), jsDelivr (font files and metadata), and a
+#    photo given as a URL, which the PDF and Word export fetch (printableImage.js, wordExportPhoto.js). That
+#    last one is why this is every https host and not a list: a list would silently drop such a photo from
+#    the export. Script, frame and form sources stay named; http is never allowed.
+#  - frame-src: Firebase Auth's hidden sign-in frame is https://<authDomain>/__/auth/iframe, with the Google
+#    domains it talks to. *.firebaseapp.com and *.web.app cover a project's default auth domain. A project
+#    that sets VITE_FIREBASE_AUTH_DOMAIN to a custom domain must add that domain here, or sign-in stops
+#    working (Auth waits for the frame, then fails with a network error).
+#  - worker-src 'self' blob: : the PDF worker and pdf.js's worker are files of this site (blob: is the
+#    browsers' fallback for a worker started from a script they wrap).
+#  - object-src 'none', base-uri 'self', form-action 'self', frame-ancestors 'self': no plug-ins, no
+#    <base> to another site, no form posted elsewhere, and (as X-Frame-Options above) framed by itself only.
+# Not set: upgrade-insecure-requests (the browser suite serves http://127.0.0.1) and a report endpoint.
+#
 # Not set, on purpose:
-#  - a Content-Security-Policy: it has to be written against a real browser session of the whole app
-#    (the PDF worker, pdf.js, Firebase and the jsDelivr fonts), not blind;
 #  - a Cross-Origin-Opener-Policy: it breaks the Google sign-in popup;
 #  - a long Cache-Control for assets/: wrangler.jsonc answers a path that is no file with index.html (a
 #    single-page app), and a rule by path would let a browser keep that page for a year under the name of
@@ -18,3 +46,4 @@
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' data: blob: https:; frame-src https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://apis.google.com https://content.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
