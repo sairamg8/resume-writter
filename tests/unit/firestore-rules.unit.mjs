@@ -131,10 +131,13 @@ function adminMayUse(auth, adminDoc) {
   if (auth.email_verified !== true) return false;
   return adminDoc?.[auth.email] === true;
 }
-/** What a client may do to a path: only the jobmap_access documents, only for an admin; jobmap_admin never. */
+/**
+ * What a client may do with a path: a document of jobmap_access (get, set, delete) or the collection itself (list:
+ * `allow read` covers it, and the panel's one read is that), only for an admin; jobmap_admin never.
+ */
 function mayTouch(path, auth, adminDoc) {
-  const [root, , ...rest] = path.split('/');
-  if (root === 'jobmap_access' && rest.length === 0) return adminMayUse(auth, adminDoc);
+  const parts = path.split('/');
+  if (parts[0] === 'jobmap_access' && parts.length <= 2 && parts.every(Boolean)) return adminMayUse(auth, adminDoc);
   return false;
 }
 
@@ -149,5 +152,9 @@ test('a non-admin cannot read or write jobmap_access; an admin can; nobody touch
   assert.equal(mayTouch('jobmap_access/new@example.org', { email: 'owner@example.org', email_verified: false }, adminDoc), false, 'unverified e-mail');
   assert.equal(mayTouch('jobmap_access/new@example.org', admin, undefined), false, 'no admin document');
   assert.equal(mayTouch(`jobmap_admin/${ADMIN_DOC}`, admin, adminDoc), false, 'not even an admin touches jobmap_admin');
-  assert.equal(mayTouch('jobmap_access', admin, adminDoc), false);
+  assert.equal(mayTouch('jobmap_access', admin, adminDoc), true, 'the admin lists the collection');
+  assert.equal(mayTouch('jobmap_access', { email: 'allowed@example.org', email_verified: true }, adminDoc), false, 'a non-admin does not');
+  assert.equal(mayTouch('jobmap_access', null, adminDoc), false);
+  assert.equal(mayTouch('jobmap_admin', admin, adminDoc), false, 'nor the admin collection');
+  assert.equal(mayTouch('jobmap_access/a@example.org/deeper/x', admin, adminDoc), false, 'a match with no wildcard below it');
 });
