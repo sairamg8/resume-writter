@@ -5,6 +5,7 @@ import { BulletStyle } from '@/templates/pdf/shared/PdfRichText';
 import { LinkStyle } from '@/templates/pdf/shared/PdfLinkStyle';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+import { withHiddenFieldsEmptied } from '@/utils/entryPrints';
 import { downloadBlob } from '@/utils/download';
 import { withPrintablePhotos } from '@/utils/printableImage';
 import { facesBorrowed, noteBuild } from '@/utils/fontFallback';
@@ -61,7 +62,7 @@ function prepareResumeData(resume, fonts, templateKey) {
     _template: templateKey,
   }, templateKey);
 
-  const resolvedSections = (resume?.sections || []).map(s => resolveSection(s, templateKey));
+  const resolvedSections = (resume?.sections || []).map(s => resolveSection(withHiddenFieldsEmptied(s), templateKey));
   return { ...resume, sections: resolvedSections, settings: resolvedSettings };
 }
 
