@@ -6,9 +6,10 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
     // The Job Map (src/pages/JobMap.jsx): one shared set of documents, for the accounts the owner allowed.
-    // An address is allowed by a document `jobmap_access/<email>` that only the owner creates, in the
-    // console; the rules below give no client any way to read or write that collection, so no address
-    // is in this file or in the app. The sign-in's e-mail must be verified (Google's always is).
+    // An address is allowed by a document `jobmap_access/<email>`, made in the console or by a Job Map
+    // admin from the Job Map page (isJobMapAdmin, below); no other client can read or write that
+    // collection, so no address is in this file or in the app. The sign-in's e-mail must be verified
+    // (Google's always is).
     function mayUseJobMap() {
       return request.auth != null
         && request.auth.token.email_verified == true
@@ -16,6 +17,15 @@ service cloud.firestore {
     }
     match /jobmap/{document} {
       allow read, write: if mayUseJobMap();
+    }
+    // Job Map admins: a single document in `jobmap_admin` (made in the console, never by a client) holds one field per admin address, set to true. No client can read or write `jobmap_admin`.
+    function isJobMapAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && get(/databases/$(database)/documents/jobmap_admin/CyNg0r3JBnvYNkQi2W7H).data.get(request.auth.token.email, false) == true;
+    }
+    match /jobmap_access/{email} {
+      allow read, write: if isJobMapAdmin();
     }
     // A résumé its owner published (Share a public link, src/utils/publicLink.js): anyone with the
     // link reads it — one by its id, never the list — and only the account that owns it writes it.
