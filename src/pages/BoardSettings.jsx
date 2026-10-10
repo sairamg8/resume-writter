@@ -248,7 +248,8 @@ export function BoardSettings() {
   async function deleteProject() {
     const ok = await confirm({ title: `Delete ${board.title}?`, body: `The project and its ${board.issues.length} issue${board.issues.length === 1 ? '' : 's'} will be deleted. You can undo this for a few seconds.`, confirmLabel: 'Delete project', tone: 'danger' });
     if (!ok) return;
-    navigate('/boards');
+    // The projects list takes this page's place: pushed, Back from it opened the settings of the project just deleted, as "This project doesn't exist".
+    navigate('/boards', { replace: true });
     const removed = store.deleteBoard(board.id);
     if (removed) toast({ title: `${board.title} deleted`, action: { label: 'Undo', onClick: () => store.restoreBoard(removed) } });
   }
