@@ -1910,7 +1910,7 @@ function entriesOf(type, lines, aside) {
         // two-cell "Company ⇥ dates" row over "Role"): still its second line when it names a role or a
         // degree and a list follows it right away.
         const spaced = n.gap && pieces(n.text).length === 1 && (ROLE.test(n.text) || (type === 'education' && DEGREE.test(n.text)))
-          && (!info[i + 1] || info[i + 1].bullet);
+          && (info[i + 1] ? info[i + 1].bullet : type === 'education');
         if (!n.bullet && (!n.gap || spaced) && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
           && !titleOfNext(L, n) && !(schoolOver(L) && !(pieces(n.text).length === 1 && PLACE.test(n.text)))) { header.push(n); i += 1; }
       }
@@ -2007,8 +2007,10 @@ function skillsOf(lines) {
     // A label and its list set a tab (a gap in the PDF) apart, as a Word table or a tabbed line prints
     // "Languages:  Python, Go": the label alone is a category, not a skill. Without a colon the list must
     // have a comma, else "Python  SQL" is two skills of a grid row.
+    // Without a colon the label must look like one (up to three capitalised words) and the list start with a letter.
     const label = cells.length === 2 && /^([^:,]{1,40}?)\s*(:?)$/.exec(cells[0]);
-    if (label && (label[2] || /,/.test(cells[1])) && !/:/.test(cells[1])) {
+    const named = label && (label[2] || (/^\p{Lu}[\p{L}&/+#-]*(?: [\p{Lu}&][\p{L}&/+#-]*){0,2}$/u.test(label[1]) && /^\p{L}[^,]*,/u.test(cells[1])));
+    if (named && !/:/.test(cells[1])) {
       items.push(itemOf('skills', { category: label[1], skills: cells[1] }));
       continue;
     }
