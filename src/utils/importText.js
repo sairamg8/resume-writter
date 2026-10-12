@@ -1234,7 +1234,7 @@ function readHeader(type, header) {
       if (!p || field(p)) return;
       // After the date on its line; or at the right tab of the line under the title. Under a date
       // alone ("Mar 2021 – Present" over "Role ⇥ Company", the Timeline's) that tab parts two fields.
-      if (at >= 0 && j > at && !titleAfterDate(p, header.length === 1 && k === 0 && at === 0 && titled === 0) && place(p)) return;
+      if (at >= 0 && j > at && !titleAfterDate(p, k === 0 && at === 0 && titled === 0) && place(p)) return;
       if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && titled && place(p)) return;
       // A place alone on its line: at the right margin, or a job's, right under the line that held its
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
@@ -1886,6 +1886,11 @@ function entriesOf(type, lines, aside) {
           const n = info[i];
           if (SECOND_LINE.has(type) && titleLike(n) && (pieces(n.text).length > 1 || PLACE.test(n.text))) header.push(info[i++]);
         }
+        // A date column set beside its title ("Jan 2020 – Present ⇥ Senior Engineer", Europass and CV-table
+        // layouts): the line under it, a name or a place, is the title's second field (the company, the school).
+        // Not a sentence of the description, which a name has no lower-case words in.
+        else if (header.length === 1 && pieces(L.text).length === 2 && SECOND_LINE.has(type) && titleLike(info[i])
+          && pieces(info[i].text).length === 1 && !sentence(info[i].text) && (nameLike(info[i].text) || PLACE.test(info[i].text) || CORPORATE.test(info[i].text))) header.push(info[i++]);
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
         // became the next role's company.
@@ -1901,7 +1906,12 @@ function entriesOf(type, lines, aside) {
           && PLACE.test(n.text) && !ROLE.test(n.text) && !nextTitle && !readHeader(type, header).location) header.push({ ...info[i++], hint: 'end' });
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
-        if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
+        // A table row's or a paragraph's spacing can set the title's second line off by a blank line (Word's
+        // two-cell "Company ⇥ dates" row over "Role"): still its second line when it names a role or a
+        // degree and a list follows it right away.
+        const spaced = n.gap && pieces(n.text).length === 1 && (ROLE.test(n.text) || (type === 'education' && DEGREE.test(n.text)))
+          && (!info[i + 1] || info[i + 1].bullet);
+        if (!n.bullet && (!n.gap || spaced) && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
           && !titleOfNext(L, n) && !(schoolOver(L) && !(pieces(n.text).length === 1 && PLACE.test(n.text)))) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
@@ -1994,6 +2004,14 @@ function skillsOf(lines) {
   const items = [];
   for (let i = 0; i < texts.length; i += 1) {
     const cells = texts[i].split('\t').map((s) => s.trim()).filter(Boolean);
+    // A label and its list set a tab (a gap in the PDF) apart, as a Word table or a tabbed line prints
+    // "Languages:  Python, Go": the label alone is a category, not a skill. Without a colon the list must
+    // have a comma, else "Python  SQL" is two skills of a grid row.
+    const label = cells.length === 2 && /^([^:,]{1,40}?)\s*(:?)$/.exec(cells[0]);
+    if (label && (label[2] || /,/.test(cells[1])) && !/:/.test(cells[1])) {
+      items.push(itemOf('skills', { category: label[1], skills: cells[1] }));
+      continue;
+    }
     for (const t of cells) {
       const m = /^([^:,]{1,60}?)\s*:\s*(.+)$/.exec(t);
       if (m) { items.push(itemOf('skills', { category: m[1], skills: m[2] })); continue; }
