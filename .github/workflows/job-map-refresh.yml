@@ -66,6 +66,9 @@ jobs:
           node refresh.mjs $flags
       - name: Keep a copy of what discovery found
         if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        # A spare: if the artifact service fails or stalls, the commit step below must still run.
+        continue-on-error: true
+        timeout-minutes: 10
         uses: actions/upload-artifact@v4
         with:
           name: job-map-found
@@ -79,6 +82,10 @@ jobs:
         env:
           BRANCH: ${{ github.ref_name }}
         run: |
+          if [ "$GITHUB_REF_TYPE" != "branch" ]; then
+            echo "::error::run this from a branch, not a tag (the discovery files are in the job-map-found artifact of this run)"
+            exit 1
+          fi
           files="tools/job-map/discovered.json tools/job-map/unresolved.json tools/job-map/jobs-agg.json"
           aside="$RUNNER_TEMP/job-map-found"
           mkdir -p "$aside"
@@ -86,21 +93,23 @@ jobs:
           git config user.name sairamgudiputi
           git config user.email sairamgudiputi8@gmail.com
           for attempt in 1 2 3 4 5 6; do
-            git fetch --quiet --depth=1 origin "$BRANCH"
-            git reset --quiet --hard FETCH_HEAD
-            for f in $files; do cp "$aside/$(basename "$f")" "$f"; done
-            git add -- $files
-            if git diff --cached --quiet; then
-              echo "Discovery changed nothing; nothing to commit."
-              exit 0
+            if git fetch --quiet --depth=1 origin "$BRANCH" && git reset --quiet --hard FETCH_HEAD; then
+              for f in $files; do cp "$aside/$(basename "$f")" "$f"; done
+              git add -- $files
+              if git diff --cached --quiet; then
+                echo "Discovery changed nothing; nothing to commit."
+                exit 0
+              fi
+              git commit --quiet -m "chore(job-map): monthly discovery of companies and boards [skip ci]"
+              if git push origin "HEAD:refs/heads/$BRANCH"; then
+                echo "Pushed on attempt $attempt."
+                exit 0
+              fi
+              echo "::warning::push attempt $attempt did not go through (the branch may have moved); fetching its tip and trying again"
+            else
+              echo "::warning::fetch attempt $attempt failed; trying again"
             fi
-            git commit --quiet -m "chore(job-map): monthly discovery of companies and boards [skip ci]"
-            if git push origin "HEAD:refs/heads/$BRANCH"; then
-              echo "Pushed on attempt $attempt."
-              exit 0
-            fi
-            echo "::warning::push attempt $attempt was rejected (the branch moved); fetching and trying again"
-            sleep $((attempt * 20))
+            if [ "$attempt" -lt 6 ]; then sleep $((attempt * 20)); fi
           done
           echo "::error::could not push the discovery files after 6 attempts (the files are in the job-map-found artifact of this run)"
           exit 1
