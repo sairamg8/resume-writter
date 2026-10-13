@@ -2,6 +2,10 @@
 # replaces the owner's `jobmap/*` documents; monthly it also looks for new companies first and commits what it
 # found (discovered.json, unresolved.json, jobs-agg.json) so the next run keeps it. Run it by hand from
 # Actions → job-map-refresh → Run workflow. The upload refuses a crawl with 40% fewer roles than are stored.
+# The monthly commit lands on whatever the branch is by then (it is pushed to every few hours, and the run takes
+# about an hour): the step fetches the tip, puts the three files on it and tries again if the branch moved. A copy
+# of the files is also kept 30 days as the run's `job-map-found` artifact. The commit carries [skip ci], so master
+# moves to a commit CI never ran on: merge master into a branch before fast-forwarding it after the 1st.
 #
 # Needs one repository secret, FIREBASE_SERVICE_ACCOUNT: the JSON key of a Firebase service account
 # (Firebase console → Project settings → Service accounts → Generate new private key). Only the owner can add it.
@@ -60,12 +64,43 @@ jobs:
           [ "$DRY" = "true" ] && flags="$flags --dry"
           [ "$FORCE" = "true" ] && flags="$flags --force"
           node refresh.mjs $flags
+      - name: Keep a copy of what discovery found
+        if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-map-found
+          path: |
+            tools/job-map/discovered.json
+            tools/job-map/unresolved.json
+            tools/job-map/jobs-agg.json
+          retention-days: 30
       - name: Keep what discovery found
         if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          files="tools/job-map/discovered.json tools/job-map/unresolved.json tools/job-map/jobs-agg.json"
+          aside="$RUNNER_TEMP/job-map-found"
+          mkdir -p "$aside"
+          for f in $files; do cp "$f" "$aside/"; done
           git config user.name sairamgudiputi
           git config user.email sairamgudiputi8@gmail.com
-          git add tools/job-map/discovered.json tools/job-map/unresolved.json tools/job-map/jobs-agg.json
-          git diff --cached --quiet && exit 0
-          git commit -m "chore(job-map): monthly discovery of companies and boards [skip ci]"
-          git push origin HEAD:${{ github.ref_name }}
+          for attempt in 1 2 3 4 5 6; do
+            git fetch --quiet --depth=1 origin "$BRANCH"
+            git reset --quiet --hard FETCH_HEAD
+            for f in $files; do cp "$aside/$(basename "$f")" "$f"; done
+            git add -- $files
+            if git diff --cached --quiet; then
+              echo "Discovery changed nothing; nothing to commit."
+              exit 0
+            fi
+            git commit --quiet -m "chore(job-map): monthly discovery of companies and boards [skip ci]"
+            if git push origin "HEAD:refs/heads/$BRANCH"; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "::warning::push attempt $attempt was rejected (the branch moved); fetching and trying again"
+            sleep $((attempt * 20))
+          done
+          echo "::error::could not push the discovery files after 6 attempts (the files are in the job-map-found artifact of this run)"
+          exit 1
