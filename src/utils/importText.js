@@ -102,6 +102,7 @@ function toLines(input) {
       return lines.map((text, i) => ({
         text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
         ...(l.fields && !i ? { fields: l.fields } : {}),
+        ...(l.loose && !i ? { loose: true } : {}),
       }));
     }
     return [{ text: clean(l), depth: indentOf(l) }];
@@ -1880,6 +1881,11 @@ function entriesOf(type, lines, aside) {
         // the line under it, and for a type with a second line (a role, a degree) the one under that
         // when it holds two fields or a place. Before, such an entry had no title, and its title and
         // company went into its description (R2-148).
+        // The one piece of the line that is not its dates names a role (or, for a school, a degree or a school).
+        const titleLine2 = (line) => {
+          const rest = pieces(line.text).filter((p) => !readDateRange(p));
+          return rest.length === 1 && (ROLE.test(rest[0]) || (type === 'education' && (DEGREE.test(rest[0]) || SCHOOL.test(rest[0]))));
+        };
         const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && (!/[.!?]$/.test(n.text) || CORPORATE.test(n.text)) && !isMetaLine(n.text); // "Inc." ends a name, not a sentence
         if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
           header.push(info[i++]);
@@ -1889,7 +1895,7 @@ function entriesOf(type, lines, aside) {
         // A date column set beside its title ("Jan 2020 – Present ⇥ Senior Engineer", Europass and CV-table
         // layouts): the line under it, a name or a place, is the title's second field (the company, the school).
         // Not a sentence of the description, which a name has no lower-case words in.
-        else if (header.length === 1 && pieces(L.text).length === 2 && SECOND_LINE.has(type) && titleLike(info[i])
+        else if (header.length === 1 && pieces(L.text).length === 2 && SECOND_LINE.has(type) && titleLine2(L) && titleLike(info[i])
           && pieces(info[i].text).length === 1 && !sentence(info[i].text) && (nameLike(info[i].text) || PLACE.test(info[i].text) || CORPORATE.test(info[i].text))) header.push(info[i++]);
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
@@ -1909,7 +1915,7 @@ function entriesOf(type, lines, aside) {
         // A table row's or a paragraph's spacing can set the title's second line off by a blank line (Word's
         // two-cell "Company ⇥ dates" row over "Role"): still its second line when it names a role or a
         // degree and a list follows it right away.
-        const spaced = n.gap && pieces(n.text).length === 1 && (ROLE.test(n.text) || (type === 'education' && DEGREE.test(n.text)))
+        const spaced = n.gap && n.loose && pieces(n.text).length === 1 && (ROLE.test(n.text) || (type === 'education' && DEGREE.test(n.text)))
           && (info[i + 1] ? info[i + 1].bullet : type === 'education');
         if (!n.bullet && (!n.gap || spaced) && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
           && !titleOfNext(L, n) && !(schoolOver(L) && !(pieces(n.text).length === 1 && PLACE.test(n.text)))) { header.push(n); i += 1; }
@@ -2095,15 +2101,18 @@ export function resumeFromText(input) {
   // Blank lines and rules: a gap before the next line, and a rule marks the line over it a heading.
   const lines = [];
   let gap = false;
+  let loose = false; // the gap is only a little wider than a line step (a PDF's table row or paragraph spacing): pdfLinesOfPages marks it
   for (const l of all) {
-    if (!l.text) { gap = true; continue; }
+    if (!l.text) { loose = l.loose === true && (!gap || loose); gap = true; continue; }
     if (RULE.test(l.text)) {
       if (lines.length) lines[lines.length - 1].ruled = true;
       gap = true;
+      loose = false;
       continue;
     }
-    lines.push({ ...l, gap });
+    lines.push(gap && loose ? { ...l, gap, loose } : { ...l, gap });
     gap = false;
+    loose = false;
   }
 
   // A title over the name — "Curriculum Vitae", "Résumé", "CV", how most UK and European CVs open — names

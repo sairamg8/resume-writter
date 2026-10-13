@@ -838,7 +838,7 @@ export function pdfLinesOfPages(pages) {
             prev = { ...line, x: prev.x, textX: prev.textX, font: prev.font, listed };
             continue;
           }
-          if (!near) { out.push({ text: '' }); open = []; pitch = {}; }
+          if (!near) { out.push(dy <= Math.max(prev.h, line.h) * 3.2 ? { text: '', loose: true } : { text: '' }); open = []; pitch = {}; }
         }
         // A list item's depth: its marker right of an open item's (by more than 2 pt) and at or past
         // where that item's text starts is nested under it — the app prints a nested item's marker where

@@ -9,6 +9,8 @@ import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 
 const FIXTURES = 'tests/fixtures/foreign-pdfs';
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
+/** The editor's best-effort notice: a status region among others (the drag-and-drop live regions have the role too). */
+const NOTICE = '[role="status"]';
 const section = (r, type) => r.sections.find((x) => x.type === type);
 
 /** Open the dashboard on a seeded résumé, hand the PDF `name` to Import, and wait for the new résumé's editor. */
@@ -22,7 +24,7 @@ function importPdf(name) {
 describe('PDF import: résumés made by other tools', () => {
   it('a Word-style PDF opens as a new résumé with the best-effort notice and its fields in place', () => {
     importPdf('01-classic-word.pdf');
-    cy.get('[role="status"]').should('contain.text', 'Imported from your file as best we could read it');
+    cy.contains(NOTICE, 'Imported from your file as best we could read it').should('be.visible');
     cy.get('input[placeholder="John Doe"]').should('have.value', 'Jane Doe');
     cy.store().should((s) => {
       expect(s.resumes, 'the résumé already there is kept').to.have.length(2);
@@ -45,8 +47,8 @@ describe('PDF import: résumés made by other tools', () => {
 
   it('the notice goes with Dismiss, and the new résumé is on the dashboard beside the old one', () => {
     importPdf('01-classic-word.pdf');
-    cy.contains('[role="status"] button', 'Dismiss').click();
-    cy.get('[role="status"]').should('not.exist');
+    cy.contains(NOTICE, 'Imported from your file').contains('button', 'Dismiss').click();
+    cy.contains(NOTICE, 'Imported from your file').should('not.exist'); // other live regions (drag and drop) share the role
     cy.get('button[title="Back to dashboard"]').click();
     cy.get(CARD).should('have.length', 2);
   });
