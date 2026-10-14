@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ATS } from './ats.mjs';
 import { classify, countryOf } from './lib.mjs';
+import { failedTooMany } from './docs.mjs';
 
 const read = (f) => JSON.parse(readFileSync(new URL(`./${f}`, import.meta.url), 'utf8'));
 const pool = async (items, n, fn) => { const q = [...items]; await Promise.all(Array.from({ length: n }, async () => { for (let x; (x = q.shift()); ) await fn(x); })); };
@@ -18,12 +19,16 @@ for (const c of read('careers-results.json')) {
 }
 
 const jobs = [], failed = [];
+let gone = 0; // boards the host says do not exist (list gave null)
 const list = [...companies.values()];
+const attempted = list.filter((c) => c.ats && c.ats !== 'aggregator' && ATS[c.ats]).length;
 await pool(list, 12, async (c) => {
   c.open = 0;
-  if (!c.ats || !ATS[c.ats]) return;
+  if (!c.ats || c.ats === 'aggregator' || !ATS[c.ats]) return;
   try {
-    const raw = (await ATS[c.ats].list(c.slug)) ?? [];
+    const listed = await ATS[c.ats].list(c.slug);
+    if (listed == null) gone++;
+    const raw = listed ?? [];
     for (const r of raw) {
       const j = classify(r, 'any');
       if (j) jobs.push({ company: c.name, ...j, country: countryOf(j.location) });
@@ -37,6 +42,11 @@ for (const a of read('jobs-agg.json')) {
   companies.get(a.company.toLowerCase()).open += 1;
   jobs.push(a);
 }
-writeFileSync(new URL('./db.json', import.meta.url), JSON.stringify({ crawled: new Date().toISOString().slice(0, 10), companies: [...companies.values()], jobs }));
-console.log(`${companies.size} companies, ${jobs.length} roles, ${failed.length} boards failed`);
+console.log(`${companies.size} companies, ${jobs.length} roles, ${failed.length} boards failed, ${gone} boards gone`);
 if (failed.length) console.error(failed.slice(0, 30).join('\n'));
+// Too many boards unreadable (a host blocking us): stop before db.json is written, so the upload never sees a partial crawl.
+if (failedTooMany(failed.length, attempted)) {
+  console.error(`${failed.length} of ${attempted} boards failed (more than 3% and more than 10): not writing db.json.`);
+  process.exit(1);
+}
+writeFileSync(new URL('./db.json', import.meta.url), JSON.stringify({ crawled: new Date().toISOString().slice(0, 10), companies: [...companies.values()], jobs }));
