@@ -88,6 +88,12 @@ test('the same lines as the old reader on 4000 seeded pages', () => {
       pages.push(page);
     }
     const copy = () => pages.map((page) => page.map((item) => ({ ...item })));
-    assert.deepEqual(pdfLinesOfPages(copy()), before.pdfLinesOfPages(copy()), JSON.stringify(pages).slice(0, 200));
+    const lines = pdfLinesOfPages(copy());
+    // The one thing the old reader did not do: a blank line that is only a little wider than a line step (a table
+    // row's or a paragraph's spacing, not a real gap) is marked `loose: true`, which the Word-table import reads
+    // (tests/pdf/530-foreign-pdf-import.test.mjs). On a blank line only; every other field and line is the old reader's.
+    assert.ok(lines.every((line) => !('loose' in line) || (line.text === '' && line.loose === true)), `loose marks only a blank line: ${JSON.stringify(pages).slice(0, 200)}`);
+    const unmarked = lines.map((line) => { const rest = { ...line }; delete rest.loose; return rest; });
+    assert.deepEqual(unmarked, before.pdfLinesOfPages(copy()), JSON.stringify(pages).slice(0, 200));
   }
 });
