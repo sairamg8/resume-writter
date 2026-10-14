@@ -25,19 +25,18 @@ export default function ImportDialog({ isOpen, onClose, onPick, keeps = false, b
       footer={<Button variant="secondary" onClick={onClose}>Cancel</Button>}
     >
       <div className="space-y-5">
-        <div>
-          {/* Full width and equal on a phone, side by side from sm; the icons go through the kit's own props. */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button variant="primary" leftIcon={Upload} fullWidth className="sm:w-auto" data-autofocus="" disabled={busy} onClick={() => pick(false)}>
-              {busy ? 'Reading…' : 'Choose a file'}
-            </Button>
-            {keeps && (
-              <Button variant="secondary" leftIcon={Pin} fullWidth className="sm:w-auto" disabled={busy} onClick={() => pick(true)}>
-                Import as my original
+        <div className="flex flex-col items-start gap-2">
+          <Button variant="primary" data-autofocus="" disabled={busy} onClick={() => pick(false)}>
+            <Upload size={15} aria-hidden="true" /> {busy ? 'Reading…' : 'Choose a file'}
+          </Button>
+          {keeps && (
+            <>
+              <Button variant="secondary" disabled={busy} onClick={() => pick(true)}>
+                <Pin size={14} aria-hidden="true" /> Import as my original
               </Button>
-            )}
-          </div>
-          {keeps && <p className="mt-2 text-xs text-cv-muted">{ORIGINALS_HINT}</p>}
+              <p className="text-xs text-cv-muted">{ORIGINALS_HINT}</p>
+            </>
+          )}
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-cv-muted">What you can import</p>
