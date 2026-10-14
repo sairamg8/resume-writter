@@ -4,7 +4,10 @@
 // label was trimmed with /^[\s|•·]+|[\s|•·,.;:!?]+$/g, which read a long run of punctuation inside the label again
 // from each of its characters (a label of 100 000 dots, sixteen). A page of 135 000 items also threw a RangeError (its
 // extremes were found with Math.min(...list)), and the import failed. Each is read once now, and a page's lines come out
-// as they did (the old file is kept in tests/fixtures/typing-freeze-reference as the reference).
+// as they did (the old file is kept in tests/fixtures/typing-freeze-reference as the reference), but for the one thing
+// the old reader did not do: a blank line a little wider than a line step is marked `loose: true`.
+// A column's contact test (CONTACT_LINE) read one long line with many '@' in it from each of them (a line of 30 000,
+// seconds); it is linear now and is asked only of a line short enough to be a contact.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pdfLines, pdfLinesOfPages } from '../../src/utils/importFile.js';
@@ -38,6 +41,37 @@ test('a page of 135 000 text items is read, not refused', () => {
   const { out, ms } = timed(() => pdfLinesOfPages([items(45_000, 3)]));
   assert.ok(out.length >= 45_000);
   assert.ok(ms < 3 * LIMIT_MS, `pdfLinesOfPages took ${ms.toFixed(0)} ms`);
+});
+
+/**
+ * A real two-column page (a side column, a main one beside it, an empty gutter between: the page is read a column at a time)
+ * whose side column has `lines` (each 150 pt wide, at x 40, a line step apart), and the main column five short lines. A
+ * line is tested as a contact only under a line of several words that runs to the column's edge, as the first of
+ * these is.
+ */
+const columnPage = (lines, top = 756) => [
+  ...lines.map((str, k) => ({ str, x: 40, y: top - 12 * k, w: 150, h: 10 })),
+  ...['Built the billing service.', 'Led a team of six.', 'Cut deploy time by half.', 'Mentored four engineers.', 'Ran the weekly review.']
+    .map((str, k) => ({ str, x: 250, y: top - 6 - 24 * k, w: 200, h: 10 })),
+];
+
+for (const [name, long] of [
+  ["'@' 30 000 times", '@'.repeat(30_000)],
+  ["'a.' 15 000 times", 'a.'.repeat(15_000)],
+  ['15 000 digits with a space between', Array(15_000).fill('1').join(' ')],
+]) {
+  test(`a column line of ${name} is read in linear time, its text kept`, () => {
+    const { out, ms } = timed(() => pdfLinesOfPages([columnPage(['AWS Docker Kubernetes Git', long, 'Tail words here'])]));
+    assert.ok(out.some((line) => line.text.includes(long)), 'the long line is in the text');
+    assert.ok(ms < LIMIT_MS, `pdfLinesOfPages took ${ms.toFixed(0)} ms`);
+  });
+}
+
+test('a column of 40 000 short lines, each tested as a contact, is read in linear time', () => {
+  // The side column's lines are one paragraph (each runs to the edge, none is a contact), the main column's five apart.
+  const { out, ms } = timed(() => pdfLinesOfPages([columnPage(Array(40_000).fill('alpha beta'), 500_004)]));
+  assert.equal(out.find((line) => line.text.startsWith('alpha beta')).text, Array(40_000).fill('alpha beta').join(' '));
+  assert.ok(ms < 2 * LIMIT_MS, `pdfLinesOfPages took ${ms.toFixed(0)} ms`);
 });
 
 /** A stand-in for pdf.js: one page of the given text items and link annotations. */
