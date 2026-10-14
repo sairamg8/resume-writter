@@ -1,10 +1,13 @@
 # Keeps the Job Map's jobs and companies current (tools/job-map). Weekly it re-reads every known board and
 # replaces the owner's `jobmap/*` documents; monthly it also looks for new companies first and commits what it
 # found (discovered.json, unresolved.json, jobs-agg.json) so the next run keeps it. Run it by hand from
-# Actions → job-map-refresh → Run workflow. The upload refuses a crawl with 40% fewer roles than are stored.
+# Actions → job-map-refresh → Run workflow. The upload refuses a crawl that is only partly there (many fewer roles,
+# companies, or one big country or job platform collapsed than are stored); discovery only ever adds to and updates the
+# committed files, and a run where most of its sources are dead stops before writing anything (tools/job-map/README.md).
 # The monthly commit lands on whatever the branch is by then (it is pushed to every few hours, and the run takes
-# about an hour): the step fetches the tip, puts the three files on it and tries again if the branch moved. A copy
-# of the files is also kept 30 days as the run's `job-map-found` artifact. The commit carries [skip ci], so master
+# about an hour): the step fetches the tip, puts the three files on it and tries again if the branch moved. It runs
+# even when a guard refuses the upload or the build later in the run (the refusal turns the run red, discovery is kept).
+# A copy of the files is also kept 30 days as the run's `job-map-found` artifact. The commit carries [skip ci], so master
 # moves to a commit CI never ran on: merge master into a branch before fast-forwarding it after the 1st.
 #
 # Needs one repository secret, FIREBASE_SERVICE_ACCOUNT: the JSON key of a Firebase service account
@@ -26,7 +29,7 @@ on:
         type: boolean
         default: false
       force:
-        description: 'Upload even if the crawl found far fewer roles than are stored'
+        description: 'Upload even if the crawl found far fewer roles, companies, or one country or job platform than are stored (never skips the document size check)'
         type: boolean
         default: false
 
@@ -65,7 +68,7 @@ jobs:
           [ "$FORCE" = "true" ] && flags="$flags --force"
           node refresh.mjs $flags
       - name: Keep a copy of what discovery found
-        if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        if: ${{ !cancelled() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
         # A spare: if the artifact service fails or stalls, the commit step below must still run.
         continue-on-error: true
         timeout-minutes: 10
@@ -78,7 +81,7 @@ jobs:
             tools/job-map/jobs-agg.json
           retention-days: 30
       - name: Keep what discovery found
-        if: ${{ success() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
+        if: ${{ !cancelled() && (inputs.discover || github.event.schedule == '43 2 1 * *') && !inputs.dry }}
         env:
           BRANCH: ${{ github.ref_name }}
         run: |
