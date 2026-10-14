@@ -60,16 +60,48 @@ test('each status of a busy host is retried', async () => {
   }
 });
 
-test('Retry-After seconds set the pause, and a huge one is capped', async () => {
-  let s = recorder();
+test('Retry-After seconds set the pause', async () => {
+  const s = recorder();
   await fetchRetry('https://x.test/a', {}, { fetchImpl: scripted(resp(429, { 'retry-after': '2' }), resp(200)).fetchImpl, sleep: s.sleep });
   assert.deepEqual(s.sleeps, [2000]);
-  s = recorder();
-  await fetchRetry('https://x.test/a', {}, { fetchImpl: scripted(resp(503, { 'retry-after': '600' }), resp(200)).fetchImpl, sleep: s.sleep });
+});
+
+test('a Retry-After above the cap: the busy answer comes back at once, no pause, no second call', async () => {
+  const busy = resp(429, { 'retry-after': '120' });
+  const { fetchImpl, calls } = scripted(busy, resp(200));
+  const { sleeps, sleep } = recorder();
+  const r = await fetchRetry('https://x.test/a', {}, { fetchImpl, sleep });
+  assert.equal(r, busy);
+  assert.equal(r.status, 429);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(sleeps, []);
+});
+
+test('a Retry-After equal to the cap (30 s) still waits it and asks again, 31 s is above it', async () => {
+  let c = scripted(resp(503, { 'retry-after': '30' }), resp(200)), s = recorder();
+  assert.equal((await fetchRetry('https://x.test/a', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep })).status, 200);
   assert.deepEqual(s.sleeps, [30000]);
-  s = recorder();
-  await fetchRetry('https://x.test/a', {}, { fetchImpl: scripted(resp(503, { 'retry-after': '600' }), resp(200)).fetchImpl, sleep: s.sleep, cap: 4000 });
+  assert.equal(c.calls.length, 2);
+  c = scripted(resp(503, { 'retry-after': '31' }), resp(200)); s = recorder();
+  assert.equal((await fetchRetry('https://x.test/a', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep })).status, 503);
+  assert.deepEqual(s.sleeps, []);
+  assert.equal(c.calls.length, 1);
+});
+
+test('the cap is the caller\'s: a Retry-After above it returns at once, one at it waits', async () => {
+  let c = scripted(resp(503, { 'retry-after': '5' }), resp(200)), s = recorder();
+  assert.equal((await fetchRetry('https://x.test/a', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep, cap: 4000 })).status, 503);
+  assert.equal(c.calls.length, 1);
+  assert.deepEqual(s.sleeps, []);
+  c = scripted(resp(503, { 'retry-after': '4' }), resp(200)); s = recorder();
+  assert.equal((await fetchRetry('https://x.test/a', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep, cap: 4000 })).status, 200);
   assert.deepEqual(s.sleeps, [4000]);
+});
+
+test('a Retry-After that is a date (not seconds) is not "above the cap": the backoff pause is used', async () => {
+  const c = scripted(resp(503, { 'retry-after': 'Wed, 21 Oct 2026 07:28:00 GMT' }), resp(200)), s = recorder();
+  assert.equal((await fetchRetry('https://x.test/a', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep })).status, 200);
+  assert.deepEqual(s.sleeps, [1500]);
 });
 
 test('without Retry-After the pause doubles from the base', async () => {
