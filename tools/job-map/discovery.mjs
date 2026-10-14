@@ -56,7 +56,9 @@ export function assembleDiscovery({ previous, found, stats }) {
   const { rows, carried } = mergeAggregatorRows(previous?.aggJobs, found?.aggJobs);
   const merged = mergeDiscovered(previous?.discovered, { boards: found?.boards, aggregators: found?.aggregators }, Object.keys(carried));
   const board = new Set(merged.companies.filter((e) => !isAgg(e)).map(keyOf));
-  const aggJobs = rows.filter((r) => !board.has(keyOf({ name: r?.company })));
+  // A company whose board is read (ats set) gets its roles from the board; one kept with only a careers link has no roles but these.
+  const read = new Set(merged.companies.filter((e) => !isAgg(e) && e.ats).map(keyOf));
+  const aggJobs = rows.filter((r) => !read.has(keyOf({ name: r?.company })));
   const un = new Map(), loose = [];
   for (const e of [...arr(previous?.unresolved), ...arr(found?.unresolved)]) { const k = keyOf(e); if (k) un.set(k, e); else loose.push(e); }
   const unresolved = [...un].filter(([k]) => !board.has(k)).map(([, e]) => e).concat(loose);
