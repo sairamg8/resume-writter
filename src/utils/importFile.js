@@ -696,9 +696,10 @@ export function pdfPageLines(items) {
     });
     const last = its[its.length - 1];
     const links = its.flatMap((it) => it.links || []);
-    // The font of the line's first item, and whether the line mixes fonts: a bold label and its list run in on one line
-    // ("LANGUAGES: Python, …", the Sidebar's skills group) are two items in two fonts (fontChanged).
-    const mixed = its.some((it) => it.font !== its[0].font);
+    // The font of the line's first item, and whether the line ends in another font than it began in: a bold label and its
+    // list run in on one line ("LANGUAGES: Python, …", the Sidebar's skills group) are two items in two fonts, the list's
+    // last (fontChanged). An inline bold word in the middle of a line (regular, bold, regular) ends in its first font.
+    const mixed = its[its.length - 1].font !== its[0].font;
     return { text: text.replace(/[ ]{2,}/g, ' ').trim(), font: its[0].font, mixed, x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
   });
 }
@@ -727,7 +728,7 @@ const CONTACT_LINE = /^(?:[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+|(?:https?:\/\/|www\.)\
  * A bare site ("janedoe.com") ends in an address ending we know, in lower case: any word with a dot ("Node.js", "Vue.js", "B.Sc") is
  * not one, nor is "ASP.NET". (A site with a path is CONTACT_LINE's.)
  */
-const BARE_SITE = /^(?:[\w-]+\.)+(?:com|net|org|io|dev|co|me|app|ai|edu|gov|info|biz|xyz|tech|site|online|blog|page|in|uk|us|ca|de|fr|au|nl|se|es|ch|eu)$/;
+const BARE_SITE = /^(?:[\w-]+\.)+(?:com|net|org|io|dev|co|me|app|ai|edu|gov|info|biz|xyz|tech|site|online|blog|page|in|uk|us|ca|de|fr|au|nl|se|es|ch|eu|it|pl|br|jp|ru|cn|no|fi|dk|at|be|ie|nz|za|sg|pt|cz|kr|mx|pro|cloud|studio|design)$/;
 /**
  * In a column: whether `line` is a contact of its own under `prev`. Only a short line is asked (a contact is, and a long one
  * has no business here); and not under a line that ends in a comma or a semicolon, where a list goes on ("AWS, Docker,"
@@ -736,8 +737,10 @@ const BARE_SITE = /^(?:[\w-]+\.)+(?:com|net|org|io|dev|co|me|app|ai|edu|gov|info
 const contactAfter = (prev, line) => line.text.length <= 200 && !/[,;]$/.test(prev.text) && (CONTACT_LINE.test(line.text) || BARE_SITE.test(line.text));
 /**
  * In a column: a line set in another font than the line above (a bold label alone over its list, a bold degree over its school)
- * starts something new; a wrapped line keeps the font its paragraph began in. Not when that first line mixes fonts: a bold label
- * with its list run in on the same line ("LANGUAGES: Python, …") has its wrapped lines in the list's font.
+ * starts something new; a wrapped line keeps the font its paragraph began in. Not when that first line ends in another font than it
+ * began in (`mixed`): a bold label with its list run in on the same line ("LANGUAGES: Python, …") has its wrapped lines in the list's
+ * font. A first line that has an inline bold word in the middle (regular, bold, regular) ends in the font it began in: it is not
+ * such a line, and a bold label alone under it is still a new line.
  */
 const fontChanged = (prev, line) => Boolean(prev.font && line.font && prev.font !== line.font && !prev.mixed);
 

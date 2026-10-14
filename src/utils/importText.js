@@ -1889,7 +1889,9 @@ function entriesOf(type, lines, aside) {
         const titleLine2 = (line) => {
           const rest = pieces(line.text).filter((p) => !readDateRange(p));
           return rest.length === 1 && (ROLE.test(rest[0]) || (type === 'education' && (DEGREE.test(rest[0]) || SCHOOL.test(rest[0]))))
-            && inlinePair([rest[0]]).length === 1 && !(type === 'education' && DEGREE.test(rest[0]) && SCHOOL.test(rest[0]));
+            && inlinePair([rest[0]]).length === 1
+            // A "High School Diploma" names a degree and no school (way() strips "high school" before SCHOOL too): the school under it is its own.
+            && !(type === 'education' && DEGREE.test(rest[0]) && SCHOOL.test(rest[0].replace(/\bhigh\s+school\b/gi, '')));
         };
         const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && (!/[.!?]$/.test(n.text) || CORPORATE.test(n.text)) && !isMetaLine(n.text); // "Inc." ends a name, not a sentence
         if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
@@ -1901,13 +1903,17 @@ function entriesOf(type, lines, aside) {
         // layouts): the line under it, a name or a place, is the title's second field (the company, the school).
         // Not a sentence of the description, which a name has no lower-case words in; not a label over its list
         // ("Key Responsibilities", "Main duties:"); not a place alone ("Remote", "Portland, OR"), which a
-        // typed "Date | Role" over it names no company with; and only where the entry's text follows it: a
-        // list, a gap, the next entry, the section's end or a sentence.
+        // typed "Date | Role" over it names no company with (a school with its region code, "Boston University, MA",
+        // is a school); and only where the entry's text follows it: a list, a gap, the next entry, a named field
+        // ("GPA: 3.8", "Location: …", which the lines below take), the section's end or a sentence. (The sentence test
+        // reads the first 300 characters: its pattern is time squared in a long run of "(".)
         else if (header.length === 1 && pieces(L.text).length === 2 && SECOND_LINE.has(type) && titleLine2(L) && titleLike(info[i])
           && pieces(info[i].text).length === 1 && !sentence(info[i].text) && !SUBHEADING.test(info[i].text) && !info[i].text.endsWith(':')
-          && !/^(?:remote|hybrid)$/i.test(info[i].text) && !(REGION_END.test(info[i].text) && !placeAfterComma(info[i].text))
+          && !/^(?:remote|hybrid)$/i.test(info[i].text)
+          && !(REGION_END.test(info[i].text) && !placeAfterComma(info[i].text) && !(type === 'education' && SCHOOL.test(info[i].text)))
           && (nameLike(info[i].text) || PLACE.test(info[i].text) || CORPORATE.test(info[i].text))
-          && (!info[i + 1] || info[i + 1].bullet || info[i + 1].gap || info[i + 1].date || info[i + 1].hint === 'entry' || sentence(info[i + 1].text))) header.push(info[i++]);
+          && (!info[i + 1] || info[i + 1].bullet || info[i + 1].gap || info[i + 1].date || info[i + 1].hint === 'entry'
+            || isMetaLine(info[i + 1].text) || sentence(info[i + 1].text.slice(0, 300)))) header.push(info[i++]);
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
         // became the next role's company.
