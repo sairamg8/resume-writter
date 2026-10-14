@@ -1,13 +1,13 @@
 // An icon beside a label in the kit's Button (the owner's screenshot of the dashboard's Import dialog: the
 // icon sat ABOVE "Choose a file" and "Import as my original", the label hung below the 32 px button, the two
 // buttons were different widths). The kit's Button wraps its children in <span className="truncate"> (an
-// inline, nowrap box). Tailwind v4's preflight makes every svg `display: block`, so a lucide icon written as a
+// inline, nowrap box); the kit's Chip and Badge wrap theirs the same way, so they are scanned too. Tailwind v4's preflight makes every svg `display: block`, so a lucide icon written as a
 // CHILD (<Button><Upload size={15} /> Choose a file</Button>) becomes a block inside that inline span and
 // breaks the line. The Button's own API puts the icon beside the span as a flex sibling: leftIcon={Upload} /
 // rightIcon={…}. Nothing in the suite measured layout, so the slip was never caught.
 //
-// This reads every JSX file in src/ and fails for any kit <Button> that has a lucide icon (or a raw <svg>) among
-// its children, naming file:line. A <button> or <a> written by hand is not the kit's Button (it is its own flex
+// This reads every JSX file in src/ and fails for any kit <Button>, <Chip> or <Badge> that has a lucide icon (or a
+// raw <svg>) among its children, naming file:line. A <button> or <a> written by hand is not the kit's Button (it is its own flex
 // box and may hold icons), and neither is an element that only carries buttonClass(): that is `inline-flex`
 // itself, so an icon child there is a flex item next to the text. The first test proves the scanner on inline
 // snippets (bad forms flagged, good forms not); the second runs it on the app.
@@ -66,10 +66,13 @@ function lucideNames(code) {
   return names;
 }
 
+/** The kit components that wrap their children in <span className="truncate"> and take the icon as a prop. */
+const KIT = ['Button', 'Chip', 'Badge'];
+
 /**
- * Every kit <Button> in `text` that holds an icon among its children, as `{ line, icon, children }`: `line` is the
- * icon's line; `children` counts the Buttons that have children at all (a floor so the scan cannot go blind).
- * A Button inside a Button is not valid use, but the closing tag is still found by depth.
+ * Every kit <Button>, <Chip> or <Badge> in `text` that holds an icon among its children, as `{ line, icon, tag }`:
+ * `line` is the icon's line; `children` counts the elements that have children at all (a floor so the scan cannot
+ * go blind). One inside another is not valid use, but the closing tag is still found by depth.
  */
 export function iconsInButtons(text) {
   const code = withoutComments(text);
@@ -77,27 +80,29 @@ export function iconsInButtons(text) {
   const icon = new RegExp(`<(?:${[...names, 'svg'].join('|')})(?![\\w.$])`, 'g');
   const found = [];
   let children = 0;
-  for (const m of code.matchAll(/<Button(?![\w.$])/g)) {
-    const open = openingTag(code, m.index);
-    if (open.endsWith('/>')) continue; // <Button … /> has no children
-    children += 1;
-    const from = m.index + open.length;
-    let depth = 1;
-    let end = code.length;
-    for (const t of code.slice(from).matchAll(/<Button(?![\w.$])|<\/Button\s*>/g)) {
-      if (t[0].startsWith('</')) depth -= 1;
-      else if (!openingTag(code, from + t.index).endsWith('/>')) depth += 1;
-      if (depth === 0) { end = from + t.index; break; }
-    }
-    icon.lastIndex = 0;
-    for (const hit of code.slice(from, end).matchAll(icon)) {
-      found.push({ line: code.slice(0, from + hit.index).split('\n').length, icon: hit[0].slice(1) });
+  for (const tag of KIT) {
+    for (const m of code.matchAll(new RegExp(`<${tag}(?![\\w.$])`, 'g'))) {
+      const open = openingTag(code, m.index);
+      if (open.endsWith('/>')) continue; // <Button … /> has no children
+      children += 1;
+      const from = m.index + open.length;
+      let depth = 1;
+      let end = code.length;
+      for (const t of code.slice(from).matchAll(new RegExp(`<${tag}(?![\\w.$])|</${tag}\\s*>`, 'g'))) {
+        if (t[0].startsWith('</')) depth -= 1;
+        else if (!openingTag(code, from + t.index).endsWith('/>')) depth += 1;
+        if (depth === 0) { end = from + t.index; break; }
+      }
+      icon.lastIndex = 0;
+      for (const hit of code.slice(from, end).matchAll(icon)) {
+        found.push({ line: code.slice(0, from + hit.index).split('\n').length, icon: hit[0].slice(1), tag });
+      }
     }
   }
   return { found, children };
 }
 
-test('the scanner: an icon among a Button\'s children is flagged, an icon in leftIcon / rightIcon or outside a Button is not', () => {
+test('the scanner: an icon among a Button\'s (or Chip\'s, Badge\'s) children is flagged, an icon in leftIcon / rightIcon / icon or outside one is not', () => {
   const head = "import { Upload, Pin as PinIcon, Check } from 'lucide-react';\nimport { Button } from '@/components/ui/Button';\n";
   const flagged = (jsx) => iconsInButtons(head + jsx).found.map((f) => `${f.line}:${f.icon}`);
 
@@ -111,6 +116,10 @@ test('the scanner: an icon among a Button\'s children is flagged, an icon in lef
   assert.deepEqual(flagged('<Button><svg viewBox="0 0 1 1" /> Go</Button>'), ['3:svg']);
   // The second of two Buttons.
   assert.deepEqual(flagged('<div>\n<Button>One</Button>\n<Button><Upload /> Two</Button>\n</div>'), ['5:Upload']);
+  // A Chip and a Badge wrap their children in the same span; a component whose name only starts with theirs is not one.
+  assert.deepEqual(flagged('<Chip><Upload /> Tag</Chip>'), ['3:Upload']);
+  assert.deepEqual(flagged('<Badge tone="warn">\n  <Check /> New\n</Badge>'), ['4:Check']);
+  assert.deepEqual(flagged('<Chip icon={Upload}>Tag</Chip>\n<Badge icon={Check}>New</Badge>\n<ChipList><Upload /> x</ChipList>'), []);
 
   // The forms that are right.
   assert.deepEqual(flagged('<Button leftIcon={Upload}>Choose a file</Button>'), []);
@@ -134,14 +143,14 @@ test('the scanner: an icon among a Button\'s children is flagged, an icon in lef
   assert.deepEqual(flagged('/* one\ntwo */\n<Button><Check /></Button>'), ['5:Check']);
 });
 
-test('no kit Button has an icon as a child; the icon goes in leftIcon / rightIcon (the Import dialog)', () => {
+test('no kit Button, Chip or Badge has an icon as a child; the icon goes in leftIcon / rightIcon / icon (the Import dialog)', () => {
   let seen = 0;
   const offenders = sourcesUnder(SRC).flatMap((file) => {
     const { found, children } = iconsInButtons(fs.readFileSync(file, 'utf8'));
     seen += children;
-    return found.map((f) => `${rel(file)}:${f.line} <Button> has the icon <${f.icon}> as a child; use leftIcon={…} or rightIcon={…}`);
+    return found.map((f) => `${rel(file)}:${f.line} <${f.tag}> has the icon <${f.icon}> as a child; use the icon prop (leftIcon={…} / rightIcon={…} on a Button, icon={…} on a Chip or Badge)`);
   });
-  // About 70 Buttons with children on 2026-10-14; far fewer means the search above broke, not that they are gone.
-  assert.ok(seen >= 40, `found only ${seen} <Button> elements with children`);
+  // 73 Buttons with children on 2026-10-14 (and a few Chips); far fewer means the search above broke, not that they are gone.
+  assert.ok(seen >= 60, `found only ${seen} kit elements with children`);
   assert.deepEqual(offenders, []);
 });

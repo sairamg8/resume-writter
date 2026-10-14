@@ -2,24 +2,27 @@
 // sat ABOVE "Choose a file", the label hung below its 32 px button, and the two choices were different widths. The
 // cause was an icon written as a child of the kit's Button (its label span is inline and preflight makes svg a
 // block); the fix puts it in leftIcon. Nothing measured layout, so it was never caught. Measured here in Chromium on
-// the production build, in touch mode (hasTouch, isMobile) at 320, 375 and 594 px wide (594 is the widest phone
-// below the sm breakpoint), and on a laptop at 1280:
+// the production build, in touch mode (hasTouch, isMobile) at 320, 375, 594 and 639 px wide (594 is a wide phone or
+// a small tablet, 639 the widest width below the sm breakpoint of 640), and on a laptop at 1280:
 //   - in the open dialog and on the dashboard page, every button and link with an icon and a label has the icon on
 //     the label's row (tests/playwright/icon-rows.js), and a one-row control holds its label inside its box;
-//   - "Choose a file" is 32 px high, inside the dialog's content box and the screen, and so is everything else in
-//     the body (the long warning, the type chips); the panel fits the screen; neither the page nor the dialog body
-//     scrolls sideways; Cancel is on the screen.
+//   - "Choose a file" is 32 px high and, on a phone, as wide as the dialog's content box (on a laptop it keeps its own
+//     width, sm:w-auto), inside the content box and the screen, and so is everything else in the body (the long
+//     warning, the type chips); the panel fits the screen; neither the page nor the dialog body scrolls sideways;
+//     Cancel is on the screen.
 // A production build has no demo account, so "Import as my original" (the second choice) is not here: the cypress
 // spec cypress/e2e/11-demo-account-import-dialog-layout.cy.js measures both choices side by side on the e2e build.
 // Measured after the dialog's 180 ms scale-in has ended (a rect during it is 0.98 of the size).
-// To see it fail: put the icon back as a child of the Button in src/components/ImportDialog.jsx and run the spec.
+// To see it fail: put the icon back as a child of the Button in src/components/ImportDialog.jsx and run the spec: the
+// dialog tests go red. The "every button and link on the dashboard" tests never open the dialog (it loads when Import
+// is pressed), so they stay green either way; they guard the dashboard's own controls, the dialog tests carry the fix.
 // Run: playwright: tests/playwright/ui-import-dialog-layout.spec.mjs
 import { test, expect } from '@playwright/test';
 import { buildTestState, STORAGE_KEY } from '../helpers.js';
 import { stackedIcons } from './icon-rows.js';
 
 // [width, height] of the phones.
-const PHONES = [[320, 640], [375, 812], [594, 800]];
+const PHONES = [[320, 640], [375, 812], [594, 800], [639, 800]];
 
 /** The dashboard on one seeded résumé; waits for its card. */
 async function openDashboard(page) {
@@ -60,6 +63,7 @@ function measure(panel) {
     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
   };
   const body = panel.querySelector(':scope > .overflow-y-auto');
+  if (!body) throw new Error('the dialog body (":scope > .overflow-y-auto" of the panel, src/components/ui/Dialog.jsx) was not found: the markup changed, update this spec');
   const style = getComputedStyle(body);
   const bodyBox = body.getBoundingClientRect();
   const inner = { left: bodyBox.left + parseFloat(style.paddingLeft), right: bodyBox.right - parseFloat(style.paddingRight) };
@@ -111,6 +115,7 @@ for (const [width, height] of PHONES) {
       const where = `Choose a file ${choose.left.toFixed(1)}..${choose.right.toFixed(1)} in the content box ${m.inner.left.toFixed(1)}..${m.inner.right.toFixed(1)}`;
       expect(choose.left, where).toBeGreaterThanOrEqual(m.inner.left - 0.5);
       expect(choose.right, where).toBeLessThanOrEqual(m.inner.right + 0.5);
+      expect(Math.abs(choose.width - (m.inner.right - m.inner.left)), `${where}: on a phone it fills the width`).toBeLessThanOrEqual(1);
       expect(m.outside, `elements wider than the dialog's content box (${m.inner.left.toFixed(1)}..${m.inner.right.toFixed(1)})`).toEqual([]);
 
       const fits = `panel ${m.panel.left.toFixed(1)}..${m.panel.right.toFixed(1)} x ${m.panel.top.toFixed(1)}..${m.panel.bottom.toFixed(1)} on a ${m.screen.width}x${m.screen.height} screen`;
@@ -145,7 +150,10 @@ test.describe('on a laptop 1280 px wide', () => {
     const dialog = await openImportDialog(page, false);
     await expectOneRow(page, '[role="dialog"]', 1);
     const m = await dialog.evaluate(measure);
-    expectOneRowHigh(m.choices['Choose a file']);
+    const choose = m.choices['Choose a file'];
+    expectOneRowHigh(choose);
+    const content = m.inner.right - m.inner.left;
+    expect(choose.width, `on a laptop Choose a file keeps its own width (${choose.width.toFixed(1)} px of a ${content.toFixed(1)} px content box)`).toBeLessThan(content / 2);
     expect(m.outside, 'elements wider than the dialog\'s content box').toEqual([]);
   });
 });

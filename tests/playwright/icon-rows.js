@@ -8,8 +8,10 @@
 // AND painted text, the icon's vertical span must overlap the text's (its union over all lines): an icon wholly
 // above or below its label is stacked. A control the author made a column on purpose (flex-direction: column or
 // a grid around the icon, as the dashboard's "New Resume" tile) is skipped. A control one row high (48 px or less)
-// must also hold its label inside its own box (3 px of slack for a font taller than its line). Text clipped to a
-// pixel (screen-reader-only) is not painted text. Returns how many controls it checked, so a pass cannot be blind.
+// must also hold its label inside its own box (3 px of slack for a font taller than its line). Text counts when its
+// rects are more than 2 px wide and high (a range over screen-reader-only text keeps its glyph width, so such a
+// label would count; there is none beside an icon today). Returns how many controls it checked, so a pass cannot
+// be blind.
 /**
  * @param {Element} root
  * @returns {{ checked: number, offenders: string[] }}
