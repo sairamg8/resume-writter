@@ -101,3 +101,70 @@ test('a capitalised label, a tab and a comma list is one category (a Word table\
   const r = resumeFromText(`${HEAD}SKILLS\nGit\tDocker, Kubernetes\nPython\tSQL`);
   assert.deepEqual(section(r, 'skills').items.map((i) => [i.category, i.skills]), [['Git', 'Docker, Kubernetes'], ['', 'Python'], ['', 'SQL']]);
 });
+
+// The company or school under a date column's title, and the lines that may follow it (where the entry's own text starts).
+test('a school under "Date | Degree" is taken where a named field follows it ("GPA: 3.8")', () => {
+  const r = resumeFromText(`${HEAD}EDUCATION\nSep 2012 – Jun 2016 | BSc Computer Science\nStanford University\nGPA: 3.8`);
+  const items = section(r, 'education').items;
+  assert.equal(items.length, 1);
+  const [school] = items;
+  assert.deepEqual([school.institution, school.degree, school.gpa, school.location, school.startDate, school.endDate, plain(school.description)],
+    ['Stanford University', 'BSc Computer Science', '3.8', '', 'Sep 2012', 'Jun 2016', ''],
+    'before: the institution and the GPA empty, the school and the GPA in the description');
+});
+
+test('a company under "Date | Role" is taken where its named field follows it ("Technologies: …", "Location: …")', () => {
+  for (const named of ['Technologies: Go, SQL', 'Location: Leeds']) {
+    const r = resumeFromText(`${HEAD}EXPERIENCE\nJan 2020 – Present | Senior Engineer\nAcme Corp\n${named}\n- Built the pipeline`);
+    assert.equal(jobs(r).length, 1, named);
+    const [job] = jobs(r);
+    assert.deepEqual([job.company, job.role], ['Acme Corp', 'Senior Engineer'], named);
+  }
+});
+
+test('a company under the date column\'s title is read in linear time where a line of 100 000 "(" follows it', () => {
+  // A guard: the sentence test on the line after the company (a pattern that is time squared in a run of "(") is bounded now.
+  const start = performance.now();
+  const r = resumeFromText(`${HEAD}EXPERIENCE\nJan 2020 – Present | Senior Engineer\nAcme Corp\n${'('.repeat(100_000)}`);
+  const ms = performance.now() - start;
+  assert.deepEqual([jobs(r)[0].company, jobs(r)[0].role], ['Acme Corp', 'Senior Engineer']);
+  assert.ok(ms < 1000, `resumeFromText took ${ms.toFixed(0)} ms`);
+});
+
+test('a school under "Date | High School Diploma" is the institution: the diploma names a degree and no school', () => {
+  for (const after of ['', '\n• Graduated with honours']) {
+    const r = resumeFromText(`${HEAD}EDUCATION\n2012 – 2016 | High School Diploma\nLincoln High School${after}`);
+    const items = section(r, 'education').items;
+    assert.equal(items.length, 1, JSON.stringify(after));
+    const [school] = items;
+    assert.deepEqual([school.institution, school.degree, school.startDate, school.endDate], ['Lincoln High School', 'High School Diploma', '2012', '2016'], JSON.stringify(after));
+  }
+});
+
+test('a school with its region code under "Date | Degree" is the institution (as typed), not a place alone', () => {
+  for (const name of ['Boston University, MA', 'Stanford University, CA']) {
+    const r = resumeFromText(`${HEAD}EDUCATION\nJun 2016 | BSc Physics\n${name}`);
+    const items = section(r, 'education').items;
+    assert.equal(items.length, 1, name);
+    const [school] = items;
+    assert.deepEqual([school.institution, school.degree, school.location, plain(school.description)], [name, 'BSc Physics', '', ''], name);
+  }
+});
+
+// The gates are pinned one at a time: each of these is read right with the other gates standing; with its own gate removed
+// the line under the title would be taken for the company.
+test('a label over the list is not the company (the SUBHEADING gate): "Key Responsibilities" under "Date | Role"', () => {
+  const r = resumeFromText(`${HEAD}EXPERIENCE\nJan 2020 – Present | Senior Engineer\nKey Responsibilities\n- Led a team`);
+  assert.equal(jobs(r).length, 1);
+  const [job] = jobs(r);
+  assert.deepEqual([job.company, job.role, job.startDate, job.current], ['', 'Senior Engineer', 'Jan 2020', true]);
+  assert.match(plain(job.description), /^Key Responsibilities Led a team$/);
+});
+
+test('a title that already holds its company takes no second one (the inlinePair gate): "Leeds Office" under "Date ⇥ Role, Company"', () => {
+  const r = resumeFromText(`${HEAD}EXPERIENCE\n2019 - present\tAudit Manager, Hargreaves & Co\nLeeds Office\n- Led a team`);
+  assert.equal(jobs(r).length, 1);
+  const [job] = jobs(r);
+  assert.deepEqual([job.company, job.role, job.location, job.startDate, job.current], ['Hargreaves & Co', 'Audit Manager', '', '2019', true]);
+  assert.match(plain(job.description), /^Leeds Office Led a team$/);
+});

@@ -8,6 +8,8 @@
 //  - a last wrapped line that is one word with a dot ('Node.js', 'Vue.js', 'ASP.NET', 'B.Sc', '2018-2022') was taken
 //    for a web address or a phone number and cut from the list above ('AWS, Docker, Kubernetes, Git,' / 'Node.js').
 //    A side column's contacts, one under another, stay one to a line;
+//    (a line that begins and ends in one font, a bold word inside a paragraph's first line, is no run-in label: a bold label
+//    alone under it is still a new line);
 //  - the blank line between two lines that are a little more than a line step apart (a table row's or a paragraph's
 //    spacing) carries `loose: true`, which the Word-table import reads; a wider gap is a plain blank line.
 // Nothing here opens a browser: the pages are hand-built text items. The time the contact test takes on long lines is
@@ -64,6 +66,20 @@ describe('a run-in label and its list, wrapped in a column', () => {
     );
     assert.deepEqual(texts([items]), ['SKILLS', 'Programming Languages', 'Python, JavaScript, Go', ...RIGHT_TEXTS]);
   });
+
+  // The run-in label is a line that BEGINS in one font and ENDS in the other (a bold label first, the list's font last). An
+  // inline bold word in the middle of a paragraph's first line (regular, bold, regular) ends in the font it began in: a bold
+  // label alone on the next line still starts a line of its own.
+  test('a bold word inside the first line of a paragraph does not join a bold label under it', () => {
+    const items = page(
+      line(756, ['SKILLS', 40, 40, BOLD]),
+      line(732, ['Managed the', 40, 60, REG], ['platform', 103, 40, BOLD], ['and tools', 146, 44, REG]),
+      line(720, ['Databases', 40, 50, BOLD]),
+      line(708, ['PostgreSQL, Redis', 40, 100, REG]),
+    );
+    assert.deepEqual(texts([items]), ['SKILLS', 'Managed the platform and tools', 'Databases', 'PostgreSQL, Redis', ...RIGHT_TEXTS],
+      'before: "Managed the platform and tools Databases" (the bold word made the first line count as a run-in label)');
+  });
 });
 
 describe('a list\'s last wrapped line in a column', () => {
@@ -119,6 +135,41 @@ describe('a side column\'s contacts, one under another', () => {
       assert.deepEqual(texts([items]), ['CONTACT', 'San Francisco, CA', contact, ...RIGHT_TEXTS]);
     });
   }
+});
+
+describe('a side column\'s contacts with a country\'s ending or a domain of a kind', () => {
+  for (const contact of ['janedoe.it', 'jane.pl', 'jane.studio', 'jane.pro']) {
+    test(`'${contact}' is a line of its own under a place`, () => {
+      const items = page(
+        line(756, ['CONTACT', 40, 45, BOLD]),
+        line(744, ['Portland, OR', 40, 150, REG]),
+        line(732, [contact, 40, 100, REG]),
+      );
+      assert.deepEqual(texts([items]), ['CONTACT', 'Portland, OR', contact, ...RIGHT_TEXTS], `before: 'Portland, OR ${contact}'`);
+    });
+  }
+
+  // Not an address: a name with a dot, a degree, an upper-case ending ('ASP.NET'). Each ends the line above, as before.
+  for (const last of ['Node.js', 'Vue.js', 'Next.js', 'ASP.NET', 'B.Sc', 'Ph.D']) {
+    test(`'${last}' alone under a line that does not end in a comma is its end`, () => {
+      const items = page(
+        line(756, ['TOOLS', 40, 40, BOLD]),
+        line(732, ['Docker Kubernetes and Git with', 40, 150, REG]),
+        line(720, [last, 40, 45, REG]),
+      );
+      assert.deepEqual(texts([items]), ['TOOLS', `Docker Kubernetes and Git with ${last}`, ...RIGHT_TEXTS]);
+    });
+  }
+
+  // A range of years is no phone number (CONTACT_LINE's lookahead): the wrapped line under a title keeps it.
+  test("a range of years ('2018 - 2022') alone under a multi-word line that does not end in a comma is its end", () => {
+    const items = page(
+      line(756, ['EDUCATION', 40, 60, BOLD]),
+      line(732, ['Bachelor of Science in Computer Science', 40, 150, REG]),
+      line(720, ['2018 - 2022', 40, 60, REG]),
+    );
+    assert.deepEqual(texts([items]), ['EDUCATION', 'Bachelor of Science in Computer Science 2018 - 2022', ...RIGHT_TEXTS]);
+  });
 });
 
 describe('the blank line between two lines that are not one paragraph', () => {
