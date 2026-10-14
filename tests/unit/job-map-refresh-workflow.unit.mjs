@@ -41,7 +41,9 @@ test('every place that asks "is this the monthly run?" compares against the decl
 test('the commit step runs only after a real discovery run, as the owner and with a message that skips CI', () => {
   const s = step('Keep what discovery found');
   const cond = condOf(s);
-  for (const part of ['success()', 'inputs.discover', 'github.event.schedule', '!inputs.dry']) assert.ok(cond?.includes(part), `its if has ${part}: ${cond}`);
+  // !cancelled(), not success(): a guard refusing the upload (or the build) later in the run must not throw away what discovery found
+  for (const part of ['!cancelled()', 'inputs.discover', 'github.event.schedule', '!inputs.dry']) assert.ok(cond?.includes(part), `its if has ${part}: ${cond}`);
+  assert.ok(!cond.includes('success()'), `and not success(): ${cond}`);
   assert.match(s, /git config user\.name sairamgudiputi\b/);
   assert.match(s, /git config user\.email sairamgudiputi8@gmail\.com/);
   assert.match(s, /\[skip ci\]/);
