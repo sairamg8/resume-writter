@@ -1,4 +1,6 @@
 // Shared by crawl.mjs (batch) and jobs.mjs (single company / preset).
+/** decodeURIComponent that leaves the text alone when it has a stray "%" (a job URL like ".../100%-remote" must not stop the build). */
+export const safeDecode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 export const REGIONS = {
   india: /india|bengaluru|bangalore|hyderabad|pune|mumbai|gurgaon|gurugram|noida|delhi|chennai|kolkata|ahmedabad|kochi|coimbatore|remote.*india/i,
   us: /\b(usa?|united states)\b|, (ca|ny|wa|tx|ma|il)\b|san francisco|new york|seattle|austin|boston|remote.*(us|united states)/i,
@@ -43,7 +45,7 @@ const functionOf = (t) => FUNCTIONS.find(([, rx]) => rx.test(t))?.[0] ?? 'other'
 export function classify(j, region = 'any') {
   const loc = j.location ?? '';
   if (!(REGIONS[region].test(loc) || /^\d+ locations?$/i.test(loc) || !loc)) return null;
-  const slug = decodeURIComponent(j.url ?? '').replace(/[-_]+/g, ' ');
+  const slug = safeDecode(j.url ?? '').replace(/[-_]+/g, ' ');
   const fn = functionOf(j.title) !== 'other' ? functionOf(j.title) : functionOf(slug);
   const byTitle = TRACKS.find(([, rx]) => rx.test(j.title)) ?? TRACKS.find(([, rx]) => rx.test(slug));
   const byDesc = !byTitle && fn === 'engineering' && DESC_TRACKS.map(([t, rx]) => [t, (j.desc ?? '').match(rx)?.length ?? 0]).sort((a, b) => b[1] - a[1])[0];
@@ -94,7 +96,7 @@ export const countryOf = (loc = '') => {
 
 /** Position (what an engineering job is) from the title plus the URL slug, which on Workday often carries the real title. */
 export function position(j) {
-  const t = `${j.title} ${decodeURIComponent(j.url ?? '').replace(/[-_]+/g, ' ')}`;
+  const t = `${j.title} ${safeDecode(j.url ?? '').replace(/[-_]+/g, ' ')}`;
   if (/full[- ]?stack/i.test(t)) return 'fullstack';
   if (/front[- ]?end|\bui\b|\bux\b|web (developer|engineer)|\breact|angular|\bvue\b|design systems?/i.test(t)) return 'frontend';
   if (/back[- ]?end|server[- ]?side|\bapi\b|\bjava\b|spring|node|golang|\bgo\b|distributed|platform|infrastructure|payments?|services?/i.test(t)) return 'backend';
