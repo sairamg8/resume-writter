@@ -696,7 +696,7 @@ export function pdfPageLines(items) {
     });
     const last = its[its.length - 1];
     const links = its.flatMap((it) => it.links || []);
-    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
+    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), font: its[0].font, x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
   });
 }
 
@@ -714,6 +714,10 @@ function fitsAfter(prev, line, right) {
 }
 /** In a column: a line that starts with a name and a colon ("PLATFORMS: Spark, …") is a field of its own. */
 const LABELLED = /^\p{Lu}[^:.!?]{0,30}:\s/u;
+/** In a column: a line that is one email address, link or phone number is a contact of its own, not the end of the line above (a side column lists them one under another). */
+const CONTACT_LINE = /^(?:\S+@\S+\.\S+|(?:https?:\/\/|www\.)\S+|(?:[\w-]+\.)+[a-z]{2,}(?:\/\S*)?|\+?\d[\d\s().-]{6,})$/i;
+/** In a column: a line set in another font than the line above (a bold label over its list, a bold degree over its school) starts something new; a wrapped line keeps the font its paragraph began in. */
+const fontChanged = (prev, line) => Boolean(prev.font && line.font && prev.font !== line.font);
 
 /**
  * Page `index`'s furniture, not the résumé's text: the running header the app prints atop every page
@@ -811,7 +815,7 @@ export function pdfLinesOfPages(pages) {
           const continues = near && sameSize && plain && (
             (listed && Math.abs(line.x - prev.textX) < 2 && line.x > prev.x + 2)
             || (!listed && Math.abs(line.x - prev.x) < 2 && prev.right >= right - 60 && !/[.!?:]$/.test(prev.text)
-              && !(column && (!/\s/.test(prev.text) || fitsAfter(prev, line, right) || LABELLED.test(line.text))))
+              && !(column && (!/\s/.test(prev.text) || fitsAfter(prev, line, right) || LABELLED.test(line.text) || CONTACT_LINE.test(line.text) || fontChanged(prev, line))))
           );
           if (listed && near && sameSize) {
             if (continues) pitch = { ...pitch, wrap: dy };
@@ -831,10 +835,10 @@ export function pdfLinesOfPages(pages) {
             }
             // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
             if (listed && open.length) open[open.length - 1].right = line.right;
-            prev = { ...line, x: prev.x, textX: prev.textX, listed };
+            prev = { ...line, x: prev.x, textX: prev.textX, font: prev.font, listed };
             continue;
           }
-          if (!near) { out.push({ text: '' }); open = []; pitch = {}; }
+          if (!near) { out.push(dy <= Math.max(prev.h, line.h) * 3.2 ? { text: '', loose: true } : { text: '' }); open = []; pitch = {}; }
         }
         // A list item's depth: its marker right of an open item's (by more than 2 pt) and at or past
         // where that item's text starts is nested under it — the app prints a nested item's marker where
@@ -992,7 +996,7 @@ export async function pdfLines(bytes, lib) {
       const content = await page.getTextContent();
       // A marked-content item (pdf.js's beginMarkedContent) has no str and no transform: not text.
       const items = content.items.filter((it) => typeof it.str === 'string' && it.transform).map((it) => ({
-        str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: it.height || Math.abs(it.transform[3]),
+        str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: it.height || Math.abs(it.transform[3]), font: it.fontName,
       }));
       const annotations = await Promise.resolve(page.getAnnotations?.()).catch(() => []);
       pages.push(withLinks(items, (annotations || []).filter((a) => a?.subtype === 'Link' && a.url && a.rect)));
