@@ -1,9 +1,11 @@
 // Public job-board adapters. list(slug) -> [{title, location, url, team}] or null when the board does not exist.
 import { fetchRetry } from './retry.mjs';
 const UA = 'resume-writter-jobmap/1.0';
-// deps = { fetchImpl, sleep } only for tests; a busy host (429/5xx) is asked again, a 429 that lasts still throws like any bad status
+// net.retries: how often a busy host (429/502/503/504) is asked again, read at call time; the discovery probes set it to 0 (one fast miss).
+export const net = { retries: 2 };
+// deps = { fetchImpl, sleep, retries } only for tests; a busy host (429/5xx) is asked again, a 429 that lasts still throws like any bad status
 export const get = async (url, deps = {}) => {
-  const r = await fetchRetry(url, { headers: { 'user-agent': UA } }, { timeoutMs: 20000, ...deps });
+  const r = await fetchRetry(url, { headers: { 'user-agent': UA } }, { timeoutMs: 20000, retries: net.retries, ...deps });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return r.json();
@@ -12,7 +14,7 @@ export const get = async (url, deps = {}) => {
 const strip = (h = '') => h.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ');
 
 export const post = async (url, body, deps = {}) => {
-  const r = await fetchRetry(url, { method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify(body) }, { timeoutMs: 20000, ...deps });
+  const r = await fetchRetry(url, { method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify(body) }, { timeoutMs: 20000, retries: net.retries, ...deps });
   if (r.status === 404 || r.status === 422) return null;
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return r.json();

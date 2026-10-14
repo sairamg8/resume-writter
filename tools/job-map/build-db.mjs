@@ -46,7 +46,7 @@ console.log(`${companies.size} companies, ${jobs.length} roles, ${failed.length}
 if (failed.length) console.error(failed.slice(0, 30).join('\n'));
 // Too many boards unreadable (a host blocking us): stop before db.json is written, so the upload never sees a partial crawl.
 if (failedTooMany(failed.length, attempted)) {
-  console.error(`${failed.length} of ${attempted} boards failed (more than 3% and more than 10): not writing db.json.`);
+  console.error(`${failed.length} of ${attempted} boards failed (more than 2% and more than 10): not writing db.json.`);
   process.exit(1);
 }
 writeFileSync(new URL('./db.json', import.meta.url), JSON.stringify({ crawled: new Date().toISOString().slice(0, 10), companies: [...companies.values()], jobs }));

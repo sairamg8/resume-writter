@@ -4,11 +4,12 @@
 // stray "%" that must not stop the build (lib.mjs). All with fake fetches and a recording sleep: no network, no timers.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { get, post } from '../../tools/job-map/ats.mjs';
+import * as ats from '../../tools/job-map/ats.mjs';
 import { fetchWikidata } from '../../tools/job-map/wikidata.mjs';
 import { shrinkProblems, oversizedDocs, failedTooMany, dataToDocs, shrunkTooFar, total } from '../../tools/job-map/docs.mjs';
 import { safeDecode, classify, position } from '../../tools/job-map/lib.mjs';
 
+const { get, post } = ats;
 const recorder = () => { const sleeps = []; return { sleeps, sleep: async (ms) => { sleeps.push(ms); } }; };
 const json = (status, body) => new Response(JSON.stringify(body), { status });
 function scripted(...answers) {
@@ -86,9 +87,56 @@ test('post: a Workday 429 is asked again, a lasting one throws, a 400 throws at 
   assert.equal(c.calls.length, 1);
 });
 
+// ats.net.retries is read at call time: the discovery probes set it to 0 so a busy host costs one fast miss.
+async function withRetries(n, fn) {
+  const prev = ats.net.retries;
+  ats.net.retries = n;
+  try { return await fn(); } finally { ats.net.retries = prev; }
+}
+
+test('net.retries defaults to 2', () => {
+  assert.equal(ats.net.retries, 2);
+});
+
+test('get: with net.retries = 0 a 429 is asked once and throws, with no pause', async () => {
+  const { fetchImpl, calls } = scripted(json(429, {}), json(200, { jobs: [1] }));
+  const { sleeps, sleep } = recorder();
+  await withRetries(0, () => assert.rejects(get('https://b.test/jobs', { fetchImpl, sleep }), (e) => e.message === '429 https://b.test/jobs'));
+  assert.equal(calls.length, 1);
+  assert.deepEqual(sleeps, []);
+});
+
+test('get: with net.retries = 2 the same 429 is asked 3 times, and the setting is restored afterwards', async () => {
+  const { fetchImpl, calls } = scripted(json(429, {}));
+  const { sleeps, sleep } = recorder();
+  await withRetries(2, () => assert.rejects(get('https://b.test/jobs', { fetchImpl, sleep }), (e) => e.message === '429 https://b.test/jobs'));
+  assert.equal(calls.length, 3);
+  assert.deepEqual(sleeps, [1500, 3000]);
+  await withRetries(0, async () => {});
+  assert.equal(ats.net.retries, 2);
+});
+
+test('post: net.retries = 0 asks a 503 once; net.retries = 1 asks it twice', async () => {
+  let c = scripted(json(503, {})), s = recorder();
+  await withRetries(0, () => assert.rejects(post('https://w.test/jobs', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep }), /^Error: 503 https:\/\/w\.test\/jobs$/));
+  assert.equal(c.calls.length, 1);
+  assert.deepEqual(s.sleeps, []);
+  c = scripted(json(503, {})); s = recorder();
+  await withRetries(1, () => assert.rejects(post('https://w.test/jobs', {}, { fetchImpl: c.fetchImpl, sleep: s.sleep }), /503/));
+  assert.equal(c.calls.length, 2);
+});
+
+test('get: the caller\'s own retries still win over net.retries', async () => {
+  const { fetchImpl, calls } = scripted(json(429, {}));
+  const { sleep } = recorder();
+  await withRetries(0, () => assert.rejects(get('https://b.test/jobs', { fetchImpl, sleep, retries: 1 }), /429/));
+  assert.equal(calls.length, 2);
+});
+
 // ---- wikidata.mjs -------------------------------------------------------------------------------------
 
-const QID = { IN: 'Q668', US: 'Q30', NL: 'Q55' };
+const QID = { IN: 'Q668', US: 'Q30', NL: 'Q55', CA: 'Q16', DE: 'Q183', GB: 'Q145', FR: 'Q142' };
+const ALL28 = ['IN', 'US', 'CA', 'DE', 'GB', 'FR', 'NL', 'CH', 'IE', 'ES', 'IT', 'SE', 'PL', 'DK', 'NO', 'FI', 'BE', 'AT', 'LU', 'PT', 'SG', 'AE', 'AU', 'JP', 'BR', 'MX', 'ZA', 'IL'];
 const binding = (i, over = {}) => ({ c: { value: `http://www.wikidata.org/entity/Q${1000 + i}` }, cLabel: { value: `Company ${i}` }, site: { value: `https://c${i}.example` }, emp: { value: String(60000 - i) }, indLabel: { value: 'software company' }, ...over });
 const answer = (bindings) => ({ ok: true, status: 200, json: async () => ({ results: { bindings } }) });
 const httpFail = (status) => ({ ok: false, status, json: async () => { throw new Error('no body'); } });
@@ -110,9 +158,9 @@ async function run(plan, perCountry = 250) {
   const real = globalThis.fetch;
   globalThis.fetch = () => new Promise(() => {});
   try {
-    const ep = endpoint(plan), rec = recorder(), report = {};
-    const out = await fetchWikidata(perCountry, () => {}, report, { fetchImpl: ep.fetchImpl, sleep: rec.sleep });
-    return { out, report, calls: ep.calls, tries: ep.tries, sleeps: rec.sleeps };
+    const ep = endpoint(plan), rec = recorder(), report = {}, logs = [];
+    const out = await fetchWikidata(perCountry, (m) => logs.push(m), report, { fetchImpl: ep.fetchImpl, sleep: rec.sleep });
+    return { out, report, calls: ep.calls, tries: ep.tries, sleeps: rec.sleeps, logs };
   } finally { globalThis.fetch = real; }
 }
 const between = (sleeps) => sleeps.filter((ms) => ms === 1500);
@@ -194,6 +242,52 @@ test('wikidata: the report is filled in the object the caller gives, a country w
   assert.deepEqual(report.failed, []);
 });
 
+const STOP_LINE = 'wikidata: stopping, 3 countries in a row never answered';
+
+test('wikidata: Wikidata answering 504 to everything stops after 3 countries, 12 requests, and reports all 28 failed in order', async () => {
+  const { out, report, calls, sleeps, logs } = await run(() => httpFail(504));
+  assert.equal(calls.length, 3 * 4);
+  assert.deepEqual([...new Set(calls)], ['IN', 'US', 'CA']);
+  assert.deepEqual(report.failed, ALL28);
+  assert.deepEqual(report.countries, {});
+  assert.deepEqual(out, []);
+  assert.equal(pauses(sleeps).length, 9);
+  assert.deepEqual(pauses(sleeps), [15000, 30000, 45000, 15000, 30000, 45000, 15000, 30000, 45000]);
+  assert.equal(between(sleeps).length, 2);
+  assert.equal(logs.filter((l) => l === STOP_LINE).length, 1);
+});
+
+test('wikidata: two failed countries, one that answers, then failures again: no early stop (the count starts over)', async () => {
+  const bad = new Set(['IN', 'US', 'DE', 'GB']);
+  const { report, calls, tries, logs } = await run((cc) => (bad.has(cc) ? httpFail(504) : answer([binding(0)])));
+  assert.deepEqual(report.failed, ['IN', 'US', 'DE', 'GB']);
+  assert.equal(Object.keys(report.countries).length, 24);
+  assert.equal(calls.length, 4 * 4 + 24);
+  assert.equal(tries.IL, 1);
+  assert.equal(logs.includes(STOP_LINE), false);
+});
+
+test('wikidata: 3 failures in a row in the middle stop there; the rest is reported failed without a request or a pause', async () => {
+  const bad = new Set(['CA', 'DE', 'GB']);
+  const { out, report, calls, tries, sleeps, logs } = await run((cc) => (bad.has(cc) ? httpFail(504) : answer([binding(0), binding(1)])));
+  assert.deepEqual(Object.keys(report.countries), ['IN', 'US']);
+  assert.deepEqual(report.failed, ALL28.slice(2));
+  assert.equal(calls.length, 2 + 3 * 4);
+  assert.equal(tries.FR, undefined);
+  assert.equal(tries.IL, undefined);
+  assert.equal(out.length, 4);
+  assert.equal(between(sleeps).length, 4);
+  assert.equal(logs.filter((l) => l === STOP_LINE).length, 1);
+});
+
+test('wikidata: a country that answers on its last attempt counts as answered for the breaker', async () => {
+  const slow = new Set(['IN', 'US', 'CA', 'DE', 'GB']);
+  const { report, logs } = await run((cc, k) => (slow.has(cc) && k < 4 ? httpFail(504) : answer([binding(0)])));
+  assert.deepEqual(report.failed, []);
+  assert.equal(Object.keys(report.countries).length, 28);
+  assert.equal(logs.includes(STOP_LINE), false);
+});
+
 // ---- docs.mjs: shrinkProblems ---------------------------------------------------------------------------
 
 // A company row as the page reads it: [name, category, tier, hq, ats, open, src, careers].
@@ -257,11 +351,14 @@ test('shrinkProblems: the case the total alone misses, Workday 20k -> 2k while t
   assert.ok(bad[0].includes('workday') && bad[0].includes('20000') && bad[0].includes('2000'), bad[0]);
 });
 
-test('shrinkProblems: an ATS is watched from 500 open roles and half is the limit', () => {
+test('shrinkProblems: an ATS is watched from 500 open roles and 30% is the limit', () => {
   const same = { US: 1000 };
   const mk = (n, open) => snap(same, rows('ashby', n, open));
-  assert.deepEqual(shrinkProblems({ previous: mk(10, 100), next: mk(10, 50) }), []);
-  assert.equal(shrinkProblems({ previous: mk(10, 100), next: mk(10, 49) }).length, 1);
+  assert.deepEqual(shrinkProblems({ previous: mk(10, 100), next: mk(10, 70) }), []);
+  const bad = shrinkProblems({ previous: mk(10, 100), next: mk(10, 69) });
+  assert.equal(bad.length, 1, bad.join('|'));
+  assert.ok(bad[0].includes('ashby') && bad[0].includes('690') && bad[0].includes('1000'));
+  assert.deepEqual(shrinkProblems({ previous: mk(10, 100), next: mk(10, 50) }).length, 1);
   assert.equal(shrinkProblems({ previous: mk(5, 100), next: mk(5, 0) }).length, 1);
   assert.deepEqual(shrinkProblems({ previous: mk(499, 1), next: mk(499, 0) }), []);
   assert.deepEqual(shrinkProblems({ previous: mk(1, 499), next: mk(1, 0) }), []);
@@ -281,13 +378,62 @@ test('shrinkProblems: stored companies unknown (null) skips the ATS and company 
   assert.equal(shrinkProblems({ previous: snap({ US: 100000 }, null), next: snap({ US: 1000 }, rows('lever', 1)) }).length >= 1, true);
 });
 
-test('shrinkProblems: companies down more than 20% is a problem, exactly 20% is not', () => {
+test('shrinkProblems: companies down more than 15% is a problem, exactly 15% is not', () => {
   const counts = { US: 1000 };
-  const bad = shrinkProblems({ previous: snap(counts, rows('lever', 1000)), next: snap(counts, rows('lever', 799)) });
+  const bad = shrinkProblems({ previous: snap(counts, rows('lever', 1000)), next: snap(counts, rows('lever', 849)) });
   assert.equal(bad.length, 1, bad.join('|'));
-  assert.ok(bad[0].includes('1000') && bad[0].includes('799'));
-  assert.deepEqual(shrinkProblems({ previous: snap(counts, rows('lever', 1000)), next: snap(counts, rows('lever', 800)) }), []);
+  assert.ok(bad[0].includes('1000') && bad[0].includes('849'));
+  assert.deepEqual(shrinkProblems({ previous: snap(counts, rows('lever', 1000)), next: snap(counts, rows('lever', 850)) }), []);
   assert.deepEqual(shrinkProblems({ previous: snap(counts, rows('lever', 1000)), next: snap(counts, rows('lever', 1500)) }), []);
+});
+
+test('shrinkProblems: the aggregator churn seen (-3.6% companies) is not a problem', () => {
+  const counts = { US: 1000 };
+  assert.deepEqual(shrinkProblems({ previous: snap(counts, rows('aggregator', 3177)), next: snap(counts, rows('aggregator', 3063)) }), []);
+});
+
+test('shrinkProblems: OTHER or REMOTE collapsing alone is not a problem (a regex change can move them), a real country is', () => {
+  const previous = snap({ US: 20000, OTHER: 15000, REMOTE: 1400 });
+  assert.deepEqual(shrinkProblems({ previous, next: snap({ US: 20000, OTHER: 3000, REMOTE: 1400 }) }), []);
+  assert.deepEqual(shrinkProblems({ previous, next: snap({ US: 20000, OTHER: 15000, REMOTE: 100 }) }), []);
+  const bad = shrinkProblems({ previous: snap({ US: 30000, OTHER: 15000 }), next: snap({ US: 12000, OTHER: 15000 }) });
+  assert.ok(bad.some((m) => m.startsWith('US ') && m.includes('12000') && m.includes('30000')), bad.join('|'));
+});
+
+test('shrinkProblems: OTHER still counts in the total, and skipCountries can be changed', () => {
+  const previous = snap({ US: 10000, OTHER: 20000 });
+  const bad = shrinkProblems({ previous, next: snap({ US: 10000, OTHER: 1000 }) });
+  assert.equal(bad.length, 1, bad.join('|'));
+  assert.ok(bad[0].includes('11000') && bad[0].includes('30000') && !bad[0].startsWith('OTHER'));
+  const prev2 = snap({ US: 20000, OTHER: 15000 }), next2 = snap({ US: 20000, OTHER: 3000 });
+  assert.deepEqual(shrinkProblems({ previous: prev2, next: next2 }), []);
+  const flagged = shrinkProblems({ previous: prev2, next: next2 }, { skipCountries: [] });
+  assert.ok(flagged.some((m) => m.startsWith('OTHER ')), flagged.join('|'));
+  const us = shrinkProblems({ previous: snap({ US: 20000, OTHER: 15000 }), next: snap({ US: 8000, OTHER: 15000 }) }, { skipCountries: ['US'] });
+  assert.equal(us.some((m) => m.startsWith('US ')), false, us.join('|'));
+});
+
+test('shrinkProblems: the healthy 13 Oct run against the stored 12 Oct data has no problem', () => {
+  const previous = { counts: { US: 27763, OTHER: 15463, GB: 4249, IN: 3776, DE: 3554, CA: 2581, REMOTE: 1351, SG: 1319, FR: 1263, BR: 1111, ES: 930 }, companies: [] };
+  const next = { counts: { US: 26623, OTHER: 14404, GB: 4162, IN: 3638, DE: 3348, CA: 2514, REMOTE: 1322, SG: 1162, FR: 1054, BR: 1090, ES: 852, IE: 746 }, companies: [] };
+  const fill = (n, wd, gh) => {
+    const out = [...rows('workday', 40, wd), ...rows('greenhouse', 250, gh)];
+    while (out.length < n) out.push([`agg-${out.length}`, 'saas', 1, 'us', 'aggregator', 0, 'x', '']);
+    return out;
+  };
+  previous.companies = fill(3177, 100, 20);
+  next.companies = fill(3028, 89, 19);
+  assert.equal(previous.companies.length, 3177);
+  assert.equal(next.companies.length, 3028);
+  assert.ok(previous.companies.every((r) => r.length === 8));
+  assert.deepEqual(shrinkProblems({ previous, next }), []);
+});
+
+test('shrinkProblems: the same healthy run with a Workday board family down 35% is caught', () => {
+  const mk = (wd) => [...rows('workday', 40, wd), ...rows('greenhouse', 250, 20)];
+  const bad = shrinkProblems({ previous: snap({ US: 27763 }, mk(100)), next: snap({ US: 27000 }, mk(64)) });
+  assert.equal(bad.length, 1, bad.join('|'));
+  assert.ok(bad[0].startsWith('workday '));
 });
 
 test('shrinkProblems: the limits can be changed', () => {
@@ -329,11 +475,14 @@ test('oversizedDocs: the default limit is 900000 bytes, and real documents from 
   assert.deepEqual(oversizedDocs(docs), []);
 });
 
-test('failedTooMany: more than the larger of 10 boards and 3% of the boards tried', () => {
+test('failedTooMany: more than the larger of 10 boards and 2% of the boards tried', () => {
   assert.equal(failedTooMany(10, 100), false);
   assert.equal(failedTooMany(11, 100), true);
-  assert.equal(failedTooMany(30, 1000), false);
-  assert.equal(failedTooMany(31, 1000), true);
+  assert.equal(failedTooMany(20, 1000), false);
+  assert.equal(failedTooMany(21, 1000), true);
+  assert.equal(failedTooMany(6, 1054), false);
+  assert.equal(failedTooMany(21, 1054), false);
+  assert.equal(failedTooMany(22, 1054), true);
   assert.equal(failedTooMany(6, 1800), false);
   assert.equal(failedTooMany(0, 0), false);
   assert.equal(failedTooMany(11, 0), true);

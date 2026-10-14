@@ -9,8 +9,9 @@ export const tierOf = (emp) => (emp >= 50000 ? 1 : emp >= 10000 ? 2 : emp > 0 ? 
 export async function fetchWikidata(perCountry = 250, log = () => {}, report = {}, { fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
   const out = [];
   report.countries = {}; report.failed = [];
-  let first = true;
+  let first = true, silent = 0; // silent = countries in a row that never answered; at 3 Wikidata is taken as down
   for (const [cc, q] of Object.entries(COUNTRIES)) {
+    if (silent >= 3) { report.failed.push(cc); continue; }
     if (!first) await sleep(1500);
     first = false;
     const query = `SELECT ?c ?cLabel ?site ?emp ?indLabel WHERE { VALUES ?t { wd:Q4830453 wd:Q891723 wd:Q6881511 } ?c wdt:P31 ?t; wdt:P17 wd:${q}; wdt:P856 ?site. OPTIONAL { ?c wdt:P1128 ?emp. } OPTIONAL { ?c wdt:P452 ?ind. } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } ORDER BY DESC(?emp) LIMIT ${perCountry * 2}`;
@@ -34,7 +35,11 @@ export async function fetchWikidata(perCountry = 250, log = () => {}, report = {
         if (attempt < 3) await sleep((e.status === 429 || e.status === 503 || e.status === 504 ? 15000 : 5000) * (attempt + 1));
       }
     }
-    if (!answered) report.failed.push(cc);
+    if (answered) silent = 0;
+    else {
+      report.failed.push(cc);
+      if (++silent === 3) log('wikidata: stopping, 3 countries in a row never answered');
+    }
   }
   return out;
 }
