@@ -696,7 +696,10 @@ export function pdfPageLines(items) {
     });
     const last = its[its.length - 1];
     const links = its.flatMap((it) => it.links || []);
-    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), font: its[0].font, x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
+    // The font of the line's first item, and whether the line mixes fonts: a bold label and its list run in on one line
+    // ("LANGUAGES: Python, …", the Sidebar's skills group) are two items in two fonts (fontChanged).
+    const mixed = its.some((it) => it.font !== its[0].font);
+    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), font: its[0].font, mixed, x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(dotGap === undefined ? {} : { dotGap }), ...(links.length ? { links } : {}) };
   });
 }
 
@@ -714,10 +717,29 @@ function fitsAfter(prev, line, right) {
 }
 /** In a column: a line that starts with a name and a colon ("PLATFORMS: Spark, …") is a field of its own. */
 const LABELLED = /^\p{Lu}[^:.!?]{0,30}:\s/u;
-/** In a column: a line that is one email address, link or phone number is a contact of its own, not the end of the line above (a side column lists them one under another). */
-const CONTACT_LINE = /^(?:\S+@\S+\.\S+|(?:https?:\/\/|www\.)\S+|(?:[\w-]+\.)+[a-z]{2,}(?:\/\S*)?|\+?\d[\d\s().-]{6,})$/i;
-/** In a column: a line set in another font than the line above (a bold label over its list, a bold degree over its school) starts something new; a wrapped line keeps the font its paragraph began in. */
-const fontChanged = (prev, line) => Boolean(prev.font && line.font && prev.font !== line.font);
+/**
+ * In a column: a line that is one email address, link or phone number is a contact of its own, not the end of the line above (a side
+ * column lists them one under another). Each part is read once by index, its character classes apart from each other's (the first
+ * took time squared in the '@' of one long word: \S+@\S+\.\S+ tried each of them); a phone number is not a range of years.
+ */
+const CONTACT_LINE = /^(?:[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+|(?:https?:\/\/|www\.)\S+|(?:[\w-]+\.)+[a-z]{2,}\/\S*|(?!\d{4}[\s-]+\d{4}$)\+?\d[\d\s().-]{6,})$/i;
+/**
+ * A bare site ("janedoe.com") ends in an address ending we know, in lower case: any word with a dot ("Node.js", "Vue.js", "B.Sc") is
+ * not one, nor is "ASP.NET". (A site with a path is CONTACT_LINE's.)
+ */
+const BARE_SITE = /^(?:[\w-]+\.)+(?:com|net|org|io|dev|co|me|app|ai|edu|gov|info|biz|xyz|tech|site|online|blog|page|in|uk|us|ca|de|fr|au|nl|se|es|ch|eu)$/;
+/**
+ * In a column: whether `line` is a contact of its own under `prev`. Only a short line is asked (a contact is, and a long one
+ * has no business here); and not under a line that ends in a comma or a semicolon, where a list goes on ("AWS, Docker,"
+ * over "Socket.io"). A paragraph whose last wrapped line is only an address is split at it all the same; its text is kept.
+ */
+const contactAfter = (prev, line) => line.text.length <= 200 && !/[,;]$/.test(prev.text) && (CONTACT_LINE.test(line.text) || BARE_SITE.test(line.text));
+/**
+ * In a column: a line set in another font than the line above (a bold label alone over its list, a bold degree over its school)
+ * starts something new; a wrapped line keeps the font its paragraph began in. Not when that first line mixes fonts: a bold label
+ * with its list run in on the same line ("LANGUAGES: Python, …") has its wrapped lines in the list's font.
+ */
+const fontChanged = (prev, line) => Boolean(prev.font && line.font && prev.font !== line.font && !prev.mixed);
 
 /**
  * Page `index`'s furniture, not the résumé's text: the running header the app prints atop every page
@@ -815,7 +837,7 @@ export function pdfLinesOfPages(pages) {
           const continues = near && sameSize && plain && (
             (listed && Math.abs(line.x - prev.textX) < 2 && line.x > prev.x + 2)
             || (!listed && Math.abs(line.x - prev.x) < 2 && prev.right >= right - 60 && !/[.!?:]$/.test(prev.text)
-              && !(column && (!/\s/.test(prev.text) || fitsAfter(prev, line, right) || LABELLED.test(line.text) || CONTACT_LINE.test(line.text) || fontChanged(prev, line))))
+              && !(column && (!/\s/.test(prev.text) || fitsAfter(prev, line, right) || LABELLED.test(line.text) || contactAfter(prev, line) || fontChanged(prev, line))))
           );
           if (listed && near && sameSize) {
             if (continues) pitch = { ...pitch, wrap: dy };
@@ -835,7 +857,7 @@ export function pdfLinesOfPages(pages) {
             }
             // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
             if (listed && open.length) open[open.length - 1].right = line.right;
-            prev = { ...line, x: prev.x, textX: prev.textX, font: prev.font, listed };
+            prev = { ...line, x: prev.x, textX: prev.textX, font: prev.font, mixed: prev.mixed, listed };
             continue;
           }
           if (!near) { out.push(dy <= Math.max(prev.h, line.h) * 3.2 ? { text: '', loose: true } : { text: '' }); open = []; pitch = {}; }
