@@ -1,14 +1,21 @@
 // Finds companies on its own (no hand-made list) from open sources, then probes their job boards.
 //   YC "hiring" list  -> website/name -> guess Greenhouse/Lever/Ashby/SmartRecruiters/Workable board
 //   Arbeitnow, Remotive, RemoteOK, Himalayas public job APIs -> jobs + company names directly
-// Writes discovered.json (companies) and jobs-agg.json (jobs from aggregator APIs). Usage: node find-companies.mjs
+//   Wikipedia unicorn list, Wikidata (largest companies of 28 countries), Muse/Jobicy/WorkingNomads job APIs
+// Merges into discovered.json (companies), unresolved.json and jobs-agg.json (jobs from aggregator APIs): it only ever adds and
+// updates what is already there (discovery.mjs holds the rules), a source that collapsed keeps its previous rows, and a run where
+// most sources are dead exits 1 before writing anything. Usage: node find-companies.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ATS } from './ats.mjs';
 import { classify, countryOf } from './lib.mjs';
 import { fetchWikidata } from './wikidata.mjs';
+import { fetchRetry } from './retry.mjs';
+import { assembleDiscovery, SOURCE_FLOORS } from './discovery.mjs';
 
 const UA = { 'user-agent': 'resume-writter-jobmap/1.0' };
-const j = async (u) => { try { const r = await fetch(u, { headers: UA, signal: AbortSignal.timeout(40000) }); return r.ok ? await r.json() : null; } catch { return null; } };
+const j = async (u) => { try { const r = await fetchRetry(u, { headers: UA }, { timeoutMs: 40000, retries: 2 }); return r.ok ? await r.json() : null; } catch { return null; } };
+const prior = (f) => { try { const x = JSON.parse(readFileSync(new URL(`./${f}`, import.meta.url), 'utf8')); return Array.isArray(x) ? x : []; } catch { return []; } };
+const previous = { discovered: prior('discovered.json'), unresolved: prior('unresolved.json'), aggJobs: prior('jobs-agg.json') };
 const strip = (h = '') => String(h).replace(/<[^>]+>/g, ' ');
 const pool = async (items, n, fn) => { const q = [...items]; await Promise.all(Array.from({ length: n }, async () => { for (let x; (x = q.shift()); ) await fn(x); })); };
 const known = new Set(JSON.parse(readFileSync(new URL('./companies.json', import.meta.url), 'utf8')).map((c) => c.name.toLowerCase()));
@@ -63,7 +70,8 @@ await pool(wikiRows, 14, async (w) => {
 console.error(`Wikipedia companies with a readable board: ${discovered.length - before}`);
 
 // ---- 1c. Wikidata: the largest companies of 28 countries, with their own website and industry ----
-const wd = await fetchWikidata(250, (m) => console.error('wikidata', m));
+const wdReport = {};
+const wd = await fetchWikidata(250, (m) => console.error('wikidata', m), wdReport);
 console.error(`Wikidata companies: ${wd.length}`);
 const beforeWd = discovered.length;
 await pool(wd, 14, async (w) => {
@@ -112,7 +120,19 @@ for (const a of agg) {
   aggJobs.push({ company: a.company, ...k, country: countryOf(a.location), src: a.src });
   if (!aggCos.has(a.company)) aggCos.set(a.company, { name: a.company, category: 'startup', tier: 0, hq: countryOf(a.location).toLowerCase(), src: a.src, ats: 'aggregator' });
 }
-writeFileSync(new URL('./discovered.json', import.meta.url), JSON.stringify([...discovered, ...aggCos.values()], null, 1));
-writeFileSync(new URL('./unresolved.json', import.meta.url), JSON.stringify(unresolved, null, 1));
-writeFileSync(new URL('./jobs-agg.json', import.meta.url), JSON.stringify(aggJobs));
+const stats = { ycHiring: yc.length, wikipediaRows: wikiRows.length, wikidataTotal: wd.length, wikidataCountries: Object.values(wdReport.countries ?? {}).filter((n) => n > 0).length, aggregatorRows: agg.length };
+const out = assembleDiscovery({ previous, found: { boards: discovered, aggregators: [...aggCos.values()], unresolved, aggJobs }, stats });
+if (out.fatal) {
+  console.error(`discovery refused: ${out.report.low.length} of 5 sources are far below their normal size, nothing was written (${out.report.low.map((k) => `${k} ${stats[k] ?? 0}`).join(', ')})`);
+  console.log(`::error::job-map discovery: most sources are dead (${out.report.low.join(', ')}); nothing was written`);
+  process.exit(1);
+}
+writeFileSync(new URL('./discovered.json', import.meta.url), JSON.stringify(out.discovered, null, 1));
+writeFileSync(new URL('./unresolved.json', import.meta.url), JSON.stringify(out.unresolved, null, 1));
+writeFileSync(new URL('./jobs-agg.json', import.meta.url), JSON.stringify(out.aggJobs));
+const r = out.report;
 console.log(`discovered ${discovered.length} board companies + ${aggCos.size} aggregator companies (${aggJobs.length} roles)`);
+console.log(`merged: ${r.kept} kept, ${r.updated} updated, ${r.added} added; now ${out.discovered.length - r.aggregatorCompanies} board companies + ${r.aggregatorCompanies} aggregator companies (${r.aggregatorRows} roles), ${r.unresolved} unresolved`);
+for (const k of r.low) console.log(`::warning::job-map discovery: source ${k} was low this run (${stats[k] ?? 0}, normal is at least ${SOURCE_FLOORS[k]})`);
+for (const c of r.carried) console.log(`::warning::job-map discovery: ${c.src} returned ${c.found} rows (was ${c.previous}); its previous rows and companies were kept`);
+for (const cc of wdReport.failed ?? []) console.log(`::warning::job-map discovery: Wikidata country ${cc} never answered; its companies from the last run were kept`);
