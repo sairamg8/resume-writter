@@ -297,6 +297,20 @@ test('assembleDiscovery: a board company is not duplicated as an aggregator comp
   assert.deepEqual([r.report.kept, r.report.added, r.report.aggregatorCompanies, r.report.aggregatorRows], [1, 1, 1, 1]);
 });
 
+test('assembleDiscovery: a company kept without a readable board (a careers link only) keeps its aggregator roles, and is not listed twice', () => {
+  // build-db reads no roles for it (no ats), so the aggregator feed is the only place its roles can come from
+  const careersOnly = { name: 'Careers Only', tier: 0, category: 'other', hq: 'in', src: 'careers', careers: 'https://careers.example/jobs' };
+  const previous = { discovered: [board('Stripe'), careersOnly], unresolved: [], aggJobs: [] };
+  const found = {
+    ...none,
+    aggregators: [agg('careers only', 'arbeitnow'), agg('Stripe', 'arbeitnow')],
+    aggJobs: [{ company: 'careers only', title: 'T', url: 'u1', src: 'arbeitnow' }, { company: 'Stripe', title: 'T', url: 'u2', src: 'arbeitnow' }],
+  };
+  const r = assembleDiscovery({ previous, found, stats: HEALTHY });
+  assert.deepEqual(r.aggJobs.map((x) => x.company), ['careers only'], 'only the company with a readable board loses its aggregator roles');
+  assert.deepEqual(names(r.discovered), ['Stripe', 'Careers Only'], 'neither is also listed as an aggregator company');
+});
+
 test('assembleDiscovery: carried rows of a company that has a board by now are dropped too', () => {
   const previous = { discovered: [agg('Late Board', 'arbeitnow')], unresolved: [], aggJobs: [...rows('arbeitnow', 60, 'AN'), { company: 'Late Board', title: 'T', url: 'u', src: 'arbeitnow' }] };
   const r = assembleDiscovery({ previous, found: { ...none, boards: [board('Late Board')] }, stats: HEALTHY });
