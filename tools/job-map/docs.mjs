@@ -43,15 +43,16 @@ const openByAts = (companies) => {
  * What is wrong with `next` against what is stored (`previous`)? Each side is { counts: {US: n, ...}, companies: rows | null }, a row being
  * [name, category, tier, hq, ats, open, src, careers]; stored companies of null skip the ATS and company checks. [] means fine.
  * Looks at the total, each big country, each big ATS (the total alone misses one board family collapsing), and the number of companies.
+ * skipCountries (OTHER, REMOTE) are pseudo-countries a pattern change in lib.mjs can move: they count in the total, not in the per-country rule.
  */
-export function shrinkProblems({ previous, next }, { maxDrop = 0.4, countryDrop = 0.5, countryMin = 500, atsDrop = 0.5, atsMin = 500, companyDrop = 0.2 } = {}) {
+export function shrinkProblems({ previous, next }, { maxDrop = 0.4, countryDrop = 0.5, countryMin = 500, atsDrop = 0.3, atsMin = 500, companyDrop = 0.15, skipCountries = ['OTHER', 'REMOTE'] } = {}) {
   const out = [];
   const before = total(previous?.counts), after = total(next?.counts);
   if (!(before > 0)) return out;
   if (dropped(before, after, maxDrop)) out.push(`${after} roles against ${before} stored (more than ${pct(maxDrop)} fewer)`);
   for (const [cc, was] of Object.entries(previous.counts)) {
     const now = next?.counts?.[cc] ?? 0;
-    if (was >= countryMin && dropped(was, now, countryDrop)) out.push(`${cc} has ${now} roles against ${was} stored (more than ${pct(countryDrop)} fewer)`);
+    if (!skipCountries.includes(cc) && was >= countryMin && dropped(was, now, countryDrop)) out.push(`${cc} has ${now} roles against ${was} stored (more than ${pct(countryDrop)} fewer)`);
   }
   if (Array.isArray(previous.companies) && Array.isArray(next?.companies)) {
     const was = openByAts(previous.companies), now = openByAts(next.companies);
@@ -67,6 +68,6 @@ export function oversizedDocs(docs, maxBytes = 900000) {
 }
 
 /** Too many job boards failed to be read (more than the larger of `floor` and `share` of those tried): the crawl is not to be trusted. */
-export function failedTooMany(failed, attempted, share = 0.03, floor = 10) {
+export function failedTooMany(failed, attempted, share = 0.02, floor = 10) {
   return failed > Math.max(floor, attempted * share);
 }
