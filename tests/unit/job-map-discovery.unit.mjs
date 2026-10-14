@@ -2,12 +2,13 @@
 // scratch from what the sources returned that day. About 625 committed companies cannot be found again by it (Workday, the careers
 // crawl, careers-link-only rows) and lost their data or vanished, and a flaky source (Wikidata 504, Wikipedia 429, an aggregator down)
 // silently gave a smaller list that was then committed. The rules now live in tools/job-map/discovery.mjs (pure): discovery only ever
-// adds and updates, a source that collapsed keeps its previous rows, and a run where 3 of the 5 sources are dead is refused.
+// adds and updates, a source that collapsed keeps its previous rows, and a run where 3 of the 4 sources (YC, Wikipedia, Wikidata, the
+// aggregators) are dead is refused. A renamed board is matched by its (ats, slug), and an unreadable previous file stops the run.
 // The last tests run the rules over the REAL committed files. Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SOURCE_FLOORS, checkSources, mergeDiscovered, mergeAggregatorRows, assembleDiscovery } from '../../tools/job-map/discovery.mjs';
+import { SOURCE_FLOORS, SOURCE_GROUPS, checkSources, mergeDiscovered, mergeAggregatorRows, assembleDiscovery, parsePrevious } from '../../tools/job-map/discovery.mjs';
 
 const board = (name, extra = {}) => ({ name, tier: 0, ats: 'greenhouse', slug: name.toLowerCase(), category: 'startup', hq: 'us', src: 'yc', ...extra });
 const agg = (name, src, extra = {}) => ({ name, category: 'startup', tier: 0, hq: 'de', src, ats: 'aggregator', ...extra });
@@ -20,30 +21,57 @@ const HEALTHY = { ycHiring: 1495, wikipediaRows: 439, wikidataTotal: 4678, wikid
 const none = { boards: [], aggregators: [], unresolved: [], aggJobs: [] };
 
 // ---------------------------------------------------------------- checkSources
-test('checkSources: numbers at the floor are healthy, one below the floor is low but not fatal', () => {
-  assert.deepEqual(checkSources({ ...SOURCE_FLOORS }), { low: [], fatal: false });
-  assert.deepEqual(checkSources({ ...SOURCE_FLOORS, ycHiring: SOURCE_FLOORS.ycHiring - 1 }), { low: ['ycHiring'], fatal: false });
-  assert.deepEqual(checkSources(HEALTHY), { low: [], fatal: false });
+test('checkSources: the floors are pinned to the numbers the sources normally beat by a wide margin', () => {
+  assert.deepEqual(SOURCE_FLOORS, { ycHiring: 700, wikipediaRows: 200, wikidataTotal: 2000, wikidataCountries: 20, aggregatorRows: 1200 });
+  assert.deepEqual(SOURCE_GROUPS, { yc: ['ycHiring'], wikipedia: ['wikipediaRows'], wikidata: ['wikidataTotal', 'wikidataCountries'], aggregators: ['aggregatorRows'] });
 });
 
-test('checkSources: two low sources are a warning, three are fatal and are named', () => {
-  assert.deepEqual(checkSources({ ...HEALTHY, wikidataTotal: 100, wikidataCountries: 3 }), { low: ['wikidataTotal', 'wikidataCountries'], fatal: false });
-  const r = checkSources({ ...HEALTHY, wikidataTotal: 100, wikidataCountries: 3, ycHiring: 0 });
+test('checkSources: numbers at the floor are healthy, one below the floor is low but not fatal', () => {
+  assert.deepEqual(checkSources({ ...SOURCE_FLOORS }), { low: [], sources: [], fatal: false });
+  assert.deepEqual(checkSources({ ...SOURCE_FLOORS, ycHiring: SOURCE_FLOORS.ycHiring - 1 }), { low: ['ycHiring'], sources: ['yc'], fatal: false });
+  assert.deepEqual(checkSources(HEALTHY), { low: [], sources: [], fatal: false });
+});
+
+test('checkSources: Wikidata is one source, so its two stats low together are one outage and a warning', () => {
+  assert.deepEqual(checkSources({ ...HEALTHY, wikidataTotal: 100, wikidataCountries: 3 }), { low: ['wikidataTotal', 'wikidataCountries'], sources: ['wikidata'], fatal: false });
+  assert.deepEqual(checkSources({ ...HEALTHY, wikidataTotal: 100 }), { low: ['wikidataTotal'], sources: ['wikidata'], fatal: false });
+  assert.deepEqual(checkSources({ ...HEALTHY, wikidataCountries: 3 }), { low: ['wikidataCountries'], sources: ['wikidata'], fatal: false });
+});
+
+test('checkSources: Wikipedia and Wikidata both down with YC and the feeds healthy is not fatal', () => {
+  const r = checkSources({ ...HEALTHY, wikipediaRows: 0, wikidataTotal: 0, wikidataCountries: 0 });
+  assert.deepEqual(r, { low: ['wikipediaRows', 'wikidataTotal', 'wikidataCountries'], sources: ['wikipedia', 'wikidata'], fatal: false });
+});
+
+test('checkSources: three of the four sources low is fatal and the sources are named', () => {
+  const r = checkSources({ ...HEALTHY, ycHiring: 0, wikipediaRows: 0, aggregatorRows: 0 });
   assert.equal(r.fatal, true);
-  assert.deepEqual([...r.low].sort(), ['wikidataCountries', 'wikidataTotal', 'ycHiring']);
+  assert.deepEqual(r.sources, ['yc', 'wikipedia', 'aggregators']);
+  assert.deepEqual([...r.low].sort(), ['aggregatorRows', 'wikipediaRows', 'ycHiring']);
+  const w = checkSources({ ...HEALTHY, ycHiring: 0, wikidataTotal: 0, wikidataCountries: 0, aggregatorRows: 0 });
+  assert.equal(w.fatal, true, 'a source with both of its stats low still counts once, the other two make three');
+  assert.deepEqual(w.sources, ['yc', 'wikidata', 'aggregators']);
+  assert.equal(checkSources({ ...HEALTHY, ycHiring: 0, wikipediaRows: 0, wikidataTotal: 0 }).fatal, true);
+  assert.equal(checkSources({ ...HEALTHY, wikipediaRows: 0, wikidataTotal: 0, aggregatorRows: 0 }).fatal, true);
+  assert.equal(checkSources({ ...HEALTHY, ycHiring: 0, aggregatorRows: 0 }).fatal, false, 'two sources are a warning');
 });
 
 test('checkSources: a missing stat counts as zero, and a missing stats object is every source low', () => {
   const r = checkSources({ ...HEALTHY, wikipediaRows: undefined });
-  assert.deepEqual(r, { low: ['wikipediaRows'], fatal: false });
-  assert.deepEqual(checkSources({ ycHiring: 1495, aggregatorRows: 2000 }).low.sort(), ['wikidataCountries', 'wikidataTotal', 'wikipediaRows']);
+  assert.deepEqual(r, { low: ['wikipediaRows'], sources: ['wikipedia'], fatal: false });
+  const two = checkSources({ ycHiring: 1495, aggregatorRows: 2000 });
+  assert.deepEqual(two.low, ['wikipediaRows', 'wikidataTotal', 'wikidataCountries']);
+  assert.deepEqual([two.sources, two.fatal], [['wikipedia', 'wikidata'], false]);
   assert.equal(checkSources({}).fatal, true);
+  assert.deepEqual(checkSources({}).sources, ['yc', 'wikipedia', 'wikidata', 'aggregators']);
   assert.equal(checkSources(undefined).fatal, true);
 });
 
-test('checkSources: the floors can be passed in', () => {
-  assert.deepEqual(checkSources({ a: 5, b: 5, c: 5 }, { a: 5, b: 6, c: 7 }), { low: ['b', 'c'], fatal: false });
-  assert.equal(checkSources({ a: 0, b: 0, c: 0 }, { a: 1, b: 1, c: 1 }).fatal, true);
+test('checkSources: the floors and the groups can be passed in', () => {
+  const groups = { x: ['a'], y: ['b'], z: ['c'] };
+  assert.deepEqual(checkSources({ a: 5, b: 5, c: 5 }, { a: 5, b: 6, c: 7 }, groups), { low: ['b', 'c'], sources: ['y', 'z'], fatal: false });
+  assert.equal(checkSources({ a: 0, b: 0, c: 0 }, { a: 1, b: 1, c: 1 }, groups).fatal, true);
+  assert.equal(checkSources({ a: 0, b: 0, c: 0 }, { a: 1, b: 1, c: 1 }, { x: ['a', 'b'], z: ['c'] }).fatal, false, 'two sources only');
 });
 
 // ---------------------------------------------------------------- mergeAggregatorRows
@@ -106,8 +134,34 @@ test('mergeAggregatorRows: rows come out grouped by source, sources in order of 
 });
 
 test('mergeAggregatorRows: missing arrays are empty arrays', () => {
-  assert.deepEqual(mergeAggregatorRows(undefined, undefined), { rows: [], carried: {} });
+  assert.deepEqual(mergeAggregatorRows(undefined, undefined), { rows: [], carried: {}, shrunk: {} });
   assert.deepEqual(mergeAggregatorRows(null, rows('a', 3)).rows, rows('a', 3));
+});
+
+test('mergeAggregatorRows: a source that fell under 90% but is not a collapse is replaced and reported as shrunk', () => {
+  const prev = [...rows('arbeitnow', 100, 'old'), ...rows('himalayas', 100, 'oldh'), ...rows('themuse', 100, 'oldm')];
+  const found = [...rows('arbeitnow', 60, 'new'), ...rows('himalayas', 90, 'newh'), ...rows('themuse', 89, 'newm')];
+  const r = mergeAggregatorRows(prev, found);
+  assert.deepEqual(r.shrunk, { arbeitnow: { previous: 100, found: 60 }, themuse: { previous: 100, found: 89 } });
+  assert.deepEqual(r.carried, {});
+  assert.deepEqual(r.rows.filter((x) => x.src === 'arbeitnow'), found.filter((x) => x.src === 'arbeitnow'), 'a shrunk source is still replaced by what was found');
+  assert.equal(r.rows.length, 60 + 90 + 89);
+});
+
+test('mergeAggregatorRows: exactly half is shrunk (not carried), one row less is carried and not shrunk', () => {
+  const prev = rows('arbeitnow', 100, 'old');
+  const half = mergeAggregatorRows(prev, rows('arbeitnow', 50, 'new'));
+  assert.deepEqual([half.shrunk, half.carried], [{ arbeitnow: { previous: 100, found: 50 } }, {}]);
+  const under = mergeAggregatorRows(prev, rows('arbeitnow', 49, 'new'));
+  assert.deepEqual([under.shrunk, under.carried], [{}, { arbeitnow: { previous: 100, found: 49 } }]);
+});
+
+test('mergeAggregatorRows: a source that holds its size or grows, or that was small before, is not shrunk', () => {
+  assert.deepEqual(mergeAggregatorRows(rows('a', 100, 'o'), rows('a', 100, 'n')).shrunk, {});
+  assert.deepEqual(mergeAggregatorRows(rows('a', 100, 'o'), rows('a', 150, 'n')).shrunk, {});
+  assert.deepEqual(mergeAggregatorRows(rows('a', 49, 'o'), rows('a', 10, 'n')).shrunk, {}, 'under minPrevious rows nothing is watched');
+  assert.deepEqual(mergeAggregatorRows([], rows('a', 10, 'n')).shrunk, {});
+  assert.deepEqual(mergeAggregatorRows(undefined, undefined).shrunk, {});
 });
 
 // ---------------------------------------------------------------- mergeDiscovered
@@ -222,13 +276,128 @@ test('mergeDiscovered: an aggregator row among the found boards is not taken for
   assert.deepEqual(r, { companies: [], kept: 0, updated: 0, added: 0 });
 });
 
+test('mergeDiscovered: a stored name is replaced by the found spelling, and name keys ignore case and the spaces around them', () => {
+  const a = mergeDiscovered([board('acme')], { boards: [board(' Acme ', { slug: 'acme' })], aggregators: [] });
+  assert.deepEqual([a.companies.length, a.updated, a.added], [1, 1, 0], '" Acme " is the company "acme"');
+  assert.equal(a.companies[0].name, ' Acme ');
+  const b = mergeDiscovered([board('Acme Corp')], { boards: [board('ACME CORP')], aggregators: [] });
+  assert.deepEqual(names(b.companies), ['ACME CORP']);
+  const c = mergeDiscovered([board('  spaced  ')], { boards: [board('SPACED')], aggregators: [] });
+  assert.deepEqual([c.companies.length, c.updated], [1, 1]);
+});
+
+test('mergeDiscovered: a previous aggregator company with the same trimmed key as a board company is dropped, carried or not', () => {
+  const prev = [agg(' Trim Co ', 'arbeitnow'), agg('Other Co', 'arbeitnow')];
+  const carried = mergeDiscovered(prev, { boards: [board('trim co')], aggregators: [] }, ['arbeitnow']);
+  assert.deepEqual(names(isAgg(carried.companies)), ['Other Co']);
+  const fresh = mergeDiscovered([board('Trim Co')], { boards: [], aggregators: [agg('  TRIM CO', 'himalayas'), agg('Other Co', 'himalayas')] });
+  assert.deepEqual(names(isAgg(fresh.companies)), ['Other Co']);
+});
+
+// A found board is the same company as a stored one when the name keys match OR the board (ats, slug) is the same.
+const at = (name, ats, slug, extra = {}) => ({ name, tier: 0, ats, slug, category: 'startup', hq: 'us', src: 'yc', ...extra });
+const counts = (r) => ({ kept: r.kept, updated: r.updated, added: r.added });
+
+test('mergeDiscovered: a renamed company is matched by its board, takes the new name and does not appear twice', () => {
+  const prev = [at('Acme', 'greenhouse', 'acme', { website: 'https://acme.example', size: 40 }), at('Other', 'lever', 'other')];
+  const r = mergeDiscovered(prev, { boards: [at('Acme Inc', 'greenhouse', 'acme')], aggregators: [] });
+  assert.deepEqual(r.companies.map((e) => [e.name, e.slug]), [['Acme Inc', 'acme'], ['Other', 'other']]);
+  assert.equal(r.companies[0].website, 'https://acme.example', 'the stored fields the found entry lacks stay');
+  assert.deepEqual(counts(r), { kept: 1, updated: 1, added: 0 });
+  const again = mergeDiscovered(r.companies, { boards: [at('Acme Inc', 'greenhouse', 'acme')], aggregators: [] });
+  assert.deepEqual(counts(again), { kept: 1, updated: 1, added: 0 });
+  assert.deepEqual(names(again.companies), ['Acme Inc', 'Other']);
+});
+
+test('mergeDiscovered: the slug is compared lower-cased and trimmed, the ats exactly', () => {
+  const same = mergeDiscovered([at('Old Name', 'ashby', 'Acme-Co')], { boards: [at('New Name', 'ashby', ' acme-co ')], aggregators: [] });
+  assert.deepEqual([same.companies.length, same.updated, same.added], [1, 1, 0]);
+  const other = mergeDiscovered([at('Old Name', 'greenhouse', 'acme')], { boards: [at('New Name', 'Greenhouse', 'acme')], aggregators: [] });
+  assert.deepEqual([other.companies.length, other.updated, other.added], [2, 0, 1], 'ats is not folded');
+});
+
+test('mergeDiscovered: the same slug on a different ats is a different company', () => {
+  const r = mergeDiscovered([at('Acme', 'greenhouse', 'acme')], { boards: [at('Acme Labs', 'lever', 'acme')], aggregators: [] });
+  assert.deepEqual(names(r.companies), ['Acme', 'Acme Labs']);
+  assert.deepEqual(counts(r), { kept: 1, updated: 0, added: 1 });
+});
+
+test('mergeDiscovered: an empty or missing slug or ats never matches by board', () => {
+  const prev = [at('P1', 'greenhouse', ''), at('P2', 'greenhouse', undefined), at('P3', '', 'x'), at('P4', undefined, 'y'), { name: 'P5', tier: 0 }];
+  const found = [at('F1', 'greenhouse', ''), at('F2', 'greenhouse', undefined), at('F3', '', 'x'), at('F4', undefined, 'y'), at('F5', null, null)];
+  const r = mergeDiscovered(prev, { boards: found, aggregators: [] });
+  assert.deepEqual(names(r.companies), ['P1', 'P2', 'P3', 'P4', 'P5', 'F1', 'F2', 'F3', 'F4', 'F5']);
+  assert.deepEqual(counts(r), { kept: 5, updated: 0, added: 5 });
+});
+
+test('mergeDiscovered: a name match wins over a slug match', () => {
+  const prev = [at('X', 'greenhouse', 'x'), at('Y', 'greenhouse', 'y')];
+  const r = mergeDiscovered(prev, { boards: [at('X', 'greenhouse', 'y')], aggregators: [] });
+  assert.deepEqual(r.companies.map((e) => [e.name, e.slug]), [['X', 'y'], ['Y', 'y']], 'X is updated by name, Y is left alone');
+  assert.deepEqual(counts(r), { kept: 1, updated: 1, added: 0 });
+});
+
+test('mergeDiscovered: a name match wins over a slug match even when the slug match was found first', () => {
+  const prev = [at('A', 'greenhouse', 'a'), at('B', 'greenhouse', 'b')];
+  const r = mergeDiscovered(prev, { boards: [at('Zed', 'greenhouse', 'a'), at('A', 'greenhouse', 'q')], aggregators: [] });
+  assert.deepEqual(r.companies.map((e) => [e.name, e.slug]), [['A', 'q'], ['B', 'b'], ['Zed', 'a']]);
+  assert.deepEqual(counts(r), { kept: 1, updated: 1, added: 1 });
+});
+
+test('mergeDiscovered: a stored company is updated at most once, the second claim is a new company', () => {
+  const prev = [at('A', 'greenhouse', 'a')];
+  const r = mergeDiscovered(prev, { boards: [at('A', 'greenhouse', 'a2'), at('Second Spelling', 'greenhouse', 'a')], aggregators: [] });
+  assert.deepEqual(r.companies.map((e) => [e.name, e.slug]), [['A', 'a2'], ['Second Spelling', 'a']]);
+  assert.deepEqual(counts(r), { kept: 0, updated: 1, added: 1 });
+});
+
+test('mergeDiscovered: of two stored companies on the same board only the first is updated', () => {
+  const prev = [at('P1', 'lever', 's'), at('P2', 'lever', 's')];
+  const r = mergeDiscovered(prev, { boards: [at('Renamed', 'lever', 's')], aggregators: [] });
+  assert.deepEqual(names(r.companies), ['Renamed', 'P2']);
+  assert.deepEqual(counts(r), { kept: 1, updated: 1, added: 0 });
+});
+
+test('mergeDiscovered: a found board that matches nothing is appended in found order', () => {
+  const r = mergeDiscovered([at('A', 'greenhouse', 'a')], { boards: [at('N2', 'lever', 'n2'), at('A2', 'greenhouse', 'a'), at('N1', 'ashby', 'n1')], aggregators: [] });
+  assert.deepEqual(names(r.companies), ['A2', 'N2', 'N1']);
+  assert.deepEqual(counts(r), { kept: 0, updated: 1, added: 2 });
+});
+
+test('mergeDiscovered: two found boards on the same (ats, slug) count once, the first wins', () => {
+  const r = mergeDiscovered([], { boards: [at('First', 'ashby', 'acme'), at('Second Spelling', 'ashby', ' ACME'), at('Lever Acme', 'lever', 'acme')], aggregators: [] });
+  assert.deepEqual(names(r.companies), ['First', 'Lever Acme']);
+  assert.deepEqual(counts(r), { kept: 0, updated: 0, added: 2 });
+  const upd = mergeDiscovered([at('Old', 'ashby', 'acme')], { boards: [at('First', 'ashby', 'acme'), at('Second Spelling', 'ashby', 'acme')], aggregators: [] });
+  assert.deepEqual(names(upd.companies), ['First']);
+  assert.deepEqual(counts(upd), { kept: 0, updated: 1, added: 0 });
+});
+
+test('mergeDiscovered: found boards with no slug are not folded together, they stay separate by name', () => {
+  const r = mergeDiscovered([], { boards: [at('One', 'greenhouse', ''), at('Two', 'greenhouse', ''), at('Three', 'greenhouse', undefined)], aggregators: [] });
+  assert.deepEqual(names(r.companies), ['One', 'Two', 'Three']);
+});
+
 // ---------------------------------------------------------------- assembleDiscovery
 test('assembleDiscovery: three or more dead sources are fatal and hand back no data to write', () => {
   const previous = { discovered: [board('A')], unresolved: [], aggJobs: [] };
-  const r = assembleDiscovery({ previous, found: { boards: [board('B')], aggregators: [], unresolved: [], aggJobs: [] }, stats: { ...HEALTHY, ycHiring: 0, wikidataTotal: 0, wikidataCountries: 0 } });
+  const found = { boards: [board('B')], aggregators: [], unresolved: [], aggJobs: [] };
+  const r = assembleDiscovery({ previous, found, stats: { ...HEALTHY, ycHiring: 0, wikipediaRows: 0, aggregatorRows: 0 } });
   assert.equal(r.fatal, true);
-  assert.deepEqual([...r.report.low].sort(), ['wikidataCountries', 'wikidataTotal', 'ycHiring']);
+  assert.deepEqual([...r.report.low].sort(), ['aggregatorRows', 'wikipediaRows', 'ycHiring']);
+  assert.deepEqual(r.report.sources, ['yc', 'wikipedia', 'aggregators']);
   for (const k of ['discovered', 'unresolved', 'aggJobs']) assert.equal(r[k], undefined, `${k} is not returned`);
+  const w = assembleDiscovery({ previous, found, stats: { ...HEALTHY, ycHiring: 0, wikidataTotal: 0, wikidataCountries: 0, aggregatorRows: 0 } });
+  assert.equal(w.fatal, true, 'yc + wikidata + aggregators');
+  assert.equal(w.discovered, undefined);
+});
+
+test('assembleDiscovery: Wikipedia and Wikidata down with everything else healthy still merges', () => {
+  const r = assembleDiscovery({ previous: { discovered: [board('A')], unresolved: [], aggJobs: [] }, found: { ...none, boards: [board('B')] }, stats: { ...HEALTHY, wikipediaRows: 0, wikidataTotal: 0, wikidataCountries: 0 } });
+  assert.equal(r.fatal, false);
+  assert.deepEqual(names(r.discovered), ['A', 'B']);
+  assert.deepEqual(r.report.low, ['wikipediaRows', 'wikidataTotal', 'wikidataCountries']);
+  assert.deepEqual(r.report.sources, ['wikipedia', 'wikidata']);
 });
 
 test('assembleDiscovery: one or two low sources still merge, and are named in the report', () => {
@@ -236,6 +405,21 @@ test('assembleDiscovery: one or two low sources still merge, and are named in th
   assert.equal(r.fatal, false);
   assert.deepEqual(names(r.discovered), ['A', 'B']);
   assert.deepEqual(r.report.low, ['wikidataTotal', 'wikidataCountries']);
+  assert.deepEqual(r.report.sources, ['wikidata']);
+  assert.deepEqual(assembleDiscovery({ previous: undefined, found: undefined, stats: HEALTHY }).report.sources, []);
+});
+
+test('assembleDiscovery: a source that shrank without collapsing is replaced and listed in the report', () => {
+  const previous = { discovered: [], unresolved: [], aggJobs: [...rows('himalayas', 100, 'HI'), ...rows('arbeitnow', 100, 'AN'), ...rows('themuse', 100, 'MU')] };
+  const found = { ...none, aggJobs: [...rows('themuse', 80, 'MUN'), ...rows('arbeitnow', 95, 'ANN'), ...rows('himalayas', 40, 'HIN')] };
+  const r = assembleDiscovery({ previous, found, stats: HEALTHY });
+  assert.deepEqual(r.report.shrunk, [{ src: 'themuse', previous: 100, found: 80 }, { src: 'himalayas', previous: 100, found: 40 }]);
+  assert.deepEqual(r.report.carried, []);
+  assert.equal(r.aggJobs.filter((x) => x.src === 'themuse').length, 80);
+  assert.deepEqual(assembleDiscovery({ previous, found: { ...none, aggJobs: previous.aggJobs }, stats: HEALTHY }).report.shrunk, []);
+  const gone = assembleDiscovery({ previous, found: none, stats: HEALTHY });
+  assert.deepEqual(gone.report.shrunk, [], 'a carried source is reported as carried, not shrunk');
+  assert.equal(gone.report.carried.length, 3);
 });
 
 test('assembleDiscovery: empty or missing previous and found pieces never throw', () => {
@@ -330,6 +514,36 @@ test('assembleDiscovery: running the same discovery twice changes nothing the se
   assert.equal(two.report.added, 0);
 });
 
+// ---------------------------------------------------------------- parsePrevious
+test('parsePrevious: a file that does not exist (null or undefined text) is an empty list', () => {
+  assert.deepEqual(parsePrevious(null, 'discovered.json'), []);
+  assert.deepEqual(parsePrevious(undefined, 'discovered.json'), []);
+});
+
+test('parsePrevious: a JSON array is returned as it is', () => {
+  assert.deepEqual(parsePrevious('[]', 'unresolved.json'), []);
+  assert.deepEqual(parsePrevious('[{"name":"A","tier":0},{"name":"B"}]', 'discovered.json'), [{ name: 'A', tier: 0 }, { name: 'B' }]);
+  assert.deepEqual(parsePrevious(' \n[1,2]\n', 'jobs-agg.json'), [1, 2]);
+});
+
+test('parsePrevious: text that is not valid JSON throws an Error that names the file', () => {
+  for (const bad of ['{', '[{"name":"A"', '<<<<<<< HEAD\n[]\n=======\n[]\n>>>>>>> main', 'not json']) {
+    assert.throws(() => parsePrevious(bad, 'discovered.json'), (e) => e instanceof Error && e.message.includes('discovered.json'), bad);
+  }
+  assert.throws(() => parsePrevious('{', 'jobs-agg.json'), /jobs-agg\.json/);
+});
+
+test('parsePrevious: valid JSON that is not an array throws, naming the file', () => {
+  for (const bad of ['{"a":1}', 'null', '"text"', '42', 'true']) {
+    assert.throws(() => parsePrevious(bad, 'unresolved.json'), (e) => e instanceof Error && e.message.includes('unresolved.json'), bad);
+  }
+});
+
+test('parsePrevious: an empty file is an error, not an empty list (a truncated write must not become an overwrite)', () => {
+  assert.throws(() => parsePrevious('', 'discovered.json'), /discovered\.json/);
+  assert.throws(() => parsePrevious('  \n', 'discovered.json'), /discovered\.json/);
+});
+
 // ---------------------------------------------------------------- the real committed data
 const read = (f) => JSON.parse(readFileSync(new URL(`../../tools/job-map/${f}`, import.meta.url), 'utf8'));
 const real = { discovered: read('discovered.json'), unresolved: read('unresolved.json'), aggJobs: read('jobs-agg.json') };
@@ -347,14 +561,43 @@ test('real data: an empty found list is a collapse for every source that had 50 
   const per = {};
   for (const x of real.aggJobs) per[x.src] = (per[x.src] ?? 0) + 1;
   const carried = new Set(Object.keys(per).filter((s) => per[s] >= 50));
-  assert.ok(carried.size >= 3 && carried.size < Object.keys(per).length, 'the data has big and small sources');
+  const small = Object.keys(per).filter((s) => per[s] < 50);
   const r = assembleDiscovery({ previous: real, found: none, stats: HEALTHY });
-  assert.deepEqual(r.report.carried.map((c) => c.src).sort(), [...carried].sort());
+  assert.deepEqual(r.report.carried.map((c) => c.src).sort(), [...carried].sort(), 'exactly the sources with 50 rows or more are carried');
   assert.ok(r.report.carried.every((c) => c.previous === per[c.src] && c.found === 0));
+  for (const s of small) {
+    assert.equal(r.report.carried.some((c) => c.src === s), false, `${s} is too small to be carried`);
+    assert.equal(r.aggJobs.some((x) => x.src === s), false, `${s} rows go with the source`);
+    assert.equal(isAgg(r.discovered).some((e) => e.src === s), false, `${s} companies go with the source`);
+  }
   const board = new Set(nonAgg(real.discovered).map((e) => key(e.name)));
+  const read = new Set(nonAgg(real.discovered).filter((e) => e.ats).map((e) => key(e.name)));
   same(isAgg(r.discovered), isAgg(real.discovered).filter((e) => carried.has(e.src) && !board.has(key(e.name))));
-  same(r.aggJobs, real.aggJobs.filter((x) => carried.has(x.src) && !board.has(key(x.company))));
+  same(r.aggJobs, real.aggJobs.filter((x) => carried.has(x.src) && !read.has(key(x.company))));
   assert.ok(r.aggJobs.length > 1000);
+});
+
+test('real data: renaming every 10th board on the committed data moves the entries by their board, none is added or duplicated', () => {
+  const idOf = (e) => (e.ats && e.slug ? `${e.ats}\0${String(e.slug).trim().toLowerCase()}` : '');
+  const stored = nonAgg(real.discovered);
+  let n = 0;
+  const found = stored.map((e) => (idOf(e) && n++ % 10 === 0 ? { ...e, name: `${e.name} Inc` } : e));
+  const renamed = found.filter((e, i) => e !== stored[i]);
+  assert.ok(renamed.length > 50, 'a tenth of the boards were renamed');
+  const first = new Set(), unique = found.filter((e) => { const k = idOf(e); if (!k) return true; if (first.has(k)) return false; first.add(k); return true; });
+  const survivors = renamed.filter((e) => unique.includes(e));
+  const dupsBefore = stored.length - unique.length;
+  const r = mergeDiscovered(real.discovered, { boards: found, aggregators: [] });
+  assert.deepEqual(counts(r), { kept: dupsBefore, updated: unique.length, added: 0 });
+  assert.equal(nonAgg(r.companies).length, stored.length, 'the board entries did not grow');
+  const newNames = new Set(survivors.map((e) => e.name));
+  assert.equal(nonAgg(r.companies).filter((e) => newNames.has(e.name)).length, survivors.length, 'every rename took effect, once');
+  assert.equal(stored.filter((e) => idOf(e) && newNames.has(`${e.name} Inc`)).length, survivors.length);
+  assert.equal(nonAgg(r.companies).some((e) => idOf(e) && newNames.has(`${e.name} Inc`)), false, 'the old spellings are gone');
+  assert.equal(stored.filter((e) => idOf(e)).length - new Set(nonAgg(r.companies).map(idOf).filter(Boolean)).size, dupsBefore, 'no board is read twice more than before');
+  const again = mergeDiscovered(r.companies, { boards: found, aggregators: [] });
+  assert.deepEqual(counts(again), { kept: dupsBefore, updated: unique.length, added: 0 });
+  same(again.companies, r.companies);
 });
 
 test('real data: the unresolved list keeps everything except companies that have a board', () => {
@@ -367,8 +610,11 @@ test('real data: the unresolved list keeps everything except companies that have
 test('real data: merging the committed data with itself changes nothing', () => {
   const found = { boards: nonAgg(real.discovered), aggregators: isAgg(real.discovered), unresolved: real.unresolved, aggJobs: real.aggJobs };
   const r = assembleDiscovery({ previous: real, found, stats: HEALTHY });
-  assert.deepEqual([r.report.kept, r.report.updated, r.report.added], [0, nonAgg(real.discovered).length, 0]);
+  // a board listed twice in the committed file (same ats and slug) is one found board, so its second entry is only kept
+  const seen = new Set(), twice = nonAgg(real.discovered).filter((e) => { const b = e.ats && e.slug ? `${e.ats}\0${String(e.slug).trim().toLowerCase()}` : ''; if (!b) return false; if (seen.has(b)) return true; seen.add(b); return false; }).length;
+  assert.deepEqual([r.report.kept, r.report.updated, r.report.added], [twice, nonAgg(real.discovered).length - twice, 0]);
   assert.deepEqual(r.report.carried, []);
+  assert.deepEqual(r.report.shrunk, []);
   same(nonAgg(r.discovered), nonAgg(real.discovered));
   same(isAgg(r.discovered), isAgg(real.discovered));
   same(r.aggJobs, real.aggJobs);

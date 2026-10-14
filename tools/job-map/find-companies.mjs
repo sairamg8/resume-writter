@@ -4,17 +4,31 @@
 //   Wikipedia unicorn list, Wikidata (largest companies of 28 countries), Muse/Jobicy/WorkingNomads job APIs
 // Merges into discovered.json (companies), unresolved.json and jobs-agg.json (jobs from aggregator APIs): it only ever adds and
 // updates what is already there (discovery.mjs holds the rules), a source that collapsed keeps its previous rows, and a run where
-// most sources are dead exits 1 before writing anything. Usage: node find-companies.mjs
+// most sources are dead exits 1 before writing anything, as does a previous file that cannot be read. Usage: node find-companies.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
-import { ATS } from './ats.mjs';
+import { ATS, net } from './ats.mjs';
 import { classify, countryOf } from './lib.mjs';
 import { fetchWikidata } from './wikidata.mjs';
 import { fetchRetry } from './retry.mjs';
-import { assembleDiscovery, SOURCE_FLOORS } from './discovery.mjs';
+import { assembleDiscovery, parsePrevious, SOURCE_FLOORS } from './discovery.mjs';
+
+// Thousands of probes: a miss costs nothing now that the merge keeps earlier finds, and a persistent 429 must not cost 3 requests and seconds per probe.
+net.retries = 0;
 
 const UA = { 'user-agent': 'resume-writter-jobmap/1.0' };
 const j = async (u) => { try { const r = await fetchRetry(u, { headers: UA }, { timeoutMs: 40000, retries: 2 }); return r.ok ? await r.json() : null; } catch { return null; } };
-const prior = (f) => { try { const x = JSON.parse(readFileSync(new URL(`./${f}`, import.meta.url), 'utf8')); return Array.isArray(x) ? x : []; } catch { return []; } };
+// A missing file is a first run; a file that cannot be read or parsed stops the run (before any request) instead of becoming an overwrite.
+const prior = (f) => {
+  try {
+    let text = null;
+    try { text = readFileSync(new URL(`./${f}`, import.meta.url), 'utf8'); } catch (e) { if (e?.code !== 'ENOENT') throw new Error(`${f} cannot be read (${e?.message}); refusing to rewrite it from scratch`); }
+    return parsePrevious(text, f);
+  } catch (e) {
+    console.error(e.message);
+    console.log(`::error::job-map discovery: ${e.message}`);
+    process.exit(1);
+  }
+};
 const previous = { discovered: prior('discovered.json'), unresolved: prior('unresolved.json'), aggJobs: prior('jobs-agg.json') };
 const strip = (h = '') => String(h).replace(/<[^>]+>/g, ' ');
 const pool = async (items, n, fn) => { const q = [...items]; await Promise.all(Array.from({ length: n }, async () => { for (let x; (x = q.shift()); ) await fn(x); })); };
@@ -123,8 +137,8 @@ for (const a of agg) {
 const stats = { ycHiring: yc.length, wikipediaRows: wikiRows.length, wikidataTotal: wd.length, wikidataCountries: Object.values(wdReport.countries ?? {}).filter((n) => n > 0).length, aggregatorRows: agg.length };
 const out = assembleDiscovery({ previous, found: { boards: discovered, aggregators: [...aggCos.values()], unresolved, aggJobs }, stats });
 if (out.fatal) {
-  console.error(`discovery refused: ${out.report.low.length} of 5 sources are far below their normal size, nothing was written (${out.report.low.map((k) => `${k} ${stats[k] ?? 0}`).join(', ')})`);
-  console.log(`::error::job-map discovery: most sources are dead (${out.report.low.join(', ')}); nothing was written`);
+  console.error(`discovery refused: ${out.report.sources.length} of 4 sources (${out.report.sources.join(', ')}) are far below their normal size, nothing was written (${out.report.low.map((k) => `${k} ${stats[k] ?? 0}`).join(', ')})`);
+  console.log(`::error::job-map discovery: most sources are dead (${out.report.sources.join(', ')}: ${out.report.low.join(', ')}); nothing was written`);
   process.exit(1);
 }
 writeFileSync(new URL('./discovered.json', import.meta.url), JSON.stringify(out.discovered, null, 1));
@@ -135,4 +149,5 @@ console.log(`discovered ${discovered.length} board companies + ${aggCos.size} ag
 console.log(`merged: ${r.kept} kept, ${r.updated} updated, ${r.added} added; now ${out.discovered.length - r.aggregatorCompanies} board companies + ${r.aggregatorCompanies} aggregator companies (${r.aggregatorRows} roles), ${r.unresolved} unresolved`);
 for (const k of r.low) console.log(`::warning::job-map discovery: source ${k} was low this run (${stats[k] ?? 0}, normal is at least ${SOURCE_FLOORS[k]})`);
 for (const c of r.carried) console.log(`::warning::job-map discovery: ${c.src} returned ${c.found} rows (was ${c.previous}); its previous rows and companies were kept`);
+for (const c of r.shrunk) console.log(`::warning::job-map discovery: ${c.src} returned ${c.found} rows (was ${c.previous})`);
 for (const cc of wdReport.failed ?? []) console.log(`::warning::job-map discovery: Wikidata country ${cc} never answered; its companies from the last run were kept`);
