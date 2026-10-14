@@ -1197,7 +1197,9 @@ function readHeader(type, header) {
   // the title after them, with no title line anywhere over it — how UK CVs set their jobs and schools
   // (dates in the left column). What follows the date is the entry's title there, not its place; it
   // went to the Location, and the company and role (or school and degree) came out empty. Only where
-  // this line is all the header has, and the text names a role, a degree or a school.
+  // this line is the header's first, with no title over it, and the text names a role, a degree or a
+  // school. Lines under it (its named fields, "GPA: 3.8"; the company or school of a date column's
+  // title) do not change that: a degree after the date is no place, with or without them.
   const titleAfterDate = (p, alone) => alone && (ROLE.test(p) || (type === 'education' && (DEGREE.test(p) || SCHOOL.test(p))));
   const field = (p) => {
     // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
@@ -1881,10 +1883,13 @@ function entriesOf(type, lines, aside) {
         // the line under it, and for a type with a second line (a role, a degree) the one under that
         // when it holds two fields or a place. Before, such an entry had no title, and its title and
         // company went into its description (R2-148).
-        // The one piece of the line that is not its dates names a role (or, for a school, a degree or a school).
+        // The one piece of the line that is not its dates names a role (or, for a school, a degree or a school),
+        // and that alone: "Audit Manager, Hargreaves & Co, Leeds" has its company already, and the line under
+        // it is the description's.
         const titleLine2 = (line) => {
           const rest = pieces(line.text).filter((p) => !readDateRange(p));
-          return rest.length === 1 && (ROLE.test(rest[0]) || (type === 'education' && (DEGREE.test(rest[0]) || SCHOOL.test(rest[0]))));
+          return rest.length === 1 && (ROLE.test(rest[0]) || (type === 'education' && (DEGREE.test(rest[0]) || SCHOOL.test(rest[0]))))
+            && inlinePair([rest[0]]).length === 1 && !(type === 'education' && DEGREE.test(rest[0]) && SCHOOL.test(rest[0]));
         };
         const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && (!/[.!?]$/.test(n.text) || CORPORATE.test(n.text)) && !isMetaLine(n.text); // "Inc." ends a name, not a sentence
         if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
@@ -1894,9 +1899,15 @@ function entriesOf(type, lines, aside) {
         }
         // A date column set beside its title ("Jan 2020 – Present ⇥ Senior Engineer", Europass and CV-table
         // layouts): the line under it, a name or a place, is the title's second field (the company, the school).
-        // Not a sentence of the description, which a name has no lower-case words in.
+        // Not a sentence of the description, which a name has no lower-case words in; not a label over its list
+        // ("Key Responsibilities", "Main duties:"); not a place alone ("Remote", "Portland, OR"), which a
+        // typed "Date | Role" over it names no company with; and only where the entry's text follows it: a
+        // list, a gap, the next entry, the section's end or a sentence.
         else if (header.length === 1 && pieces(L.text).length === 2 && SECOND_LINE.has(type) && titleLine2(L) && titleLike(info[i])
-          && pieces(info[i].text).length === 1 && !sentence(info[i].text) && (nameLike(info[i].text) || PLACE.test(info[i].text) || CORPORATE.test(info[i].text))) header.push(info[i++]);
+          && pieces(info[i].text).length === 1 && !sentence(info[i].text) && !SUBHEADING.test(info[i].text) && !info[i].text.endsWith(':')
+          && !/^(?:remote|hybrid)$/i.test(info[i].text) && !(REGION_END.test(info[i].text) && !placeAfterComma(info[i].text))
+          && (nameLike(info[i].text) || PLACE.test(info[i].text) || CORPORATE.test(info[i].text))
+          && (!info[i + 1] || info[i + 1].bullet || info[i + 1].gap || info[i + 1].date || info[i + 1].hint === 'entry' || sentence(info[i + 1].text))) header.push(info[i++]);
         // A job's place alone on the line under its dates, its title over them (LinkedIn's: "San
         // Francisco, California, United States"): its location. Before, it went into the description, or
         // became the next role's company.
