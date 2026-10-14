@@ -411,9 +411,10 @@ test('assembleDiscovery: one or two low sources still merge, and are named in th
 
 test('assembleDiscovery: a source that shrank without collapsing is replaced and listed in the report', () => {
   const previous = { discovered: [], unresolved: [], aggJobs: [...rows('himalayas', 100, 'HI'), ...rows('arbeitnow', 100, 'AN'), ...rows('themuse', 100, 'MU')] };
-  const found = { ...none, aggJobs: [...rows('themuse', 80, 'MUN'), ...rows('arbeitnow', 95, 'ANN'), ...rows('himalayas', 40, 'HIN')] };
+  // 60 of 100 is under 90% (reported) and over 50% (not a collapse: replaced, not carried); 95 of 100 is not reported
+  const found = { ...none, aggJobs: [...rows('themuse', 80, 'MUN'), ...rows('arbeitnow', 95, 'ANN'), ...rows('himalayas', 60, 'HIN')] };
   const r = assembleDiscovery({ previous, found, stats: HEALTHY });
-  assert.deepEqual(r.report.shrunk, [{ src: 'themuse', previous: 100, found: 80 }, { src: 'himalayas', previous: 100, found: 40 }]);
+  assert.deepEqual(r.report.shrunk, [{ src: 'themuse', previous: 100, found: 80 }, { src: 'himalayas', previous: 100, found: 60 }]);
   assert.deepEqual(r.report.carried, []);
   assert.equal(r.aggJobs.filter((x) => x.src === 'themuse').length, 80);
   assert.deepEqual(assembleDiscovery({ previous, found: { ...none, aggJobs: previous.aggJobs }, stats: HEALTHY }).report.shrunk, []);

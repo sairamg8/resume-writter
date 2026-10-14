@@ -135,7 +135,8 @@ test('get: the caller\'s own retries still win over net.retries', async () => {
 
 // ---- wikidata.mjs -------------------------------------------------------------------------------------
 
-const QID = { IN: 'Q668', US: 'Q30', NL: 'Q55', CA: 'Q16', DE: 'Q183', GB: 'Q145', FR: 'Q142' };
+// every country wikidata.mjs asks for, so a fake request is always logged under its own code
+const QID = { IN: 'Q668', US: 'Q30', CA: 'Q16', DE: 'Q183', GB: 'Q145', FR: 'Q142', NL: 'Q55', CH: 'Q39', IE: 'Q27', ES: 'Q29', IT: 'Q38', SE: 'Q34', PL: 'Q36', DK: 'Q35', NO: 'Q20', FI: 'Q33', BE: 'Q31', AT: 'Q40', LU: 'Q32', PT: 'Q45', SG: 'Q334', AE: 'Q878', AU: 'Q408', JP: 'Q17', BR: 'Q155', MX: 'Q96', ZA: 'Q258', IL: 'Q801' };
 const ALL28 = ['IN', 'US', 'CA', 'DE', 'GB', 'FR', 'NL', 'CH', 'IE', 'ES', 'IT', 'SE', 'PL', 'DK', 'NO', 'FI', 'BE', 'AT', 'LU', 'PT', 'SG', 'AE', 'AU', 'JP', 'BR', 'MX', 'ZA', 'IL'];
 const binding = (i, over = {}) => ({ c: { value: `http://www.wikidata.org/entity/Q${1000 + i}` }, cLabel: { value: `Company ${i}` }, site: { value: `https://c${i}.example` }, emp: { value: String(60000 - i) }, indLabel: { value: 'software company' }, ...over });
 const answer = (bindings) => ({ ok: true, status: 200, json: async () => ({ results: { bindings } }) });
