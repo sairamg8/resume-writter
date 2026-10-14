@@ -4,26 +4,37 @@ const CAT = [[/bank|financ|payment|credit|broker|invest|asset manag/i, 'bank'], 
 export const categoryOf = (ind = '') => CAT.find(([rx]) => rx.test(ind))?.[1] ?? 'other';
 export const tierOf = (emp) => (emp >= 50000 ? 1 : emp >= 10000 ? 2 : emp > 0 ? 3 : 0);
 
-export async function fetchWikidata(perCountry = 250, log = () => {}) {
+// Four attempts per country. After a failed attempt it waits 15 s x n for a busy endpoint (HTTP 429/503/504), 5 s x n otherwise (n = 1, 2, 3; no wait after the last).
+// report.countries = { IN: 228, ... } for each country that answered, report.failed = ['NL', ...] for each that never did. deps = { fetchImpl, sleep } for tests.
+export async function fetchWikidata(perCountry = 250, log = () => {}, report = {}, { fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
   const out = [];
+  report.countries = {}; report.failed = [];
+  let first = true;
   for (const [cc, q] of Object.entries(COUNTRIES)) {
+    if (!first) await sleep(1500);
+    first = false;
     const query = `SELECT ?c ?cLabel ?site ?emp ?indLabel WHERE { VALUES ?t { wd:Q4830453 wd:Q891723 wd:Q6881511 } ?c wdt:P31 ?t; wdt:P17 wd:${q}; wdt:P856 ?site. OPTIONAL { ?c wdt:P1128 ?emp. } OPTIONAL { ?c wdt:P452 ?ind. } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } ORDER BY DESC(?emp) LIMIT ${perCountry * 2}`;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    let answered = false;
+    for (let attempt = 0; attempt < 4 && !answered; attempt++) {
       try {
-        const r = await fetch('https://query.wikidata.org/sparql', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/sparql-results+json', 'user-agent': 'resume-writter-jobmap/1.0 (github.com/sairamg8/devbible)' }, body: new URLSearchParams({ query }), signal: AbortSignal.timeout(90000) });
-        if (!r.ok) throw new Error(String(r.status));
-        const seen = new Set(); let n = 0;
+        const r = await fetchImpl('https://query.wikidata.org/sparql', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/sparql-results+json', 'user-agent': 'resume-writter-jobmap/1.0 (github.com/sairamg8/devbible)' }, body: new URLSearchParams({ query }), signal: AbortSignal.timeout(90000) });
+        if (!r.ok) throw Object.assign(new Error(String(r.status)), { status: r.status });
+        const seen = new Set(), got = []; let n = 0;
         for (const b of (await r.json()).results.bindings) {
           if (seen.has(b.c.value) || n >= perCountry) continue;
           seen.add(b.c.value); n++;
           const name = b.cLabel.value; if (/^Q\d+$/.test(name)) continue;
           const emp = Number(b.emp?.value) || 0;
-          out.push({ name, hq: cc.toLowerCase(), website: b.site.value, size: emp || null, category: categoryOf(b.indLabel?.value), tier: tierOf(emp), src: 'wikidata' });
+          got.push({ name, hq: cc.toLowerCase(), website: b.site.value, size: emp || null, category: categoryOf(b.indLabel?.value), tier: tierOf(emp), src: 'wikidata' });
         }
-        log(`${cc}: ${n}`); break;
-      } catch (e) { log(`${cc}: retry (${e.message})`); await new Promise((r) => setTimeout(r, 5000 * (attempt + 1))); }
+        out.push(...got); report.countries[cc] = got.length; answered = true;
+        log(`${cc}: ${n}`);
+      } catch (e) {
+        log(`${cc}: retry (${e.message})`);
+        if (attempt < 3) await sleep((e.status === 429 || e.status === 503 || e.status === 504 ? 15000 : 5000) * (attempt + 1));
+      }
     }
-    await new Promise((r) => setTimeout(r, 1500));
+    if (!answered) report.failed.push(cc);
   }
   return out;
 }
